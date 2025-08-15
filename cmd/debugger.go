@@ -171,9 +171,10 @@ func newEventHandler(pm *dap.ProtocolManager) debug.EventHandler {
 }
 
 func (s *state) messageHandler(ctx context.Context, message godap.Message) (bool, godap.ResponseMessage, error) {
-	var resp godap.ResponseMessage
-
-	var err error
+	var (
+		resp godap.ResponseMessage
+		err  error
+	)
 
 	switch request := message.(type) {
 	case *godap.AttachRequest:

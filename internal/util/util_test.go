@@ -1,12 +1,9 @@
 package util
 
 import (
-	"path/filepath"
-	"slices"
-	"strings"
 	"testing"
 
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/opa/v1/ast"
 )
 
 func TestFindClosestMatchingRoot(t *testing.T) {
@@ -56,79 +53,38 @@ func TestFindClosestMatchingRoot(t *testing.T) {
 	}
 }
 
-func TestDirCleanUpPaths(t *testing.T) {
-	t.Parallel()
+func BenchmarkStringRepeatMake(b *testing.B) {
+	for b.Loop() {
+		_ = stringRepeatMake("test", 1000)
+	}
+}
 
-	tests := map[string]struct {
-		State                     map[string]string
-		DeleteTarget              string
-		AdditionalPreserveTargets []string
-		Expected                  []string
-	}{
-		"simple": {
-			DeleteTarget: "foo/bar.rego",
-			State: map[string]string{
-				"foo/bar.rego": "package foo",
-			},
-			Expected: []string{"foo"},
-		},
-		"not empty": {
-			DeleteTarget: "foo/bar.rego",
-			State: map[string]string{
-				"foo/bar.rego": "package foo",
-				"foo/baz.rego": "package foo",
-			},
-			Expected: []string{},
-		},
-		"all the way up": {
-			DeleteTarget: "foo/bar/baz/bax.rego",
-			State: map[string]string{
-				"foo/bar/baz/bax.rego": "package baz",
-			},
-			Expected: []string{"foo/bar/baz", "foo/bar", "foo"},
-		},
-		"almost all the way up": {
-			DeleteTarget: "foo/bar/baz/bax.rego",
-			State: map[string]string{
-				"foo/bar/baz/bax.rego": "package baz",
-				"foo/bax.rego":         "package foo",
-			},
-			Expected: []string{"foo/bar/baz", "foo/bar"},
-		},
-		"with preserve targets": {
-			DeleteTarget: "foo/bar/baz/bax.rego",
-			AdditionalPreserveTargets: []string{
-				"foo/bar/baz_test/bax.rego",
-			},
-			State: map[string]string{
-				"foo/bar/baz/bax.rego": "package baz",
-				"foo/bax.rego":         "package foo",
-			},
-			// foo/bar is not deleted because of the preserve target
-			Expected: []string{"foo/bar/baz"},
-		},
+func stringRepeatMake(s string, n int) []*ast.Term {
+	sl := make([]*ast.Term, n)
+	for i := range s {
+		sl[i] = &ast.Term{Value: ast.String("test")}
 	}
 
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+	return sl
+}
 
-			tempDir := testutil.TempDirectoryOf(t, test.State)
-			expected := Map(test.Expected, FilepathJoiner(tempDir))
-
-			additionalPreserveTargets := []string{tempDir}
-			for i, v := range test.AdditionalPreserveTargets {
-				additionalPreserveTargets[i] = filepath.Join(tempDir, v)
-			}
-
-			got, err := DirCleanUpPaths(filepath.Join(tempDir, test.DeleteTarget), additionalPreserveTargets)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if !slices.Equal(got, expected) {
-				t.Fatalf("expected\n%v\ngot:\n%v", strings.Join(expected, "\n"), strings.Join(got, "\n"))
-			}
-		})
+// Without pre-allocating, this is more than twice as slow and results in 5 allocs/op.
+// BenchmarkFilter/Filter-10    5919769    191.0 ns/op    224 B/op    1 allocs/op
+// ...
+func BenchmarkFilter(b *testing.B) {
+	strings := []string{
+		"foo", "bar", "baz", "qux", "quux", "corge", "grault", "garply", "waldo", "fred", "plugh", "xyzzy", "thud",
+		"x", "y", "z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "the", "lazy", "dog", "jumped", "over",
+		"the", "quick", "brown", "fox",
 	}
+
+	pred := func(s string) bool {
+		return len(s) > 3
+	}
+
+	b.Run("Filter", func(b *testing.B) {
+		for b.Loop() {
+			_ = Filter(strings, pred)
+		}
+	})
 }

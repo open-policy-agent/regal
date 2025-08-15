@@ -1,6 +1,8 @@
 package types
 
 import (
+	"encoding/json"
+
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
@@ -44,9 +46,23 @@ type KeywordLocation struct {
 	End   uint
 }
 
+type CommandArgs struct {
+	// Target is the URI of the document for which the command applies to
+	Target string `json:"target"`
+
+	// Optional arguments, command dependent
+	// Diagnostic is the diagnostic that is to be fixed in the target
+	Diagnostic *Diagnostic `json:"diagnostic,omitempty"`
+	// Query is the query to evaluate
+	Query string `json:"path,omitempty"`
+	// Row is the row within the file where the command was run from
+	Row int `json:"row,omitempty"`
+}
+
 type Client struct {
-	Identifier  clients.Identifier     `json:"identifier"`
-	InitOptions *InitializationOptions `json:"init_options,omitempty"`
+	Identifier   clients.Identifier     `json:"identifier"`
+	InitOptions  *InitializationOptions `json:"init_options,omitempty"`
+	Capabilities *json.RawMessage       `json:"capabilities,omitempty"`
 }
 
 func NewGenericClient() Client {

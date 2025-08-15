@@ -8,8 +8,8 @@ import (
 	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/report"
-	"github.com/open-policy-agent/regal/pkg/roast/util"
 	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
 )
 
@@ -319,7 +319,7 @@ func (c *Cache) Delete(fileURI string) {
 	c.successfulParseLineCounts.Delete(fileURI)
 }
 
-func (c *Cache) UpdateCacheForURIFromDisk(fileURI, path string) (bool, string, error) {
+func (c *Cache) UpdateForURIFromDisk(fileURI, path string) (bool, string, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return false, "", fmt.Errorf("failed to read file: %w", err)

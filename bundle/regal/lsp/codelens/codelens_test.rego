@@ -4,7 +4,7 @@ import data.regal.lsp.codelens
 
 # regal ignore:rule-length
 test_code_lenses_for_module if {
-	module := regal.parse_module("policy.rego", `
+	policy := `
 	package foo
 
 	import rego.v1
@@ -12,14 +12,26 @@ test_code_lenses_for_module if {
 	rule1 := 1
 
 	rule2 if 1 + rule1 == 2
-	`)
-	lenses := codelens.lenses with input as module
+	`
+	module := regal.parse_module("policy.rego", policy)
+	lenses := codelens.lenses with input as {
+		"params": {"textDocument": {"uri": "file://policy.rego"}},
+		# Ugh, why did we make enableDebugCodelens camel case 😭
+		"regal": {
+			"client": {"init_options": {"enableDebugCodelens": true}},
+			"file": {
+				"name": "policy.rego",
+				"lines": split(policy, "\n"),
+			},
+		},
+	}
+		with data.workspace.parsed as {"file://policy.rego": module}
 
 	lenses == [
 		{
 			"command": {
 				"arguments": [json.marshal({
-					"target": "policy.rego",
+					"target": "file://policy.rego",
 					"path": "data.foo",
 					"row": 2,
 				})],
@@ -31,7 +43,7 @@ test_code_lenses_for_module if {
 		{
 			"command": {
 				"arguments": [json.marshal({
-					"target": "policy.rego",
+					"target": "file://policy.rego",
 					"path": "data.foo.rule1",
 					"row": 6,
 				})],
@@ -43,7 +55,7 @@ test_code_lenses_for_module if {
 		{
 			"command": {
 				"arguments": [json.marshal({
-					"target": "policy.rego",
+					"target": "file://policy.rego",
 					"path": "data.foo.rule2",
 					"row": 8,
 				})],
@@ -54,7 +66,7 @@ test_code_lenses_for_module if {
 		{
 			"command": {
 				"arguments": [json.marshal({
-					"target": "policy.rego",
+					"target": "file://policy.rego",
 					"path": "data.foo",
 					"row": 2,
 				})],
@@ -66,7 +78,7 @@ test_code_lenses_for_module if {
 		{
 			"command": {
 				"arguments": [json.marshal({
-					"target": "policy.rego",
+					"target": "file://policy.rego",
 					"path": "data.foo.rule2",
 					"row": 8,
 				})],

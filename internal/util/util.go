@@ -9,9 +9,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-
-	rio "github.com/open-policy-agent/regal/internal/io"
-	rutil "github.com/open-policy-agent/regal/pkg/roast/util"
 )
 
 // NullToEmpty returns empty slice if provided slice is nil.
@@ -69,11 +66,61 @@ func Must[T any](v T, err error) T {
 func Map[T, U any](a []T, f func(T) U) []U {
 	b := make([]U, len(a))
 
-	for i, v := range a {
-		b[i] = f(v)
+	for i := range a {
+		b[i] = f(a[i])
 	}
 
 	return b
+}
+
+// MapKeys applies a function to each key of a map and returns a new slice with the results.
+func MapKeys[K comparable, V any, U any](m map[K]V, f func(K) U) []U {
+	keys := make([]U, 0, len(m))
+
+	for k := range m {
+		keys = append(keys, f(k))
+	}
+
+	return keys
+}
+
+// MapValues applies the function f to each value in the map m and returns a new map with the same keys.
+func MapValues[K comparable, V, R any](m map[K]V, f func(V) R) map[K]R {
+	mapped := make(map[K]R, len(m))
+	for k, v := range m {
+		mapped[k] = f(v)
+	}
+
+	return mapped
+}
+
+// Filter returns a new slice containing only the elements of s that
+// satisfy the predicate f. This function runs each element of s through
+// f twice in order to allocate exactly what is needed. This is commonly
+// *much* more efficient than appending blindly, but do not use this if
+// the predicate function is expensive to compute.
+func Filter[T any](s []T, f func(T) bool) []T {
+	n := 0
+
+	for i := range s {
+		if f(s[i]) {
+			n++
+		}
+	}
+
+	if n == 0 {
+		return nil
+	}
+
+	r := make([]T, 0, n)
+
+	for i := range s {
+		if f(s[i]) {
+			r = append(r, s[i])
+		}
+	}
+
+	return r
 }
 
 // FindClosestMatchingRoot finds the closest matching root for a given path.
@@ -137,71 +184,6 @@ func DeleteEmptyDirs(dir string) error {
 	return nil
 }
 
-// DirCleanUpPaths will, for a given target file, list all the dirs that would
-// be empty if the target file was deleted.
-func DirCleanUpPaths(target string, preserve []string) ([]string, error) {
-	dirs := make([]string, 0)
-	preserveDirs := rutil.NewSet[string]()
-
-	for _, p := range preserve {
-		for {
-			preserveDirs.Add(p)
-
-			p = filepath.Dir(p)
-			if p == "." || p == "/" || preserveDirs.Contains(p) {
-				break
-			}
-		}
-	}
-
-	dir := filepath.Dir(target)
-
-	for !preserveDirs.Contains(dir) {
-		if !strings.Contains(dir, string(os.PathSeparator)) {
-			break
-		}
-
-		if !rio.IsDir(dir) {
-			return nil, fmt.Errorf("expected directory, got file %s", dir)
-		}
-
-		files, err := os.ReadDir(dir)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read directory %s: %w", dir, err)
-		}
-
-		empty := true
-
-		for _, file := range files {
-			// exclude the target
-			abs := filepath.Join(dir, file.Name())
-			if abs == target {
-				continue
-			}
-
-			// exclude any other marked dirs
-			if file.IsDir() && len(dirs) > 0 {
-				if dirs[len(dirs)-1] == abs {
-					continue
-				}
-			}
-
-			empty = false
-
-			break
-		}
-
-		if !empty {
-			break
-		}
-
-		dirs = append(dirs, dir)
-		dir = filepath.Dir(dir)
-	}
-
-	return dirs, nil
-}
-
 // SafeUintToInt will convert a uint to an int, clamping the result to
 // math.MaxInt.
 func SafeUintToInt(u uint) int {
@@ -243,7 +225,7 @@ func HasAnySuffix(s string, suffixes ...string) bool {
 
 // Partial2 is a helper function that partially applies the first argument
 // of a two-argument function, returning a new function taking the second argument.
-func Partial2[T, U, R any](f func(a T, b U) R, a T) func(b U) R {
+func Partial2[T, U, R any](f func(a T, b U) R, a T) func(U) R {
 	return func(b U) R {
 		return f(a, b)
 	}
@@ -266,10 +248,10 @@ func SafeIntToUint(i int) uint {
 }
 
 // FreePort returns a free port to listen on, if none of the preferred ports
-// are available then a random free port is returned.
+// are available on the localhost interface, then a random free port is returned.
 func FreePort(preferred ...int) (port int, err error) {
 	listen := func(p int) (int, error) {
-		l, err := net.ListenTCP("tcp", &net.TCPAddr{Port: p})
+		l, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: p})
 		if err != nil {
 			return 0, fmt.Errorf("failed to listen on port %d: %w", p, err)
 		}
@@ -301,4 +283,16 @@ func FreePort(preferred ...int) (port int, err error) {
 
 func Pointer[T any](v T) *T {
 	return &v
+}
+
+func Wrap[T any](v T, err error) func(string) (T, error) {
+	if err != nil {
+		return func(msg string) (T, error) {
+			return v, fmt.Errorf("%s: %w", msg, err)
+		}
+	}
+
+	return func(_ string) (T, error) {
+		return v, nil
+	}
 }

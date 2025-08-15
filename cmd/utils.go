@@ -87,7 +87,7 @@ func readUserConfig(params lintAndFixParams, searchPath string) (userConfig *os.
 		}
 	}
 
-	return userConfig, err //nolint:wrapcheck
+	return userConfig, err
 }
 
 func loadUserConfig(params lintAndFixParams, root string) (cfg config.Config, path string, err error) {

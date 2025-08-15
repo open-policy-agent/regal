@@ -1,6 +1,8 @@
 package types
 
 import (
+	"encoding/json"
+
 	"github.com/open-policy-agent/regal/internal/lsp/types/completion"
 	"github.com/open-policy-agent/regal/internal/lsp/types/symbols"
 )
@@ -40,7 +42,7 @@ type (
 		RootURI               string                 `json:"rootUri"`
 		Trace                 string                 `json:"trace"`
 		WorkspaceFolders      *[]WorkspaceFolder     `json:"workspaceFolders"`
-		Capabilities          ClientCapabilities     `json:"capabilities"`
+		Capabilities          *json.RawMessage       `json:"capabilities,omitempty"`
 		ProcessID             int                    `json:"processId"`
 	}
 
@@ -52,38 +54,6 @@ type (
 	ClientInfo struct {
 		Name    string `json:"name"`
 		Version string `json:"version"`
-	}
-
-	ClientCapabilities struct {
-		General   GeneralClientCapabilities      `json:"general"`
-		Text      TextDocumentClientCapabilities `json:"textDocument"`
-		Workspace WorkspaceClientCapabilities    `json:"workspace"`
-		Window    WindowClientCapabilities       `json:"window"`
-	}
-
-	WorkspaceClientCapabilities struct {
-		Diagnostics DiagnosticWorkspaceClientCapabilities `json:"diagnostics"`
-	}
-
-	DiagnosticWorkspaceClientCapabilities struct {
-		RefreshSupport bool `json:"refreshSupport"`
-	}
-
-	TextDocumentClientCapabilities struct {
-		Diagnostic DiagnosticClientCapabilities `json:"diagnostic"`
-	}
-
-	DiagnosticClientCapabilities struct {
-		DynamicRegistration    bool `json:"dynamicRegistration"`
-		RelatedDocumentSupport bool `json:"relatedDocumentSupport"`
-	}
-
-	WindowClientCapabilities struct {
-		WorkDoneProgress bool `json:"workDoneProgress"`
-	}
-
-	GeneralClientCapabilities struct {
-		StaleRequestSupport StaleRequestSupportClientCapabilities `json:"staleRequestSupport"`
 	}
 
 	ShowMessageParams struct {

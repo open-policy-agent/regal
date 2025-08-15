@@ -1,4 +1,3 @@
-//nolint:wrapcheck
 package cmd
 
 import (
@@ -117,7 +116,7 @@ func scaffoldRule(params newRuleCommandParams) error {
 	case "custom":
 		return scaffoldCustomRule(params)
 	case "builtin":
-		steps := []func(params newRuleCommandParams) error{scaffoldBuiltinRule, createBuiltinDocs, addToDataYAML}
+		steps := []func(newRuleCommandParams) error{scaffoldBuiltinRule, createBuiltinDocs, addToDataYAML}
 		for _, f := range steps {
 			if err := f(params); err != nil {
 				return err

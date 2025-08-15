@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/open-policy-agent/regal/internal/lsp"
+	"github.com/open-policy-agent/regal/internal/lsp/connection"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/pkg/version"
 )
@@ -36,21 +37,22 @@ func init() {
 				if err != nil {
 					fmt.Fprintln(os.Stderr, "error getting executable path:", err)
 				} else {
-					fmt.Fprintf(
-						os.Stderr,
-						"Regal Language Server (path: %s, version: %s)\n",
-						absPath,
-						cmp.Or(version.Version, "Unknown"),
-					)
+					msg := "Regal Language Server (path: %s, version: %s)\n"
+					fmt.Fprintf(os.Stderr, msg, absPath, cmp.Or(version.Version, "Unknown"))
 				}
+			}
+
+			if os.Getenv("REGAL_DEBUG") != "" {
+				fmt.Fprintln(os.Stderr, "Debug mode enabled")
+				verboseLogging = true
 			}
 
 			opts := &lsp.LanguageServerOptions{Logger: log.NewLogger(log.LevelMessage, os.Stderr)}
 			ls := lsp.NewLanguageServer(ctx, opts)
 
-			conn := lsp.NewConnectionFromLanguageServer(ctx, ls.Handle, &lsp.ConnectionOptions{
-				LoggingConfig: lsp.ConnectionLoggingConfig{
-					Writer:      os.Stderr,
+			conn := connection.New(ctx, ls.Handle, &connection.Options{
+				LoggingConfig: connection.LoggingConfig{
+					Logger:      opts.Logger,
 					LogInbound:  verboseLogging,
 					LogOutbound: verboseLogging,
 				},

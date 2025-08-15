@@ -7,12 +7,14 @@ import (
 	"slices"
 
 	"github.com/open-policy-agent/opa/v1/bundle"
+
+	rio "github.com/open-policy-agent/regal/internal/io"
 )
 
 // LoadDataBundle loads a bundle from the given path but only includes data
 // files. The path must contain a bundle manifest file.
 func LoadDataBundle(path string) (bundle.Bundle, error) {
-	if _, err := os.Stat(filepath.Join(path, ".manifest")); err != nil {
+	if !rio.IsFile(filepath.Join(path, ".manifest")) {
 		return bundle.Bundle{}, fmt.Errorf("manifest file was not found at bundle path %q", path)
 	}
 

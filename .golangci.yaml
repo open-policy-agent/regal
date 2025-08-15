@@ -79,6 +79,13 @@ linters:
       case:
         rules:
           json: snake
+    unused:
+      exported-fields-are-used: false
+    usetesting:
+      context-background: true
+      context-todo: true
+      os-create-temp: true
+      os-temp-dir: true
   exclusions:
     rules:
       - path: '(.+)_test\.go'

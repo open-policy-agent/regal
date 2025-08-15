@@ -4,12 +4,11 @@ import (
 	"fmt"
 
 	"github.com/open-policy-agent/opa/v1/ast"
-	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
-	"github.com/open-policy-agent/regal/pkg/roast/util"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/rules"
 )
 
@@ -31,12 +30,9 @@ func NewCacheFileProvider(c *cache.Cache, ci clients.Identifier) *CacheFileProvi
 }
 
 func (c *CacheFileProvider) List() ([]string, error) {
-	uris := outil.Keys(c.Cache.GetAllFiles())
-
-	paths := make([]string, len(uris))
-	for i, u := range uris {
-		paths[i] = uri.ToPath(c.ClientIdentifier, u)
-	}
+	paths := util.MapKeys(c.Cache.GetAllFiles(), func(u string) string {
+		return uri.ToPath(c.ClientIdentifier, u)
+	})
 
 	return paths, nil
 }
@@ -72,10 +68,7 @@ func (c *CacheFileProvider) Rename(from, to string) error {
 	}
 
 	if _, exists := c.Cache.GetFileContents(toURI); exists {
-		return RenameConflictError{
-			From: from,
-			To:   to,
-		}
+		return RenameConflictError{From: from, To: to}
 	}
 
 	c.Cache.SetFileContents(toURI, content)
@@ -88,10 +81,5 @@ func (c *CacheFileProvider) Rename(from, to string) error {
 }
 
 func (c *CacheFileProvider) ToInput(versionsMap map[string]ast.RegoVersion) (rules.Input, error) {
-	input, err := rules.InputFromMap(c.Cache.GetAllFiles(), versionsMap)
-	if err != nil {
-		return rules.Input{}, fmt.Errorf("failed to create input: %w", err)
-	}
-
-	return input, nil
+	return util.Wrap(rules.InputFromMap(c.Cache.GetAllFiles(), versionsMap))("failed to create input")
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/parse"
+	rutil "github.com/open-policy-agent/regal/internal/util"
 )
 
 // Input represents the input for a linter evaluation.
@@ -34,12 +35,9 @@ type regoFile struct {
 
 // NewInput creates a new Input from a set of modules.
 func NewInput(fileContent map[string]string, modules map[string]*ast.Module) Input {
-	// Maintain order across runs
-	filenames := util.KeysSorted(modules)
-
 	return Input{
 		FileContent: fileContent,
-		FileNames:   filenames,
+		FileNames:   util.KeysSorted(modules), // Maintain order across runs
 		Modules:     modules,
 	}
 }
@@ -54,15 +52,14 @@ func InputFromPaths(paths []string, prefix string, versionsMap map[string]ast.Re
 		return inputFromStdin()
 	}
 
-	fileContent := make(map[string]string, len(paths))
+	content := make(map[string]string, len(paths))
 	modules := make(map[string]*ast.Module, len(paths))
 
 	var versionedDirs []string
 
 	if len(versionsMap) > 0 {
-		versionedDirs = util.Keys(versionsMap)
 		// Sort directories by length, so that the most specific path is found first
-		slices.Sort(versionedDirs)
+		versionedDirs = util.KeysSorted(versionsMap)
 		slices.Reverse(versionedDirs)
 	}
 
@@ -79,12 +76,7 @@ func InputFromPaths(paths []string, prefix string, versionsMap map[string]ast.Re
 			defer wg.Done()
 
 			parserOptions := parse.ParserOptions()
-
-			parserOptions.RegoVersion = RegoVersionFromVersionsMap(
-				versionsMap,
-				strings.TrimPrefix(path, prefix),
-				ast.RegoUndefined,
-			)
+			parserOptions.RegoVersion = RegoVersionFromMap(versionsMap, strings.TrimPrefix(path, prefix), ast.RegoUndefined)
 
 			result, err := regoWithOpts(path, parserOptions)
 
@@ -97,7 +89,7 @@ func InputFromPaths(paths []string, prefix string, versionsMap map[string]ast.Re
 				return
 			}
 
-			fileContent[result.name] = util.ByteSliceToString(result.raw)
+			content[result.name] = util.ByteSliceToString(result.raw)
 			modules[result.name] = result.parsed
 		}(path)
 	}
@@ -108,38 +100,37 @@ func InputFromPaths(paths []string, prefix string, versionsMap map[string]ast.Re
 		return Input{}, fmt.Errorf("failed to parse %d module(s) — first error: %w", len(errors), errors[0])
 	}
 
-	return NewInput(fileContent, modules), nil
+	return NewInput(content, modules), nil
 }
 
 // InputFromMap creates a new Input from a map of file paths to their contents.
 // This function uses a vesrionsMap to determine the parser version for each
 // file before parsing the module.
 func InputFromMap(files map[string]string, versionsMap map[string]ast.RegoVersion) (Input, error) {
-	fileContent := make(map[string]string, len(files))
+	content := make(map[string]string, len(files))
 	modules := make(map[string]*ast.Module, len(files))
-	parserOptions := parse.ParserOptions()
+	prsopts := parse.ParserOptions()
 
-	for path, content := range files {
-		fileContent[path] = content
+	for path, fileContent := range files {
+		prsopts.RegoVersion = RegoVersionFromMap(versionsMap, path, ast.RegoUndefined)
 
-		parserOptions.RegoVersion = RegoVersionFromVersionsMap(versionsMap, path, ast.RegoUndefined)
-
-		mod, err := parse.ModuleWithOpts(path, content, parserOptions)
+		mod, err := parse.ModuleWithOpts(path, fileContent, prsopts)
 		if err != nil {
 			return Input{}, fmt.Errorf("failed to parse module %s: %w", path, err)
 		}
 
+		content[path] = fileContent
 		modules[path] = mod
 	}
 
-	return NewInput(fileContent, modules), nil
+	return NewInput(content, modules), nil
 }
 
-// RegoVersionFromVersionsMap takes a mapping of file path prefixes, typically
+// RegoVersionFromMap takes a mapping of file path prefixes, typically
 // representing the roots of the project, and the expected Rego version for
 // each. Using this, it finds the longest matching prefix for the given filename
 // and returns the defaultVersion if to matching prefix is found.
-func RegoVersionFromVersionsMap(
+func RegoVersionFromMap(
 	versionsMap map[string]ast.RegoVersion,
 	filename string,
 	defaultVersion ast.RegoVersion,
@@ -173,12 +164,12 @@ func regoWithOpts(path string, opts ast.ParserOptions) (*regoFile, error) {
 
 	bs, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err //nolint:wrapcheck
+		return nil, err
 	}
 
 	mod, err := parse.ModuleWithOpts(path, util.ByteSliceToString(bs), opts)
 	if err != nil {
-		return nil, err //nolint:wrapcheck
+		return nil, err
 	}
 
 	return &regoFile{name: path, raw: bs, parsed: mod}, nil
@@ -208,16 +199,10 @@ func inputFromStdin() (Input, error) {
 
 // InputFromText creates a new Input from raw Rego text.
 func InputFromText(fileName, text string) (Input, error) {
-	mod, err := parse.Module(fileName, text)
-	if err != nil {
-		return Input{}, fmt.Errorf("failed to parse module: %w", err)
-	}
-
-	return NewInput(map[string]string{fileName: text}, map[string]*ast.Module{fileName: mod}), nil
+	return rutil.Wrap(InputFromTextWithOptions(fileName, text, parse.ParserOptions()))("can't create input from text")
 }
 
-// InputFromTextWithOptions creates a new Input from raw Rego text while
-// respecting the provided options.
+// InputFromTextWithOptions creates a new Input from raw Rego text while respecting the provided options.
 func InputFromTextWithOptions(fileName, text string, opts ast.ParserOptions) (Input, error) {
 	mod, err := ast.ParseModuleWithOpts(fileName, text, opts)
 	if err != nil {

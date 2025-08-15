@@ -51,7 +51,7 @@ func prepareQuery() (*rego.PreparedEvalQuery, error) {
 
 	preparedQuery, err := rego.New(regoArgs...).PrepareForEval(context.Background())
 	if err != nil {
-		return nil, err //nolint:wrapcheck
+		return nil, err
 	}
 
 	return &preparedQuery, nil

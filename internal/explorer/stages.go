@@ -127,7 +127,7 @@ func getOne(mods map[string]*ast.Module) *ast.Module {
 func Plan(ctx context.Context, path, rego string, usePrint bool) (string, error) {
 	mod, err := ast.ParseModuleWithOpts(path, rego, parse.ParserOptions())
 	if err != nil {
-		return "", err //nolint:wrapcheck
+		return "", err
 	}
 
 	b := &bundle.Bundle{
@@ -147,18 +147,18 @@ func Plan(ctx context.Context, path, rego string, usePrint bool) (string, error)
 		WithRegoAnnotationEntrypoints(true).
 		WithEnablePrintStatements(usePrint)
 	if err := compiler.Build(ctx); err != nil {
-		return "", err //nolint:wrapcheck
+		return "", err
 	}
 
 	var policy ir.Policy
 
 	if err := encoding.JSON().Unmarshal(compiler.Bundle().PlanModules[0].Raw, &policy); err != nil {
-		return "", err //nolint:wrapcheck
+		return "", err
 	}
 
 	buf := bytes.Buffer{}
 	if err := ir.Pretty(&buf, &policy); err != nil {
-		return "", err //nolint:wrapcheck
+		return "", err
 	}
 
 	return buf.String(), nil

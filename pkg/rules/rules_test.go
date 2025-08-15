@@ -119,7 +119,7 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			actualVersion := RegoVersionFromVersionsMap(tc.VersionsMap, tc.Filename, ast.RegoUndefined)
+			actualVersion := RegoVersionFromMap(tc.VersionsMap, tc.Filename, ast.RegoUndefined)
 			if actualVersion != tc.ExpectedVersion {
 				t.Errorf("Expected %v, got %v", tc.ExpectedVersion, actualVersion)
 			}

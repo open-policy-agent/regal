@@ -16,7 +16,7 @@ import data.regal.util
 
 # METADATA
 # entrypoint: true
-# scope: document
+result["response"] := items
 
 # METADATA
 # description: Highlights METADATA itself when clicked

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "regal.lsp.completion",
+  "$ref": "#/$defs/params",
+  "$defs": {
+    "params": {
+      "properties": {
+        "textDocument": {
+          "$ref": "#/$defs/textDocument"
+        }
+      },
+      "type": "object",
+      "required": [
+        "textDocument"
+      ]
+    },
+    "textDocument": {
+      "type": "object",
+      "description": "Text document properties",
+      "properties": {
+        "uri": {
+          "type": "string",
+          "description": "URI of the text document"
+        }
+      },
+      "required": [
+        "uri"
+      ]
+    }
+  }
+}

@@ -8,15 +8,19 @@ package regal.lsp.signaturehelp
 import rego.v1
 
 # METADATA
-# description: main entry point for builtin signature help.
 # entrypoint: true
-default result := null
+result["response"] := signature
 
-result := r if {
+# METADATA
+# description: The builtin signature help response
+# scope: document
+default signature := null
+
+signature := s if {
 	func_info := _function_at_position(input.regal.file.lines, input.params.position)
 	builtin_info := data.workspace.builtins[func_info.name]
 
-	r := {
+	s := {
 		"signatures": [{
 			"label": _build_function_label(builtin_info.decl, func_info.name),
 			# some builtins had a space at the start

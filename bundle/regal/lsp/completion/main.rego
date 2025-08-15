@@ -6,6 +6,10 @@
 package regal.lsp.completion
 
 # METADATA
+# entrypoint: true
+result["response"] := items
+
+# METADATA
 # description: main entry point for completion suggestions
 # entrypoint: true
 items contains object.union(completion, {"_regal": {"provider": provider}}) if {

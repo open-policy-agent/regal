@@ -1,4 +1,4 @@
-package lsp
+package foldingrange
 
 import (
 	"strings"
@@ -23,7 +23,7 @@ func (s stack) Pop() (stack, scanner.Position) {
 }
 
 //nolint:gosec
-func TokenFoldingRanges(policy string) []types.FoldingRange {
+func TokenRanges(policy string) []types.FoldingRange {
 	scn, err := scanner.New(strings.NewReader(policy))
 	if err != nil {
 		panic(err)
@@ -100,7 +100,7 @@ func TokenFoldingRanges(policy string) []types.FoldingRange {
 }
 
 //nolint:gosec
-func findFoldingRanges(text string, module *ast.Module) []types.FoldingRange {
+func FindAll(text string, module *ast.Module) []types.FoldingRange {
 	uintZero := uint(0)
 
 	ranges := make([]types.FoldingRange, 0)
@@ -151,7 +151,7 @@ func findFoldingRanges(text string, module *ast.Module) []types.FoldingRange {
 
 	// Tokens — {}, [], ()
 
-	tokenRanges := TokenFoldingRanges(text)
+	tokenRanges := TokenRanges(text)
 
 	return append(ranges, tokenRanges...)
 }

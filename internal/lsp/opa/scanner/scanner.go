@@ -3,11 +3,12 @@
 // license that can be found in the LICENSE file.
 
 // Original source at https://github.com/open-policy-agent/opa/blob/main/ast/internal/scanner/scanner.go
+// This version removes several functions in OPA's scanner that aren't used here currently.
+// If we need more functionality later, revisit the original source.
 
 package scanner
 
 import (
-	"fmt"
 	"io"
 	"unicode"
 	"unicode/utf8"
@@ -19,10 +20,8 @@ import (
 
 const bom = 0xFEFF
 
-// Scanner is used to tokenize an input stream of
-// Rego source code.
+// Scanner is used to tokenize an input stream of Rego source code.
 type Scanner struct {
-	keywords         map[string]tokens.Token
 	bs               []byte
 	errors           []Error
 	offset           int
@@ -56,13 +55,12 @@ func New(r io.Reader) (*Scanner, error) {
 	}
 
 	s := &Scanner{
-		offset:   0,
-		row:      1,
-		col:      0,
-		bs:       bs,
-		curr:     -1,
-		width:    0,
-		keywords: tokens.Keywords(),
+		offset: 0,
+		row:    1,
+		col:    0,
+		bs:     bs,
+		curr:   -1,
+		width:  0,
 	}
 
 	s.next()
@@ -72,84 +70,6 @@ func New(r io.Reader) (*Scanner, error) {
 	}
 
 	return s, nil
-}
-
-// Bytes returns the raw bytes for the full source
-// which the scanner has read in.
-func (s *Scanner) Bytes() []byte {
-	return s.bs
-}
-
-// String returns a human-readable string of the current scanner state.
-func (s *Scanner) String() string {
-	return fmt.Sprintf("<curr: %q, offset: %d, len: %d>", s.curr, s.offset, len(s.bs))
-}
-
-// Keyword will return a token for the passed in
-// literal value. If the value is a Rego keyword
-// then the appropriate token is returned. Everything
-// else is an Ident.
-func (s *Scanner) Keyword(lit string) tokens.Token {
-	if tok, ok := s.keywords[lit]; ok {
-		return tok
-	}
-	return tokens.Ident
-}
-
-// AddKeyword adds a string -> token mapping to this Scanner instance.
-func (s *Scanner) AddKeyword(kw string, tok tokens.Token) {
-	s.keywords[kw] = tok
-
-	switch tok {
-	case tokens.Every: // importing 'every' means also importing 'in'
-		s.keywords["in"] = tokens.In
-	}
-}
-
-func (s *Scanner) HasKeyword(keywords map[string]tokens.Token) bool {
-	for kw := range s.keywords {
-		if _, ok := keywords[kw]; ok {
-			return true
-		}
-	}
-	return false
-}
-
-func (s *Scanner) SetRegoV1Compatible() {
-	s.regoV1Compatible = true
-}
-
-func (s *Scanner) RegoV1Compatible() bool {
-	return s.regoV1Compatible
-}
-
-// WithKeywords returns a new copy of the Scanner struct `s`, with the set
-// of known keywords being that of `s` with `kws` added.
-func (s *Scanner) WithKeywords(kws map[string]tokens.Token) *Scanner {
-	cpy := *s
-	cpy.keywords = make(map[string]tokens.Token, len(s.keywords)+len(kws))
-	for kw, tok := range s.keywords {
-		cpy.AddKeyword(kw, tok)
-	}
-	for k, t := range kws {
-		cpy.AddKeyword(k, t)
-	}
-	return &cpy
-}
-
-// WithoutKeywords returns a new copy of the Scanner struct `s`, with the
-// set of known keywords being that of `s` with `kws` removed.
-// The previously known keywords are returned for a convenient reset.
-func (s *Scanner) WithoutKeywords(kws map[string]tokens.Token) (*Scanner, map[string]tokens.Token) {
-	cpy := *s
-	kw := s.keywords
-	cpy.keywords = make(map[string]tokens.Token, len(s.keywords)-len(kws))
-	for kw, tok := range s.keywords {
-		if _, ok := kws[kw]; !ok {
-			cpy.AddKeyword(kw, tok)
-		}
-	}
-	return &cpy, kw
 }
 
 // Scan will increment the scanners position in the source
@@ -168,7 +88,7 @@ func (s *Scanner) Scan() (tokens.Token, Position, string, []Error) {
 		tok = tokens.Whitespace
 	} else if isLetter(s.curr) {
 		lit = s.scanIdentifier()
-		tok = s.Keyword(lit)
+		tok = tokens.Keyword(lit)
 	} else if isDecimal(s.curr) {
 		lit = s.scanNumber()
 		tok = tokens.Number
@@ -420,8 +340,6 @@ func (s *Scanner) literalStart() int {
 	// Need to subtract width of first character (plus one for the delimiter).
 	return s.offset - (s.width + 1)
 }
-
-// From the Go scanner (src/go/scanner/scanner.go)
 
 func isLetter(ch rune) bool {
 	return 'a' <= lower(ch) && lower(ch) <= 'z' || ch == '_'

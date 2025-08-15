@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/storage"
@@ -25,12 +24,8 @@ type Policy struct{}
 // as it acts like the entrypoint for all Rego-based providers, and not a single provider "function" like
 // the Go providers do.
 func NewPolicy(ctx context.Context, store storage.Store) *Policy {
-	// TODO(anders): Temporarily initialize *all* prepared queries here. Most are unrelated to completions,
-	// so this should happen elsewhere. Adding to that — preparing all queries at once is *slow* — like 1.5
-	// seconds slow on an M4 MacBook Pro. So we'll need to find a better way to do this before next release,
-	// and it's on top of my list to fix.
-	if err := rego.StoreAllCachedQueries(ctx, store); err != nil {
-		log.Fatalf("failed to start policy completions provider: %v", err)
+	if err := rego.StoreCachedQuery(ctx, query.Completion, store); err != nil {
+		panic(fmt.Errorf("failed to store cached query for completions: %w", err))
 	}
 
 	return &Policy{}

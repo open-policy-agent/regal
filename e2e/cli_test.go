@@ -16,9 +16,9 @@ import (
 	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/mode"
 	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/report"
-	rutil "github.com/open-policy-agent/regal/pkg/roast/util"
 )
 
 var _cwd = io.Getwd()
@@ -100,8 +100,8 @@ func TestLintV1Violations(t *testing.T) {
 		expectStdout(unmarshalsTo(&rep)).
 		verify(t)
 
-	ruleNames := rutil.NewSet[string]()
-	excludedRules := rutil.NewSet(
+	ruleNames := util.NewSet[string]()
+	excludedRules := util.NewSet(
 		"implicit-future-keywords",
 		"use-if",
 		"use-contains",

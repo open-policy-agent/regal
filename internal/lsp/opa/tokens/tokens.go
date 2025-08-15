@@ -6,18 +6,8 @@
 
 package tokens
 
-import "maps"
-
-// Token represents a single Rego source code token
-// for use by the Parser.
+// Token represents a single Rego source code token for use by the parser.
 type Token int
-
-func (t Token) String() string {
-	if t < 0 || int(t) >= len(strings) {
-		return "unknown"
-	}
-	return strings[t]
-}
 
 // All tokens must be defined here
 const (
@@ -75,56 +65,6 @@ const (
 	If
 )
 
-var strings = [...]string{
-	Illegal:    "illegal",
-	EOF:        "eof",
-	Whitespace: "whitespace",
-	Comment:    "comment",
-	Ident:      "identifier",
-	Package:    "package",
-	Import:     "import",
-	As:         "as",
-	Default:    "default",
-	Else:       "else",
-	Not:        "not",
-	Some:       "some",
-	With:       "with",
-	Null:       "null",
-	True:       "true",
-	False:      "false",
-	Number:     "number",
-	String:     "string",
-	LBrack:     "[",
-	RBrack:     "]",
-	LBrace:     "{",
-	RBrace:     "}",
-	LParen:     "(",
-	RParen:     ")",
-	Comma:      ",",
-	Colon:      ":",
-	Add:        "plus",
-	Sub:        "minus",
-	Mul:        "mul",
-	Quo:        "div",
-	Rem:        "rem",
-	And:        "and",
-	Or:         "or",
-	Unify:      "eq",
-	Equal:      "equal",
-	Assign:     "assign",
-	In:         "in",
-	Neq:        "neq",
-	Gt:         "gt",
-	Lt:         "lt",
-	Gte:        "gte",
-	Lte:        "lte",
-	Dot:        ".",
-	Semicolon:  ";",
-	Every:      "every",
-	Contains:   "contains",
-	If:         "if",
-}
-
 var keywords = map[string]Token{
 	"package": Package,
 	"import":  Import,
@@ -139,9 +79,9 @@ var keywords = map[string]Token{
 	"false":   False,
 }
 
-// Keywords returns a copy of the default string -> Token keyword map.
-func Keywords() map[string]Token {
-	cpy := make(map[string]Token, len(keywords))
-	maps.Copy(cpy, keywords)
-	return cpy
+func Keyword(lit string) Token {
+	if tok, ok := keywords[lit]; ok {
+		return tok
+	}
+	return Ident
 }

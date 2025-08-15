@@ -1,4 +1,3 @@
-//nolint:wrapcheck
 package reporter
 
 import (
@@ -18,11 +17,11 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/mode"
 	"github.com/open-policy-agent/regal/internal/novelty"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/fixer"
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
 	"github.com/open-policy-agent/regal/pkg/report"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
-	"github.com/open-policy-agent/regal/pkg/roast/util"
 )
 
 // Reporter releases linter reports in a format decided by the implementation.
@@ -296,7 +295,7 @@ func (tr CompactReporter) Publish(_ context.Context, r report.Report) error {
 	summary := fmt.Sprintf("%d %s linted , %d %s found.",
 		r.Summary.FilesScanned, pluralize("file", r.Summary.FilesScanned),
 		r.Summary.NumViolations, pluralize("violation", r.Summary.NumViolations))
-	// rendering the table
+
 	table.Render()
 
 	_, err := fmt.Fprintln(tr.out, strings.TrimSuffix(sb.String(), ""), summary)

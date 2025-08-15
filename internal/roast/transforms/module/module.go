@@ -9,8 +9,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	outil "github.com/open-policy-agent/opa/v1/util"
 
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
-	"github.com/open-policy-agent/regal/pkg/roast/util"
 )
 
 var newLine = []byte("\n")
