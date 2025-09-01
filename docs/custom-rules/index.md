@@ -200,7 +200,7 @@ regal parse path/to/policy.rego > input.json
 
 You should now be able evaluate your custom rule against the `input.json` AST:
 
-![Code Lens for Evaluation of custom rule](./assets/evalcustom.png)
+![Code Lens for Evaluation of custom rule](../assets/evalcustom.png)
 
 **Tips:**
 
@@ -211,7 +211,7 @@ As another convenience, any `.rego` file where the first comment in the policy i
 the evaluation feature automatically use the AST of the file as input. This allows building queries against the AST of
 the policy you're working on, providing an extremely fast feedback loop for developing new rules!
 
-![Use AST of file as input](./assets/lsp/eval_use_as_input.png)
+![Use AST of file as input](../assets/lsp/eval_use_as_input.png)
 
 #### Test-Driven Development
 

@@ -1,13 +1,13 @@
 # Rules
 
-import rules from "@generated/regal-rules-data/default/rules.json";
+import rules from "@generated/regal/default/rules.json";
 
 <!-- markdownlint-disable MD033 -->
 
-This page contains an index of all <span>{Object.keys(rules).length}</span>
+This page contains an index of all <span>{rules.length}</span>
 Regal rules.
 
-import RegalRulesTable from '@site/src/components/RegalRulesTable';
+import RulesTable from '@site/src/components/projects/regal/RulesTable';
 
 <!-- markdownlint-disable MD033 -->
-<RegalRulesTable/>
+<RulesTable />

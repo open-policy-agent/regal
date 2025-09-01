@@ -6,7 +6,7 @@ title: Introduction
 
 <!-- markdownlint-disable MD041 -->
 
-import RegalIntro from '@site/src/components/RegalIntro';
+import Intro from '@site/src/components/projects/regal/Intro';
 
 <!-- markdownlint-disable MD025 -->
 
@@ -21,4 +21,4 @@ Regal is the perfect companion for policy development, whether you're an
 experienced Rego developer or just starting out.
 
 <!-- markdownlint-disable MD033 -->
-<RegalIntro/>
+<Intro/>
