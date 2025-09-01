@@ -15,7 +15,7 @@ them according to your requirements.
 
 For more advanced requirements, see the guide on writing [custom rules](https://docs.styra.com/regal/custom-rules) in Rego.
 
-import RegalRulesTable from '@site/src/components/RegalRulesTable';
+import RulesTable from '@site/src/components/projects/regal/RulesTable';
 
 <!-- markdownlint-disable MD033 -->
-<RegalRulesTable category="custom"/>
+<RulesTable category="custom"/>

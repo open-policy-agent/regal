@@ -2,7 +2,7 @@
 
 Rules that detect bugs in your code.
 
-import RegalRulesTable from '@site/src/components/RegalRulesTable';
+import RulesTable from '@site/src/components/projects/regal/RulesTable';
 
 <!-- markdownlint-disable MD033 -->
-<RegalRulesTable category="bugs"/>
+<RulesTable category="bugs"/>

@@ -2,7 +2,7 @@
 
 Rules to help identify possible performance issues.
 
-import RegalRulesTable from '@site/src/components/RegalRulesTable';
+import RulesTable from '@site/src/components/projects/regal/RulesTable';
 
 <!-- markdownlint-disable MD033 -->
-<RegalRulesTable category="performance"/>
+<RulesTable category="performance"/>
