@@ -50,12 +50,10 @@ func TraceValueToLevel(value string) (Level, error) {
 	}
 }
 
+// NewLogger creates a new Logger that writes to the given writer at level.
+// Use NewLogger(log.LevelOff, io.Discard) to create a no-op logger.
 func NewLogger(level Level, writer io.Writer) *Logger {
-	return &Logger{Level: level, Writer: writer}
-}
-
-func NoOpLogger() *Logger {
-	return &Logger{Level: LevelOff, Writer: io.Discard}
+	return &Logger{Level: level, Writer: writer, rwm: sync.RWMutex{}}
 }
 
 func (l *Logger) SetLevel(level Level) {

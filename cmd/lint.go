@@ -267,7 +267,7 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 		return report.Report{}, fmt.Errorf("failed to get reporter: %w", err)
 	}
 
-	return result, rep.Publish(ctx, result) //nolint:wrapcheck
+	return result, rep.Publish(ctx, result)
 }
 
 func updateCheckAndWarn(params *lintParams, regalRules *bundle.Bundle, userConfig *config.Config) {

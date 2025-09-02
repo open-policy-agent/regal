@@ -1,7 +1,9 @@
-package lsp
+package foldingrange_test
 
 import (
 	"testing"
+
+	"github.com/open-policy-agent/regal/internal/lsp/foldingrange"
 )
 
 func TestTokenFoldingRanges(t *testing.T) {
@@ -22,7 +24,7 @@ rule if {
 	)
 }`
 
-	foldingRanges := TokenFoldingRanges(policy)
+	foldingRanges := foldingrange.TokenRanges(policy)
 
 	if len(foldingRanges) != 3 {
 		t.Fatalf("Expected 3 folding ranges, got %d", len(foldingRanges))
@@ -66,7 +68,7 @@ func TestTokenInvalidFoldingRanges(t *testing.T) {
 
 arr := ]]`
 
-	foldingRanges := TokenFoldingRanges(policy)
+	foldingRanges := foldingrange.TokenRanges(policy)
 
 	if len(foldingRanges) != 0 {
 		t.Fatalf("Expected no folding ranges, got %d", len(foldingRanges))

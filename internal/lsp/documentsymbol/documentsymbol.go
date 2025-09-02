@@ -1,4 +1,4 @@
-package lsp
+package documentsymbol
 
 import (
 	"bytes"
@@ -12,7 +12,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/types/symbols"
 )
 
-func documentSymbols(contents string, module *ast.Module, builtins map[string]*ast.Builtin) []types.DocumentSymbol {
+// TODO: Rewrite in Rego.
+func All(contents string, module *ast.Module, builtins map[string]*ast.Builtin) []types.DocumentSymbol {
 	// Only pkgSymbols would likely suffice, but we're keeping docSymbols around in case
 	// we ever want to add more top-level symbols than the package.
 	docSymbols := make([]types.DocumentSymbol, 0)
@@ -114,7 +115,7 @@ func toWorkspaceSymbol(docSym types.DocumentSymbol, docURL string) types.Workspa
 	}
 }
 
-func toWorkspaceSymbols(docSym []types.DocumentSymbol, docURL string, symbols *[]types.WorkspaceSymbol) {
+func ToWorkspaceSymbols(docSym []types.DocumentSymbol, docURL string, symbols *[]types.WorkspaceSymbol) {
 	for _, sym := range docSym {
 		// Only include the "main" symbol for incremental rules and functions
 		// as numeric items isn't very useful in the workspace symbol list.
@@ -122,7 +123,7 @@ func toWorkspaceSymbols(docSym []types.DocumentSymbol, docURL string, symbols *[
 			*symbols = append(*symbols, toWorkspaceSymbol(sym, docURL))
 
 			if sym.Children != nil {
-				toWorkspaceSymbols(*sym.Children, docURL, symbols)
+				ToWorkspaceSymbols(*sym.Children, docURL, symbols)
 			}
 		}
 	}

@@ -5,7 +5,7 @@ import rego.v1
 import data.regal.lsp.signaturehelp as sh
 
 test_result if {
-	r := sh.result with input as {
+	r := sh.signature with input as {
 		"params": {"position": {
 			"line": 2,
 			"character": 15,

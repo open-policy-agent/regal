@@ -8,7 +8,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	encutil "github.com/open-policy-agent/regal/internal/roast/encoding/util"
-	"github.com/open-policy-agent/regal/pkg/roast/util"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 type moduleCodec struct{}

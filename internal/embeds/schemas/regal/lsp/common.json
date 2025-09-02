@@ -5,6 +5,10 @@
   "$defs": {
     "input": {
       "properties": {
+        "method": {
+          "type": "string",
+          "description": "The method name for the LSP request"
+        },
         "regal": {
           "$ref": "#/$defs/regal"
         }
@@ -17,9 +21,27 @@
           "type": "object",
           "description": "LSP client properties",
           "properties": {
+            "capabilities": {
+              "type": "object",
+              "description": "Capabilities of the LSP client",
+              "additionalProperties": true
+            },
             "identifier": {
               "type": "integer",
               "description": "Numeric identifier for the LSP client"
+            },
+            "init_options": {
+              "type": "object",
+              "description": "Initialization options for the LSP client",
+              "properties": {
+                "enableDebugCodelens": {
+                  "type": "boolean",
+                  "description": "Enable the debug code lens on packages and rules. This requires client support."
+                }
+              },
+              "required": [
+                "debug_supported"
+              ]
             }
           }
         },
@@ -60,6 +82,14 @@
             },
             "rego_version": {
               "type": "string"
+            },
+            "successful_parse_count": {
+              "type": "integer",
+              "description": "Number of lines that were successfully parsed"
+            },
+            "parse_errors": {
+              "type": "array",
+              "description": "List of parse errors for the file"
             }
           },
           "type": "object",

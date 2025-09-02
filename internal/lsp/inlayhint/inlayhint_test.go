@@ -1,10 +1,11 @@
-package lsp
+package inlayhint_test
 
 import (
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
+	"github.com/open-policy-agent/regal/internal/lsp/inlayhint"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 )
 
@@ -19,7 +20,7 @@ func TestGetInlayHintsAstCall(t *testing.T) {
 	module := ast.MustParseModule(policy)
 
 	bis := rego.BuiltinsForCapabilities(ast.CapabilitiesForThisVersion())
-	inlayHints := getInlayHints(module, bis)
+	inlayHints := inlayhint.FromModule(module, bis)
 
 	if len(inlayHints) != 2 {
 		t.Fatalf("Expected 2 inlay hints, got %d", len(inlayHints))
@@ -68,7 +69,7 @@ func TestGetInlayHintsAstTerms(t *testing.T) {
 
 	bis := rego.BuiltinsForCapabilities(ast.CapabilitiesForThisVersion())
 
-	inlayHints := getInlayHints(module, bis)
+	inlayHints := inlayhint.FromModule(module, bis)
 
 	if len(inlayHints) != 1 {
 		t.Fatalf("Expected 1 inlay hints, got %d", len(inlayHints))

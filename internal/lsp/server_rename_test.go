@@ -11,7 +11,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/config"
-	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
 )
 
 func TestLanguageServerFixRenameParams(t *testing.T) {
@@ -40,7 +39,7 @@ func TestLanguageServerFixRenameParams(t *testing.T) {
 	fileURI := ls.workspaceRootURI + "/foo/bar/policy.rego"
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 
-	params, err := ls.fixRenameParams("fix my file!", &fixes.DirectoryPackageMismatch{}, fileURI)
+	params, err := ls.fixRenameParams("fix my file!", fileURI)
 	if err != nil {
 		t.Fatalf("failed to fix rename params: %s", err)
 	}
@@ -96,7 +95,7 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 	ls.cache.SetFileContents(conflictingFileURI, "package authz.main.rules") // existing content irrelevant here
 
-	params, err := ls.fixRenameParams("fix my file!", &fixes.DirectoryPackageMismatch{}, fileURI)
+	params, err := ls.fixRenameParams("fix my file!", fileURI)
 	if err != nil {
 		t.Fatalf("failed to fix rename params: %s", err)
 	}
@@ -183,7 +182,7 @@ func TestLanguageServerFixRenameParamsWhenTargetOutsideRoot(t *testing.T) {
 	fileURI := ls.workspaceRootURI + "foo/bar/policy.rego"
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 
-	if _, err := ls.fixRenameParams("fix my file!", &fixes.DirectoryPackageMismatch{}, fileURI); err == nil {
+	if _, err := ls.fixRenameParams("fix my file!", fileURI); err == nil {
 		t.Fatalf("expected error, got nil")
 	} else if !strings.Contains(err.Error(), "cannot move file out of workspace root") {
 		t.Fatalf("expected error to contain 'cannot move file out of workspace root', got %s", err)

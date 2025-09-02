@@ -1,17 +1,19 @@
 package testutil
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/report"
-	rutil "github.com/open-policy-agent/regal/pkg/roast/util"
+	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
-func Must[T any](x T, err error) func(tb testing.TB) T {
+func Must[T any](x T, err error) func(testing.TB) T {
 	return func(tb testing.TB) T {
 		tb.Helper()
 
@@ -73,6 +75,14 @@ func MustRemove(t *testing.T, path string) {
 	}
 }
 
+func MustRemoveAll(t *testing.T, path ...string) {
+	t.Helper()
+
+	if err := os.RemoveAll(filepath.Join(path...)); err != nil {
+		t.Fatalf("failed to remove path %s: %v", path, err)
+	}
+}
+
 func AssertNumViolations(tb testing.TB, num int, rep report.Report) {
 	tb.Helper()
 
@@ -81,13 +91,13 @@ func AssertNumViolations(tb testing.TB, num int, rep report.Report) {
 	}
 }
 
-func ViolationTitles(rep report.Report) *rutil.Set[string] {
+func ViolationTitles(rep report.Report) *util.Set[string] {
 	titles := make([]string, len(rep.Violations))
 	for i := range rep.Violations {
 		titles[i] = rep.Violations[i].Title
 	}
 
-	return rutil.NewSet(titles...)
+	return util.NewSet(titles...)
 }
 
 func AssertOnlyViolations(t *testing.T, rep report.Report, expected ...string) {
@@ -144,4 +154,17 @@ func MustUnmarshalYAML[T any](t *testing.T, data []byte) T {
 	}
 
 	return result
+}
+
+func ToJSONRawMessage(tb testing.TB, msg any) *json.RawMessage {
+	tb.Helper()
+
+	data, err := encoding.JSON().Marshal(msg)
+	if err != nil {
+		tb.Fatalf("failed to marshal message: %v", err)
+	}
+
+	jraw := json.RawMessage(data)
+
+	return &jraw
 }

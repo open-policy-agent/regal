@@ -64,8 +64,7 @@ func LoadCapabilitiesVersions(engine string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to embedded capabilities directory for engine '%s' (does the engine exist?): %w",
-			engine,
-			err,
+			engine, err,
 		)
 	}
 

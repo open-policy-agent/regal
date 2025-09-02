@@ -98,16 +98,12 @@ allow[msg] { 1 == 1; msg := "hello" }
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := t.Context()
-
 			c := cache.NewCache()
 			c.SetFileContents(testData.fileURI, testData.content)
 
-			s := NewRegalStore()
-
-			success, err := updateParse(ctx, updateParseOpts{
+			success, err := updateParse(t.Context(), updateParseOpts{
 				Cache:            c,
-				Store:            s,
+				Store:            NewRegalStore(),
 				FileURI:          testData.fileURI,
 				Builtins:         ast.BuiltinMap,
 				RegoVersion:      testData.regoVersion,
@@ -169,9 +165,7 @@ func TestConvertReportToDiagnostics(t *testing.T) {
 		IsAggregate: true,
 	}
 
-	rpt := &report.Report{
-		Violations: []report.Violation{violation1, violation2},
-	}
+	rpt := &report.Report{Violations: []report.Violation{violation1, violation2}}
 
 	expectedFileDiags := map[string][]types.Diagnostic{
 		"file1": {
@@ -212,31 +206,27 @@ func TestLintWithConfigIgnoreWildcards(t *testing.T) {
 
 	conf := &config.Config{
 		Rules: map[string]config.Category{
-			"idiomatic": {
-				"directory-package-mismatch": config.Rule{
-					Level: "ignore",
-				},
-			},
+			"idiomatic": {"directory-package-mismatch": config.Rule{Level: "ignore"}},
 		},
 	}
 
 	contents := "package p\n\ncamelCase := 1\n"
-	module := parse.MustParseModule(contents)
-	workspaceRootURI := "file:///workspace"
 	fileURI := "file:///workspace/ignore/p.rego"
-	state := cache.NewCache()
 
+	state := cache.NewCache()
 	state.SetFileContents(fileURI, contents)
-	state.SetModule(fileURI, module)
+	state.SetModule(fileURI, parse.MustParseModule(contents))
 	state.SetFileDiagnostics(fileURI, []types.Diagnostic{})
 
-	if err := updateFileDiagnostics(t.Context(), diagnosticsRunOpts{
+	opts := diagnosticsRunOpts{
 		Cache:            state,
 		RegalConfig:      conf,
 		FileURI:          fileURI,
-		WorkspaceRootURI: workspaceRootURI,
+		WorkspaceRootURI: "file:///workspace",
 		UpdateForRules:   []string{"prefer-snake-case"},
-	}); err != nil {
+	}
+
+	if err := updateFileDiagnostics(t.Context(), opts); err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
@@ -263,18 +253,13 @@ func TestLintWithConfigIgnoreWildcards(t *testing.T) {
 		},
 	}
 
-	if err := updateFileDiagnostics(t.Context(), diagnosticsRunOpts{
-		Cache:            state,
-		RegalConfig:      conf,
-		FileURI:          fileURI,
-		WorkspaceRootURI: workspaceRootURI,
-		UpdateForRules:   []string{"prefer-snake-case"},
-	}); err != nil {
+	opts.UpdateForRules = []string{"prefer-snake-case"}
+
+	if err := updateFileDiagnostics(t.Context(), opts); err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	diagnostics, _ = state.GetFileDiagnostics(fileURI)
-	if len(diagnostics) != 0 {
+	if diagnostics, _ := state.GetFileDiagnostics(fileURI); len(diagnostics) != 0 {
 		t.Fatalf("Expected no diagnostics, got %v", diagnostics)
 	}
 }

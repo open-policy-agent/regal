@@ -20,7 +20,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
-	rutil "github.com/open-policy-agent/regal/pkg/roast/util"
 )
 
 const (
@@ -179,7 +178,7 @@ func FindConfig(path string) (*os.File, error) {
 			return nil, fmt.Errorf("failed to stat .regal config file: %w", err)
 		}
 
-		return os.Open(expectedConfigFilePath) //nolint:wrapcheck
+		return os.Open(expectedConfigFilePath)
 	}
 
 	// regalConfigFileError is nil at this point, so we can return the file
@@ -373,16 +372,6 @@ func rootsFromRegalConfigDirOrFile(file *os.File) ([]string, error) {
 	return append(foundBundleRoots, util.Map(manifestRoots, util.FilepathJoiner(parent))...), nil
 }
 
-func FromMap(confMap map[string]any) (Config, error) {
-	var conf Config
-
-	if err := encoding.JSONRoundTrip(confMap, &conf); err != nil {
-		return conf, fmt.Errorf("failed to convert config map to config struct: %w", err)
-	}
-
-	return conf, nil
-}
-
 // AllRegoVersions returns a map of all Rego versions found in the provided config and .manifest files,
 // keyed by the path of the directory for which the version applies. Config file has higher precedence
 // than .manifest files.
@@ -543,7 +532,7 @@ func (p *Project) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
-	return encoding.JSONRoundTrip(result, p) //nolint:wrapcheck
+	return encoding.JSONRoundTrip(result, p)
 }
 
 func (config *Config) UnmarshalYAML(value *yaml.Node) error {
@@ -756,10 +745,7 @@ func fromOPABuiltin(builtin ast.Builtin) *Builtin {
 }
 
 func fromOPACapabilities(capabilities *ast.Capabilities) *Capabilities {
-	var result Capabilities
-
-	result.Builtins = make(map[string]*Builtin, len(capabilities.Builtins))
-
+	result := Capabilities{Builtins: make(map[string]*Builtin, len(capabilities.Builtins))}
 	for _, builtin := range capabilities.Builtins {
 		result.Builtins[builtin.Name] = fromOPABuiltin(*builtin)
 	}
@@ -796,7 +782,7 @@ func (rule *Rule) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("marshalling rule failed %w", err)
 	}
 
-	return encoding.JSON().Marshal(&result) //nolint:wrapcheck
+	return encoding.JSON().Marshal(&result)
 }
 
 func (rule *Rule) UnmarshalJSON(data []byte) error {
@@ -809,8 +795,7 @@ func (rule *Rule) UnmarshalJSON(data []byte) error {
 }
 
 func (rule *Rule) MarshalYAML() (any, error) {
-	result := make(map[string]any)
-	result[keyLevel] = rule.Level
+	result := map[string]any{keyLevel: rule.Level}
 
 	if rule.Ignore != nil && len(rule.Ignore.Files) != 0 {
 		result[keyIgnore] = rule.Ignore
@@ -887,7 +872,7 @@ func GetPotentialRoots(paths ...string) ([]string, error) {
 		}
 	}
 
-	dirMap := rutil.NewSet[string]()
+	dirMap := util.NewSet[string]()
 
 	for _, dir := range absDirPaths {
 		brds, err := FindBundleRootDirectories(dir)

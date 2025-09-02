@@ -17,12 +17,15 @@ package regal.lsp.documentlink
 import data.regal.util
 
 # METADATA
+# entrypoint: true
+result["response"] := items
+
+# METADATA
 # description: Set of links in document
 # entrypoint: true
 items contains item if {
 	module := data.workspace.parsed[input.params.textDocument.uri]
 
-	# regal ignore:prefer-snake-case,messy-rule
 	some encoded in module.comments
 	comment := object.union(encoded, {"text": base64.decode(encoded.text)})
 	contains(comment.text, "regal ignore:")

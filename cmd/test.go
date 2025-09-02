@@ -30,9 +30,9 @@ import (
 	rbundle "github.com/open-policy-agent/regal/bundle"
 	"github.com/open-policy-agent/regal/internal/compile"
 	rio "github.com/open-policy-agent/regal/internal/io"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/builtins"
 	"github.com/open-policy-agent/regal/pkg/config"
-	rutil "github.com/open-policy-agent/regal/pkg/roast/util"
 )
 
 const benchmarkGoBenchOutput = "gobench"
@@ -231,7 +231,7 @@ func opaTest(args []string) int {
 func moduleLoader(regalRules *bundle.Bundle) ast.ModuleLoader {
 	// We use the package declarations to know which modules we still need, and return
 	// those from the embedded regal bundle.
-	extra := rutil.NewSet[string]()
+	extra := util.NewSet[string]()
 	for _, mod := range regalRules.Modules {
 		extra.Add(mod.Parsed.Package.Path.String())
 	}

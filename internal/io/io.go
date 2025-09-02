@@ -20,6 +20,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
@@ -229,6 +230,71 @@ func ModulesFromCustomRuleFS(customRuleFS fs.FS, rootPath string) (map[string]*a
 	}
 
 	return modules, nil
+}
+
+// DirCleanUpPaths will, for a given target file, list all the dirs that would
+// be empty if the target file was deleted.
+func DirCleanUpPaths(target string, preserve []string) ([]string, error) {
+	dirs := make([]string, 0)
+	preserveDirs := util.NewSet[string]()
+
+	for _, p := range preserve {
+		for {
+			preserveDirs.Add(p)
+
+			p = filepath.Dir(p)
+			if p == "." || p == "/" || preserveDirs.Contains(p) {
+				break
+			}
+		}
+	}
+
+	dir := filepath.Dir(target)
+
+	for !preserveDirs.Contains(dir) {
+		if !strings.Contains(dir, string(os.PathSeparator)) {
+			break
+		}
+
+		if !IsDir(dir) {
+			return nil, fmt.Errorf("expected directory, got file %s", dir)
+		}
+
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read directory %s: %w", dir, err)
+		}
+
+		empty := true
+
+		for _, file := range files {
+			// exclude the target
+			abs := filepath.Join(dir, file.Name())
+			if abs == target {
+				continue
+			}
+
+			// exclude any other marked dirs
+			if file.IsDir() && len(dirs) > 0 {
+				if dirs[len(dirs)-1] == abs {
+					continue
+				}
+			}
+
+			empty = false
+
+			break
+		}
+
+		if !empty {
+			break
+		}
+
+		dirs = append(dirs, dir)
+		dir = filepath.Dir(dir)
+	}
+
+	return dirs, nil
 }
 
 // NOTE: These are mirrored here merely to provide correct capabilities for the

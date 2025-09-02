@@ -1,10 +1,11 @@
-package lsp
+package documentsymbol_test
 
 import (
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
+	"github.com/open-policy-agent/regal/internal/lsp/documentsymbol"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/types/symbols"
@@ -61,7 +62,7 @@ func TestDocumentSymbols(t *testing.T) {
 
 			bis := rego.BuiltinsForCapabilities(ast.CapabilitiesForThisVersion())
 
-			syms := documentSymbols(tc.policy, module, bis)
+			syms := documentsymbol.All(tc.policy, module, bis)
 
 			pkg := syms[0]
 			if pkg.Name != tc.expected.Name {

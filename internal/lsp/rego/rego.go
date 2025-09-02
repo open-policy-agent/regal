@@ -19,11 +19,11 @@ import (
 	"github.com/open-policy-agent/regal/internal/compile"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/builtins"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
-	"github.com/open-policy-agent/regal/pkg/roast/util"
 	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
 )
 
@@ -47,13 +47,6 @@ func init() {
 }
 
 type (
-	Query[T, R any] struct {
-		Query  string `json:"query"`
-		Input  T      `json:"input"`
-		Output R      `json:"output"`
-		Store  storage.Store
-	}
-
 	BuiltInCall struct {
 		Builtin  *ast.Builtin
 		Location *ast.Location
@@ -73,10 +66,13 @@ type (
 	}
 
 	File struct {
-		Name        string   `json:"name"`
-		Lines       []string `json:"lines"`
-		Abs         string   `json:"abs"`
-		RegoVersion string   `json:"rego_version"`
+		Name                 string             `json:"name"`
+		Content              string             `json:"content"`
+		Lines                []string           `json:"lines"`
+		Abs                  string             `json:"abs"`
+		RegoVersion          string             `json:"rego_version"`
+		SuccessfulParseCount uint               `json:"successful_parse_count"`
+		ParseErrors          []types.Diagnostic `json:"parse_errors"`
 	}
 
 	Environment struct {
@@ -96,19 +92,18 @@ type (
 	}
 
 	FileRequirements struct {
-		Lines bool `json:"lines"`
+		Lines                    bool `json:"lines"`
+		SuccessfulParseLineCount bool `json:"successful_parse_line_count"`
+		ParseErrors              bool `json:"parse_errors"`
 	}
 
 	Input[T any] struct {
-		Regal  RegalContext `json:"regal"`
+		Method string       `json:"method"`
 		Params T            `json:"params"`
+		Regal  RegalContext `json:"regal"`
 	}
 
-	regoOptions        = []func(*rego.Rego)
-	codeActions        = []types.CodeAction
-	codeLenses         = []types.CodeLens
-	documentLinks      = []types.DocumentLink
-	documentHighlights = []types.DocumentHighlight
+	regoOptions = []func(*rego.Rego)
 
 	cachedQuery struct {
 		body     ast.Body
@@ -123,14 +118,14 @@ type (
 	}
 )
 
-func NewInput[T any](regal RegalContext, params T) Input[T] {
-	return Input[T]{Regal: regal, Params: params}
+func NewInput[T any](method string, regal RegalContext, params T) Input[T] {
+	return Input[T]{Method: method, Regal: regal, Params: params}
 }
 
 func (c Input[T]) String() string { // For debugging only
 	s, err := encoding.JSON().MarshalToString(&c)
 	if err != nil {
-		return fmt.Sprintf("CodeActionInput marshalling error: %v", err)
+		return fmt.Sprintf("Input marshalling error: %v", err)
 	}
 
 	return s
@@ -225,70 +220,19 @@ func AllRuleHeadLocations(ctx context.Context, fileName, contents string, module
 	return locations, nil
 }
 
-// CodeLenses returns all code lenses in the module.
-func CodeLenses(ctx context.Context, uri, contents string, module *ast.Module) (codeLenses, error) {
-	var lenses codeLenses
-
-	if err := policyToValue(ctx, query.CodeLens, policy{module, uri, contents}, &lenses); err != nil {
-		return nil, fmt.Errorf("failed querying code lenses: %w", err)
-	}
-
-	return lenses, nil
+type Result[R any] struct {
+	Response R   `json:"response"`
+	Regal    any `json:"regal"`
 }
 
-func QueryEval[P any, R any](ctx context.Context, query string, input Input[P]) (R, error) {
-	var result R
+func QueryEval[P any, R any](ctx context.Context, query string, input Input[P]) (Result[R], error) {
+	var result Result[R]
 
 	if err := CachedQueryEval(ctx, query, rast.StructToValue(input), &result); err != nil {
 		return result, fmt.Errorf("failed querying %q: %w", query, err)
 	}
 
 	return result, nil
-}
-
-// CodeActions returns all code actions in the module.
-// Note that at least as of now, no code actions depend on the data in the module, so
-// it is not passed as part of the input. This could change in the future.
-func CodeActions(ctx context.Context, input Input[types.CodeActionParams]) (codeActions, error) {
-	var actions codeActions
-
-	if err := CachedQueryEval(ctx, string(query.CodeAction), rast.StructToValue(input), &actions); err != nil {
-		return nil, fmt.Errorf("failed querying code actions: %w", err)
-	}
-
-	return actions, nil
-}
-
-func DocumentLinks(ctx context.Context, input Input[types.DocumentLinkParams]) (documentLinks, error) {
-	var links documentLinks
-
-	err := CachedQueryEval(ctx, query.DocumentLink, rast.StructToValue(input), &links)
-	if err != nil {
-		return nil, fmt.Errorf("failed querying document links: %w", err)
-	}
-
-	return links, nil
-}
-
-func DocumentHighlight(ctx context.Context, input Input[types.DocumentHighlightParams]) (documentHighlights, error) {
-	var highlights documentHighlights
-
-	err := CachedQueryEval(ctx, query.DocumentHighlight, rast.StructToValue(input), &highlights)
-	if err != nil {
-		return nil, fmt.Errorf("failed querying document highlights: %w", err)
-	}
-
-	return highlights, nil
-}
-
-func SignatureHelp(ctx context.Context, input Input[types.SignatureHelpParams]) (types.SignatureHelp, error) {
-	var signatureHelp types.SignatureHelp
-
-	if err := CachedQueryEval(ctx, query.SignatureHelp, rast.StructToValue(input), &signatureHelp); err != nil {
-		return types.SignatureHelp{}, fmt.Errorf("failed querying signature help: %w", err)
-	}
-
-	return signatureHelp, nil
 }
 
 func CachedQueryEval[T any](ctx context.Context, query string, input ast.Value, toValue *T) error {

@@ -15,9 +15,9 @@ import (
 	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/test"
 	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/report"
-	"github.com/open-policy-agent/regal/pkg/roast/util"
 	"github.com/open-policy-agent/regal/pkg/rules"
 )
 

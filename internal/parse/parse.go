@@ -10,6 +10,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	rio "github.com/open-policy-agent/regal/internal/io"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
@@ -37,18 +38,12 @@ func ModuleWithOpts(path, policy string, opts ast.ParserOptions) (module *ast.Mo
 		opts.RegoVersion = ast.RegoV0
 	}
 
-	if opts.RegoVersion != ast.RegoUndefined {
-		if module, err = ast.ParseModuleWithOpts(path, policy, opts); err != nil {
-			return nil, err //nolint:wrapcheck
-		}
-	} else {
-		// We are parsing for an unknown Rego version
-		if module, err = ModuleUnknownVersionWithOpts(path, policy, opts); err != nil {
-			return nil, err
-		}
+	parse := ast.ParseModuleWithOpts
+	if opts.RegoVersion == ast.RegoUndefined {
+		parse = ModuleUnknownVersionWithOpts // We are parsing for an unknown Rego version
 	}
 
-	return module, nil
+	return parse(path, policy, opts)
 }
 
 // ModuleUnknownVersionWithOpts attempts to parse a module with an unknown Rego version. The function will
@@ -56,12 +51,7 @@ func ModuleWithOpts(path, policy string, opts ast.ParserOptions) (module *ast.Mo
 // which parser was successful. Note that this is not 100% accurate, and the conditions for determining the
 // version may change over time. If the version is known beforehand, use ModuleWithOpts instead, and provide
 // the target Rego version in the parser options.
-func ModuleUnknownVersionWithOpts(filename, policy string, opts ast.ParserOptions) (*ast.Module, error) {
-	var (
-		err error
-		mod *ast.Module
-	)
-
+func ModuleUnknownVersionWithOpts(filename, policy string, opts ast.ParserOptions) (mod *ast.Module, err error) {
 	// Iterate over RegoV1 and RegoV0 in that order
 	// If `import rego.v1`` is present in module, RegoV0CompatV1 is used
 	for i := range attemptVersionOrder {
@@ -86,7 +76,7 @@ func ModuleUnknownVersionWithOpts(filename, policy string, opts ast.ParserOption
 	// TODO: We probably need to return the errors from each parse attempt ?
 	// as otherwise there could be very skewed error messages..
 
-	return nil, err //nolint:wrapcheck
+	return nil, err
 }
 
 func hasRegoV1Import(imports []*ast.Import) bool {
@@ -104,21 +94,14 @@ func MustParseModule(policy string) *ast.Module {
 // Note that this function will parse using the RegoV1 parser version. If the version of
 // the policy is unknown, use ModuleUnknownVersionWithOpts instead.
 func Module(filename, policy string) (*ast.Module, error) {
-	mod, err := ast.ParseModuleWithOpts(filename, policy, ParserOptions())
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse module: %w", err)
-	}
-
-	return mod, nil
+	return util.Wrap(ast.ParseModuleWithOpts(filename, policy, ParserOptions()))("failed to parse module")
 }
 
 // PrepareAST prepares the AST to be used as linter input.
 // Deprecated: New code should use the `transform` package from roast, as this avoids an
 // expensive intermediate step in module -> ast.Value conversions.
-func PrepareAST(name string, content string, module *ast.Module) (map[string]any, error) {
-	var preparedAST map[string]any
-
-	if err := encoding.JSONRoundTrip(module, &preparedAST); err != nil {
+func PrepareAST(name string, content string, module *ast.Module) (preparedAST map[string]any, err error) {
+	if err = encoding.JSONRoundTrip(module, &preparedAST); err != nil {
 		return nil, fmt.Errorf("JSON rountrip failed for module: %w", err)
 	}
 

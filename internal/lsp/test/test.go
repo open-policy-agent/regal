@@ -24,7 +24,7 @@ func HandlerFor[T any](method string, h handler.Func[T]) rpcHandler {
 	}
 }
 
-func SendsToChannel[T any](c chan T) func(msg T) (any, error) {
+func SendsToChannel[T any](c chan T) func(T) (any, error) {
 	return func(msg T) (any, error) {
 		c <- msg
 

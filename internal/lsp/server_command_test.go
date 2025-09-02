@@ -71,7 +71,7 @@ allow if {
 			createWorkspaceApplyEditTestHandler := func(
 				t *testing.T,
 				receivedMessages chan types.ApplyWorkspaceEditParams,
-			) func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
+			) func(_ context.Context, _ *jsonrpc2.Conn, _ *jsonrpc2.Request) (result any, err error) {
 				t.Helper()
 
 				return func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {

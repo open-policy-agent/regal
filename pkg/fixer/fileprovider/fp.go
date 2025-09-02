@@ -16,7 +16,7 @@ type FileProvider interface {
 	Delete(string) error
 	Rename(string, string) error
 
-	ToInput(versionsMap map[string]ast.RegoVersion) (rules.Input, error)
+	ToInput(map[string]ast.RegoVersion) (rules.Input, error)
 }
 
 type RenameConflictError struct {

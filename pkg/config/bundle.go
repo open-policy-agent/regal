@@ -8,6 +8,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/bundle"
 
 	"github.com/open-policy-agent/regal/internal/util"
+	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
 func LoadConfigWithDefaultsFromBundle(regalBundle *bundle.Bundle, userConfig *Config) (Config, error) {
@@ -21,8 +22,9 @@ func LoadConfigWithDefaultsFromBundle(regalBundle *bundle.Bundle, userConfig *Co
 		panic("expected 'rules' of object type in default configuration")
 	}
 
-	defaultConfig, err := FromMap(bundledConf)
-	if err != nil {
+	var defaultConfig Config
+
+	if err := encoding.JSONRoundTrip(bundledConf, &defaultConfig); err != nil {
 		panic("failed to parse default conf")
 	}
 
@@ -54,9 +56,10 @@ func LoadConfigWithDefaultsFromBundle(regalBundle *bundle.Bundle, userConfig *Co
 func extractUserRuleLevels(userConfig *Config, mergedConf *Config, providedRuleLevels map[string]string) {
 	for categoryName, rulesByCategory := range mergedConf.Rules {
 		for ruleName, rule := range rulesByCategory {
-			var providedLevel string
-
-			var ok bool
+			var (
+				providedLevel             string
+				ok, userHasConfiguredRule bool
+			)
 
 			if providedLevel, ok = providedRuleLevels[ruleName]; !ok {
 				continue
@@ -64,8 +67,6 @@ func extractUserRuleLevels(userConfig *Config, mergedConf *Config, providedRuleL
 
 			// use the level from the provided configuration as the fallback
 			selectedRuleLevel := providedLevel
-
-			var userHasConfiguredRule bool
 
 			if _, ok := userConfig.Rules[categoryName]; ok {
 				_, userHasConfiguredRule = userConfig.Rules[categoryName][ruleName]

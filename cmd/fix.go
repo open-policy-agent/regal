@@ -22,7 +22,6 @@ import (
 	"github.com/open-policy-agent/regal/pkg/fixer/fileprovider"
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
 	"github.com/open-policy-agent/regal/pkg/linter"
-	rutil "github.com/open-policy-agent/regal/pkg/roast/util"
 )
 
 // fixParams is similar to the lint params, but with some fields such as profiling removed.
@@ -288,7 +287,7 @@ func fix(args []string, params *fixParams) (err error) {
 			return fmt.Errorf("failed to get changed files: %w", err)
 		}
 
-		changedFiles := rutil.NewSet(cf...)
+		changedFiles := util.NewSet(cf...)
 
 		var conflictingFiles []string
 
@@ -336,7 +335,7 @@ please run fix from a clean state to support the use of git to undo, or use --fo
 				return fmt.Errorf("failed to delete file %s: %w", file, err)
 			}
 
-			dirs, err := util.DirCleanUpPaths(file, roots)
+			dirs, err := rio.DirCleanUpPaths(file, roots)
 			if err != nil {
 				return fmt.Errorf("failed to delete empty directories: %w", err)
 			}

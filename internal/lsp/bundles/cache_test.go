@@ -1,9 +1,9 @@
 package bundles
 
 import (
-	"os"
+	"io"
+	"maps"
 	"path/filepath"
-	"reflect"
 	"slices"
 	"testing"
 
@@ -19,7 +19,7 @@ func TestRefresh(t *testing.T) {
 		"foo/data.json": `{"foo": "bar"}`,
 	})
 
-	c := NewCache(workspacePath, log.NoOpLogger())
+	c := NewCache(workspacePath, log.NewLogger(log.LevelOff, io.Discard))
 
 	// perform the first load of the bundles
 	refreshedBundles, err := c.Refresh()
@@ -40,7 +40,7 @@ func TestRefresh(t *testing.T) {
 		t.Fatalf("failed to get bundle foo")
 	}
 
-	if !reflect.DeepEqual(fooBundle.Data, map[string]any{"foo": "bar"}) {
+	if !maps.Equal(fooBundle.Data, map[string]any{"foo": "bar"}) {
 		t.Fatalf("unexpected bundle data: %v", fooBundle.Data)
 	}
 
@@ -48,15 +48,12 @@ func TestRefresh(t *testing.T) {
 		t.Fatalf("unexpected bundle roots: %v", fooBundle.Manifest.Roots)
 	}
 
-	if !reflect.DeepEqual(*fooBundle.Manifest.Roots, []string{"foo"}) {
+	if !slices.Equal(*fooBundle.Manifest.Roots, []string{"foo"}) {
 		t.Fatalf("unexpected bundle roots: %v", *fooBundle.Manifest.Roots)
 	}
 
 	// perform the second load of the bundles, after no changes on disk
-	refreshedBundles, err = c.Refresh()
-	if err != nil {
-		t.Fatalf("failed to refresh cache: %v", err)
-	}
+	refreshedBundles = testutil.Must(c.Refresh())(t)
 
 	if !slices.Equal(refreshedBundles, []string{}) {
 		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
@@ -66,10 +63,7 @@ func TestRefresh(t *testing.T) {
 	testutil.MustWriteFile(t, filepath.Join(workspacePath, "foo", "foo.rego"), []byte(`package wow`))
 
 	// perform the third load of the bundles, after adding a new unrelated file
-	refreshedBundles, err = c.Refresh()
-	if err != nil {
-		t.Fatalf("failed to refresh cache: %v", err)
-	}
+	refreshedBundles = testutil.Must(c.Refresh())(t)
 
 	if !slices.Equal(refreshedBundles, []string{}) {
 		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
@@ -78,8 +72,7 @@ func TestRefresh(t *testing.T) {
 	// update the data in the bundle
 	testutil.MustWriteFile(t, filepath.Join(workspacePath, "foo", "data.json"), []byte(`{"foo": "baz"}`))
 
-	refreshedBundles, err = c.Refresh()
-	if err != nil {
+	if refreshedBundles, err = c.Refresh(); err != nil {
 		t.Fatalf("failed to refresh cache: %v", err)
 	}
 
@@ -87,12 +80,11 @@ func TestRefresh(t *testing.T) {
 		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
 	}
 
-	fooBundle, ok = c.Get("foo")
-	if !ok {
+	if fooBundle, ok = c.Get("foo"); !ok {
 		t.Fatalf("failed to get bundle foo")
 	}
 
-	if !reflect.DeepEqual(fooBundle.Data, map[string]any{"foo": "baz"}) {
+	if !maps.Equal(fooBundle.Data, map[string]any{"foo": "baz"}) {
 		t.Fatalf("unexpected bundle data: %v", fooBundle.Data)
 	}
 
@@ -101,10 +93,7 @@ func TestRefresh(t *testing.T) {
 	testutil.MustWriteFile(t, filepath.Join(workspacePath, "bar", ".manifest"), []byte(`{"roots":["bar"]}`))
 	testutil.MustWriteFile(t, filepath.Join(workspacePath, "bar", "data.json"), []byte(`{"bar": true}`))
 
-	refreshedBundles, err = c.Refresh()
-	if err != nil {
-		t.Fatalf("failed to refresh cache: %v", err)
-	}
+	refreshedBundles = testutil.Must(c.Refresh())(t)
 
 	if !slices.Equal(refreshedBundles, []string{"bar"}) {
 		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
@@ -112,21 +101,17 @@ func TestRefresh(t *testing.T) {
 
 	barBundle, ok := c.Get("bar")
 	if !ok {
-		t.Fatalf("failed to get bundle foo")
+		t.Fatalf("failed to get bundle bar")
 	}
 
-	if !reflect.DeepEqual(barBundle.Data, map[string]any{"bar": true}) {
+	if !maps.Equal(barBundle.Data, map[string]any{"bar": true}) {
 		t.Fatalf("unexpected bundle data: %v", fooBundle.Data)
 	}
 
 	// remove the foo bundle
-	if err = os.RemoveAll(filepath.Join(workspacePath, "foo")); err != nil {
-		t.Fatalf("failed to remove foo bundle: %v", err)
-	}
+	testutil.MustRemoveAll(t, workspacePath, "foo")
 
-	if _, err = c.Refresh(); err != nil {
-		t.Fatalf("failed to refresh cache: %v", err)
-	}
+	_ = testutil.Must(c.Refresh())(t)
 
 	if !slices.Equal(c.List(), []string{"bar"}) {
 		t.Fatalf("unexpected bundle list: %v", c.List())

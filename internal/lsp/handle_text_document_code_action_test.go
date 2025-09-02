@@ -4,9 +4,12 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/sourcegraph/jsonrpc2"
+
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/internal/web"
 	"github.com/open-policy-agent/regal/pkg/config"
@@ -19,7 +22,12 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 	webServer := &web.Server{}
 	webServer.SetBaseURL("http://foo.bar")
 
-	l := &LanguageServer{client: types.NewGenericClient(), webServer: webServer, loadedConfig: &config.Config{}}
+	l := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+
+	l.workspaceRootURI = "file:///"
+	l.client = types.NewGenericClient()
+	l.webServer = webServer
+	l.loadedConfig = &config.Config{}
 
 	diag := types.Diagnostic{
 		Code:    ruleNameUseAssignmentOperator,
@@ -37,12 +45,12 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 		Title:       "Replace = with := in assignment",
 		Kind:        "quickfix",
 		Diagnostics: params.Context.Diagnostics,
-		IsPreferred: truePtr,
+		IsPreferred: util.Pointer(true),
 		Command: types.Command{
 			Title:   "Replace = with := in assignment",
 			Command: "regal.fix.use-assignment-operator",
 			Tooltip: "Replace = with := in assignment",
-			Arguments: toAnySlice(string(util.Must(encoding.JSON().Marshal(commandArgs{
+			Arguments: toAnySlice(string(util.Must(encoding.JSON().Marshal(types.CommandArgs{
 				Target:     params.TextDocument.URI,
 				Diagnostic: &diag,
 			})))),
@@ -79,12 +87,12 @@ func TestHandleTextDocumentCodeActionSourceExplorer(t *testing.T) {
 	webServer := web.NewServer(nil, log.NewLogger(log.LevelDebug, t.Output()))
 	webServer.SetBaseURL("http://foo.bar")
 
-	l := &LanguageServer{
-		client:           types.Client{Identifier: clients.IdentifierVSCode},
-		webServer:        webServer,
-		workspaceRootURI: "file:///foo",
-		loadedConfig:     &config.Config{},
-	}
+	l := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+
+	l.workspaceRootURI = "file:///foo"
+	l.client = types.Client{Identifier: clients.IdentifierVSCode}
+	l.webServer = webServer
+	l.loadedConfig = &config.Config{}
 
 	params := types.CodeActionParams{
 		TextDocument: types.TextDocumentIdentifier{URI: "file:///foo/example.rego"},
@@ -159,7 +167,9 @@ func assertExpectedCodeAction(t *testing.T, expected, actual types.CodeAction) {
 func invokeCodeActionHandler(t *testing.T, l *LanguageServer, params types.CodeActionParams) types.CodeAction {
 	t.Helper()
 
-	result, err := l.handleTextDocumentCodeAction(t.Context(), params)
+	req := &jsonrpc2.Request{Method: "textDocument/codeAction", Params: testutil.ToJSONRawMessage(t, params)}
+
+	result, err := l.Handle(t.Context(), nil, req)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -184,7 +194,12 @@ func invokeCodeActionHandler(t *testing.T, l *LanguageServer, params types.CodeA
 // "real world" usage shows a number somewhere between 0.1 - 0.5 ms
 // of which most of the cost is in JSON marshaling and unmarshaling.
 func BenchmarkHandleTextDocumentCodeAction(b *testing.B) {
-	l := &LanguageServer{client: types.NewGenericClient(), webServer: &web.Server{}}
+	l := NewLanguageServer(b.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelMessage, b.Output())})
+
+	l.workspaceRootURI = "file:///"
+	l.client = types.NewGenericClient()
+	l.webServer = &web.Server{}
+	l.loadedConfig = &config.Config{}
 
 	params := types.CodeActionParams{
 		TextDocument: types.TextDocumentIdentifier{URI: "file:///example.rego"},
@@ -198,7 +213,10 @@ func BenchmarkHandleTextDocumentCodeAction(b *testing.B) {
 	}
 
 	for b.Loop() {
-		res, err := l.handleTextDocumentCodeAction(b.Context(), params)
+		res, err := l.Handle(b.Context(), nil, &jsonrpc2.Request{
+			Method: "textDocument/codeAction",
+			Params: testutil.ToJSONRawMessage(b, params),
+		})
 		if err != nil {
 			b.Fatal(err)
 		}

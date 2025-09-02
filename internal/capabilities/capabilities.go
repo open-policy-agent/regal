@@ -19,6 +19,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/capabilities/embedded"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 const (
@@ -88,8 +89,7 @@ func lookupEmbeddedURL(parsedURL *url.URL) (*ast.Capabilities, error) {
 
 	for dir != "" {
 		// leading and trailing / symbols confuse path.Split()
-		dir = strings.Trim(dir, "/")
-		dir, file = path.Split(dir)
+		dir, file = path.Split(strings.Trim(dir, "/"))
 		elems = append(elems, file)
 	}
 
@@ -173,21 +173,9 @@ func lookupEmbeddedURL(parsedURL *url.URL) (*ast.Capabilities, error) {
 
 	switch engine {
 	case engineOPA:
-		// This obtuse error handling is required to make the linter
-		// happy.
-		caps, err := ast.LoadCapabilitiesVersion(version)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load capabilities due to error: %w", err)
-		}
-
-		return caps, nil
+		return util.Wrap(ast.LoadCapabilitiesVersion(version))("failed to load capabilities")
 	case engineEOPA:
-		caps, err := embedded.LoadCapabilitiesVersion(engineEOPA, version)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load capabilities due to error: %w", err)
-		}
-
-		return caps, nil
+		return util.Wrap(embedded.LoadCapabilitiesVersion(engineEOPA, version))("failed to load capabilities")
 	default:
 		return nil, fmt.Errorf("engine '%s' not present in embedded capabilities database", engine)
 	}
@@ -206,12 +194,7 @@ func lookupFileURL(parsedURL *url.URL) (*ast.Capabilities, error) {
 		return nil, fmt.Errorf("error opening file '%s': %w", path, err)
 	}
 
-	caps, err := ast.LoadCapabilitiesJSON(fd)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load capabilities due to error: %w", err)
-	}
-
-	return caps, nil
+	return util.Wrap(ast.LoadCapabilitiesJSON(fd))("failed to load capabilities")
 }
 
 func lookupWebURL(ctx context.Context, parsedURL *url.URL) (*ast.Capabilities, error) {
@@ -228,12 +211,7 @@ func lookupWebURL(ctx context.Context, parsedURL *url.URL) (*ast.Capabilities, e
 	}
 	defer resp.Body.Close()
 
-	caps, err := ast.LoadCapabilitiesJSON(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load capabilities due to error: %w", err)
-	}
-
-	return caps, nil
+	return util.Wrap(ast.LoadCapabilitiesJSON(resp.Body))("failed to load capabilities")
 }
 
 // semverSort uses the semver library to perform the string comparisons during
@@ -319,8 +297,5 @@ func List() (map[string][]string, error) {
 	semverSort(opaCaps)
 	semverSort(eopaCaps)
 
-	return map[string][]string{
-		engineOPA:  opaCaps,
-		engineEOPA: eopaCaps,
-	}, nil
+	return map[string][]string{engineOPA: opaCaps, engineEOPA: eopaCaps}, nil
 }

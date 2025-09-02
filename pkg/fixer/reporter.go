@@ -45,8 +45,7 @@ func (r *PrettyReporter) SetDryRun(dryRun bool) {
 }
 
 func (r *PrettyReporter) ReportConflicts(fixReport *Report) error {
-	roots := util.Keys(fixReport.conflictsSourceFile)
-	slices.Sort(roots)
+	roots := util.KeysSorted(fixReport.conflictsSourceFile)
 
 	if len(roots) > 0 {
 		fmt.Fprintln(r.outputWriter, "Source file conflicts:")
@@ -61,8 +60,7 @@ func (r *PrettyReporter) ReportConflicts(fixReport *Report) error {
 				continue
 			}
 
-			conflictingFiles := util.Keys(cs)
-			slices.Sort(conflictingFiles)
+			conflictingFiles := util.KeysSorted(cs)
 
 			fmt.Fprintln(r.outputWriter, "In project root:", rootKey)
 
@@ -79,9 +77,7 @@ func (r *PrettyReporter) ReportConflicts(fixReport *Report) error {
 		}
 	}
 
-	roots = util.Keys(fixReport.conflictsManyToOne)
-	slices.Sort(roots)
-
+	roots = util.KeysSorted(fixReport.conflictsManyToOne)
 	if len(roots) > 0 {
 		if len(fixReport.conflictsSourceFile) > 0 {
 			fmt.Fprintln(r.outputWriter)
@@ -99,8 +95,7 @@ func (r *PrettyReporter) ReportConflicts(fixReport *Report) error {
 				continue
 			}
 
-			conflictingFiles := util.Keys(cs)
-			slices.Sort(conflictingFiles)
+			conflictingFiles := util.KeysSorted(cs)
 
 			fmt.Fprintln(r.outputWriter, "In project root:", rootKey)
 
@@ -156,19 +151,14 @@ func (r *PrettyReporter) Report(fixReport *Report) error {
 
 	i := 0
 
-	rootsSorted := util.Keys(byRoot)
-
-	slices.Sort(rootsSorted)
-
-	for _, root := range rootsSorted {
+	for _, root := range util.KeysSorted(byRoot) {
 		if i > 0 {
 			fmt.Fprintln(r.outputWriter)
 		}
 
 		fixesByFile := byRoot[root]
-		files := util.Keys(fixesByFile)
+		files := util.KeysSorted(fixesByFile)
 
-		slices.Sort(files)
 		fmt.Fprintf(r.outputWriter, "In project root: %s\n", root)
 
 		for _, file := range files {

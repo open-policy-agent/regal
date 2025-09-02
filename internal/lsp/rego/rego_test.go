@@ -7,19 +7,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
-func TestCodeLenses(t *testing.T) {
-	t.Parallel()
-
-	policy := "package p\n\nallow if \"foo\" in input.bar"
-	module := parse.MustParseModule(policy)
-	lenses := testutil.Must(CodeLenses(t.Context(), "p.rego", policy, module))(t)
-
-	// 2 for the package, 2 for the rule, the contents of the lenses are tested in Rego
-	if len(lenses) != 4 {
-		t.Fatalf("expected 4 code lenses, got %d", len(lenses))
-	}
-}
-
 func TestAllRuleHeadLocations(t *testing.T) {
 	t.Parallel()
 

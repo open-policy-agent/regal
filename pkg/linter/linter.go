@@ -34,7 +34,6 @@ import (
 	"github.com/open-policy-agent/regal/pkg/report"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
-	rutil "github.com/open-policy-agent/regal/pkg/roast/util"
 	"github.com/open-policy-agent/regal/pkg/rules"
 )
 
@@ -612,8 +611,8 @@ func (l Linter) validate(conf *config.Config) error {
 		return fmt.Errorf("failed to load custom rules: %w", l.customRuleError)
 	}
 
-	validCategories := rutil.NewSet[string]()
-	validRules := rutil.NewSet[string]()
+	validCategories := util.NewSet[string]()
+	validRules := util.NewSet[string]()
 
 	// Add all built-in rules
 	for _, b := range l.ruleBundles {
@@ -643,8 +642,8 @@ func (l Linter) validate(conf *config.Config) error {
 		validRules.Add(parts[4])
 	}
 
-	configuredCategories := rutil.NewSet(outil.Keys(conf.Rules)...)
-	configuredRules := rutil.NewSet[string]()
+	configuredCategories := util.NewSet(outil.Keys(conf.Rules)...)
+	configuredRules := util.NewSet[string]()
 
 	for _, cat := range conf.Rules {
 		configuredRules.Add(outil.Keys(cat)...)

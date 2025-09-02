@@ -1,8 +1,6 @@
 package fixer
 
 import (
-	"slices"
-
 	"github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
@@ -56,12 +54,7 @@ func (r *Report) OldPathForFile(newPath string) (string, bool) {
 }
 
 func (r *Report) FixedFiles() []string {
-	fixedFiles := util.Keys(r.fileFixes)
-
-	// sort the files for deterministic output
-	slices.Sort(fixedFiles)
-
-	return fixedFiles
+	return util.KeysSorted(r.fileFixes)
 }
 
 func (r *Report) TotalFixes() uint {
