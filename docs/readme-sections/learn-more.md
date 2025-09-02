@@ -5,7 +5,7 @@
 
 ### Documentation
 
-Please see [Regal's Documentation Site](https://docs.styra.com/regal) for the
+Please see [Regal's Documentation Site](https://openpolicyagent.org/projects/regal) for the
 canonical documentation of Regal.
 
 [Contributing](https://github.com/open-policy-agent/regal/blob/main/docs/CONTRIBUTING.md)

@@ -45,7 +45,8 @@ Regal.
 - All the steps for building, testing and linting in this document should pass
 
 If you're struggling with any of the above points, or you're unsure of what to do, no worries! Just say so in your PR,
-or ask for advice in the `#regal` channel in the Styra Community [Slack](https://inviter.co/styra)!
+or ask for advice in the `#regal` channel in the OPA
+[Slack](https://slack.openpolicyagent.org).
 
 ### Rules Development Workflow
 
@@ -54,7 +55,7 @@ file to inspect its AST in this format. It is often more convenient to direct th
 `input.json` to browse it in your favorite editor, e.g. `regal parse policy.rego > input.json`.
 
 If you're using VS Code and the [OPA VS Code extension](https://github.com/open-policy-agent/vscode-opa), you may
-use the [Code Lens for Evaluation](https://docs.styra.com/regal/language-server#code-lenses-evaluation) to directly
+use the [Code Lens for Evaluation](https://openpolicyagent.org/projects/regal/language-server#code-lenses-evaluation) to directly
 evaluate packages and rules using the `input.json` file as input, and see the result directly in your editor on the
 line you clicked to evaluate.
 
@@ -143,7 +144,7 @@ anything you can't figure out, don't hesitate to ask for help in the `#regal` Sl
 
 ## Documentation
 
-The tables on the [rules pages](https://docs.styra.com/regal/rules) are
+The tables on the [rules pages](https://openpolicyagent.org/projects/regal/rules) are
 generated from the individual
 [rule Markdown files](https://github.com/open-policy-agent/regal/tree/main/docs/rules)
 under `docs/rules`.
@@ -166,8 +167,3 @@ wasmtime-cli 13.0.0
 $ wasmtime --dir $(pwd) regal -- lint bundle
 90 files linted. No violations found.
 ```
-
-## Community
-
-If you'd like to discuss Regal development or just talk about Regal in general, please join us in the `#regal`
-channel in the Styra Community [Slack](https://inviter.co/styra)!

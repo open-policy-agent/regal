@@ -50,9 +50,3 @@ rules:
 
 - DEV Community: [//TODO: Write a better comment](https://dev.to/adammc331/todo-write-a-better-comment-4c8c)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/style/todo-comment/todo_comment.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

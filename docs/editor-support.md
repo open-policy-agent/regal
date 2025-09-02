@@ -8,14 +8,14 @@ the official OPA extension for Visual Studio Code - now supports the Regal langu
 To see Regal linting as you work, install the extension at version `0.13.3` or later
 and open a workspace with Rego files.
 
-The plugin will automatically find and use [Regal config](https://docs.styra.com/regal#configuration).
+The plugin will automatically find and use [Regal config](https://openpolicyagent.org/projects/regal#configuration).
 
 ### Debug Adapter Protocol (DAP)
 
 From
 [`v0.17.0`](https://github.com/open-policy-agent/vscode-opa/blob/main/CHANGELOG.md#0170)
 onwards, the OPA extension for Visual Studio Code supports the
-[Regal Debug Adapter](/regal/debug-adapter).
+[Regal Debug Adapter](https://openpolicyagent.org/projects/regal/debug-adapter).
 
 To start a new debug session use the code action `Debug` found above a Rego rule
 or package.
@@ -39,7 +39,7 @@ by Regal.
 
 [Neovim](https://neovim.io/) supports both the Language Server Protocol and the Debug Adapter Protocol.
 
-Generally, the Regal binary should be [installed](https://docs.styra.com/regal#getting-started)
+Generally, the Regal binary should be [installed](https://openpolicyagent.org/projects/regal#getting-started)
 first. [`mason.vim`](https://github.com/williamboman/mason.nvim) users can install the
 Regal binary with `:MasonInstall regal`
 ([package definition](https://github.com/mason-org/mason-registry/blob/2024-07-23-asian-hate/packages/regal/package.yaml)).
@@ -109,7 +109,7 @@ messages.
 
 There are many language server integrations for Neovim, if you'd like to see
 another one listed, please [open an issue](https://github.com/open-policy-agent/regal/issues/new)
-or drop us a message in [Slack](http://communityinviter.com/apps/styracommunity/signup).
+or drop us a message in [Slack](https://slack.openpolicyagent.org).
 
 ### Debug Adapter Protocol (DAP)
 

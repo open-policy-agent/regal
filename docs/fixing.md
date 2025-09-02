@@ -1,11 +1,12 @@
 # Fixing Violations
 
 For each violation Regal is able to detect, there is a documentation page explaining the issue in detail and how to fix
-it. For example, here's the one for the [`prefer-some-in-iteration`](/regal/rules/style/prefer-some-in-iteration) rule.
+it. For example, here's the one for the
+[`prefer-some-in-iteration`](https://openpolicyagent.org/projects/regal/rules/style/prefer-some-in-iteration) rule.
 
 Some rules are **automatically** fixable, meaning that Regal can fix the violation for you. Note that while most fixes
 will make minor changes to the code, some fixes make more significant modifications. As an example, the
-[directory-package-mismatch](https://docs.styra.com/regal/rules/idiomatic/directory-package-mismatch) fix will
+[directory-package-mismatch](https://openpolicyagent.org/projects/regal/rules/idiomatic/directory-package-mismatch) fix will
 automatically move a file to its idiomatic location based on the package path declared in the file.
 
 :::tip
@@ -16,12 +17,12 @@ committing the fixes.
 
 Currently, the following rules are automatically fixable:
 
-- [opa-fmt](/regal/rules/style/opa-fmt)
-- [non-raw-regex-pattern](/regal/rules/idiomatic/non-raw-regex-pattern)
-- [use-assignment-operator](/regal/rules/style/use-assignment-operator)
-- [no-whitespace-comment](/regal/rules/style/no-whitespace-comment)
-- [directory-package-mismatch](https://docs.styra.com/regal/rules/idiomatic/directory-package-mismatch)
-- [use-rego-v1](/regal/rules/imports/use-rego-v1) (v0 Rego only)
+- [opa-fmt](https://openpolicyagent.org/projects/regal/rules/style/opa-fmt)
+- [non-raw-regex-pattern](https://openpolicyagent.org/projects/regal/rules/idiomatic/non-raw-regex-pattern)
+- [use-assignment-operator](https://openpolicyagent.org/projects/regal/rules/style/use-assignment-operator)
+- [no-whitespace-comment](https://openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment)
+- [directory-package-mismatch](https://openpolicyagent.org/projects/regal/rules/idiomatic/directory-package-mismatch)
+- [use-rego-v1](https://openpolicyagent.org/projects/regal/rules/imports/use-rego-v1) (v0 Rego only)
 
 So, how do you go on about automatically fixing reported violations?
 
@@ -60,7 +61,7 @@ All paths are relative to its closest **project root**, as reported in the secon
 projects will likely only have one "root", which is the workspace directory itself. More complex projects may however
 host multiple roots inside the workspace, and defining these roots — either by configuration, or by `.manifest` files —
 will in some cases (like the previously mentioned `directory-package-mismatch` fix) help Regal better apply the correct
-fixes. See the documentation on [project roots](https://docs.styra.com/regal#project-roots) for more information.
+fixes. See the documentation on [project roots](https://openpolicyagent.org/projects/regal#project-roots) for more information.
 
 ### Dry Run
 
@@ -84,7 +85,7 @@ src={require('./assets/lsp/code_action_show.png').default}
 alt="Screenshot of code action displayed in VS Code"/>
 
 Example of suggested Code Action for the
-[use-assignment-operator](https://docs.styra.com/regal/rules/style/use-assignment-operator) rule. Click to fix!
+[use-assignment-operator](https://openpolicyagent.org/projects/regal/rules/style/use-assignment-operator) rule. Click to fix!
 
 <img
 src={require('./assets/lsp/code_action_fix.png').default}
@@ -100,10 +101,5 @@ Compared to `regal fix`, automatically fixing violations in editors has some lim
 
 :::tip
 If you're curious about using Regal to fix problems directly in your editor, see the docs on editor support
-[here](/regal/editor-support) to learn more!
+[here](https://openpolicyagent.org/projects/regal/editor-support) to learn more!
 :::
-
-## Community
-
-If you'd like to discuss Regal development or just talk about Regal in general, please join us in the `#regal`
-channel in the Styra Community [Slack](https://inviter.co/styra)!

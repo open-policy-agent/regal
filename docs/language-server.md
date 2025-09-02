@@ -128,16 +128,16 @@ that may appear when a linter rule has been violated. Code actions can be trigge
 that appears on the line with a diagnostic message, or by pressing `ctrl/cmd + .` when the cursor is on the line.
 
 <img
-  src={require('./assets/lsp/codeaction.png').default}
-  alt="Screenshot of code action displayed in Zed"/>
+src={require('./assets/lsp/codeaction.png').default}
+alt="Screenshot of code action displayed in Zed"/>
 
 Regal currently provides **quick fix actions** for the following linter rules:
 
-- [opa-fmt](https://docs.styra.com/regal/rules/style/opa-fmt)
-- [use-rego-v1](https://docs.styra.com/regal/rules/imports/use-rego-v1)
-- [use-assignment-operator](https://docs.styra.com/regal/rules/style/use-assignment-operator)
-- [no-whitespace-comment](https://docs.styra.com/regal/rules/style/no-whitespace-comment)
-- [directory-package-mismatch](https://docs.styra.com/regal/rules/idiomatic/directory-package-mismatch)
+- [opa-fmt](https://openpolicyagent.org/projects/regal/rules/style/opa-fmt)
+- [use-rego-v1](https://openpolicyagent.org/projects/regal/rules/imports/use-rego-v1)
+- [use-assignment-operator](https://openpolicyagent.org/projects/regal/rules/style/use-assignment-operator)
+- [no-whitespace-comment](https://openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment)
+- [directory-package-mismatch](https://openpolicyagent.org/projects/regal/rules/idiomatic/directory-package-mismatch)
 
 Regal also provides **source actions** — actions that apply to a whole file and aren't triggered by linter issues:
 
@@ -229,8 +229,3 @@ server, but that are planned for the future. If you have suggestions for anythin
 
 Also note that not all clients (i.e. editors) may support all features of a language server! See the
 [editor support](./editor-support.md) page for information about Regal support in different editors.
-
-## Community
-
-If you'd like to discuss the Regal's language server, or just talk about Regal in general, please join us in the
-`#regal` channel in the Styra Community [Slack](https://inviter.co/styra)!

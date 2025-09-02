@@ -19,4 +19,4 @@
 
 — Jimmy Ray, [Boeing](https://www.boeing.com/)
 
-See the [adopters](https://docs.styra.com/regal/adopters) file for more Regal users.
+See the [adopters](https://openpolicyagent.org/projects/regal/adopters) file for more Regal users.

@@ -87,9 +87,3 @@ rules:
 - OPA Docs: [With Keyword](https://www.openpolicyagent.org/docs/policy-language/#with-keyword)
 - Styra Blog: [Dynamic Policy Composition for OPA](https://www.styra.com/blog/dynamic-policy-composition-for-opa/)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/performance/with-outside-test-context/with_outside_test_context.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

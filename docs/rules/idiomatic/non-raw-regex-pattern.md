@@ -4,7 +4,7 @@
 
 **Category**: Idiomatic
 
-**Automatically fixable**: [Yes](/regal/fixing)
+**Automatically fixable**: [Yes](https://openpolicyagent.org/projects/regal/fixing)
 
 **Avoid**
 ```rego
@@ -59,9 +59,3 @@ rules:
 - Rego Style Guide: [Use raw strings for regex patterns](https://github.com/StyraInc/rego-style-guide#use-raw-strings-for-regex-patterns)
 - OPA Docs: [Regex Functions Reference](https://www.openpolicyagent.org/docs/policy-reference/#regex)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/idiomatic/non-raw-regex-pattern/non_raw_regex_pattern.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

@@ -1,7 +1,7 @@
 # Go Integration
 
 :warning: Using Regal from Go is currently experimental and subject to change. Please swing by
-[Slack](https://inviter.co/styra) if you're keen to use Regal in a production system.
+[Slack](https://slack.openpolicyagent.org) if you're keen to use Regal in a production system.
 
 If you'd like to integrate Regal into a Go application, this guide contains some pointers.
 
@@ -57,8 +57,3 @@ if err != nil {
     return
 }
 ```
-
-## Community
-
-If you'd like to discuss Regal development or just talk about Regal in general, please join us in the `#regal`
-channel in the Styra Community [Slack](https://inviter.co/styra)!

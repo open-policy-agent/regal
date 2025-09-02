@@ -54,12 +54,6 @@ rules:
 
 ## Related Resources
 
-- Regal Docs: [file-length](https://docs.styra.com/regal/rules/style/file-length)
-- Regal Docs: [line-length](https://docs.styra.com/regal/rules/style/line-length)
+- Regal Docs: [file-length](https://openpolicyagent.org/projects/regal/rules/style/file-length)
+- Regal Docs: [line-length](https://openpolicyagent.org/projects/regal/rules/style/line-length)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/style/rule-length/rule_length.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

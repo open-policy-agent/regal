@@ -50,7 +50,7 @@ test_report_is_empty {
 The `not` keyword negates the expression that follows it. A common mistake, especially in tests, is to use `not`
 to test the result of evaluating a partial (i.e. multi-value) rule. However, as even an empty set is considered
 "truthy", the `not` will in that case always evaluate to `false`. There are more cases where `not` is impossible,
-or a [constant condition](https://docs.styra.com/regal/rules/bugs/constant-condition), but references to partial
+or a [constant condition](https://openpolicyagent.org/projects/regal/rules/bugs/constant-condition), but references to partial
 rules are by far the most common. For tests where you want to assert the set is empty or has a specific number of
 items, use the built-in `count` function instead.
 
@@ -68,11 +68,5 @@ rules:
 
 ## Related Resources
 
-- Regal Docs: [constant-condition](https://docs.styra.com/regal/rules/bugs/constant-condition)
+- Regal Docs: [constant-condition](https://openpolicyagent.org/projects/regal/rules/bugs/constant-condition)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/bugs/impossible-not/impossible_not.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

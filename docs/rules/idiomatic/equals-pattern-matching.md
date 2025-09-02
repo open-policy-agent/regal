@@ -94,9 +94,3 @@ rules:
 
 - Styra Blog: [How to express OR in Rego](https://www.styra.com/blog/how-to-express-or-in-rego/)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/idiomatic/equals-pattern-matching/equals_pattern_matching.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

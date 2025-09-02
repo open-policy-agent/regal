@@ -32,7 +32,7 @@ There is an [open issue](https://github.com/open-policy-agent/opa/issues/6315) i
 this in the future, and allow zero-arity functions to be treated as other functions. Until then, the recommendation
 is to avoid them and just use rules in their place.
 
-Note that if you're using the [opa fmt](https://docs.styra.com/regal/rules/style/opa-fmt) command to format your code,
+Note that if you're using the [opa fmt](https://openpolicyagent.org/projects/regal/rules/style/opa-fmt) command to format your code,
 it will remove the parentheses from a zero-arity function definition for you.
 
 ## Configuration Options
@@ -52,9 +52,3 @@ rules:
 - OPA Docs: [The OPA Document Model](https://www.openpolicyagent.org/docs/philosophy/#the-opa-document-model)
 - OPA Issues: [Allow user-defined zero-argument functions in Rego](https://github.com/open-policy-agent/opa/issues/6315)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/bugs/zero-arity-function/zero_arity_function.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

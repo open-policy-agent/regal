@@ -43,9 +43,3 @@ rules:
 ## Related Resources
 
 - OPA Docs: [object.keys](https://www.openpolicyagent.org/docs/policy-reference/#builtin-object-objectkeys)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

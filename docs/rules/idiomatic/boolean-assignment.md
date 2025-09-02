@@ -5,6 +5,7 @@
 **Category**: Idiomatic
 
 **Avoid**
+
 ```rego
 package policy
 
@@ -50,11 +51,5 @@ rules:
 ## Related Resources
 
 - Styra Blog: [How to express OR in Rego](https://www.styra.com/blog/how-to-express-or-in-rego/)
-- Regal Docs: [default-over-else](https://docs.styra.com/regal/rules/style/default-over-else)
+- Regal Docs: [default-over-else](https://openpolicyagent.org/projects/regal/rules/style/default-over-else)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/idiomatic/boolean-assignment/boolean_assignment.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

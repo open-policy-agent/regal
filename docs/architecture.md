@@ -15,8 +15,8 @@ When running Regal against a directory, like `regal lint my-policies/`, Regal do
 - Each linter rule (and there are almost 40 of them at the time of writing this) uses the **input**, which contains
   information such as the package name, what imports are used, and all the rules and the expressions they contain, to
   determine whether the Rego policy linted contains any violations against the rule. An example could be a rule that
-  [forbids shadowing](https://docs.styra.com/regal/rules/bugs/rule-shadows-builtin) (i.e. using the same name as)
-  built-in functions and operators.
+  [forbids shadowing](https://openpolicyagent.org/projects/regal/rules/bugs/rule-shadows-builtin)
+  (i.e. using the same name as) built-in functions and operators.
 - Since rule bodies aren’t necessarily flat, but may contain nested bodies of constructs such as
   [comprehensions](https://www.openpolicyagent.org/docs/policy-language/#comprehensions) or
   [every](https://www.openpolicyagent.org/docs/policy-language/#every-keyword) blocks, many linter rules need to
@@ -27,7 +27,7 @@ When running Regal against a directory, like `regal lint my-policies/`, Regal do
   policy files and tests, the cost may be prohibitive. To alleviate this, Regal is implemented to process files
   concurrently to minimize the impact of IO bound tasks, and to make use of multiple cores when available.
 - The result of linting each file is eventually collected and compiled into a linter report, which is presented to the
-  user in one of the available [output formats](https://docs.styra.com/regal#output-formats).
+  user in one of the available [output formats](https://openpolicyagent.org/projects/regal#output-formats).
 
 ## Rego Rules Evaluation
 
@@ -40,8 +40,3 @@ The `report` rule in turn uses
 `report` under `data.regal.rules[category][title]` for built-in rules, and `data.custom.regal.rules[category][title]`
 for custom rules. The violations reported from each rule is added to the `report` set and sent back to the application,
 which will compile a final report and present it to the user.
-
-## Community
-
-If you'd like to discuss Regal's architecture or just talk about Regal in general, please join us in the `#regal`
-channel in the Styra Community [Slack](https://inviter.co/styra)!

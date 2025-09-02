@@ -4,7 +4,7 @@
 
 **Category**: Style
 
-**Automatically fixable**: [Yes](/regal/fixing)
+**Automatically fixable**: [Yes](https://openpolicyagent.org/projects/regal/fixing)
 
 **Avoid**
 
@@ -47,15 +47,9 @@ rules:
       # optional pattern to except from this rule
       # this example would allow comments like "#--"
       # use or (`|`) to separate multiple patterns
-      except-pattern: '^--'
+      except-pattern: "^--"
 ```
 
 ## Related Resources
 
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/style/no-whitespace-comment/no_whitespace_comment.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

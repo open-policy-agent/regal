@@ -5,7 +5,8 @@
 **Category**: Idiomatic
 
 **Avoid**
-````rego
+
+```rego
 package policy
 
 # top level set comprehension
@@ -20,10 +21,11 @@ user_roles_mapping := {user: roles |
     some user in input.users
     roles := user.roles
 }
-````
+```
 
 **Prefer**
-````rego
+
+```rego
 package policy
 
 # set generating rule
@@ -38,7 +40,7 @@ user_roles_mapping[user] := roles if {
     some user in input.users
     roles := user.roles
 }
-````
+```
 
 ## Rationale
 
@@ -145,9 +147,3 @@ rules:
 - OPA Docs: [Comprehensions](https://www.openpolicyagent.org/docs/policy-language/#comprehensions)
 - Styra Blog: [Five Things You Didn't Know About OPA](https://www.styra.com/blog/five-things-you-didnt-know-about-opa/)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/idiomatic/prefer-set-or-object-rule/prefer_set_or_object_rule.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

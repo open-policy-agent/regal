@@ -34,7 +34,7 @@ arguably provides a more idiomatic construct for default assignment: the
 
 While the end result is the same, default assignment has the benefit of more clearly — and **before** the conditional
 assignments — communicating what the *safe* option is. This is particularly important for
-[entrypoint](https://docs.styra.com/regal/rules/idiomatic/no-defined-entrypoint) rules, where the
+[entrypoint](https://openpolicyagent.org/projects/regal/rules/idiomatic/no-defined-entrypoint) rules, where the
 default value of a rule is a part of the rule's contract.
 
 ## Exceptions
@@ -95,9 +95,3 @@ rules:
 
 - OPA Docs: [Default Keyword](https://www.openpolicyagent.org/docs/policy-language/#default-keyword)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/style/default-over-else/default_over_else.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

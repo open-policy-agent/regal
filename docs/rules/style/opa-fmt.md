@@ -4,7 +4,7 @@
 
 **Category**: Style
 
-**Automatically fixable**: [Yes](/regal/fixing)
+**Automatically fixable**: [Yes](https://openpolicyagent.org/projects/regal/fixing)
 
 **Avoid**
 
@@ -44,7 +44,7 @@ been formatted with `opa fmt` (the rego.v1 keyword is permitted but not added).
 
 When formatting, a file expected to be v1 based on the configuration, but with
 v0 syntax is still formatted as `opa fmt –-v0-v1`. Please see
-[Configuring Rego Version](https://docs.styra.com/regal#configuring-rego-version)
+[Configuring Rego Version](https://openpolicyagent.org/projects/regal#configuring-rego-version)
 for more configuration help for multi version projects.
 
 ## Configuration Options
@@ -62,9 +62,3 @@ rules:
 ## Related Resources
 
 - OPA Docs: [CLI Reference `opa fmt`](https://www.openpolicyagent.org/docs/cli/#opa-fmt)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

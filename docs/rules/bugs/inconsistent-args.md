@@ -51,7 +51,7 @@ find_vars(rule, _) if {
 }
 ```
 
-Using [pattern matching for equality](https://docs.styra.com/regal/rules/idiomatic/equals-pattern-matching) checks is
+Using [pattern matching for equality](https://openpolicyagent.org/projects/regal/rules/idiomatic/equals-pattern-matching) checks is
 also allowed.
 
 ## Configuration Options
@@ -68,11 +68,5 @@ rules:
 
 ## Related Resources
 
-- Regal Docs: [equals-pattern-matching](https://docs.styra.com/regal/rules/idiomatic/equals-pattern-matching)
+- Regal Docs: [equals-pattern-matching](https://openpolicyagent.org/projects/regal/rules/idiomatic/equals-pattern-matching)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/bugs/inconsistent-args/inconsistent_args.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!
