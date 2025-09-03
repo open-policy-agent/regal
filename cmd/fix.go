@@ -129,8 +129,7 @@ func fix(args []string, params *fixParams) (err error) {
 		if err == nil {
 			defer regalDir.Close()
 
-			customRulesPath := filepath.Join(regalDir.Name(), "rules")
-			if _, err = os.Stat(customRulesPath); err == nil {
+			if customRulesPath := filepath.Join(regalDir.Name(), "rules"); rio.IsDir(customRulesPath) {
 				customRulesDir = customRulesPath
 			}
 		}
@@ -370,9 +369,5 @@ please run fix from a clean state to support the use of git to undo, or use --fo
 		}
 	}
 
-	if err = r.Report(fixReport); err != nil {
-		return fmt.Errorf("failed to output fix report: %w", err)
-	}
-
-	return nil
+	return util.WrapErr(r.Report(fixReport), "failed to output fix report")
 }

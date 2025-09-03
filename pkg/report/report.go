@@ -90,30 +90,25 @@ type ProfileEntry struct {
 // while working with large Rego code repositories.
 type Aggregate map[string]any
 
-func FromResultSet(resultSet rego.ResultSet, aggregate bool) (Report, error) {
+func FromResultSet(resultSet rego.ResultSet, aggregate bool) (r Report, err error) {
 	if len(resultSet) != 1 {
-		return Report{}, fmt.Errorf("expected 1 item in resultset, got %d", len(resultSet))
+		return r, fmt.Errorf("expected 1 item in resultset, got %d", len(resultSet))
 	}
 
-	r := Report{}
+	var binding any
 
-	if aggregate {
-		if binding, ok := resultSet[0].Bindings["lint"].(map[string]any); ok {
-			if aggregateBinding, ok := binding["aggregate"]; ok {
-				if err := encoding.JSONRoundTrip(aggregateBinding, &r); err != nil {
-					return r, fmt.Errorf("JSON rountrip failed for bindings: %v %w", binding, err)
-				}
-			}
+	if lb, ok := resultSet[0].Bindings["lint"].(map[string]any); ok {
+		binding = lb
+		if aggregateBinding, ok := lb["aggregate"]; ok && aggregate {
+			binding = aggregateBinding
 		}
-	} else {
-		if binding, ok := resultSet[0].Bindings["lint"]; ok {
-			if err := encoding.JSONRoundTrip(binding, &r); err != nil {
-				return r, fmt.Errorf("JSON rountrip failed for bindings: %v %w", binding, err)
-			}
+
+		if err = encoding.JSONRoundTrip(binding, &r); err != nil {
+			err = fmt.Errorf("JSON rountrip failed for bindings: %v %w", binding, err)
 		}
 	}
 
-	return r, nil
+	return r, err
 }
 
 func (a Aggregate) SourceFile() string {

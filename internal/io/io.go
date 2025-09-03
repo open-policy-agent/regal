@@ -1,7 +1,9 @@
 package io
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -23,6 +25,27 @@ import (
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
+
+type readWriteCloser struct {
+	in  io.ReadCloser
+	out io.WriteCloser
+}
+
+func NewReadWriteCloser(in io.ReadCloser, out io.WriteCloser) readWriteCloser {
+	return readWriteCloser{in: in, out: out}
+}
+
+func (rwc readWriteCloser) Read(p []byte) (int, error) {
+	return util.Wrap(rwc.in.Read(p))("failed to read from stdin")
+}
+
+func (rwc readWriteCloser) Write(p []byte) (int, error) {
+	return util.Wrap(rwc.out.Write(p))("failed to write to stdout")
+}
+
+func (rwc readWriteCloser) Close() error {
+	return errors.Join(rwc.in.Close(), rwc.out.Close())
+}
 
 // Getwd returns the current working directory, or an empty string if it cannot be determined.
 func Getwd() string {

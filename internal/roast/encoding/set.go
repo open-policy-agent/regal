@@ -7,6 +7,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
 )
 
 type setCodec struct{}
@@ -26,5 +28,5 @@ type set struct {
 func (*setCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	s := *((*set)(ptr))
 
-	writeTermsArray(stream, s.keys)
+	util.WriteValsArray(stream, s.keys)
 }

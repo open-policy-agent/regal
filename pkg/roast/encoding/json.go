@@ -40,6 +40,14 @@ func JSONRoundTrip(from any, to any) error {
 	return nil
 }
 
+func JSONRoundTripTo[T any](from any) (T, error) {
+	var to T
+
+	err := JSONRoundTrip(from, &to)
+
+	return to, err
+}
+
 // MustJSONRoundTrip convert any value to JSON and back again, exit on failure.
 func MustJSONRoundTrip(from any, to any) {
 	if err := JSONRoundTrip(from, to); err != nil {

@@ -268,8 +268,7 @@ func (f *Fixer) applyLinterFixes(
 			fixResult := fixResults[0]
 
 			if fixResult.Rename != nil {
-				err = f.handleRename(fp, fixReport, startingFiles, fixResult)
-				if err != nil {
+				if err = f.handleRename(fp, fixReport, startingFiles, fixResult); err != nil {
 					return err
 				}
 

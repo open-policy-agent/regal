@@ -440,9 +440,8 @@ func regoVersionFromConfigValue(version *int) ast.RegoVersion {
 }
 
 func (config Config) MarshalYAML() (any, error) {
-	var unstructuredConfig map[string]any
-
-	if err := encoding.JSONRoundTrip(config, &unstructuredConfig); err != nil {
+	unstructuredConfig, err := encoding.JSONRoundTripTo[map[string]any](config)
+	if err != nil {
 		return nil, fmt.Errorf("failed to created unstructured config: %w", err)
 	}
 
@@ -834,9 +833,8 @@ func (rule *Rule) mapToConfig(result any) error {
 	}
 
 	if ignore, ok := ruleMap[keyIgnore]; ok {
-		var dst Ignore
-
-		if err := encoding.JSONRoundTrip(ignore, &dst); err != nil {
+		dst, err := encoding.JSONRoundTripTo[Ignore](ignore)
+		if err != nil {
 			return fmt.Errorf("unmarshalling rule ignore failed: %w", err)
 		}
 

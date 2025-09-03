@@ -184,10 +184,7 @@ func updateFileDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
 		return fmt.Errorf("failed to get file contents for uri %q", opts.FileURI)
 	}
 
-	input := rules.NewInput(
-		map[string]string{opts.FileURI: contents},
-		map[string]*ast.Module{opts.FileURI: module},
-	)
+	input := rules.NewInput(map[string]string{opts.FileURI: contents}, map[string]*ast.Module{opts.FileURI: module})
 
 	regalInstance := linter.NewLinter().
 		// needed to get the aggregateData for this file

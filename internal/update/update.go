@@ -14,6 +14,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/rego"
 
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 
 	_ "embed"
@@ -112,12 +113,7 @@ func resultSetToDecision(rs rego.ResultSet) (decision, error) {
 		return decision{}, errors.New("no result set")
 	}
 
-	var result decision
-	if err := encoding.JSONRoundTrip(rs[0].Bindings["result"], &result); err != nil {
-		return decision{}, fmt.Errorf("failed to decode result set: %w", err)
-	}
-
-	return result, nil
+	return util.Wrap(encoding.JSONRoundTripTo[decision](rs[0].Bindings["result"]))("failed to decode result set")
 }
 
 func getLatestCachedVersion(opts Options) (string, error) {

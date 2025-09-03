@@ -6,6 +6,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
 )
 
 type packageCodec struct{}
@@ -17,20 +19,9 @@ func (*packageCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*packageCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	pkg := *((*ast.Package)(ptr))
 
-	stream.WriteObjectStart()
-
-	if pkg.Location != nil {
-		stream.WriteObjectField(strLocation)
-		stream.WriteVal(pkg.Location)
-	}
+	util.ObjectStart(stream, pkg.Location)
 
 	if pkg.Path != nil {
-		if pkg.Location != nil {
-			stream.WriteMore()
-		}
-
-		stream.WriteObjectField(strPath)
-
 		// Make a copy to avoid data race
 		// https://github.com/open-policy-agent/regal/issues/1167
 		pathCopy := pkg.Path.Copy()
@@ -38,14 +29,12 @@ func (*packageCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 		// Omit location of "data" part of path, at it isn't present in code
 		pathCopy[0].Location = nil
 
-		stream.WriteVal(pathCopy)
+		util.WriteVal(stream, strPath, pathCopy)
 	}
 
 	if stream.Attachment != nil {
-		stream.WriteMore()
-		stream.WriteObjectField(strAnnotations)
-		stream.WriteVal(stream.Attachment)
+		util.WriteVal(stream, strAnnotations, stream.Attachment)
 	}
 
-	stream.WriteObjectEnd()
+	util.ObjectEnd(stream)
 }

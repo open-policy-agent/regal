@@ -6,6 +6,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
 )
 
 type withCodec struct{}
@@ -17,19 +19,8 @@ func (*withCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*withCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	with := *((*ast.With)(ptr))
 
-	stream.WriteObjectStart()
-
-	if with.Location != nil {
-		stream.WriteObjectField(strLocation)
-		stream.WriteVal(with.Location)
-		stream.WriteMore()
-	}
-
-	stream.WriteObjectField(strTarget)
-	stream.WriteVal(with.Target)
-	stream.WriteMore()
-	stream.WriteObjectField(strValue)
-	stream.WriteVal(with.Value)
-
-	stream.WriteObjectEnd()
+	util.ObjectStart(stream, with.Location)
+	util.WriteVal(stream, strTarget, with.Target)
+	util.WriteVal(stream, strValue, with.Value)
+	util.ObjectEnd(stream)
 }

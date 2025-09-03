@@ -20,62 +20,27 @@ func (*ruleCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*ruleCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	rule := *((*ast.Rule)(ptr))
 
-	stream.WriteObjectStart()
-
-	hasWritten := false
-
-	if rule.Location != nil {
-		stream.WriteObjectField(strLocation)
-		stream.WriteVal(rule.Location)
-
-		hasWritten = true
-	}
+	util.ObjectStart(stream, rule.Location)
 
 	if len(rule.Annotations) > 0 {
-		if hasWritten {
-			stream.WriteMore()
-		}
-
-		stream.WriteObjectField(strAnnotations)
-		util.WriteValsArray(stream, rule.Annotations)
-
-		hasWritten = true
+		util.WriteValsArrayAttr(stream, strAnnotations, rule.Annotations)
 	}
 
 	if rule.Default {
-		if hasWritten {
-			stream.WriteMore()
-		}
-
-		stream.WriteObjectField(strDefault)
-		stream.WriteBool(rule.Default)
-
-		hasWritten = true
+		util.WriteBool(stream, strDefault, rule.Default)
 	}
 
 	if rule.Head != nil {
-		if hasWritten {
-			stream.WriteMore()
-		}
-
-		stream.WriteObjectField(strHead)
-		stream.WriteVal(rule.Head)
+		util.WriteVal(stream, strHead, rule.Head)
 	}
 
 	if !rast.IsBodyGenerated(&rule) {
-		if hasWritten {
-			stream.WriteMore()
-		}
-
-		stream.WriteObjectField(strBody)
-		stream.WriteVal(rule.Body)
+		util.WriteVal(stream, strBody, rule.Body)
 	}
 
 	if rule.Else != nil {
-		stream.WriteMore()
-		stream.WriteObjectField(strElse)
-		stream.WriteVal(rule.Else)
+		util.WriteVal(stream, strElse, rule.Else)
 	}
 
-	stream.WriteObjectEnd()
+	util.ObjectEnd(stream)
 }

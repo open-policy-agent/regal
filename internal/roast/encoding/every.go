@@ -6,6 +6,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
 )
 
 type everyCodec struct{}
@@ -17,28 +19,10 @@ func (*everyCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*everyCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	every := *((*ast.Every)(ptr))
 
-	stream.WriteObjectStart()
-
-	if every.Location != nil {
-		stream.WriteObjectField(strLocation)
-		stream.WriteVal(every.Location)
-		stream.WriteMore()
-	}
-
-	stream.WriteObjectField(strKey)
-	stream.WriteVal(every.Key)
-	stream.WriteMore()
-
-	stream.WriteObjectField(strValue)
-	stream.WriteVal(every.Value)
-	stream.WriteMore()
-
-	stream.WriteObjectField(strDomain)
-	stream.WriteVal(every.Domain)
-	stream.WriteMore()
-
-	stream.WriteObjectField(strBody)
-	stream.WriteVal(every.Body)
-
-	stream.WriteObjectEnd()
+	util.ObjectStart(stream, every.Location)
+	util.WriteVal(stream, strKey, every.Key)
+	util.WriteVal(stream, strValue, every.Value)
+	util.WriteVal(stream, strDomain, every.Domain)
+	util.WriteVal(stream, strBody, every.Body)
+	util.ObjectEnd(stream)
 }

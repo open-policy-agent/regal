@@ -6,6 +6,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
 )
 
 type refCodec struct{}
@@ -19,5 +21,5 @@ func (*refCodec) IsEmpty(ptr unsafe.Pointer) bool {
 func (*refCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	ref := *((*ast.Ref)(ptr))
 
-	writeTermsArray(stream, ref)
+	util.WriteValsArray(stream, ref)
 }
