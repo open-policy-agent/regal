@@ -39,9 +39,3 @@ rules:
 
 - OPA Docs: [strings.count](https://www.openpolicyagent.org/docs/policy-reference/#builtin-strings-stringscount)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/idiomatic/use-strings-count/use_strings_count.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

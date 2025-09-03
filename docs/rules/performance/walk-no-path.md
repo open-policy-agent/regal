@@ -68,7 +68,7 @@ allow if {
 ```
 
 For this reason, and a few historic ones, using the second argument for the return value is the preferred way to use
-`walk`, which is [unique](https://docs.styra.com/regal/rules/style/function-arg-return#exceptions) for the walk built-in
+`walk`, which is [unique](https://openpolicyagent.org/projects/regal/rules/style/function-arg-return#exceptions) for the walk built-in
 function.
 
 ## Configuration Options
@@ -85,11 +85,5 @@ rules:
 
 ## Related Resources
 
-- Regal Docs: [function-arg-return](https://docs.styra.com/regal/rules/style/function-arg-return)
+- Regal Docs: [function-arg-return](https://openpolicyagent.org/projects/regal/rules/style/function-arg-return)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/performance/walk-no-path/walk_no_path.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

@@ -55,17 +55,11 @@ rules:
       # one of "error", "warning", "ignore"
       level: error
       ignore-import-paths:
-        # Make an exception for some specific import paths
-        - data.permissions.admin.users
+      # Make an exception for some specific import paths
+      - data.permissions.admin.users
 ```
 
 ## Related Resources
 
 - Rego Style Guide: [Prefer importing packages over rules and functions](https://github.com/StyraInc/rego-style-guide#prefer-importing-packages-over-rules-and-functions)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/imports/prefer-package-imports/prefer_package_imports.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

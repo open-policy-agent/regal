@@ -182,13 +182,13 @@ Starting from top to bottom, these are the components comprising our custom rule
 ### Rule Development Workflow
 
 In addition to making use of the `regal parse` command to inspect the AST of a policy, using Regal's
-[language server](https://docs.styra.com/regal/language-server) for rule development provides the absolute best rule
+[language server](https://openpolicyagent.org/projects/regal/language-server) for rule development provides the absolute best rule
 development experience.
 
 #### Code Lens for Evaluation
 
 If you're using VS Code and the [OPA VS Code extension](https://github.com/open-policy-agent/vscode-opa), you may
-use the [Code Lens for Evaluation](https://docs.styra.com/regal/language-server#code-lenses-evaluation) to directly
+use the [Code Lens for Evaluation](https://openpolicyagent.org/projects/regal/language-server#code-lenses-evaluation) to directly
 evaluate packages and rules using the `input.json` file as input, and see the result directly in your editor on the
 line you clicked to evaluate.
 
@@ -374,8 +374,3 @@ from the `.regal/rules` directory relative to the selected workspace root.
 
 Custom rules will be loaded each time a lint is run for a file or the workspace.
 If your custom rules are broken, fixes will be used on the next linting run.
-
-## Community
-
-If you'd like to discuss custom rules development or just talk about Regal in general, please join us in the `#regal`
-channel in the Styra Community [Slack](https://inviter.co/styra)!

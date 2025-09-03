@@ -9,7 +9,7 @@
 Since Regal v0.30.0, this rule is only enabled for projects that have either been explicitly configured to target
 versions of OPA before 1.0, or if no configuration is provided — where Regal is able to determine that an older version
 of OPA/Rego is being targeted. Consult the documentation on Regal's
-[configuration](https://docs.styra.com/regal#configuration) for information on how to best work with older versions of
+[configuration](https://openpolicyagent.org/projects/regal#configuration) for information on how to best work with older versions of
 OPA and Rego.
 
 Since OPA v1.0, this rule is automatically disabled, as there currently are no deprecated built-in functions
@@ -139,9 +139,3 @@ rules:
 
 - OPA Docs: [Strict Mode](https://www.openpolicyagent.org/docs/policy-language/#strict-mode)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/bugs/deprecated-builtin/deprecated_builtin.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

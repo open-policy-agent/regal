@@ -30,7 +30,7 @@ _authorized if {
 
 ## Rationale
 
-Rules marked as internal using the [underscore prefix convention](https://docs.styra.com/opa/rego-style-guide#optionally-use-leading-underscore-for-rules-intended-for-internal-use)
+Rules marked as internal using the [underscore prefix convention](https://github.com/StyraInc/rego-style-guide#optionally-use-leading-underscore-for-rules-intended-for-internal-use)
 cannot be used as entrypoints, as entrypoints by definition are public. Either rename the rule to mark it as public,
 or use another public rule as an entrypoint, which may reference the internal rule.
 
@@ -48,12 +48,6 @@ rules:
 
 ## Related Resources
 
-- Rego Style Guide: [Optionally, use leading underscore for rules intended for internal use](https://docs.styra.com/opa/rego-style-guide#optionally-use-leading-underscore-for-rules-intended-for-internal-use)
-- Regal Docs: [no-defined-entrypoint](https://docs.styra.com/regal/rules/idiomatic/no-defined-entrypoint)
+- Rego Style Guide: [Optionally, use leading underscore for rules intended for internal use](https://github.com/StyraInc/rego-style-guide#optionally-use-leading-underscore-for-rules-intended-for-internal-use)
+- Regal Docs: [no-defined-entrypoint](https://openpolicyagent.org/projects/regal/rules/idiomatic/no-defined-entrypoint)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/bugs/internal-entrypoint/internal_entrypoint.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

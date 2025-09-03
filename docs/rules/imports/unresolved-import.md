@@ -25,7 +25,7 @@ _data_ files. If no reference is found, the rule will flag it as unresolved.
 Since unresolved imports may be perfectly valid — for example when an import points to data — this rule provides an
 option in its configuration to except certain paths from being checked. These paths may even contain a wildcard suffix
 to indicate that any path past the wildcard (e.g. `data.users.*`) should be ignored. It is also possible to use a
-regular [ignore directive](https://docs.styra.com/regal#inline-ignore-directives):
+regular [ignore directive](https://openpolicyagent.org/projects/regal#inline-ignore-directives):
 
 ```rego
 package example
@@ -59,9 +59,3 @@ rules:
 - OPA Docs: [Collaboration Using Import](https://www.openpolicyagent.org/docs/faq/#collaboration-using-import)
 - OPA Issues: [Missing import should create error](https://github.com/open-policy-agent/opa/issues/491)
   - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/imports/unresolved-import/unresolved_import.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

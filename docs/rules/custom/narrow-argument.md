@@ -53,7 +53,7 @@ country_code(country) := 81 if country == "Japan"
 Instead of passing around potentially large `user` objects, our function now only needs to consider a `country` string,
 which perhaps may prove useful for more than just users. Another benefit of this approach is that it's often possible
 to simplify functions even further by moving the equality comparison directly into the function's arguments — a simple
-form of [pattern matching](https://docs.styra.com/regal/rules/idiomatic/equals-pattern-matching):
+form of [pattern matching](https://openpolicyagent.org/projects/regal/rules/idiomatic/equals-pattern-matching):
 
 ```rego
 package policy
@@ -110,7 +110,7 @@ has_fax(user) if {
     is_string(user.fax)
     user.fax != ""
 }
-````
+```
 
 While it's tempting to try and narrow the arguments passed to `has_phone` and `has_fax` only to what they need:
 
@@ -131,7 +131,7 @@ has_fax(fax) if {
     is_string(fax)
     fax != ""
 }
-````
+```
 
 We have now changed the behavior of `is_unreachable`, and a user without phone or fax will no longer be considered
 unreachable. Why? Again, because OPA evaluates the function arguments before they are passed to the function, **and**
@@ -157,7 +157,7 @@ example rewrite `is_unreachable` to `is_reachable`, and then use `not` to negate
 impossible to reach.
 
 Find what works best for you, and use the `exclude-args` configuration option (see below) to exclude arg names that you
-commonly don't want to narrow, or [ignore directives](https://docs.styra.com/regal#inline-ignore-directives) for single
+commonly don't want to narrow, or [ignore directives](https://openpolicyagent.org/projects/regal#inline-ignore-directives) for single
 locations.
 
 ## Configuration Options
@@ -179,9 +179,3 @@ rules:
         - config
         - user
 ```
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

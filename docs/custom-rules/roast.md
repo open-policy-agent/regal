@@ -3,7 +3,7 @@
 Roast is an optimized JSON format for [Rego](https://www.openpolicyagent.org/docs/latest/policy-language/) ASTs, as well
 as common utilities for working with the both the Roast format and OPA's AST APIs.
 
-Roast is used by [Regal](https://docs.styra.com/regal), where the JSON representation of Rego's AST is used input for
+Roast is used by [Regal](https://openpolicyagent.org/projects/regal), where the JSON representation of Rego's AST is used input for
 static analysis [performed by Rego itself](https://www.styra.com/blog/linting-rego-with-rego/) to determine whether
 policies conform to Regal's linter rules.
 
@@ -204,7 +204,7 @@ therefore been removed from the Roast format.
 ### Removed `name` attribute from rule heads
 
 The `name` attribute found in the OPA AST for `rules` is unreliable, as it's not always present. The `ref`
-attribute however always is.  While this doesn't come with any real cost in terms of AST size or performance, consistency
+attribute however always is. While this doesn't come with any real cost in terms of AST size or performance, consistency
 is key.
 
 ### Fixed inconsistencies in the original Rego AST
@@ -221,8 +221,3 @@ uses `text` and `location` consistently.
 
 While the numbers may vary some, the Roast format is currently about 40-50% smaller in size than the original AST JSON
 format, and can be processed (in Rego, using `walk` and so on) about 1.25 times faster.
-
-## Community
-
-If you'd like to discuss OPA's AST, Roast or anything else related to OPA and Styra, please join us in the `#regal`
-channel in the Styra Community [Slack](https://communityinviter.com/apps/styracommunity/signup)!

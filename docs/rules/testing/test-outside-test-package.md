@@ -52,9 +52,3 @@ rules:
 
 - OPA Docs: [Policy Testing](https://www.openpolicyagent.org/docs/policy-testing/)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/testing/test-outside-test-package/test_outside_test_package.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

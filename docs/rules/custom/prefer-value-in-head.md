@@ -76,16 +76,10 @@ rules:
       only-scalars: false
       # variable names to exempt from the rule (by default, none)
       except-var-names:
-        - report
-        - violation
+      - report
+      - violation
 ```
 
 ## Related Resources
 
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/custom/prefer-value-in-head/prefer_value_in_head.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

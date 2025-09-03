@@ -21,4 +21,5 @@ Regal is the perfect companion for policy development, whether you're an
 experienced Rego developer or just starting out.
 
 <!-- markdownlint-disable MD033 -->
-<Intro/>
+
+<Intro image={require('./assets/regal-banner.png').default}/>

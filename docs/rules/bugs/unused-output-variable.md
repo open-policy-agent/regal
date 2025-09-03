@@ -93,12 +93,6 @@ rules:
 
 ## Related Resources
 
-- Regal Docs: [prefer-some-in-iteration](https://docs.styra.com/regal/rules/style/prefer-some-in-iteration)
+- Regal Docs: [prefer-some-in-iteration](https://openpolicyagent.org/projects/regal/rules/style/prefer-some-in-iteration)
 - OPA Docs: [Strict Mode](https://www.openpolicyagent.org/docs/policy-language/#strict-mode)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/bugs/unused-output-variable/unused_output_variable.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

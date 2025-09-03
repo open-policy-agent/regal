@@ -5,13 +5,13 @@ While many projects consider the project's root directory (in editors often refe
 [bundles](https://www.openpolicyagent.org/docs/management-bundles/). While most of Regal's features works
 independently of this — linting, for example, doesn't consider where in a workspace policies are located as long as
 those locations aren't [ignored](./ignore-rules) — some features, like automatically
-[fixing](https://docs.styra.com/regal/fixing) violations, benefit from knowing when a project contains multiple roots.
+[fixing](https://openpolicyagent.org/projects/regal/fixing) violations, benefit from knowing when a project contains multiple roots.
 
 To provide an example, consider the
-[directory-package-mismatch](https://docs.styra.com/regal/rules/idiomatic/directory-package-mismatch) rule, which states
+[directory-package-mismatch](https://openpolicyagent.org/projects/regal/rules/idiomatic/directory-package-mismatch) rule, which states
 that a file declaring a `package` path like `policy.permissions.users` should also be located in a directory structure
 that mirrors that package, i.e. `policy/permissions/users`. When a violation against this rule is reported, the
-`regal fix` command, or its equivalent [Code Action](http://docs.styra.com/regal#regal-language-server) in editors,
+`regal fix` command, or its equivalent [Code Action](https://openpolicyagent.org/projects/regal#regal-language-server) in editors,
 may when invoked remediate the issue by moving the file to the correct location.
 But where should the `policy/permissions/users` directory _itself_ reside?
 

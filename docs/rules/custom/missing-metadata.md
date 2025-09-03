@@ -73,11 +73,5 @@ rules:
 
 - OPA Docs: [Metadata](https://www.openpolicyagent.org/docs/policy-language/#metadata)
 - OPA Docs: [Annotations](https://www.openpolicyagent.org/docs/policy-language/#annotations)
-- Rego Style Guide: [Use Metadata Annotations](https://docs.styra.com/opa/rego-style-guide#use-metadata-annotations)
+- Rego Style Guide: [Use Metadata Annotations](https://github.com/StyraInc/rego-style-guide)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/custom/missing-metadata/missing_metadata.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

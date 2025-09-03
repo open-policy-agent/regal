@@ -76,8 +76,3 @@ Some companies and organizations using Regal.
 - [UNIwise](https://uniwise.eu/)
 - [VodafoneZiggo](https://www.vodafoneziggo.nl)
 <!-- cspell:enable-->
-
-## Community
-
-If you'd like to discuss Regal adoption or just talk about Regal in general, please join us in the `#regal`
-channel in the Styra Community [Slack](https://inviter.co/styra)!

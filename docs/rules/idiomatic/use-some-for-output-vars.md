@@ -109,9 +109,3 @@ rules:
 - OPA Docs: [The `some` keyword](https://www.openpolicyagent.org/docs/policy-language/#some-keyword)
 - Wikipedia: [Unification](https://en.wikipedia.org/wiki/Unification_(computer_science))
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/idiomatic/use-some-for-output-vars/use_some_for_output_vars.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!

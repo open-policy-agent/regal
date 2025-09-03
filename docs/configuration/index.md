@@ -85,7 +85,7 @@ default configuration.
 Generally, users will want to commit their Regal configuration file to the repo
 containing their Rego source code. This allows configurations to be shared
 among team members and makes the configuration options available to Regal when
-running as a [CI linter](https://docs.styra.com/regal/cicd) too.
+running as a [CI linter](https://openpolicyagent.org/projects/regal/cicd) too.
 
 Sometimes however it can be handy to have some user defaults when a project
 configuration file is not found, hasn't been created yet or is not applicable.

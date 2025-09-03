@@ -77,7 +77,7 @@ development, whether you're an experienced Rego developer or just starting out.
 
 — Jimmy Ray, [Boeing](https://www.boeing.com/)
 
-See the [adopters](https://docs.styra.com/regal/adopters) file for more Regal users.
+See the [adopters](https://openpolicyagent.org/projects/regal/adopters) file for more Regal users.
 
 
 <!-- markdownlint-disable MD041 -->
@@ -95,7 +95,7 @@ brew install regal
 <details>
   <summary><strong>Other Installation Options</strong></summary>
 
-Please see [Packages](https://docs.styra.com/regal/adopters#packaging)
+Please see [Packages](https://openpolicyagent.org/projects/regal/adopters#packaging)
 for a list of package repositories which distribute Regal.
 
 Manual installation commands:
@@ -171,21 +171,21 @@ Description:  	Use raw strings for regex patterns
 Category:     	idiomatic
 Location:     	policy/authz.rego:12:27
 Text:         	isEmployee if regex.match("@acmecorp\\.com$", input.user.email)
-Documentation:	https://docs.styra.com/regal/rules/idiomatic/non-raw-regex-pattern
+Documentation:	https://openpolicyagent.org/projects/regal/rules/idiomatic/non-raw-regex-pattern
 
 Rule:         	use-assignment-operator
 Description:  	Prefer := over = for assignment
 Category:     	style
 Location:     	policy/authz.rego:5:1
 Text:         	default allow = false
-Documentation:	https://docs.styra.com/regal/rules/style/use-assignment-operator
+Documentation:	https://openpolicyagent.org/projects/regal/rules/style/use-assignment-operator
 
 Rule:         	prefer-snake-case
 Description:  	Prefer snake_case for names
 Category:     	style
 Location:     	policy/authz.rego:12:1
 Text:         	isEmployee if regex.match("@acmecorp\\.com$", input.user.email)
-Documentation:	https://docs.styra.com/regal/rules/style/prefer-snake-case
+Documentation:	https://openpolicyagent.org/projects/regal/rules/style/prefer-snake-case
 
 1 file linted. 3 violations found.
 ```
@@ -206,21 +206,21 @@ companion for Rego development!
 
 Integrating Regal in your favorite editor means you'll get immediate feedback from the linter as you work on your
 policies. More than that, it'll unlock a whole new set of features that leverage Regal's
-[language server](https://docs.styra.com/regal/language-server),
+[language server](https://openpolicyagent.org/projects/regal/language-server),
 like context-aware completion suggestions, informative tooltips on hover,
 or go-to-definition.
 
 Elevate your policy development experience with Regal in VS Code, Neovim, Zed, Helix
-and more on our [Editor Support page](https://docs.styra.com/regal/editor-support)!
+and more on our [Editor Support page](https://openpolicyagent.org/projects/regal/editor-support)!
 
 To learn more about the features provided by the Regal language server, see the
-[Language Server](https://docs.styra.com/regal/language-server) page.
+[Language Server](https://openpolicyagent.org/projects/regal/language-server) page.
 
 ### Using Regal in Your Build Pipeline
 
 To ensure Regal's rules are enforced consistently in your project or organization,
 we've made it easy to run Regal as part of your builds.
-See the docs on [Using Regal in your build pipeline](https://docs.styra.com/regal/cicd) to learn more
+See the docs on [Using Regal in your build pipeline](https://openpolicyagent.org/projects/regal/cicd) to learn more
 about how to set up Regal to lint your policies on every commit or pull request.
 
 
@@ -231,23 +231,23 @@ about how to set up Regal to lint your policies on every commit or pull request.
 Now you're up and running with Regal, take a look around some of our documentation
 to get a feel for the different features and capabilities of Regal.
 
-- [Rules](https://docs.styra.com/regal/rules)
-  - [Bugs](https://docs.styra.com/regal/rules/bugs): Common mistakes, potential bugs and inefficiencies in Rego policies.
-  - [Idiomatic](https://docs.styra.com/regal/rules/idiomatic): Suggestions for more idiomatic constructs.
-  - [Imports](https://docs.styra.com/regal/rules/imports): Best practices for imports.
-  - [Performance](https://docs.styra.com/regal/rules/performance): Rules for improving performance of policies.
-  - [Style](https://docs.styra.com/regal/rules/style): Rego Style Guide rules.
-  - [Testing](https://docs.styra.com/regal/rules/testing): Rules for testing and development.
-  - [Custom](https://docs.styra.com/regal/rules/custom): Custom rules where enforcement can be adjusted to match your preferences.
-- [Configuration](https://docs.styra.com/regal/configuration): Dig into some of the different configuration options available.
-- [Editor Support](https://docs.styra.com/regal/editor-support): Get Regal integrated into your editor of choice.
-  - [Language Server](https://docs.styra.com/regal/language-server): Learn more
+- [Rules](https://openpolicyagent.org/projects/regal/rules)
+  - [Bugs](https://openpolicyagent.org/projects/regal/rules/bugs): Common mistakes, potential bugs and inefficiencies in Rego policies.
+  - [Idiomatic](https://openpolicyagent.org/projects/regal/rules/idiomatic): Suggestions for more idiomatic constructs.
+  - [Imports](https://openpolicyagent.org/projects/regal/rules/imports): Best practices for imports.
+  - [Performance](https://openpolicyagent.org/projects/regal/rules/performance): Rules for improving performance of policies.
+  - [Style](https://openpolicyagent.org/projects/regal/rules/style): Rego Style Guide rules.
+  - [Testing](https://openpolicyagent.org/projects/regal/rules/testing): Rules for testing and development.
+  - [Custom](https://openpolicyagent.org/projects/regal/rules/custom): Custom rules where enforcement can be adjusted to match your preferences.
+- [Configuration](https://openpolicyagent.org/projects/regal/configuration): Dig into some of the different configuration options available.
+- [Editor Support](https://openpolicyagent.org/projects/regal/editor-support): Get Regal integrated into your editor of choice.
+  - [Language Server](https://openpolicyagent.org/projects/regal/language-server): Learn more
     about Regal's advanced editor capabilities.
-  - [DAP](https://docs.styra.com/regal/debug-adapter): Live debug your Rego policies with Regal's DAP support.
-- [Fixing Issues](https://docs.styra.com/regal/fixing): See Regal can help you fix issues in your Rego policies automatically.
-- [CI/CD](https://docs.styra.com/regal/ci-cd): Run Regal as part of your automated checks.
-- [Custom Rules](https://docs.styra.com/regal/custom-rules): Learn how to write your own rules for Regal.
-- [Adopters](https://docs.styra.com/regal/adopters): See who else is using Regal.
+  - [DAP](https://openpolicyagent.org/projects/regal/debug-adapter): Live debug your Rego policies with Regal's DAP support.
+- [Fixing Issues](https://openpolicyagent.org/projects/regal/fixing): See Regal can help you fix issues in your Rego policies automatically.
+- [CI/CD](https://openpolicyagent.org/projects/regal/ci-cd): Run Regal as part of your automated checks.
+- [Custom Rules](https://openpolicyagent.org/projects/regal/custom-rules): Learn how to write your own rules for Regal.
+- [Adopters](https://openpolicyagent.org/projects/regal/adopters): See who else is using Regal.
 
 
 <!-- If updating, please check resources-website.md too -->
@@ -257,7 +257,7 @@ to get a feel for the different features and capabilities of Regal.
 
 ### Documentation
 
-Please see [Regal's Documentation Site](https://docs.styra.com/regal) for the
+Please see [Regal's Documentation Site](https://openpolicyagent.org/projects/regal) for the
 canonical documentation of Regal.
 
 [Contributing](https://github.com/open-policy-agent/regal/blob/main/docs/CONTRIBUTING.md)

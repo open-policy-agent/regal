@@ -43,7 +43,7 @@ the error message rather than actually failing.
 ```
 
 While this is normally caught in development and testing, having this issue reported at "compile time", which ideally
-is [directly in your editor](https://docs.styra.com/regal/language-server) as you work on your policy. This means less
+is [directly in your editor](https://openpolicyagent.org/projects/regal/language-server) as you work on your policy. This means less
 time spent chasing down issues later, and a happier development experience.
 
 ## Configuration Options
@@ -62,9 +62,3 @@ rules:
 
 - OPA Docs: [Built-in Functions: `sprintf`](https://www.openpolicyagent.org/docs/policy-reference/#builtin-strings-sprintf)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/bugs/sprintf-arguments-mismatch/sprintf_arguments_mismatch.rego)
-
-## Community
-
-If you think you've found a problem with this rule or its documentation, would like to suggest improvements, new rules,
-or just talk about Regal in general, please join us in the `#regal` channel in the Styra Community
-[Slack](https://inviter.co/styra)!
