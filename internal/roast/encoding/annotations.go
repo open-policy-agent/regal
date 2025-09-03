@@ -19,64 +19,40 @@ func (*annotationsCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*annotationsCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	a := *((*ast.Annotations)(ptr))
 
-	stream.WriteObjectStart()
-
-	if a.Location != nil {
-		stream.WriteObjectField(strLocation)
-		stream.WriteVal(a.Location)
-		stream.WriteMore()
-	}
-
-	stream.WriteObjectField(strScope)
-	stream.WriteString(a.Scope)
+	util.ObjectStart(stream, a.Location)
+	util.WriteString(stream, strScope, a.Scope)
 
 	if a.Title != "" {
-		stream.WriteMore()
-		stream.WriteObjectField(strTitle)
-		stream.WriteString(a.Title)
+		util.WriteString(stream, strTitle, a.Title)
 	}
 
 	if a.Description != "" {
-		stream.WriteMore()
-		stream.WriteObjectField(strDescription)
-		stream.WriteString(a.Description)
+		util.WriteString(stream, strDescription, a.Description)
 	}
 
 	if a.Entrypoint {
-		stream.WriteMore()
-		stream.WriteObjectField(strEntrypoint)
-		stream.WriteBool(a.Entrypoint)
+		util.WriteBool(stream, strEntrypoint, a.Entrypoint)
 	}
 
 	if len(a.Organizations) > 0 {
-		stream.WriteMore()
-		stream.WriteObjectField(strOrganizations)
-		util.WriteStringsArray(stream, a.Organizations)
+		util.WriteValsArrayAttr(stream, strOrganizations, a.Organizations)
 	}
 
 	if len(a.RelatedResources) > 0 {
-		stream.WriteMore()
-		stream.WriteObjectField(strRelatedResources)
-		util.WriteValsArray(stream, a.RelatedResources)
+		util.WriteValsArrayAttr(stream, strRelatedResources, a.RelatedResources)
 	}
 
 	if len(a.Authors) > 0 {
-		stream.WriteMore()
-		stream.WriteObjectField(strAuthors)
-		util.WriteValsArray(stream, a.Authors)
+		util.WriteValsArrayAttr(stream, strAuthors, a.Authors)
 	}
 
 	if len(a.Schemas) > 0 {
-		stream.WriteMore()
-		stream.WriteObjectField(strSchemas)
-		util.WriteValsArray(stream, a.Schemas)
+		util.WriteValsArrayAttr(stream, strSchemas, a.Schemas)
 	}
 
 	if len(a.Custom) > 0 {
-		stream.WriteMore()
-		stream.WriteObjectField(strCustom)
-		util.WriteObject(stream, a.Custom)
+		util.WriteObject(stream, strCustom, a.Custom)
 	}
 
-	stream.WriteObjectEnd()
+	util.ObjectEnd(stream)
 }

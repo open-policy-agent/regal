@@ -24,10 +24,12 @@ package connection
 import (
 	"cmp"
 	"context"
+	"os"
 	"slices"
 
 	"github.com/sourcegraph/jsonrpc2"
 
+	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
@@ -65,7 +67,7 @@ func (cfg *LoggingConfig) ShouldLog(method string) bool {
 }
 
 func New(ctx context.Context, handler HandlerFunc, opts *Options) *jsonrpc2.Conn {
-	stream := jsonrpc2.NewBufferedStream(StdOutReadWriteCloser{}, jsonrpc2.VSCodeObjectCodec{})
+	stream := jsonrpc2.NewBufferedStream(io.NewReadWriteCloser(os.Stdin, os.Stdout), jsonrpc2.VSCodeObjectCodec{})
 	asynch := jsonrpc2.AsyncHandler(jsonrpc2.HandlerWithError(handler))
 
 	return jsonrpc2.NewConn(ctx, stream, asynch, logMessages(opts.LoggingConfig))

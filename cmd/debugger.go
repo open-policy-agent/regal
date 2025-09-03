@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
 
@@ -18,16 +17,16 @@ import (
 	"github.com/open-policy-agent/opa/v1/logging"
 
 	"github.com/open-policy-agent/regal/internal/dap"
+	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/builtins"
 )
 
 func init() {
-	verboseLogging := false
-	serverMode := false
+	verboseLogging, serverMode := false, false
 	address := "localhost:4712"
 
-	debuggerCommand := &cobra.Command{
+	debug := &cobra.Command{
 		Use:   "debug",
 		Short: "Run the Regal OPA Debugger",
 		Long:  `Start the Regal OPA debugger and listen on stdin/stdout for client editor messages.`,
@@ -49,35 +48,22 @@ func init() {
 		}),
 	}
 
-	debuggerCommand.Flags().BoolVarP(
-		&verboseLogging, "verbose", "v", verboseLogging, "Enable verbose logging")
-	debuggerCommand.Flags().BoolVarP(
-		&serverMode, "server", "s", serverMode, "Start the debugger in server mode")
-	debuggerCommand.Flags().StringVarP(
-		&address, "address", "a", address, "Address to listen on. For use with --server flag.")
+	debug.Flags().BoolVarP(&verboseLogging, "verbose", "v", verboseLogging, "Enable verbose logging")
+	debug.Flags().BoolVarP(&serverMode, "server", "s", serverMode, "Start the debugger in server mode")
+	debug.Flags().StringVarP(&address, "address", "a", address, "Address to listen on. For use with --server flag.")
 
-	RootCommand.AddCommand(debuggerCommand)
+	RootCommand.AddCommand(debug)
 }
 
 func startCmd(ctx context.Context, logger *dap.DebugLogger) error {
 	protoManager := dap.NewProtocolManager(logger.Local)
 	logger.ProtocolManager = protoManager
 
-	debugParams := []debug.DebuggerOption{
-		debug.SetEventHandler(newEventHandler(protoManager)),
-		debug.SetLogger(logger),
-	}
-
-	debugger := debug.NewDebugger(debugParams...)
-
-	conn := newCmdConn(os.Stdin, os.Stdout)
+	debugger := debug.NewDebugger(debug.SetEventHandler(newEventHandler(protoManager)), debug.SetLogger(logger))
+	conn := io.NewReadWriteCloser(os.Stdin, os.Stdout)
 	s := newState(protoManager, debugger, logger)
 
-	if err := protoManager.Start(ctx, conn, s.messageHandler); err != nil {
-		return fmt.Errorf("failed to handle connection: %w", err)
-	}
-
-	return nil
+	return util.WrapErr(protoManager.Start(ctx, conn, s.messageHandler), "failed to handle connection")
 }
 
 func startServer(ctx context.Context, address string, logger *dap.DebugLogger) error {
@@ -109,13 +95,7 @@ func startServer(ctx context.Context, address string, logger *dap.DebugLogger) e
 
 			protoManager := dap.NewProtocolManager(logger.Local)
 			logger.ProtocolManager = protoManager
-
-			debugParams := []debug.DebuggerOption{
-				debug.SetEventHandler(newEventHandler(protoManager)),
-				debug.SetLogger(logger),
-			}
-
-			debugger := debug.NewDebugger(debugParams...)
+			debugger := debug.NewDebugger(debug.SetEventHandler(newEventHandler(protoManager)), debug.SetLogger(logger))
 
 			s := newState(protoManager, debugger, logger)
 			if err := protoManager.Start(ctx, conn, s.messageHandler); err != nil {
@@ -282,11 +262,7 @@ func (s *state) launch(ctx context.Context, r *godap.LaunchRequest) (*godap.Laun
 }
 
 func (s *state) start() error {
-	if err := s.session.ResumeAll(); err != nil {
-		return fmt.Errorf("failed to start debug session: %w", err)
-	}
-
-	return nil
+	return util.WrapErr(s.session.ResumeAll(), "failed to start debug session")
 }
 
 func (*state) evaluate(_ *godap.EvaluateRequest) (*godap.EvaluateResponse, error) {
@@ -353,22 +329,15 @@ func pos(loc *location.Location) (source *godap.Source, line, col, endLine, endC
 	}
 
 	if loc.File != "" {
-		source = &godap.Source{
-			Path: loc.File,
-		}
+		source = &godap.Source{Path: loc.File}
 	}
 
 	lines := bytes.Split(loc.Text, []byte("\n"))
-	line = loc.Row
-	col = loc.Col
 
 	// vs-code will select text if multiple lines are present; avoid this
 	// endLine = loc.Row + len(lines) - 1
 	// endCol = col + len(lines[len(lines)-1])
-	endLine = line
-	endCol = col + len(lines[0])
-
-	return
+	return source, loc.Row, loc.Col, loc.Row, loc.Col + len(lines[0])
 }
 
 func (s *state) scopes(r *godap.ScopesRequest) (*godap.ScopesResponse, error) {
@@ -385,9 +354,7 @@ func (s *state) scopes(r *godap.ScopesRequest) (*godap.ScopesResponse, error) {
 				line = loc.Row
 
 				if loc.File != "" {
-					source = &godap.Source{
-						Path: loc.File,
-					}
+					source = &godap.Source{Path: loc.File}
 				}
 			}
 
@@ -427,12 +394,10 @@ func (s *state) breakpointLocations(request *godap.BreakpointLocationsRequest) *
 	s.logger.Debug("Breakpoint locations requested for: %s:%d", request.Arguments.Source.Name, line)
 
 	// TODO: Actually assert where breakpoints can be placed.
-	return dap.NewBreakpointLocationsResponse([]godap.BreakpointLocation{
-		{
-			Line:   line,
-			Column: 1,
-		},
-	})
+	return dap.NewBreakpointLocationsResponse([]godap.BreakpointLocation{{
+		Line:   line,
+		Column: 1,
+	}})
 }
 
 func (s *state) setBreakpoints(request *godap.SetBreakpointsRequest) (*godap.SetBreakpointsResponse, error) {
@@ -455,10 +420,7 @@ func (s *state) setBreakpoints(request *godap.SetBreakpointsRequest) (*godap.Set
 	breakpoints := make([]godap.Breakpoint, 0, len(request.Arguments.Breakpoints))
 
 	for _, sbp := range request.Arguments.Breakpoints {
-		loc := location.Location{
-			File: request.Arguments.Source.Path,
-			Row:  sbp.Line,
-		}
+		loc := location.Location{File: request.Arguments.Source.Path, Row: sbp.Line}
 
 		bp, err := s.session.AddBreakpoint(loc)
 		if err != nil {
@@ -478,52 +440,4 @@ func (s *state) setBreakpoints(request *godap.SetBreakpointsRequest) (*godap.Set
 
 func (s *state) terminate(_ *godap.TerminateRequest) (*godap.TerminateResponse, error) {
 	return dap.NewTerminateResponse(), s.session.Terminate()
-}
-
-type cmdConn struct {
-	in  io.ReadCloser
-	out io.WriteCloser
-}
-
-func newCmdConn(in io.ReadCloser, out io.WriteCloser) *cmdConn {
-	return &cmdConn{
-		in:  in,
-		out: out,
-	}
-}
-
-func (c *cmdConn) Read(p []byte) (int, error) {
-	n, err := c.in.Read(p)
-	if err != nil {
-		return n, fmt.Errorf("failed to read: %w", err)
-	}
-
-	return n, nil
-}
-
-func (c *cmdConn) Write(p []byte) (int, error) {
-	n, err := c.out.Write(p)
-	if err != nil {
-		return n, fmt.Errorf("failed to write: %w", err)
-	}
-
-	return n, nil
-}
-
-func (c *cmdConn) Close() error {
-	var errs []error
-
-	if err := c.in.Close(); err != nil {
-		errs = append(errs, err)
-	}
-
-	if err := c.out.Close(); err != nil {
-		errs = append(errs, err)
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("errors: %v", errs)
-	}
-
-	return nil
 }

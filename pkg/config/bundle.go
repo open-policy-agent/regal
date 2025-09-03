@@ -11,23 +11,18 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
+// LoadConfigWithDefaultsFromBundle returns a complete configuration based on the default
+// (embedded) configuration and (optionally) a user-provided configuration. Panics if the
+// embedded configuration can't be read, as that is a hard dependency.
 func LoadConfigWithDefaultsFromBundle(regalBundle *bundle.Bundle, userConfig *Config) (Config, error) {
-	bundled, err := util.SearchMap(regalBundle.Data, "regal", "config", "provided")
-	if err != nil {
-		panic(err)
-	}
+	bundled := util.Must(util.SearchMap(regalBundle.Data, "regal", "config", "provided"))
 
 	bundledConf, ok := bundled.(map[string]any)
 	if !ok {
 		panic("expected 'rules' of object type in default configuration")
 	}
 
-	var defaultConfig Config
-
-	if err := encoding.JSONRoundTrip(bundledConf, &defaultConfig); err != nil {
-		panic("failed to parse default conf")
-	}
-
+	defaultConfig := util.Must(encoding.JSONRoundTripTo[Config](bundledConf))
 	if userConfig == nil {
 		defaultConfig.Capabilities = CapabilitiesForThisVersion()
 
@@ -36,7 +31,7 @@ func LoadConfigWithDefaultsFromBundle(regalBundle *bundle.Bundle, userConfig *Co
 
 	providedRuleLevels := providedConfLevels(&defaultConfig)
 
-	if err = mergo.Merge(&defaultConfig, userConfig, mergo.WithOverride); err != nil {
+	if err := mergo.Merge(&defaultConfig, userConfig, mergo.WithOverride); err != nil {
 		return Config{}, fmt.Errorf("failed to merge user config: %w", err)
 	}
 

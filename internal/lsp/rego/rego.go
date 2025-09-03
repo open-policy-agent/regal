@@ -246,11 +246,7 @@ func CachedQueryEval[T any](ctx context.Context, query string, input ast.Value, 
 		return err
 	}
 
-	if err := encoding.JSONRoundTrip(result.Expressions[0].Value, toValue); err != nil {
-		return fmt.Errorf("failed unmarshaling value: %w", err)
-	}
-
-	return nil
+	return util.WrapErr(encoding.JSONRoundTrip(result.Expressions[0].Value, toValue), "failed to unmarshal value")
 }
 
 func StoreAllCachedQueries(ctx context.Context, store storage.Store) error {

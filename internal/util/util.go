@@ -296,3 +296,11 @@ func Wrap[T any](v T, err error) func(string) (T, error) {
 		return v, nil
 	}
 }
+
+func WrapErr(err error, msg string) error {
+	if err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("%s: %w", msg, err)
+}

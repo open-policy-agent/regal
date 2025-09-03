@@ -20,55 +20,30 @@ func (*moduleCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*moduleCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	mod := *((*ast.Module)(ptr))
 
-	stream.WriteObjectStart()
-
-	hasWritten := false
+	encutil.ObjectStart(stream, nil)
 
 	if mod.Package != nil {
-		stream.WriteObjectField(strPackage)
-
 		if len(mod.Annotations) > 0 {
 			stream.Attachment = util.Filter(mod.Annotations, notDocumentOrRuleScope)
 		}
 
-		stream.WriteVal(mod.Package)
-
+		encutil.WriteVal(stream, strPackage, mod.Package)
 		stream.Attachment = nil
-		hasWritten = true
 	}
 
 	if len(mod.Imports) > 0 {
-		if hasWritten {
-			stream.WriteMore()
-		}
-
-		stream.WriteObjectField(strImports)
-		encutil.WriteValsArray(stream, mod.Imports)
-
-		hasWritten = true
+		encutil.WriteValsArrayAttr(stream, strImports, mod.Imports)
 	}
 
 	if len(mod.Rules) > 0 {
-		if hasWritten {
-			stream.WriteMore()
-		}
-
-		stream.WriteObjectField(strRules)
-		encutil.WriteValsArray(stream, mod.Rules)
-
-		hasWritten = true
+		encutil.WriteValsArrayAttr(stream, strRules, mod.Rules)
 	}
 
 	if len(mod.Comments) > 0 {
-		if hasWritten {
-			stream.WriteMore()
-		}
-
-		stream.WriteObjectField(strComments)
-		encutil.WriteValsArray(stream, mod.Comments)
+		encutil.WriteValsArrayAttr(stream, strComments, mod.Comments)
 	}
 
-	stream.WriteObjectEnd()
+	encutil.ObjectEnd(stream)
 }
 
 func notDocumentOrRuleScope(a *ast.Annotations) bool {

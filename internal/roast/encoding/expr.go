@@ -19,62 +19,28 @@ func (*exprCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*exprCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	expr := *((*ast.Expr)(ptr))
 
-	stream.WriteObjectStart()
-
-	hasWritten := false
-
-	if expr.Location != nil {
-		stream.WriteObjectField(strLocation)
-		stream.WriteVal(expr.Location)
-
-		hasWritten = true
-	}
+	util.ObjectStart(stream, expr.Location)
 
 	if expr.Negated {
-		if hasWritten {
-			stream.WriteMore()
-		}
-
-		stream.WriteObjectField(strNegated)
-		stream.WriteBool(expr.Negated)
-
-		hasWritten = true
+		util.WriteBool(stream, strNegated, expr.Negated)
 	}
 
 	if expr.Generated {
-		if hasWritten {
-			stream.WriteMore()
-		}
-
-		stream.WriteObjectField(strGenerated)
-		stream.WriteBool(expr.Generated)
-
-		hasWritten = true
+		util.WriteBool(stream, strGenerated, expr.Generated)
 	}
 
 	if len(expr.With) > 0 {
-		if hasWritten {
-			stream.WriteMore()
-		}
-
-		stream.WriteObjectField(strWith)
-		util.WriteValsArray(stream, expr.With)
-
-		hasWritten = true
+		util.WriteValsArrayAttr(stream, strWith, expr.With)
 	}
 
 	if expr.Terms != nil {
-		if hasWritten {
-			stream.WriteMore()
-		}
-
 		stream.WriteObjectField(strTerms)
 
 		switch t := expr.Terms.(type) {
 		case *ast.Term:
 			stream.WriteVal(t)
 		case []*ast.Term:
-			writeTermsArray(stream, t)
+			util.WriteValsArray(stream, t)
 		case *ast.SomeDecl:
 			stream.WriteVal(t)
 		case *ast.Every:
@@ -82,5 +48,5 @@ func (*exprCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 		}
 	}
 
-	stream.WriteObjectEnd()
+	util.ObjectEnd(stream)
 }

@@ -127,9 +127,7 @@ func RegalIsFormatted(_ rego.BuiltinContext, input *ast.Term, options *ast.Term)
 	}
 
 	regoVersion := ast.RegoV1
-
-	versionTerm := optionsObj.Get(regoVersionTerm)
-	if versionTerm != nil {
+	if versionTerm := optionsObj.Get(regoVersionTerm); versionTerm != nil {
 		if v, ok := versionTerm.Value.(ast.String); ok && v == "v0" {
 			regoVersion = ast.RegoV0
 		}
@@ -170,24 +168,15 @@ func formatRego(source []byte, opts format.Opts) (result []byte, err error) {
 func TestContextBuiltins() []*tester.Builtin {
 	return []*tester.Builtin{
 		{
-			Decl: &ast.Builtin{
-				Name: RegalParseModuleMeta.Name,
-				Decl: RegalParseModuleMeta.Decl,
-			},
+			Decl: &ast.Builtin{Name: RegalParseModuleMeta.Name, Decl: RegalParseModuleMeta.Decl},
 			Func: rego.Function2(RegalParseModuleMeta, RegalParseModule),
 		},
 		{
-			Decl: &ast.Builtin{
-				Name: RegalLastMeta.Name,
-				Decl: RegalLastMeta.Decl,
-			},
+			Decl: &ast.Builtin{Name: RegalLastMeta.Name, Decl: RegalLastMeta.Decl},
 			Func: rego.Function1(RegalLastMeta, RegalLast),
 		},
 		{
-			Decl: &ast.Builtin{
-				Name: RegalIsFormattedMeta.Name,
-				Decl: RegalIsFormattedMeta.Decl,
-			},
+			Decl: &ast.Builtin{Name: RegalIsFormattedMeta.Name, Decl: RegalIsFormattedMeta.Decl},
 			Func: rego.Function2(RegalIsFormattedMeta, RegalIsFormatted),
 		},
 	}

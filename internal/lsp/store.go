@@ -58,9 +58,8 @@ func PutConfig(ctx context.Context, store storage.Store, config *config.Config) 
 
 func Put[T any](ctx context.Context, store storage.Store, path storage.Path, value T) error {
 	return transact(ctx, store, func(txn storage.Transaction) error {
-		var asMap map[string]any
-
-		if err := encoding.JSONRoundTrip(value, &asMap); err != nil {
+		asMap, err := encoding.JSONRoundTripTo[map[string]any](value)
+		if err != nil {
 			return fmt.Errorf("failed to marshal value to JSON: %w", err)
 		}
 

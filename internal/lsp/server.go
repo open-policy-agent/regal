@@ -2038,16 +2038,16 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 	return initializeResult, nil
 }
 
-type loadWorkspaceContentsFailedFile struct {
+type fileLoadFailure struct {
 	URI   string
 	Error error
 }
 
 func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool) (
-	[]string, []loadWorkspaceContentsFailedFile, error,
+	[]string, []fileLoadFailure, error,
 ) {
 	changedOrNewURIs := make([]string, 0)
-	failed := make([]loadWorkspaceContentsFailedFile, 0)
+	failed := make([]fileLoadFailure, 0)
 
 	if err := files.DefaultWalker(l.workspacePath()).Walk(func(path string) error {
 		fileURI := uri.FromPath(l.client.Identifier, path)
@@ -2063,10 +2063,9 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 
 		changed, _, err := l.cache.UpdateForURIFromDisk(fileURI, path)
 		if err != nil {
-			failed = append(failed, loadWorkspaceContentsFailedFile{
-				URI:   fileURI,
-				Error: fmt.Errorf("failed to update cache for uri %q: %w", path, err),
-			})
+			failed = append(failed,
+				fileLoadFailure{URI: fileURI, Error: fmt.Errorf("failed to update cache for uri %q: %w", path, err)},
+			)
 
 			return nil // continue processing other files
 		}
@@ -2078,10 +2077,7 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 		}
 
 		if _, err = updateParse(ctx, l.parseOpts(fileURI, l.builtinsForCurrentCapabilities())); err != nil {
-			failed = append(failed, loadWorkspaceContentsFailedFile{
-				URI:   fileURI,
-				Error: fmt.Errorf("failed to update parse: %w", err),
-			})
+			failed = append(failed, fileLoadFailure{URI: fileURI, Error: fmt.Errorf("failed to update parse: %w", err)})
 
 			return nil // continue processing other files
 		}
@@ -2159,19 +2155,14 @@ func (l *LanguageServer) sendFileDiagnostics(ctx context.Context, fileURI string
 		fileDiags, _ = l.cache.GetFileDiagnostics(fileURI)
 	}
 
-	// diagnostics must be a non-nil slice, otherwise diagnostics may not be
-	// cleared by the client.
+	// must be a non-nil slice, otherwise diagnostics may not be cleared by the client.
 	if fileDiags == nil {
 		fileDiags = noDiagnostics
 	}
 
-	resp := types.FileDiagnostics{URI: fileURI, Items: fileDiags}
+	err := l.conn.Notify(ctx, methodTdPublishDiagnostics, types.FileDiagnostics{URI: fileURI, Items: fileDiags})
 
-	if err := l.conn.Notify(ctx, methodTdPublishDiagnostics, resp); err != nil {
-		return fmt.Errorf("failed to notify: %w", err)
-	}
-
-	return nil
+	return util.WrapErr(err, "failed to notify")
 }
 
 func (l *LanguageServer) getFilteredModules() (map[string]*ast.Module, error) {

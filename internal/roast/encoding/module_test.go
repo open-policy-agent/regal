@@ -213,13 +213,9 @@ func TestSerializedModuleSize(t *testing.T) {
 	t.Parallel()
 
 	policy := mustReadTestFile(t, "testdata/policy.rego")
-	module := ast.MustParseModuleWithOpts(string(policy), ast.ParserOptions{
-		ProcessAnnotation: true,
-	})
+	module := ast.MustParseModuleWithOpts(string(policy), ast.ParserOptions{ProcessAnnotation: true})
 
-	json := jsoniter.ConfigFastest
-
-	roast, err := json.Marshal(module)
+	roast, err := jsoniter.ConfigFastest.Marshal(module)
 	if err != nil {
 		t.Fatalf("failed to marshal module: %v", err)
 	}
@@ -232,20 +228,14 @@ func TestSerializedModuleSize(t *testing.T) {
 	}
 }
 
-// BenchmarkSerializeModule-10    	    2281	    500175 ns/op	  219349 B/op	    9883 allocs/op
-// BenchmarkSerializeModule-10    	    2488	    479095 ns/op	  217090 B/op	    9805 allocs/op
+// BenchmarkSerializeModule-16    	    3361	    354640 ns/op	  216756 B/op	    9773 allocs/op
 
 func BenchmarkSerializeModule(b *testing.B) {
 	policy := mustReadTestFile(b, "testdata/policy.rego")
-	module := ast.MustParseModuleWithOpts(string(policy), ast.ParserOptions{
-		ProcessAnnotation: true,
-	})
-
-	json := jsoniter.ConfigFastest
+	module := ast.MustParseModuleWithOpts(string(policy), ast.ParserOptions{ProcessAnnotation: true})
 
 	for b.Loop() {
-		_, err := json.Marshal(module)
-		if err != nil {
+		if _, err := jsoniter.ConfigFastest.Marshal(module); err != nil {
 			b.Fatalf("failed to marshal module: %v", err)
 		}
 	}

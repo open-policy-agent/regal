@@ -92,13 +92,9 @@ func createAndInitServer(
 
 	ls.SetConn(connServer)
 
-	request := types.InitializeParams{
-		RootURI:    fileURIScheme + tempDir,
-		ClientInfo: types.ClientInfo{Name: "go test"},
-	}
+	request := types.InitializeParams{RootURI: fileURIScheme + tempDir, ClientInfo: types.ClientInfo{Name: "go test"}}
 
 	var response types.InitializeResult
-
 	if err := connClient.Call(ctx, "initialize", request, &response); err != nil {
 		t.Fatalf("failed to initialize: %s", err)
 	}
