@@ -33,7 +33,10 @@ func TestFindManifestLocations(t *testing.T) {
 			t.Errorf("expected 2 locations, got %d", len(locations))
 		}
 
-		expected := []string{"foo/bar/baz", "foo/bar/qux"}
+		expected := []string{
+			filepath.FromSlash("foo/bar/baz"),
+			filepath.FromSlash("foo/bar/qux"),
+		}
 
 		if !slices.Equal(locations, expected) {
 			t.Errorf("expected %v, got %v", expected, locations)

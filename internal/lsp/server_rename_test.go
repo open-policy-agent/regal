@@ -9,6 +9,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
@@ -165,7 +166,7 @@ func TestLanguageServerFixRenameParamsWhenTargetOutsideRoot(t *testing.T) {
 	ls.client.Identifier = clients.IdentifierVSCode
 	// the root where the client stated the workspace is
 	// this is what would be set if a config file were in the parent instead
-	ls.workspaceRootURI = fmt.Sprintf("file://%s/workspace/", tmpDir)
+	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
 	ls.loadedConfig = &config.Config{
 		Rules: map[string]config.Category{
 			"idiomatic": {

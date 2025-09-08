@@ -2,11 +2,17 @@ package capabilities
 
 import (
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
 func TestLookupFromFile(t *testing.T) {
 	t.Parallel()
+
+	// TODO: https://github.com/open-policy-agent/regal/issues/1683
+	if runtime.GOOS == "windows" {
+		t.Skip()
+	}
 
 	// Test that we are able to load a capabilities file using a file://
 	// URL.

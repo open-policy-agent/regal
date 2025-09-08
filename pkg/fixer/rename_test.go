@@ -1,6 +1,9 @@
 package fixer
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
 
 func TestRenameCandidate(t *testing.T) {
 	t.Parallel()
@@ -48,7 +51,7 @@ func TestRenameCandidate(t *testing.T) {
 			t.Parallel()
 
 			actual := renameCandidate(tc.oldName)
-			if actual != tc.expected {
+			if actual != filepath.FromSlash(tc.expected) {
 				t.Errorf("expected %s, got %s", tc.expected, actual)
 			}
 		})

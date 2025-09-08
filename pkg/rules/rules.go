@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -140,12 +139,14 @@ func RegoVersionFromMap(
 	}
 
 	selectedVersion := defaultVersion
-	dir := path.Join("/", filepath.Dir(filename))
+	dir := filepath.Dir(filename)
 
 	var longestMatch int
 
 	for versionedDir := range versionsMap {
-		matchingVersionedDir := path.Join("/", versionedDir, "/")
+		matchingVersionedDir := filepath.Join(
+			string(os.PathSeparator), filepath.FromSlash(versionedDir), string(os.PathSeparator),
+		)
 
 		if strings.HasPrefix(dir, matchingVersionedDir) {
 			// >= as the versioned dir might be "" for the project root
