@@ -107,13 +107,7 @@ func TestFindConfig(t *testing.T) {
 			test.WithTempFS(testData.FS, func(root string) {
 				configFile, err := FindConfig(filepath.Join(root, "foo", "bar", "baz"))
 				if testData.Error != "" {
-					if err == nil {
-						t.Fatalf("expected error %s, got nil", testData.Error)
-					}
-
-					if !strings.Contains(err.Error(), testData.Error) {
-						t.Fatalf("expected error %q, got %q", testData.Error, err.Error())
-					}
+					testutil.ErrMustContain(err, testData.Error)(t)
 				} else if err != nil {
 					t.Fatalf("expected no error, got %s", err)
 				}
@@ -341,40 +335,15 @@ capabilities:
 		t.Errorf("expected %d builtins, got %d", exp, got)
 	}
 
-	expectedBuiltins := []string{"regex.match", "ldap.query"}
+	expBuiltins := util.NewSet("regex.match", "ldap.query")
+	actBuiltins := util.NewSetFromKeys(conf.Capabilities.Builtins)
 
-	for _, expectedBuiltin := range expectedBuiltins {
-		expectedBuiltinFound := false
-
-		for name := range conf.Capabilities.Builtins {
-			if name == expectedBuiltin {
-				expectedBuiltinFound = true
-
-				break
-			}
-		}
-
-		if !expectedBuiltinFound {
-			t.Errorf("expected builtin %s to be found", expectedBuiltin)
-		}
+	if !expBuiltins.Equal(expBuiltins.Intersect(actBuiltins)) {
+		t.Errorf("expected builtins %s in capabilities set", expBuiltins)
 	}
 
-	unexpectedBuiltins := []string{"http.send"}
-
-	for _, unexpectedBuiltin := range unexpectedBuiltins {
-		unexpectedBuiltinFound := false
-
-		for name := range conf.Capabilities.Builtins {
-			if name == unexpectedBuiltin {
-				unexpectedBuiltinFound = true
-
-				break
-			}
-		}
-
-		if unexpectedBuiltinFound {
-			t.Errorf("expected builtin %s to be removed", unexpectedBuiltin)
-		}
+	if actBuiltins.Contains("http.send") {
+		t.Errorf("expected builtin http.send to be removed from capabilities set")
 	}
 }
 
@@ -427,10 +396,8 @@ capabilities:
     engine: opa
     version: 68
 `)
-	if err := yaml.Unmarshal(bs, &Config{}); err == nil ||
-		err.Error() != "capabilities: from.version must be a string" {
-		t.Errorf("expected error, got %v", err)
-	}
+
+	testutil.ErrMustContain(yaml.Unmarshal(bs, &Config{}), "capabilities: from.version must be a string")(t)
 }
 
 func TestUnmarshalConfigWithMissingVPrefixOPAVersion(t *testing.T) {
@@ -442,10 +409,9 @@ capabilities:
     engine: opa
     version: 0.68.0
 `)
-	if err := yaml.Unmarshal(bs, &Config{}); err == nil ||
-		err.Error() != "capabilities: from.version must be a valid OPA version (with a 'v' prefix)" {
-		t.Errorf("expected error, got %v", err)
-	}
+
+	testutil.ErrMustContain(
+		yaml.Unmarshal(bs, &Config{}), "capabilities: from.version must be a valid OPA version (with a 'v' prefix)")(t)
 }
 
 func TestUnmarshalProjectRootsAsStringOrObject(t *testing.T) {
@@ -461,14 +427,8 @@ func TestUnmarshalProjectRootsAsStringOrObject(t *testing.T) {
 `)
 
 	conf := testutil.MustUnmarshalYAML[Config](t, bs)
-
 	version1 := 1
-	expRoots := []Root{
-		{Path: "foo/bar"},
-		{Path: "baz"},
-		{Path: "bar/baz"},
-		{Path: "v1", RegoVersion: &version1},
-	}
+	expRoots := []Root{{Path: "foo/bar"}, {Path: "baz"}, {Path: "bar/baz"}, {Path: "v1", RegoVersion: &version1}}
 	roots := *conf.Project.Roots
 
 	if len(roots) != len(expRoots) {
@@ -508,9 +468,7 @@ func TestAllRegoVersions(t *testing.T) {
     - path: foo
       rego-version: 1
 `,
-			FS: map[string]string{
-				"bar/baz/.manifest": `{"rego_version": 1}`,
-			},
+			FS: map[string]string{"bar/baz/.manifest": `{"rego_version": 1}`},
 			Expected: map[string]ast.RegoVersion{
 				"":        ast.RegoV0,
 				"bar/baz": ast.RegoV1,
@@ -518,10 +476,8 @@ func TestAllRegoVersions(t *testing.T) {
 			},
 		},
 		"no config": {
-			Config: "",
-			FS: map[string]string{
-				"bar/baz/.manifest": `{"rego_version": 1}`,
-			},
+			Config:   "",
+			FS:       map[string]string{"bar/baz/.manifest": `{"rego_version": 1}`},
 			Expected: map[string]ast.RegoVersion{},
 		},
 	}
@@ -536,11 +492,7 @@ func TestAllRegoVersions(t *testing.T) {
 			}
 
 			test.WithTempFS(testData.FS, func(root string) {
-				versions, err := AllRegoVersions(root, conf)
-				if err != nil {
-					t.Fatal(err)
-				}
-
+				versions := testutil.Must(AllRegoVersions(root, conf))(t)
 				if !maps.Equal(versions, testData.Expected) {
 					t.Errorf("expected %v, got %v", testData.Expected, versions)
 				}

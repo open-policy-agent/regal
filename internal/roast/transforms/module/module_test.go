@@ -163,14 +163,10 @@ func BenchmarkObjectInsertManyVsObjectNew(b *testing.B) {
 		for b.Loop() {
 			terms := make([][2]*ast.Term, 0, n)
 			for j := range n {
-				terms = append(terms, ast.Item(
-					ast.InternedTerm(strconv.Itoa(j)),
-					ast.InternedTerm(strconv.Itoa(j)),
-				))
+				terms = append(terms, ast.Item(ast.InternedTerm(strconv.Itoa(j)), ast.InternedTerm(strconv.Itoa(j))))
 			}
 
-			obj := ast.NewObject(terms...)
-			if obj.Len() != n {
+			if obj := ast.NewObject(terms...); obj.Len() != n {
 				b.Errorf("expected object length %d, got %d", n, obj.Len())
 			}
 		}

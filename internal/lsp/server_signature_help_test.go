@@ -22,7 +22,6 @@ func TestTextDocumentSignatureHelp(t *testing.T) {
 	t.Cleanup(cancel)
 
 	mainRegoURI := fileURIScheme + filepath.Join(t.TempDir(), "main.rego")
-
 	content := `package example
 
 allow if regex.match(` + "`foo`" + `, "bar")
@@ -63,17 +62,19 @@ allow if concat(",", "a", "b") == "b,a"`
 
 			ls := NewLanguageServer(ctx, &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 			ls.loadedConfig = &config.Config{}
-
 			ls.cache.SetFileContents(mainRegoURI, content)
 
-			if err := PutBuiltins(ctx, ls.regoStore, builtins); err != nil {
-				t.Fatalf("failed to store builtins: %s", err)
-			}
+			testutil.NoErr(PutBuiltins(ctx, ls.regoStore, builtins))(t)
 
-			signatureHelp := invokeSignatureHelpHandler(ctx, t, ls, types.SignatureHelpParams{
-				TextDocument: types.TextDocumentIdentifier{URI: mainRegoURI},
-				Position:     tc.position,
-			})
+			result := testutil.Must(ls.Handle(ctx, nil, &jsonrpc2.Request{
+				Method: "textDocument/signatureHelp",
+				Params: testutil.ToJSONRawMessage(t, types.SignatureHelpParams{
+					TextDocument: types.TextDocumentIdentifier{URI: mainRegoURI},
+					Position:     tc.position,
+				}),
+			}))(t)
+
+			signatureHelp := testutil.MustBe[*types.SignatureHelp](t, result)
 
 			if len(signatureHelp.Signatures) == 0 {
 				t.Error("expected at least one signature")
@@ -118,28 +119,4 @@ allow if concat(",", "a", "b") == "b,a"`
 			}
 		})
 	}
-}
-
-func invokeSignatureHelpHandler(
-	ctx context.Context,
-	t *testing.T,
-	l *LanguageServer,
-	params types.SignatureHelpParams,
-) *types.SignatureHelp {
-	t.Helper()
-
-	result, err := l.Handle(ctx, nil, &jsonrpc2.Request{
-		Method: "textDocument/signatureHelp",
-		Params: testutil.ToJSONRawMessage(t, params),
-	})
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-
-	signatureHelp, ok := result.(*types.SignatureHelp)
-	if !ok || signatureHelp == nil {
-		t.Fatalf("Expected result to be of type []types.CodeAction, got %T", result)
-	}
-
-	return signatureHelp
 }

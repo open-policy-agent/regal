@@ -42,19 +42,11 @@ func TestEvalWorkspacePath(t *testing.T) {
 
 	policy1URI := ls.workspaceRootURI + "/policy1.rego"
 	policy1RelativeFileName := strings.TrimPrefix(policy1URI, ls.workspaceRootURI+"/")
-
-	module1, err := rparse.ModuleWithOpts(policy1RelativeFileName, policy1, rparse.ParserOptions())
-	if err != nil {
-		t.Fatal(err)
-	}
+	module1 := testutil.Must(rparse.ModuleWithOpts(policy1RelativeFileName, policy1, rparse.ParserOptions()))(t)
 
 	policy2URI := ls.workspaceRootURI + "/policy2.rego"
 	policy2RelativeFileName := strings.TrimPrefix(policy2URI, ls.workspaceRootURI+"/")
-
-	module2, err := rparse.ModuleWithOpts(policy2RelativeFileName, policy2, rparse.ParserOptions())
-	if err != nil {
-		t.Fatal(err)
-	}
+	module2 := testutil.Must(rparse.ModuleWithOpts(policy2RelativeFileName, policy2, rparse.ParserOptions()))(t)
 
 	ls.cache.SetFileContents(policy1URI, policy1)
 	ls.cache.SetFileContents(policy2URI, policy2)
@@ -63,19 +55,12 @@ func TestEvalWorkspacePath(t *testing.T) {
 
 	input := map[string]any{"exists": true}
 
-	res, err := ls.EvalInWorkspace(t.Context(), "data.policy1.allow", input)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	res := testutil.Must(ls.EvalInWorkspace(t.Context(), "data.policy1.allow", input))(t)
 	if val, ok := res.Value.(bool); !ok || val != true {
 		t.Fatalf("expected true, got false")
 	}
 
-	expectedPrintOutput := map[string]map[int][]string{
-		policy2URI: {4: {"1"}},
-	}
-
+	expectedPrintOutput := map[string]map[int][]string{policy2URI: {4: {"1"}}}
 	if diff := cmp.Diff(expectedPrintOutput, res.PrintOutput); diff != "" {
 		t.Fatalf("unexpected print output (-want +got):\n%s", diff)
 	}
@@ -86,23 +71,12 @@ func TestEvalWorkspacePathInternalData(t *testing.T) {
 
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
-	res, err := ls.EvalInWorkspace(t.Context(), "object.keys(data.internal)", map[string]any{})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	val, ok := res.Value.([]any)
-	if !ok {
-		t.Fatalf("expected []any, got %T", res.Value)
-	}
+	res := testutil.Must(ls.EvalInWorkspace(t.Context(), "object.keys(data.internal)", map[string]any{}))(t)
+	val := testutil.MustBe[[]any](t, res.Value)
 
 	act := make([]string, 0, len(val))
 	for _, v := range val {
-		if str, ok := v.(string); !ok {
-			t.Fatalf("expected string, got %T", v)
-		} else {
-			act = append(act, str)
-		}
+		act = append(act, testutil.MustBe[string](t, v))
 	}
 
 	slices.Sort(act)
@@ -116,20 +90,13 @@ func TestEvalWorkspacePathInternalData(t *testing.T) {
 func TestFindInputPath(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
-		fileExt     string
-		fileContent string
-	}{
-		{"json", `{"x": true}`},
-		{"yaml", "x: true"},
-	}
+	cases := []struct{ fileExt, fileContent string }{{"json", `{"x": true}`}, {"yaml", "x: true"}}
 
 	for _, tc := range cases {
 		t.Run(tc.fileExt, func(t *testing.T) {
 			t.Parallel()
 
 			tmpDir := t.TempDir()
-
 			workspacePath := filepath.Join(tmpDir, "workspace")
 			file := filepath.Join(tmpDir, "workspace", "foo", "bar", "baz.rego")
 
@@ -146,7 +113,6 @@ func TestFindInputPath(t *testing.T) {
 			}
 
 			testutil.MustRemove(t, tmpDir+"/workspace/foo/bar/input."+tc.fileExt)
-
 			createWithContent(t, tmpDir+"/workspace/input."+tc.fileExt, tc.fileContent)
 
 			if path, exp := rio.FindInputPath(file, workspacePath), workspacePath+"/input."+tc.fileExt; path != exp {
@@ -159,39 +125,30 @@ func TestFindInputPath(t *testing.T) {
 func TestFindInput(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
-		fileType    string
-		fileContent string
-	}{
-		{"json", `{"x": true}`},
-		{"yaml", "x: true"},
-	}
+	cases := []struct{ fileType, fileContent string }{{"json", `{"x": true}`}, {"yaml", "x: true"}}
 
 	for _, tc := range cases {
 		t.Run(tc.fileType, func(t *testing.T) {
 			t.Parallel()
 
 			tmpDir := t.TempDir()
-
 			workspacePath := filepath.Join(tmpDir, "workspace")
 			file := filepath.Join(tmpDir, "workspace", "foo", "bar", "baz.rego")
 
 			testutil.MustMkdirAll(t, workspacePath, "foo", "bar")
 
-			path, content := rio.FindInput(file, workspacePath)
-			if path != "" || content != nil {
+			if path, content := rio.FindInput(file, workspacePath); path != "" || content != nil {
 				t.Fatalf("did not expect to find input.%s", tc.fileType)
 			}
 
 			createWithContent(t, tmpDir+"/workspace/foo/bar/input."+tc.fileType, tc.fileContent)
 
-			path, content = rio.FindInput(file, workspacePath)
+			path, content := rio.FindInput(file, workspacePath)
 			if path != workspacePath+"/foo/bar/input."+tc.fileType || !maps.Equal(content, map[string]any{"x": true}) {
 				t.Errorf(`expected input {"x": true} at, got %s`, content)
 			}
 
 			testutil.MustRemove(t, tmpDir+"/workspace/foo/bar/input."+tc.fileType)
-
 			createWithContent(t, tmpDir+"/workspace/input."+tc.fileType, tc.fileContent)
 
 			path, content = rio.FindInput(file, workspacePath)
@@ -205,10 +162,9 @@ func TestFindInput(t *testing.T) {
 func createWithContent(t *testing.T, path string, content string) {
 	t.Helper()
 
-	f := testutil.Must(os.Create(path))(t)
-	defer f.Close()
+	testutil.NoErr(rio.WithCreateRecursive(path, func(f *os.File) error {
+		_, err := f.WriteString(content)
 
-	if _, err := f.WriteString(content); err != nil {
-		t.Fatal(err)
-	}
+		return err
+	}))(t)
 }

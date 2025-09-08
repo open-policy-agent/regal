@@ -35,9 +35,7 @@ type PrettyReporter struct {
 }
 
 func NewPrettyReporter(outputWriter io.Writer) *PrettyReporter {
-	return &PrettyReporter{
-		outputWriter: outputWriter,
-	}
+	return &PrettyReporter{outputWriter: outputWriter}
 }
 
 func (r *PrettyReporter) SetDryRun(dryRun bool) {

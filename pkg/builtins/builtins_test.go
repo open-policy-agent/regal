@@ -21,9 +21,7 @@ func BenchmarkRegalLast(b *testing.B) {
 
 	for b.Loop() {
 		var err error
-
-		res, err = builtins.RegalLast(bctx, arr)
-		if err != nil {
+		if res, err = builtins.RegalLast(bctx, arr); err != nil {
 			b.Fatal(err)
 		}
 	}

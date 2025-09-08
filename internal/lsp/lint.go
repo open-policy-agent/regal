@@ -102,11 +102,7 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 	var astErrs ast.Errors
 	if errors.As(err, &astErrs) {
 		for _, e := range astErrs {
-			astErrors = append(astErrors, ast.Error{
-				Code:     e.Code,
-				Message:  e.Message,
-				Location: e.Location,
-			})
+			astErrors = append(astErrors, ast.Error{Code: e.Code, Message: e.Message, Location: e.Location})
 		}
 	} else {
 		// Check if err is a single ast.Error
@@ -312,20 +308,15 @@ func convertReportToDiagnostics(rpt *report.Report, workspaceRootURI string) map
 		}
 
 		file := cmp.Or(item.Location.File, workspaceRootURI)
-		source := "regal/" + item.Category
 
 		fileDiags[file] = append(fileDiags[file], types.Diagnostic{
 			Severity: &severity,
 			Range:    getRangeForViolation(item),
 			Message:  item.Description,
-			Source:   &source,
+			Source:   util.Pointer("regal/" + item.Category),
 			Code:     item.Title,
 			CodeDescription: &types.CodeDescription{
-				Href: fmt.Sprintf(
-					"https://docs.styra.com/regal/rules/%s/%s",
-					item.Category,
-					item.Title,
-				),
+				Href: fmt.Sprintf("https://docs.styra.com/regal/rules/%s/%s", item.Category, item.Title),
 			},
 		})
 	}

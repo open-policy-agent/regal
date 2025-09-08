@@ -572,17 +572,16 @@ func (l Linter) GetConfig() (*config.Config, error) {
 
 	mergedConf, err := config.LoadConfigWithDefaultsFromBundle(rbundle.LoadedBundle(), l.userConfig)
 	if err != nil {
-		return &config.Config{}, fmt.Errorf("failed to read provided config: %w", err)
+		return nil, fmt.Errorf("failed to read provided config: %w", err)
 	}
 
 	if l.debugMode {
 		bs, err := yaml.Marshal(mergedConf)
 		if err != nil {
-			return &config.Config{}, fmt.Errorf("failed to marshal config: %w", err)
+			return nil, fmt.Errorf("failed to marshal config: %w", err)
 		}
 
-		log.Println("merged provided and user config:")
-		log.Println(outil.ByteSliceToString(bs))
+		log.Println("merged provided and user config:\n", outil.ByteSliceToString(bs))
 	}
 
 	return &mergedConf, nil
@@ -654,24 +653,15 @@ func (l Linter) validate(conf *config.Config) error {
 	configuredCategories.Add(l.enableCategory...)
 	configuredCategories.Add(l.disableCategory...)
 
-	var invalidCategories []string
-
-	if diff := configuredCategories.Diff(validCategories); diff.Size() > 0 {
-		invalidCategories = diff.Items()
-	}
-
-	var invalidRules []string
-
-	if diff := configuredRules.Diff(validRules); diff.Size() > 0 {
-		invalidRules = diff.Items()
-	}
+	invalidCategories := configuredCategories.Diff(validCategories)
+	invalidRules := configuredRules.Diff(validRules)
 
 	switch {
-	case len(invalidCategories) > 0 && len(invalidRules) > 0:
+	case invalidCategories.Size() > 0 && invalidRules.Size() > 0:
 		return fmt.Errorf("unknown categories: %v, unknown rules: %v", invalidCategories, invalidRules)
-	case len(invalidCategories) > 0:
+	case invalidCategories.Size() > 0:
 		return fmt.Errorf("unknown categories: %v", invalidCategories)
-	case len(invalidRules) > 0:
+	case invalidRules.Size() > 0:
 		return fmt.Errorf("unknown rules: %v", invalidRules)
 	}
 

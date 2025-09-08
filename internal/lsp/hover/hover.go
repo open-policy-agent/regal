@@ -70,15 +70,13 @@ func CreateHoverContent(builtin *ast.Builtin) string {
 	}
 
 	title := fmt.Sprintf("[%s](%s)", builtin.Name, link)
-
 	sb := &strings.Builder{}
 
 	sb.WriteString("### ")
 	sb.WriteString(title)
 	sb.WriteString("\n\n")
 
-	exampleLink, ok := examples.GetBuiltInLink(builtin.Name)
-	if ok {
+	if exampleLink, ok := examples.GetBuiltInLink(builtin.Name); ok {
 		fmt.Fprintf(sb, "[View Usage Examples](%s)\n", exampleLink)
 	}
 

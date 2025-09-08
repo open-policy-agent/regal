@@ -57,11 +57,5 @@ func (u *NonRawRegexPattern) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]FixR
 		return []FixResult{}, nil
 	}
 
-	newContents := strings.Join(lines, "\n")
-
-	return []FixResult{{
-		Title:    u.Name(),
-		Root:     opts.BaseDir,
-		Contents: newContents,
-	}}, nil
+	return []FixResult{{Title: u.Name(), Root: opts.BaseDir, Contents: strings.Join(lines, "\n")}}, nil
 }

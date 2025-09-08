@@ -22,10 +22,7 @@ func TestRefresh(t *testing.T) {
 	c := NewCache(workspacePath, log.NewLogger(log.LevelOff, io.Discard))
 
 	// perform the first load of the bundles
-	refreshedBundles, err := c.Refresh()
-	if err != nil {
-		t.Fatalf("failed to refresh cache: %v", err)
-	}
+	refreshedBundles := testutil.Must(c.Refresh())(t)
 
 	if !slices.Equal(refreshedBundles, []string{"foo"}) {
 		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
@@ -35,11 +32,7 @@ func TestRefresh(t *testing.T) {
 		t.Fatalf("unexpected number of bundles: %d", len(c.List()))
 	}
 
-	fooBundle, ok := c.Get("foo")
-	if !ok {
-		t.Fatalf("failed to get bundle foo")
-	}
-
+	fooBundle := testutil.MustBeOK(c.Get("foo"))(t)
 	if !maps.Equal(fooBundle.Data, map[string]any{"foo": "bar"}) {
 		t.Fatalf("unexpected bundle data: %v", fooBundle.Data)
 	}
@@ -64,7 +57,6 @@ func TestRefresh(t *testing.T) {
 
 	// perform the third load of the bundles, after adding a new unrelated file
 	refreshedBundles = testutil.Must(c.Refresh())(t)
-
 	if !slices.Equal(refreshedBundles, []string{}) {
 		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
 	}
@@ -72,18 +64,12 @@ func TestRefresh(t *testing.T) {
 	// update the data in the bundle
 	testutil.MustWriteFile(t, filepath.Join(workspacePath, "foo", "data.json"), []byte(`{"foo": "baz"}`))
 
-	if refreshedBundles, err = c.Refresh(); err != nil {
-		t.Fatalf("failed to refresh cache: %v", err)
-	}
-
+	refreshedBundles = testutil.Must(c.Refresh())(t)
 	if !slices.Equal(refreshedBundles, []string{"foo"}) {
 		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
 	}
 
-	if fooBundle, ok = c.Get("foo"); !ok {
-		t.Fatalf("failed to get bundle foo")
-	}
-
+	fooBundle = testutil.MustBeOK(c.Get("foo"))(t)
 	if !maps.Equal(fooBundle.Data, map[string]any{"foo": "baz"}) {
 		t.Fatalf("unexpected bundle data: %v", fooBundle.Data)
 	}
@@ -94,16 +80,11 @@ func TestRefresh(t *testing.T) {
 	testutil.MustWriteFile(t, filepath.Join(workspacePath, "bar", "data.json"), []byte(`{"bar": true}`))
 
 	refreshedBundles = testutil.Must(c.Refresh())(t)
-
 	if !slices.Equal(refreshedBundles, []string{"bar"}) {
 		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
 	}
 
-	barBundle, ok := c.Get("bar")
-	if !ok {
-		t.Fatalf("failed to get bundle bar")
-	}
-
+	barBundle := testutil.MustBeOK(c.Get("bar"))(t)
 	if !maps.Equal(barBundle.Data, map[string]any{"bar": true}) {
 		t.Fatalf("unexpected bundle data: %v", fooBundle.Data)
 	}
@@ -112,7 +93,6 @@ func TestRefresh(t *testing.T) {
 	testutil.MustRemoveAll(t, workspacePath, "foo")
 
 	_ = testutil.Must(c.Refresh())(t)
-
 	if !slices.Equal(c.List(), []string{"bar"}) {
 		t.Fatalf("unexpected bundle list: %v", c.List())
 	}

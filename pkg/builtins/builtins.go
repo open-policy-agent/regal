@@ -10,56 +10,22 @@ import (
 	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/open-policy-agent/opa/v1/tester"
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
-	"github.com/open-policy-agent/opa/v1/types"
 	"github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/pkg/builtins/meta"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
-// RegalParseModuleMeta metadata for regal.parse_module.
-var RegalParseModuleMeta = &rego.Function{
-	Name: "regal.parse_module",
-	Decl: types.NewFunction(
-		types.Args(
-			types.Named("filename", types.S).Description("file name to attach to AST nodes' locations"),
-			types.Named("rego", types.S).Description("Rego module"),
-		),
-		types.Named("output", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))),
-	),
-}
+var (
+	RegalBuiltinRegoFuncs = []func(*rego.Rego){
+		rego.Function1(meta.RegalLast, RegalLast),
+		rego.Function2(meta.RegalParseModule, RegalParseModule),
+		rego.Function2(meta.RegalIsFormatted, RegalIsFormatted),
+	}
 
-// RegalLastMeta metadata for regal.last.
-var RegalLastMeta = &rego.Function{
-	Name: "regal.last",
-	Decl: types.NewFunction(
-		types.Args(
-			types.Named("array", types.NewArray(nil, types.A)).
-				Description("performance optimized last index retrieval"),
-		),
-		types.Named("element", types.A),
-	),
-}
-
-var RegalBuiltinRegoFuncs = []func(*rego.Rego){
-	rego.Function1(RegalLastMeta, RegalLast),
-	rego.Function2(RegalParseModuleMeta, RegalParseModule),
-	rego.Function2(RegalIsFormattedMeta, RegalIsFormatted),
-}
-
-// RegalIsFormattedMeta metadata for regal.is_formatted.
-var RegalIsFormattedMeta = &rego.Function{
-	Name: "regal.is_formatted",
-	Decl: types.NewFunction(
-		types.Args(
-			types.Named("input", types.S).
-				Description("input string to check for formatting"),
-			types.Named("options", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))).
-				Description("formatting options"),
-		),
-		types.B,
-	),
-}
+	regoVersionTerm = ast.InternedTerm("rego_version")
+)
 
 // RegalParseModule regal.parse_module, like rego.parse_module but with location data included in AST.
 func RegalParseModule(_ rego.BuiltinContext, filename *ast.Term, policy *ast.Term) (*ast.Term, error) {
@@ -75,7 +41,6 @@ func RegalParseModule(_ rego.BuiltinContext, filename *ast.Term, policy *ast.Ter
 
 	filenameStr := string(filenameValue)
 	policyStr := string(policyValue)
-
 	opts := parse.ParserOptions()
 
 	// Allow testing Rego v0 modules. We could provide a separate builtin for this,
@@ -113,8 +78,6 @@ func RegalLast(_ rego.BuiltinContext, arr *ast.Term) (*ast.Term, error) {
 	return nil, nil //nolint:nilnil
 }
 
-var regoVersionTerm = ast.StringTerm("rego_version")
-
 func RegalIsFormatted(_ rego.BuiltinContext, input *ast.Term, options *ast.Term) (*ast.Term, error) {
 	inputStr, err := builtins.StringOperand(input.Value, 1)
 	if err != nil {
@@ -135,7 +98,7 @@ func RegalIsFormatted(_ rego.BuiltinContext, input *ast.Term, options *ast.Term)
 
 	// We don't need to process annotations for formatting.
 	popts := ast.ParserOptions{ProcessAnnotation: false, RegoVersion: regoVersion}
-	source := util.StringToByteSlice(string(inputStr))
+	source := util.StringToByteSlice(inputStr)
 
 	result, err := formatRego(source, format.Opts{RegoVersion: regoVersion, ParserOptions: &popts})
 	if err != nil {
@@ -168,16 +131,16 @@ func formatRego(source []byte, opts format.Opts) (result []byte, err error) {
 func TestContextBuiltins() []*tester.Builtin {
 	return []*tester.Builtin{
 		{
-			Decl: &ast.Builtin{Name: RegalParseModuleMeta.Name, Decl: RegalParseModuleMeta.Decl},
-			Func: rego.Function2(RegalParseModuleMeta, RegalParseModule),
+			Decl: &ast.Builtin{Name: meta.RegalParseModule.Name, Decl: meta.RegalParseModule.Decl},
+			Func: rego.Function2(meta.RegalParseModule, RegalParseModule),
 		},
 		{
-			Decl: &ast.Builtin{Name: RegalLastMeta.Name, Decl: RegalLastMeta.Decl},
-			Func: rego.Function1(RegalLastMeta, RegalLast),
+			Decl: &ast.Builtin{Name: meta.RegalLast.Name, Decl: meta.RegalLast.Decl},
+			Func: rego.Function1(meta.RegalLast, RegalLast),
 		},
 		{
-			Decl: &ast.Builtin{Name: RegalIsFormattedMeta.Name, Decl: RegalIsFormattedMeta.Decl},
-			Func: rego.Function2(RegalIsFormattedMeta, RegalIsFormatted),
+			Decl: &ast.Builtin{Name: meta.RegalIsFormatted.Name, Decl: meta.RegalIsFormatted.Decl},
+			Func: rego.Function2(meta.RegalIsFormatted, RegalIsFormatted),
 		},
 	}
 }

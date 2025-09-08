@@ -77,14 +77,12 @@ func getPackagePathDirectory(fc *FixCandidate, config *config.Config) (string, e
 }
 
 func shouldExcludeTestSuffix(config *config.Config) bool {
-	if config == nil {
-		return true
-	}
-
-	if category, ok := config.Rules["idiomatic"]; ok {
-		if rule, ok := category["directory-package-mismatch"]; ok {
-			if exclude, ok := rule.Extra["exclude-test-suffix"].(bool); ok {
-				return exclude
+	if config != nil {
+		if category, ok := config.Rules["idiomatic"]; ok {
+			if rule, ok := category["directory-package-mismatch"]; ok {
+				if exclude, ok := rule.Extra["exclude-test-suffix"].(bool); ok {
+					return exclude
+				}
 			}
 		}
 	}

@@ -48,16 +48,7 @@ all_digits if {
 `,
 			fixExpected: false,
 			runtimeOptions: &RuntimeOptions{
-				Locations: []report.Location{
-					{
-						Row:    4,
-						Column: 17,
-						End: &report.Position{
-							Row:    4,
-							Column: 24,
-						},
-					},
-				},
+				Locations: []report.Location{{Row: 4, Column: 17, End: &report.Position{Row: 4, Column: 24}}},
 			},
 		},
 		"bad request, but location given": {
@@ -75,16 +66,7 @@ all_digits if {
 `,
 			fixExpected: false,
 			runtimeOptions: &RuntimeOptions{
-				Locations: []report.Location{
-					{
-						Row:    4,
-						Column: 17,
-						End: &report.Position{
-							Row:    4,
-							Column: 25,
-						},
-					},
-				},
+				Locations: []report.Location{{Row: 4, Column: 17, End: &report.Position{Row: 4, Column: 25}}},
 			},
 		},
 		"simple case": {
@@ -102,16 +84,7 @@ all_digits if {
 `,
 			fixExpected: true,
 			runtimeOptions: &RuntimeOptions{
-				Locations: []report.Location{
-					{
-						Row:    4,
-						Column: 17,
-						End: &report.Position{
-							Row:    4,
-							Column: 25,
-						},
-					},
-				},
+				Locations: []report.Location{{Row: 4, Column: 17, End: &report.Position{Row: 4, Column: 25}}},
 			},
 		},
 		"two on one line": {
@@ -130,22 +103,8 @@ all_digits if {
 			fixExpected: true,
 			runtimeOptions: &RuntimeOptions{
 				Locations: []report.Location{
-					{
-						Row:    4,
-						Column: 47,
-						End: &report.Position{
-							Row:    4,
-							Column: 50,
-						},
-					},
-					{
-						Row:    4,
-						Column: 24,
-						End: &report.Position{
-							Row:    4,
-							Column: 27,
-						},
-					},
+					{Row: 4, Column: 47, End: &report.Position{Row: 4, Column: 50}},
+					{Row: 4, Column: 24, End: &report.Position{Row: 4, Column: 27}},
 				},
 			},
 		},
@@ -165,22 +124,8 @@ all_digits if {
 			fixExpected: true,
 			runtimeOptions: &RuntimeOptions{
 				Locations: []report.Location{
-					{
-						Row:    4,
-						Column: 50,
-						End: &report.Position{
-							Row:    4,
-							Column: 56,
-						},
-					},
-					{
-						Row:    4,
-						Column: 24,
-						End: &report.Position{
-							Row:    4,
-							Column: 30,
-						},
-					},
+					{Row: 4, Column: 50, End: &report.Position{Row: 4, Column: 56}},
+					{Row: 4, Column: 24, End: &report.Position{Row: 4, Column: 30}},
 				},
 			},
 		},
@@ -206,22 +151,8 @@ all_digits if {
 			fixExpected: true,
 			runtimeOptions: &RuntimeOptions{
 				Locations: []report.Location{
-					{
-						Row:    5,
-						Column: 17,
-						End: &report.Position{
-							Row:    5,
-							Column: 20,
-						},
-					},
-					{
-						Row:    6,
-						Column: 17,
-						End: &report.Position{
-							Row:    4,
-							Column: 20,
-						},
-					},
+					{Row: 5, Column: 17, End: &report.Position{Row: 5, Column: 20}},
+					{Row: 6, Column: 17, End: &report.Position{Row: 4, Column: 20}},
 				},
 			},
 		},

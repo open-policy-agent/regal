@@ -6,6 +6,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
 func TestParse(t *testing.T) {
@@ -103,13 +104,8 @@ func TestParse_Errors(t *testing.T) {
 			t.Parallel()
 
 			_, err := Parse(tc.ExecuteCommandParams, tc.ParseOptions)
-			if err == nil {
-				t.Fatalf("expected error %q, got nil", tc.ExpectedError)
-			}
 
-			if err.Error() != tc.ExpectedError {
-				t.Fatalf("expected error %q, got %q", tc.ExpectedError, err.Error())
-			}
+			testutil.ErrMustContain(err, tc.ExpectedError)(t)
 		})
 	}
 }

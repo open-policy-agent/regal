@@ -10,6 +10,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
@@ -61,8 +62,6 @@ allow if {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			tempDir := t.TempDir()
-
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 
@@ -76,9 +75,8 @@ allow if {
 
 				return func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
 					if req.Method == "workspace/applyEdit" {
-						var requestData types.ApplyWorkspaceEditParams
-
-						if err = encoding.JSON().Unmarshal(*req.Params, &requestData); err != nil {
+						requestData, err := encoding.JSONUnmarshalTo[types.ApplyWorkspaceEditParams](*req.Params)
+						if err != nil {
 							t.Fatalf("failed to unmarshal applyEdit params: %s", err)
 						}
 
@@ -93,6 +91,7 @@ allow if {
 				}
 			}
 
+			tempDir := t.TempDir()
 			clientHandler := createWorkspaceApplyEditTestHandler(t, receivedMessages)
 			ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
 
@@ -113,9 +112,7 @@ allow if {
 			var executeResponse any
 
 			// simulates a manual fmt request from the client
-			if err := connClient.Call(ctx, "workspace/executeCommand", executeParams, &executeResponse); err != nil {
-				t.Fatalf("failed to execute command: %s", err)
-			}
+			testutil.NoErr(connClient.Call(ctx, "workspace/executeCommand", executeParams, &executeResponse))(t)
 
 			timeout := time.NewTimer(determineTimeout())
 			defer timeout.Stop()
@@ -135,14 +132,12 @@ allow if {
 					t.Fatalf("expected URI %s, got %s", mainRegoURI, docChange.TextDocument.URI)
 				}
 
-				edits := docChange.Edits
-
-				if len(edits) != len(tc.expectedEdits) {
-					t.Fatalf("expected %d edits, got %d", len(tc.expectedEdits), len(edits))
+				if len(docChange.Edits) != len(tc.expectedEdits) {
+					t.Fatalf("expected %d edits, got %d", len(tc.expectedEdits), len(docChange.Edits))
 				}
 
 				for i, expected := range tc.expectedEdits {
-					actual := edits[i]
+					actual := docChange.Edits[i]
 					if actual.Range != expected.Range || actual.NewText != expected.NewText {
 						t.Fatalf("edit %d mismatch:\nexpected: %v\nactual:   %v", i, expected, actual)
 					}

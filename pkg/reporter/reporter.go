@@ -327,9 +327,7 @@ func (tr GitHubReporter) Publish(ctx context.Context, r report.Report) error {
 		return err
 	}
 
-	if r.Violations == nil {
-		r.Violations = []report.Violation{}
-	}
+	r.Violations = util.NullToEmpty(r.Violations)
 
 	for _, violation := range r.Violations { //nolint:gocritic
 		if _, err := fmt.Fprintf(tr.out,

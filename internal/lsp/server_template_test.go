@@ -122,9 +122,7 @@ func TestTemplateContentsForFile(t *testing.T) {
 
 			newContents, err := ls.templateContentsForFile(fileURI)
 			if tc.ExpectedError != "" {
-				if !strings.Contains(err.Error(), tc.ExpectedError) {
-					t.Fatalf("expected error to contain %q, got %q", tc.ExpectedError, err)
-				}
+				testutil.ErrMustContain(err, tc.ExpectedError)(t)
 			} else if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -139,11 +137,7 @@ func TestTemplateContentsForFile(t *testing.T) {
 func TestTemplateContentsForFileInWorkspaceRoot(t *testing.T) {
 	t.Parallel()
 
-	td := t.TempDir()
-
-	testutil.MustMkdirAll(t, td, ".regal")
-	testutil.MustWriteFile(t, filepath.Join(td, ".regal", "config.yaml"), []byte{})
-
+	td := testutil.TempDirectoryOf(t, map[string]string{".regal/config.yaml": ""})
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
 	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, td)
@@ -152,11 +146,9 @@ func TestTemplateContentsForFileInWorkspaceRoot(t *testing.T) {
 
 	ls.cache.SetFileContents(fileURI, "")
 
-	if _, err := ls.templateContentsForFile(fileURI); err == nil {
-		t.Fatalf("expected error")
-	} else if !strings.Contains(err.Error(), "this function does not template files in the workspace root") {
-		t.Fatalf("expected error about root templating, got %s", err.Error())
-	}
+	_, err := ls.templateContentsForFile(fileURI)
+
+	testutil.ErrMustContain(err, "this function does not template files in the workspace root")(t)
 }
 
 func TestTemplateContentsForFileWithUnknownRoot(t *testing.T) {
@@ -164,24 +156,15 @@ func TestTemplateContentsForFileWithUnknownRoot(t *testing.T) {
 
 	td := t.TempDir()
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	fileURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(td, "foo", "bar.rego"))
 
 	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, td)
+	ls.cache.SetFileContents(fileURI, "")
 
 	testutil.MustMkdirAll(t, td, "foo")
 
-	fileURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(td, "foo", "bar.rego"))
-
-	ls.cache.SetFileContents(fileURI, "")
-
-	newContents, err := ls.templateContentsForFile(fileURI)
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-
-	exp := "package foo\n\n"
-
-	if exp != newContents {
-		t.Errorf("unexpected content: %s, want %s", newContents, exp)
+	if exp, act := "package foo\n\n", testutil.Must(ls.templateContentsForFile(fileURI))(t); exp != act {
+		t.Errorf("unexpected content: %s, want %s", act, exp)
 	}
 }
 
@@ -322,7 +305,6 @@ func TestNewFileTemplating(t *testing.T) {
 			success = allLinesMatch
 		case <-timeout.C:
 			t.Log("never received expected message", expectedMessage)
-
 			t.Fatalf("timed out waiting for expected message to be sent")
 		}
 	}
@@ -335,14 +317,12 @@ func TestNewFileTemplating(t *testing.T) {
 func TestTemplateWorkerRaceConditionWithDidOpen(t *testing.T) {
 	t.Parallel()
 
-	files := map[string]string{".regal/config.yaml": `{}`}
-
 	// set up the server and client connections
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	receivedMessages := make(chan message, 10)
-	tempDir := testutil.TempDirectoryOf(t, files)
+	tempDir := testutil.TempDirectoryOf(t, map[string]string{".regal/config.yaml": `{}`})
 	ls, connClient := createAndInitServer(t, ctx, tempDir, createTemplateTestClientHandler(t, receivedMessages))
 
 	newFilePath := filepath.Join(tempDir, "foo", "bar", "policy.rego")
@@ -418,12 +398,9 @@ func TestTemplateWorkerRaceConditionWithDidOpen(t *testing.T) {
 
 	<-templateCompleted
 
-	cacheContent, ok := ls.cache.GetFileContents(newFileURI)
-	if !ok {
-		t.Fatalf("expected file to be in cache")
-	}
-
+	cacheContent := testutil.MustBeOK(ls.cache.GetFileContents(newFileURI))(t)
 	expectedTemplateContent := "package foo.bar\n\n"
+
 	if cacheContent != expectedTemplateContent {
 		t.Fatalf("race condition occurred! Expected cache to contain %q, got %q. "+
 			"didOpen overwrote templated content.", expectedTemplateContent, cacheContent)

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"iter"
 	"maps"
 )
@@ -12,9 +13,19 @@ type Set[T comparable] struct {
 
 // NewSet creates a new set from the supplied items.
 func NewSet[T comparable](items ...T) *Set[T] {
-	s := &Set[T]{elements: make(map[T]struct{})}
+	s := &Set[T]{elements: make(map[T]struct{}, len(items))}
 
 	s.Add(items...)
+
+	return s
+}
+
+// NewSetFromKeys creates a new set from the keys of map m.
+func NewSetFromKeys[T comparable, V any](m map[T]V) *Set[T] {
+	s := &Set[T]{elements: make(map[T]struct{}, len(m))}
+	for k := range m {
+		s.elements[k] = struct{}{}
+	}
 
 	return s
 }
@@ -72,7 +83,38 @@ func (s *Set[T]) Diff(b *Set[T]) *Set[T] {
 	return diffSet
 }
 
+// Intersect returns a new set containing items that are present in both sets.
+func (s *Set[T]) Intersect(b *Set[T]) *Set[T] {
+	intersects := NewSet[T]()
+
+	for item := range s.elements {
+		if b.Contains(item) {
+			intersects.Add(item)
+		}
+	}
+
+	return intersects
+}
+
+func (s *Set[T]) Equal(b *Set[T]) bool {
+	if s.Size() != b.Size() {
+		return false
+	}
+
+	for item := range s.elements {
+		if !b.Contains(item) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Values returns an iterator of all items in the set.
 func (s *Set[T]) Values() iter.Seq[T] {
 	return maps.Keys(s.elements)
+}
+
+func (s *Set[T]) String() string {
+	return fmt.Sprintf("%v", s.Items())
 }

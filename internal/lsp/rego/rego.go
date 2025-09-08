@@ -300,10 +300,10 @@ func prepareQueryArgs(
 	ctx context.Context,
 	query ast.Body,
 	store storage.Store,
-	regalBundle *bundle.Bundle,
+	rb *bundle.Bundle,
 ) (regoOptions, storage.Transaction) {
 	args := make([]func(*rego.Rego), 0, 5+len(builtins.RegalBuiltinRegoFuncs))
-	args = append(args, rego.ParsedQuery(query), rego.ParsedBundle("regal", regalBundle))
+	args = append(args, rego.ParsedQuery(query), rego.ParsedBundle("regal", rb))
 	args = append(args, builtins.RegalBuiltinRegoFuncs...)
 
 	// For debugging

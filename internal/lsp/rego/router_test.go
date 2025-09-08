@@ -18,30 +18,28 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
+type document struct {
+	uri     string
+	content string
+	parsed  map[string]any
+}
+
+func newDocument(uri, content string) document {
+	return document{
+		uri:     uri,
+		content: content,
+		parsed:  encoding.MustJSONRoundTripTo[map[string]any](parse.MustParseModule(content)),
+	}
+}
+
 func TestRouteTextDocumentCodeAction(t *testing.T) {
 	t.Parallel()
 
 	mgr := rego.NewRegoRouter(t.Context(), nil, providers(regalContext(), "", ""))
-	req := &jsonrpc2.Request{
-		Method: "textDocument/codeAction",
-		Params: codeActionParams(t, "file:///workspace/p.rego", 0, 0, 0, 10),
-	}
+	req := request("textDocument/codeAction", codeActionParams(t, "file:///workspace/p.rego", 0, 0, 0, 10))
+	rsp := testutil.Must(mgr.Handle(t.Context(), nil, req))(t)
 
-	resp, err := mgr.Handle(t.Context(), nil, req)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	if resp == nil {
-		t.Fatal("expected a response, got nil")
-	}
-
-	result, ok := resp.([]types.CodeAction)
-	if !ok {
-		t.Fatalf("expected response to be of type []types.CodeAction, got %T", resp)
-	}
-
-	if len(result) == 0 {
+	if len(testutil.MustBe[[]types.CodeAction](t, rsp)) == 0 {
 		t.Fatal("expected at least one code action, got none")
 	}
 }
@@ -49,42 +47,20 @@ func TestRouteTextDocumentCodeAction(t *testing.T) {
 func TestRouteTextDocumentDocumentLink(t *testing.T) {
 	t.Parallel()
 
-	module := parse.MustParseModule("# regal ignore:prefer-snake-case\npackage p\n")
-	moduleMap := make(map[string]any)
-	fileURI := "file:///workspace/p.rego"
-
-	encoding.MustJSONRoundTrip(module, &moduleMap)
-
-	store := inmem.NewFromObjectWithOpts(map[string]any{
-		"workspace": map[string]any{
-			"parsed": map[string]any{
-				fileURI: moduleMap,
-			},
-			"config": map[string]any{
-				"rules": map[string]any{
-					"style": map[string]any{
-						"prefer-snake-case": map[string]any{},
-					},
-				},
+	doc := newDocument("file:///workspace/p.rego", "# regal ignore:prefer-snake-case\npackage p\n")
+	stg := inmem.NewFromObjectWithOpts(map[string]any{"workspace": map[string]any{
+		"parsed": map[string]any{doc.uri: doc.parsed},
+		"config": map[string]any{
+			"rules": map[string]any{
+				"style": map[string]any{"prefer-snake-case": map[string]any{}},
 			},
 		},
-	}, inmem.OptRoundTripOnWrite(false))
+	}}, inmem.OptRoundTripOnWrite(false))
+	mgr := rego.NewRegoRouter(t.Context(), stg, providers(regalContext(), "", ""))
+	rsp := testutil.Must(mgr.Handle(t.Context(), nil, request("textDocument/documentLink", linkParams(t, doc.uri))))(t)
+	res := testutil.MustBe[[]types.DocumentLink](t, rsp)
 
-	mgr := rego.NewRegoRouter(t.Context(), store, providers(regalContext(), "", ""))
-	req := &jsonrpc2.Request{Method: "textDocument/documentLink", Params: linkParams(t, fileURI)}
-
-	resp := testutil.Must(mgr.Handle(t.Context(), nil, req))(t)
-
-	if resp == nil {
-		t.Fatal("expected a response, got nil")
-	}
-
-	result, ok := resp.([]types.DocumentLink)
-	if !ok {
-		t.Fatalf("expected response to be of type rego.Result[[]types.DocumentLink], got %T", resp)
-	}
-
-	if len(result) == 0 {
+	if len(res) == 0 {
 		t.Fatal("expected at least one document link, got none")
 	}
 }
@@ -92,49 +68,23 @@ func TestRouteTextDocumentDocumentLink(t *testing.T) {
 func TestRouteTextDocumentDocumentHighlight(t *testing.T) {
 	t.Parallel()
 
-	module := parse.MustParseModule("# METADATA\n# title: p\npackage p\n")
-	moduleMap := make(map[string]any)
-	fileURI := "file:///workspace/p.rego"
-
-	encoding.MustJSONRoundTrip(module, &moduleMap)
-
-	store := inmem.NewFromObjectWithOpts(map[string]any{
-		"workspace": map[string]any{
-			"parsed": map[string]any{
-				fileURI: moduleMap,
-			},
-		},
-	}, inmem.OptRoundTripOnWrite(false))
-
-	mgr := rego.NewRegoRouter(t.Context(), store, rego.Providers{
+	doc := newDocument("file:///workspace/p.rego", "# METADATA\n# title: p\npackage p\n")
+	stg := inmem.NewFromObjectWithOpts(map[string]any{"workspace": map[string]any{
+		"parsed": map[string]any{doc.uri: doc.parsed},
+	}}, inmem.OptRoundTripOnWrite(false))
+	mgr := rego.NewRegoRouter(t.Context(), stg, rego.Providers{
 		ContextProvider: func(string, *rego.Requirements) rego.RegalContext {
 			return regalContext()
 		},
 		ContentProvider: func(uri string) (string, bool) {
-			if uri == fileURI {
-				return "# METADATA\n# title: p\npackage p\n", true
-			}
-
-			return "", false
+			return doc.content, uri == doc.uri
 		},
 	})
+	prm := docPositionParams(t, doc.uri, types.Position{Line: 0, Character: 4})
+	rsp := testutil.Must(mgr.Handle(t.Context(), nil, request("textDocument/documentHighlight", prm)))(t)
+	res := testutil.MustBe[[]types.DocumentHighlight](t, rsp)
 
-	req := &jsonrpc2.Request{
-		Method: "textDocument/documentHighlight",
-		Params: docPositionParams(t, fileURI, types.Position{Line: 0, Character: 4}),
-	}
-	resp := testutil.Must(mgr.Handle(t.Context(), nil, req))(t)
-
-	if resp == nil {
-		t.Fatal("expected a response, got nil")
-	}
-
-	result, ok := resp.([]types.DocumentHighlight)
-	if !ok {
-		t.Fatalf("expected response to be of type rego.Result[[]types.DocumentLink], got %T", resp)
-	}
-
-	if len(result) == 0 {
+	if len(res) == 0 {
 		t.Fatal("expected at least one document link, got none")
 	}
 }
@@ -143,27 +93,11 @@ func TestRouteIgnoredDocument(t *testing.T) {
 	t.Parallel()
 
 	mgr := rego.NewRegoRouter(t.Context(), nil, providers(regalContext(), "", "file:///workspace/ignored.rego"))
-	req := &jsonrpc2.Request{
-		Method: "textDocument/codeAction",
-		Params: codeActionParams(t, "file:///workspace/ignored.rego", 0, 0, 0, 10),
-	}
+	req := request("textDocument/codeAction", codeActionParams(t, "file:///workspace/ignored.rego", 0, 0, 0, 10))
+	rsp := testutil.Must(mgr.Handle(t.Context(), nil, req))(t)
+	res := testutil.MustBe[[]types.CodeAction](t, rsp)
 
-	resp := testutil.Must(mgr.Handle(t.Context(), nil, req))(t)
-
-	if resp == nil {
-		t.Fatal("expected a response, got nil")
-	}
-
-	result, ok := resp.([]types.CodeAction)
-	if !ok {
-		t.Fatalf("expected response to be of type []types.CodeAction, got %T", resp)
-	}
-
-	if result == nil {
-		t.Fatal("expected an empty response, got nil")
-	}
-
-	if len(result) != 0 {
+	if len(res) != 0 {
 		t.Fatal("expected empty response, got code actions")
 	}
 }
@@ -174,29 +108,20 @@ func TestTextDocumentSignatureHelp(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
-	content := `package example
+	doc := newDocument("file:///workspace/p.rego", `package example
 
-allow if regex.match(` + "`foo`" + `, "bar")
+allow if regex.match(`+"`foo`"+`, "bar")
 allow if count([1,2,3]) == 2
-allow if concat(",", "a", "b") == "b,a"`
+allow if concat(",", "a", "b") == "b,a"`)
 
-	module := parse.MustParseModule(content)
-	moduleMap := make(map[string]any)
-
-	encoding.MustJSONRoundTrip(module, &moduleMap)
-
-	store := inmem.NewFromObjectWithOpts(map[string]any{
-		"workspace": map[string]any{
-			"builtins": map[string]any{
-				"count":       ast.Count,
-				"concat":      ast.Concat,
-				"regex.match": ast.RegexMatch,
-			},
-			"parsed": map[string]any{
-				"file://workspace/p.rego": moduleMap,
-			},
+	store := inmem.NewFromObjectWithOpts(map[string]any{"workspace": map[string]any{
+		"builtins": map[string]any{
+			"count":       ast.Count,
+			"concat":      ast.Concat,
+			"regex.match": ast.RegexMatch,
 		},
-	}, inmem.OptRoundTripOnWrite(true))
+		"parsed": map[string]any{doc.uri: doc.parsed},
+	}}, inmem.OptRoundTripOnWrite(true))
 
 	testCases := map[string]struct {
 		position       types.Position
@@ -228,26 +153,11 @@ allow if concat(",", "a", "b") == "b,a"`
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			mgr := rego.NewRegoRouter(ctx, store, providers(regalContext(), content, ""))
-			req := &jsonrpc2.Request{
-				Method: "textDocument/signatureHelp",
-				Params: docPositionParams(t, "file://workspace/p.rego", tc.position),
-			}
+			mgr := rego.NewRegoRouter(ctx, store, providers(regalContext(), doc.content, ""))
+			req := request("textDocument/signatureHelp", docPositionParams(t, doc.uri, tc.position))
+			rsp := testutil.Must(mgr.Handle(ctx, nil, req))(t)
 
-			resp, err := mgr.Handle(ctx, nil, req)
-			if err != nil {
-				t.Fatalf("expected no error, got %v", err)
-			}
-
-			if resp == nil {
-				t.Fatal("expected a response, got nil")
-			}
-
-			signatureHelp, ok := resp.(*types.SignatureHelp)
-			if !ok || signatureHelp == nil {
-				t.Fatalf("expected response to be of type types.SignatureHelp, got %T", resp)
-			}
-
+			signatureHelp := testutil.MustBe[*types.SignatureHelp](t, rsp)
 			if len(signatureHelp.Signatures) == 0 {
 				t.Error("expected at least one signature")
 			}
@@ -297,10 +207,8 @@ func docPositionParams(t *testing.T, uri string, position types.Position) *json.
 	t.Helper()
 
 	return testutil.ToJSONRawMessage(t, map[string]any{
-		"textDocument": map[string]any{
-			"uri": uri,
-		},
-		"position": position,
+		"textDocument": map[string]any{"uri": uri},
+		"position":     position,
 	})
 }
 
@@ -308,9 +216,7 @@ func codeActionParams(t *testing.T, uri string, ls, cs, le, ce int) *json.RawMes
 	t.Helper()
 
 	return testutil.ToJSONRawMessage(t, map[string]any{
-		"textDocument": map[string]any{
-			"uri": uri,
-		},
+		"textDocument": map[string]any{"uri": uri},
 		"range": map[string]any{
 			"start": map[string]int{"line": ls, "character": cs},
 			"end":   map[string]int{"line": le, "character": ce},
@@ -321,11 +227,7 @@ func codeActionParams(t *testing.T, uri string, ls, cs, le, ce int) *json.RawMes
 func linkParams(t *testing.T, uri string) *json.RawMessage {
 	t.Helper()
 
-	return testutil.ToJSONRawMessage(t, map[string]any{
-		"textDocument": map[string]any{
-			"uri": uri,
-		},
-	})
+	return testutil.ToJSONRawMessage(t, map[string]any{"textDocument": map[string]any{"uri": uri}})
 }
 
 func providers(rc rego.RegalContext, content, ignored string) rego.Providers {
@@ -337,28 +239,23 @@ func providers(rc rego.RegalContext, content, ignored string) rego.Providers {
 			return uri == ignored
 		},
 		ContentProvider: func(_ string) (string, bool) {
-			if content != "" {
-				return content, true
-			}
-
-			return "", false
+			return content, content != ""
 		},
 	}
 }
 
 func regalContext() rego.RegalContext {
 	return rego.RegalContext{
-		Client: types.Client{
-			Identifier: clients.IdentifierVSCode,
-		},
+		Client: types.Client{Identifier: clients.IdentifierVSCode},
 		Environment: rego.Environment{
 			PathSeparator:    "/",
 			WorkspaceRootURI: "file:///workspace",
 			WebServerBaseURI: "http://webserver",
 		},
-		File: rego.File{
-			Name: "workspace/p.rego",
-			Abs:  "/workspace/p.rego",
-		},
+		File: rego.File{Name: "workspace/p.rego", Abs: "/workspace/p.rego"},
 	}
+}
+
+func request(method string, params *json.RawMessage) *jsonrpc2.Request {
+	return &jsonrpc2.Request{Method: method, Params: params}
 }

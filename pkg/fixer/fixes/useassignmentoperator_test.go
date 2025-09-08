@@ -16,69 +16,28 @@ func TestUseAssignmentOperator(t *testing.T) {
 		runtimeOptions  *RuntimeOptions
 	}{
 		"no change": {
-			fc: &FixCandidate{Filename: "test.rego", Contents: `package test
-
-allow := true
-`},
-			contentAfterFix: `package test
-
-allow := true
-`,
-			fixExpected:    false,
-			runtimeOptions: &RuntimeOptions{},
+			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\nallow := true\n"},
+			contentAfterFix: "package test\n\nallow := true\n",
+			fixExpected:     false,
+			runtimeOptions:  &RuntimeOptions{},
 		},
 		"no change because no location": {
-			fc: &FixCandidate{Filename: "test.rego", Contents: `package test
-
-allow = true
-`},
-			contentAfterFix: `package test
-
-allow = true
-`,
-			fixExpected:    false,
-			runtimeOptions: &RuntimeOptions{},
+			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\nallow := true\n"},
+			contentAfterFix: "package test\n\nallow := true\n",
+			fixExpected:     false,
+			runtimeOptions:  &RuntimeOptions{},
 		},
 		"single change": {
-			fc: &FixCandidate{Filename: "test.rego", Contents: `package test
-
-allow = true
-`},
-			contentAfterFix: `package test
-
-allow := true
-`,
-			fixExpected: true,
-			runtimeOptions: &RuntimeOptions{
-				Locations: []report.Location{
-					{
-						Row:    3,
-						Column: 7,
-					},
-				},
-			},
+			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\nallow = true\n"},
+			contentAfterFix: "package test\n\nallow := true\n",
+			fixExpected:     true,
+			runtimeOptions:  &RuntimeOptions{Locations: []report.Location{{Row: 3, Column: 7}}},
 		},
 		"bad change": {
-			fc: &FixCandidate{
-				Filename: "test.rego",
-				Contents: `package test
-
-allow = true
-`,
-			},
-			contentAfterFix: `package test
-
-allow = true
-`,
-			fixExpected: false,
-			runtimeOptions: &RuntimeOptions{
-				Locations: []report.Location{
-					{
-						Row:    1,
-						Column: 1,
-					},
-				},
-			},
+			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\nallow = true\n"},
+			contentAfterFix: "package test\n\nallow = true\n",
+			fixExpected:     false,
+			runtimeOptions:  &RuntimeOptions{Locations: []report.Location{{Row: 1, Column: 1}}},
 		},
 		"many changes": {
 			fc: &FixCandidate{
@@ -96,19 +55,8 @@ allow := true if { u = 1 }
 
 allow := true if { u = 2 }
 `,
-			fixExpected: true,
-			runtimeOptions: &RuntimeOptions{
-				Locations: []report.Location{
-					{
-						Row:    3,
-						Column: 7,
-					},
-					{
-						Row:    5,
-						Column: 7,
-					},
-				},
-			},
+			fixExpected:    true,
+			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 3, Column: 7}, {Row: 5, Column: 7}}},
 		},
 		"different columns": {
 			fc: &FixCandidate{
@@ -128,20 +76,7 @@ allow := true
 `,
 			fixExpected: true,
 			runtimeOptions: &RuntimeOptions{
-				Locations: []report.Location{
-					{
-						Row:    3,
-						Column: 7,
-					},
-					{
-						Row:    4,
-						Column: 6,
-					},
-					{
-						Row:    5,
-						Column: 12,
-					},
-				},
+				Locations: []report.Location{{Row: 3, Column: 7}, {Row: 4, Column: 6}, {Row: 5, Column: 12}},
 			},
 		},
 	}
@@ -165,12 +100,10 @@ allow := true
 				return
 			}
 
-			fixedContent := fixResults[0].Contents
-
-			if tc.fixExpected && fixedContent != tc.contentAfterFix {
+			if tc.fixExpected && fixResults[0].Contents != tc.contentAfterFix {
 				t.Fatalf(
 					"unexpected content, got:\n%s---\nexpected:\n%s---",
-					fixedContent,
+					fixResults[0].Contents,
 					tc.contentAfterFix,
 				)
 			}

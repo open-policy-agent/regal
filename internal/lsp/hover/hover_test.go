@@ -49,8 +49,8 @@ func TestCreateHoverContent(t *testing.T) {
 		file := testutil.MustReadFile(t, c.testdata)
 		hoverContent := CreateHoverContent(c.builtin)
 
-		if string(file) != hoverContent {
-			t.Errorf("Expected %s, got %s", string(file), hoverContent)
+		if file != hoverContent {
+			t.Errorf("Expected %s, got %s", file, hoverContent)
 		}
 	}
 }

@@ -5,23 +5,20 @@ import (
 	"os"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/rules"
 )
 
 type InMemoryFileProvider struct {
-	files         map[string]string
-	modifiedFiles *util.Set[string]
-	deletedFiles  *util.Set[string]
+	files    map[string]string
+	modified *util.Set[string]
+	deleted  *util.Set[string]
 }
 
 func NewInMemoryFileProvider(files map[string]string) *InMemoryFileProvider {
-	return &InMemoryFileProvider{
-		files:         files,
-		modifiedFiles: util.NewSet[string](),
-		deletedFiles:  util.NewSet[string](),
-	}
+	return &InMemoryFileProvider{files: files, modified: util.NewSet[string](), deleted: util.NewSet[string]()}
 }
 
 func NewInMemoryFileProviderFromFS(paths ...string) (*InMemoryFileProvider, error) {
@@ -36,20 +33,11 @@ func NewInMemoryFileProviderFromFS(paths ...string) (*InMemoryFileProvider, erro
 		files[path] = string(fc)
 	}
 
-	return &InMemoryFileProvider{
-		files:         files,
-		modifiedFiles: util.NewSet[string](),
-		deletedFiles:  util.NewSet[string](),
-	}, nil
+	return &InMemoryFileProvider{files: files, modified: util.NewSet[string](), deleted: util.NewSet[string]()}, nil
 }
 
 func (p *InMemoryFileProvider) List() ([]string, error) {
-	files := make([]string, 0)
-	for file := range p.files {
-		files = append(files, file)
-	}
-
-	return files, nil
+	return outil.Keys(p.files), nil
 }
 
 func (p *InMemoryFileProvider) Get(file string) (string, error) {
@@ -63,8 +51,7 @@ func (p *InMemoryFileProvider) Get(file string) (string, error) {
 
 func (p *InMemoryFileProvider) Put(file string, content string) error {
 	p.files[file] = content
-
-	p.modifiedFiles.Add(file)
+	p.modified.Add(file)
 
 	return nil
 }
@@ -75,46 +62,31 @@ func (p *InMemoryFileProvider) Rename(from, to string) error {
 		return fmt.Errorf("file %s not found", from)
 	}
 
-	_, ok = p.files[to]
-	if ok {
-		return RenameConflictError{
-			From: from,
-			To:   to,
-		}
+	if _, ok = p.files[to]; ok {
+		return RenameConflictError{From: from, To: to}
 	}
 
-	if err := p.Put(to, content); err != nil {
-		return fmt.Errorf("failed to put file %s: %w", to, err)
-	}
+	p.Put(to, content) //nolint:errcheck // always returns nil
 
-	if err := p.Delete(from); err != nil {
-		return fmt.Errorf("failed to delete file %s: %w", from, err)
-	}
-
-	return nil
+	return p.Delete(from)
 }
 
 func (p *InMemoryFileProvider) Delete(file string) error {
-	p.deletedFiles.Add(file)
-	p.modifiedFiles.Remove(file)
+	p.deleted.Add(file)
+	p.modified.Remove(file)
 	delete(p.files, file)
 
 	return nil
 }
 
 func (p *InMemoryFileProvider) ModifiedFiles() []string {
-	return p.modifiedFiles.Items()
+	return p.modified.Items()
 }
 
 func (p *InMemoryFileProvider) DeletedFiles() []string {
-	return p.deletedFiles.Items()
+	return p.deleted.Items()
 }
 
 func (p *InMemoryFileProvider) ToInput(versionsMap map[string]ast.RegoVersion) (rules.Input, error) {
-	input, err := rules.InputFromMap(p.files, versionsMap)
-	if err != nil {
-		return rules.Input{}, fmt.Errorf("failed to create input: %w", err)
-	}
-
-	return input, nil
+	return util.Wrap(rules.InputFromMap(p.files, versionsMap))("failed to create input")
 }

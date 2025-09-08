@@ -125,7 +125,6 @@ deny contains "strings" if true
 pi := 3.14
 `)
 	bis := rego.BuiltinsForCapabilities(ast.CapabilitiesForThisVersion())
-
 	items := DefinedInModule(mod, bis)
 
 	expectedRefs := map[string]types.Ref{
@@ -182,7 +181,7 @@ A function that's really funky`,
 		}
 
 		if items[key].Kind != item.Kind {
-			t.Errorf("expected documentation kind %q, got %q", item.Description, items[key].Description)
+			t.Errorf("expected kind %q, got %q", item.Kind, items[key].Kind)
 		}
 
 		if items[key].Detail != item.Detail {

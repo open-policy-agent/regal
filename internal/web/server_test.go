@@ -4,18 +4,15 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
 func TestTemplateFoundAndParsed(t *testing.T) {
 	t.Parallel()
 
 	buf := bytes.Buffer{}
-
-	st := state{Code: "package main\n\nimport rego.v1\n"}
-
-	if err := tpl.ExecuteTemplate(&buf, mainTemplate, st); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(tpl.ExecuteTemplate(&buf, mainTemplate, state{Code: "package main\n\nimport rego.v1\n"}))(t)
 
 	if !strings.HasPrefix(buf.String(), "<!DOCTYPE html>") {
 		t.Fatalf("expected HTML document, got %s", buf.String())

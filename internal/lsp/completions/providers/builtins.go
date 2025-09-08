@@ -33,40 +33,29 @@ func (*BuiltIns) Run(
 		return nil, errors.New("builtins provider requires options")
 	}
 
-	fileURI := params.TextDocument.URI
-
-	lines, currentLine := completionLineHelper(c, fileURI, params.Position.Line)
-
-	if len(lines) < 1 || currentLine == "" || !inRuleBody(currentLine) {
+	lines, line := completionLineHelper(c, params.TextDocument.URI, params.Position.Line)
+	if len(lines) < 1 || line == "" || !inRuleBody(line) || strings.HasPrefix(strings.TrimSpace(line), "default ") {
 		return []types.CompletionItem{}, nil
 	}
 
-	// default rules cannot contain calls
-	if strings.HasPrefix(strings.TrimSpace(currentLine), "default ") {
-		return []types.CompletionItem{}, nil
-	}
-
-	words := patternWhiteSpace.Split(strings.TrimSpace(currentLine), -1)
+	words := patternWhiteSpace.Split(strings.TrimSpace(line), -1)
 	lastWord := words[len(words)-1]
 	items := make([]types.CompletionItem, 0, len(opts.Builtins))
+	p := params.Position
 
 	for _, builtIn := range opts.Builtins {
-		key := builtIn.Name
-
-		if builtIn.Infix != "" || builtIn.IsDeprecated() || !strings.HasPrefix(key, lastWord) {
+		if builtIn.Infix != "" || builtIn.IsDeprecated() || !strings.HasPrefix(builtIn.Name, lastWord) {
 			continue
 		}
 
-		p := params.Position
-
 		items = append(items, types.CompletionItem{
-			Label:         key,
+			Label:         builtIn.Name,
 			Kind:          completion.Function,
 			Detail:        "built-in function",
 			Documentation: types.Markdown(hover.CreateHoverContent(builtIn)),
 			TextEdit: &types.TextEdit{
 				Range:   types.RangeBetween(p.Line, p.Character-uint(len(lastWord)), p.Line, p.Character),
-				NewText: key,
+				NewText: builtIn.Name,
 			},
 		})
 	}

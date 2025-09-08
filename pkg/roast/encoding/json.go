@@ -26,6 +26,15 @@ func JSON() jsoniter.API {
 	return jsoniter.ConfigFastest
 }
 
+// JSONUnmarshalTo unmarshals JSON into the provided type T.
+func JSONUnmarshalTo[T any](bs []byte) (to T, err error) {
+	if err = jsoniter.ConfigFastest.Unmarshal(bs, &to); err != nil {
+		err = SafeNumberConfig.Unmarshal(bs, &to)
+	}
+
+	return to, err
+}
+
 // JSONRoundTrip convert any value to JSON and back again.
 func JSONRoundTrip(from any, to any) error {
 	bs, err := jsoniter.ConfigFastest.Marshal(from)
@@ -40,10 +49,9 @@ func JSONRoundTrip(from any, to any) error {
 	return nil
 }
 
-func JSONRoundTripTo[T any](from any) (T, error) {
-	var to T
-
-	err := JSONRoundTrip(from, &to)
+// JSONRoundTripTo convert any value to JSON and back again, returning the new value or an error.
+func JSONRoundTripTo[T any](from any) (to T, err error) {
+	err = JSONRoundTrip(from, &to)
 
 	return to, err
 }
@@ -53,4 +61,14 @@ func MustJSONRoundTrip(from any, to any) {
 	if err := JSONRoundTrip(from, to); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// MustJSONRoundTripTo convert any value to JSON and back again, returning the new value or exit on failure.
+func MustJSONRoundTripTo[T any](from any) T {
+	to, err := JSONRoundTripTo[T](from)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return to
 }

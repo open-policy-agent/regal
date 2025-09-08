@@ -55,19 +55,14 @@ func ModuleUnknownVersionWithOpts(filename, policy string, opts ast.ParserOption
 	// Iterate over RegoV1 and RegoV0 in that order
 	// If `import rego.v1`` is present in module, RegoV0CompatV1 is used
 	for i := range attemptVersionOrder {
-		version := attemptVersionOrder[i]
+		opts.RegoVersion = attemptVersionOrder[i]
 
-		opts.RegoVersion = version
-
-		mod, err = ast.ParseModuleWithOpts(filename, policy, opts)
-		if err == nil {
+		if mod, err = ast.ParseModuleWithOpts(filename, policy, opts); err == nil {
 			if hasRegoV1Import(mod.Imports) {
 				mod.SetRegoVersion(ast.RegoV0CompatV1)
-
-				return mod, nil
+			} else {
+				mod.SetRegoVersion(opts.RegoVersion)
 			}
-
-			mod.SetRegoVersion(version)
 
 			return mod, nil
 		}

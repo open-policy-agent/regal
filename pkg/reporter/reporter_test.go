@@ -2,24 +2,16 @@ package reporter
 
 import (
 	"bytes"
-	"os"
 	"strings"
 	"testing"
 
+	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/report"
 )
 
-func ptr(s string) *string {
-	return &s
-}
-
 var rep = report.Report{
-	Summary: report.Summary{
-		FilesScanned:  3,
-		NumViolations: 2,
-		FilesFailed:   2,
-		RulesSkipped:  1,
-	},
+	Summary: report.Summary{FilesScanned: 3, NumViolations: 2, FilesFailed: 2, RulesSkipped: 1},
 	Violations: []report.Violation{
 		{
 			Title:       "breaking-the-law",
@@ -29,18 +21,13 @@ var rep = report.Report{
 				File:   "a.rego",
 				Row:    1,
 				Column: 1,
-				Text:   ptr("package illegal"),
-				End: &report.Position{
-					Row:    1,
-					Column: 14,
-				},
+				Text:   util.Pointer("package illegal"),
+				End:    &report.Position{Row: 1, Column: 14},
 			},
-			RelatedResources: []report.RelatedResource{
-				{
-					Description: "documentation",
-					Reference:   "https://example.com/illegal",
-				},
-			},
+			RelatedResources: []report.RelatedResource{{
+				Description: "documentation",
+				Reference:   "https://example.com/illegal",
+			}},
 			Level: "error",
 		},
 		{
@@ -51,14 +38,12 @@ var rep = report.Report{
 				File:   "b.rego",
 				Row:    22,
 				Column: 18,
-				Text:   ptr("default allow = true"),
+				Text:   util.Pointer("default allow = true"),
 			},
-			RelatedResources: []report.RelatedResource{
-				{
-					Description: "documentation",
-					Reference:   "https://example.com/questionable",
-				},
-			},
+			RelatedResources: []report.RelatedResource{{
+				Description: "documentation",
+				Reference:   "https://example.com/questionable",
+			}},
 			Level: "warning",
 		},
 	},
@@ -84,12 +69,9 @@ func TestPrettyReporterPublish(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	if err := NewPrettyReporter(&buf).Publish(t.Context(), rep); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(NewPrettyReporter(&buf).Publish(t.Context(), rep))(t)
 
-	expect := MustReadFile(t, "testdata/pretty/reporter.txt")
-	if buf.String() != expect {
+	if expect := testutil.MustReadFile(t, "testdata/pretty/reporter.txt"); buf.String() != expect {
 		t.Errorf("expected %s, got %s", expect, buf.String())
 	}
 }
@@ -113,25 +95,21 @@ func TestPrettyReporterPublishLongText(t *testing.T) {
 					File:   "b.rego",
 					Row:    22,
 					Column: 18,
-					Text:   ptr(strings.Repeat("long,", 1000)),
+					Text:   util.Pointer(strings.Repeat("long,", 1000)),
 				},
-				RelatedResources: []report.RelatedResource{
-					{
-						Description: "documentation",
-						Reference:   "https://example.com/to-long",
-					},
-				},
+				RelatedResources: []report.RelatedResource{{
+					Description: "documentation",
+					Reference:   "https://example.com/to-long",
+				}},
 				Level: "warning",
 			},
 		},
 	}
 
 	var buf bytes.Buffer
-	if err := NewPrettyReporter(&buf).Publish(t.Context(), longRep); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(NewPrettyReporter(&buf).Publish(t.Context(), longRep))(t)
 
-	if expect := MustReadFile(t, "testdata/pretty/reporter-long-text.txt"); expect != buf.String() {
+	if expect := testutil.MustReadFile(t, "testdata/pretty/reporter-long-text.txt"); expect != buf.String() {
 		t.Errorf("expected %s, got %s", expect, buf.String())
 	}
 }
@@ -140,9 +118,7 @@ func TestPrettyReporterPublishNoViolations(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	if err := NewPrettyReporter(&buf).Publish(t.Context(), report.Report{}); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(NewPrettyReporter(&buf).Publish(t.Context(), report.Report{}))(t)
 
 	if buf.String() != "0 files linted. No violations found.\n" {
 		t.Errorf(`expected "0 files linted. No violations found.\n", got %q`, buf.String())
@@ -153,9 +129,7 @@ func TestCompactReporterPublish(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	if err := NewCompactReporter(&buf).Publish(t.Context(), rep); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(NewCompactReporter(&buf).Publish(t.Context(), rep))(t)
 
 	expect := `+--------------+------------------------------+
 |   Location   |         Description          |
@@ -175,9 +149,7 @@ func TestCompactReporterPublishNoViolations(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	if err := NewCompactReporter(&buf).Publish(t.Context(), report.Report{}); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(NewCompactReporter(&buf).Publish(t.Context(), report.Report{}))(t)
 
 	if buf.String() != "\n" {
 		t.Errorf("expected %q, got %q", "", buf.String())
@@ -188,11 +160,9 @@ func TestJSONReporterPublish(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	if err := NewJSONReporter(&buf).Publish(t.Context(), rep); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(NewJSONReporter(&buf).Publish(t.Context(), rep))(t)
 
-	if expect := MustReadFile(t, "testdata/json/reporter.json"); expect != buf.String() {
+	if expect := testutil.MustReadFile(t, "testdata/json/reporter.json"); expect != buf.String() {
 		t.Errorf("expected %q, got %q", expect, buf.String())
 	}
 }
@@ -201,11 +171,9 @@ func TestJSONReporterPublishNoViolations(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	if err := NewJSONReporter(&buf).Publish(t.Context(), report.Report{}); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(NewJSONReporter(&buf).Publish(t.Context(), report.Report{}))(t)
 
-	if expect := MustReadFile(t, "testdata/json/reporter-no-violations.json"); expect != buf.String() {
+	if expect := testutil.MustReadFile(t, "testdata/json/reporter-no-violations.json"); expect != buf.String() {
 		t.Errorf("expected %q, got %q", expect, buf.String())
 	}
 }
@@ -215,9 +183,7 @@ func TestGitHubReporterPublish(t *testing.T) {
 	t.Setenv("GITHUB_STEP_SUMMARY", "")
 
 	var buf bytes.Buffer
-	if err := NewGitHubReporter(&buf).Publish(t.Context(), rep); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(NewGitHubReporter(&buf).Publish(t.Context(), rep))(t)
 
 	if expectTable := "Rule:         \tbreaking-the-law"; !strings.Contains(buf.String(), expectTable) {
 		t.Errorf("expected table output %q, got %q", expectTable, buf.String())
@@ -250,11 +216,9 @@ func TestSarifReporterPublish(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	if err := NewSarifReporter(&buf).Publish(t.Context(), rep); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(NewSarifReporter(&buf).Publish(t.Context(), rep))(t)
 
-	if expect := MustReadFile(t, "testdata/sarif/reporter.json"); buf.String() != expect {
+	if expect := testutil.MustReadFile(t, "testdata/sarif/reporter.json"); buf.String() != expect {
 		t.Errorf("expected %s, got %s", expect, buf.String())
 	}
 }
@@ -263,30 +227,22 @@ func TestSarifReporterPublish(t *testing.T) {
 func TestSarifReporterViolationWithoutRegion(t *testing.T) {
 	t.Parallel()
 
-	var buf bytes.Buffer
-	if err := NewSarifReporter(&buf).Publish(t.Context(), report.Report{
-		Violations: []report.Violation{
-			{
-				Title:       "opa-fmt",
-				Description: "File should be formatted with `opa fmt`",
-				Category:    "style",
-				Location: report.Location{
-					File: "policy.rego",
-				},
-				RelatedResources: []report.RelatedResource{
-					{
-						Description: "documentation",
-						Reference:   "https://docs.styra.com/regal/rules/style/opa-fmt",
-					},
-				},
-				Level: "error",
-			},
-		},
-	}); err != nil {
-		t.Fatal(err)
-	}
+	rep := report.Report{Violations: []report.Violation{{
+		Title:       "opa-fmt",
+		Description: "File should be formatted with `opa fmt`",
+		Category:    "style",
+		Location:    report.Location{File: "policy.rego"},
+		RelatedResources: []report.RelatedResource{{
+			Description: "documentation",
+			Reference:   "https://docs.styra.com/regal/rules/style/opa-fmt",
+		}},
+		Level: "error",
+	}}}
 
-	if expect := MustReadFile(t, "testdata/sarif/reporter-no-region.json"); buf.String() != expect {
+	var buf bytes.Buffer
+	testutil.NoErr(NewSarifReporter(&buf).Publish(t.Context(), rep))(t)
+
+	if expect := testutil.MustReadFile(t, "testdata/sarif/reporter-no-region.json"); buf.String() != expect {
 		t.Errorf("expected %s, got %s", expect, buf.String())
 	}
 }
@@ -295,11 +251,9 @@ func TestSarifReporterPublishNoViolations(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	if err := NewSarifReporter(&buf).Publish(t.Context(), report.Report{}); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(NewSarifReporter(&buf).Publish(t.Context(), report.Report{}))(t)
 
-	if expect := MustReadFile(t, "testdata/sarif/reporter-no-violation.json"); buf.String() != expect {
+	if expect := testutil.MustReadFile(t, "testdata/sarif/reporter-no-violation.json"); buf.String() != expect {
 		t.Errorf("expected %s, got %s", expect, buf.String())
 	}
 }
@@ -308,11 +262,9 @@ func TestJUnitReporterPublish(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	if err := NewJUnitReporter(&buf).Publish(t.Context(), rep); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(NewJUnitReporter(&buf).Publish(t.Context(), rep))(t)
 
-	if expect := MustReadFile(t, "testdata/junit/reporter.xml"); buf.String() != expect {
+	if expect := testutil.MustReadFile(t, "testdata/junit/reporter.xml"); buf.String() != expect {
 		t.Errorf("expected %s, got %s", expect, buf.String())
 	}
 }
@@ -321,9 +273,7 @@ func TestJUnitReporterPublishNoViolations(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	if err := NewJUnitReporter(&buf).Publish(t.Context(), report.Report{}); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoErr(NewJUnitReporter(&buf).Publish(t.Context(), report.Report{}))(t)
 
 	if expect := "<testsuites name=\"regal\"></testsuites>\n"; buf.String() != expect {
 		t.Errorf("expected \n%s, got \n%s", expect, buf.String())
@@ -334,20 +284,7 @@ func TestJUnitReporterPublishViolationWithoutText(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	if err := NewJUnitReporter(&buf).Publish(t.Context(), report.Report{
+	testutil.NoErr(NewJUnitReporter(&buf).Publish(t.Context(), report.Report{
 		Violations: []report.Violation{{Title: "no-text"}},
-	}); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func MustReadFile(t *testing.T, path string) string {
-	t.Helper()
-
-	bs, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return string(bs)
+	}))(t)
 }

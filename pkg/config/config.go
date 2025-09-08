@@ -123,14 +123,7 @@ func (d *Default) mapToConfig(result any) error {
 }
 
 func FromPath(path string) (Config, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return Config{}, fmt.Errorf("failed to open config file: %w", err)
-	}
-
-	defer file.Close()
-
-	return FromFile(file)
+	return util.Wrap(util.WithOpen(path, FromFile))("failed to open config file")
 }
 
 func FromFile(file *os.File) (Config, error) {
@@ -229,16 +222,11 @@ func findUpwards(path, name string, expectDir bool) (string, error) {
 
 func findFileUpwards(path, name string, expectDir bool) (*os.File, error) {
 	dir, err := findUpwards(path, name, expectDir)
-	if err == nil {
-		file, err := os.Open(dir)
-		if err != nil {
-			return nil, fmt.Errorf("failed to open .regal directory: %w", err)
-		}
-
-		return file, nil
+	if err != nil {
+		return nil, fmt.Errorf("failed to find .regal directory: %w", err)
 	}
 
-	return nil, fmt.Errorf("failed to find .regal directory: %w", err)
+	return util.Wrap(os.Open(dir))("failed to open .regal directory")
 }
 
 // FindRegalDirectoryPath searches for a .regal directory upwards from the provided path.
@@ -296,14 +284,7 @@ func FindBundleRootDirectories(path string) ([]string, error) {
 			// Opening files as part of walking is generally not a good idea...
 			// but I think we can assume the number of .regal directories in a project
 			// is limited to a reasonable number.
-			rd, err := os.Open(path)
-			if err != nil {
-				return fmt.Errorf("failed to open .regal directory: %w", err)
-			}
-
-			defer rd.Close()
-
-			roots, err := rootsFromRegalConfigDirOrFile(rd)
+			roots, err := util.WithOpen(path, rootsFromRegalConfigDirOrFile)
 			if err != nil {
 				return fmt.Errorf("failed to get roots from .regal directory: %w", err)
 			}
@@ -377,7 +358,6 @@ func rootsFromRegalConfigDirOrFile(file *os.File) ([]string, error) {
 // than .manifest files.
 func AllRegoVersions(root string, conf *Config) (map[string]ast.RegoVersion, error) {
 	versionsMap := make(map[string]ast.RegoVersion)
-
 	if conf == nil {
 		return versionsMap, nil
 	}
@@ -393,9 +373,8 @@ func AllRegoVersions(root string, conf *Config) (map[string]ast.RegoVersion, err
 			return nil, fmt.Errorf("failed to read manifest file: %w", err)
 		}
 
-		var manifest bundle.Manifest
-
-		if err = encoding.JSON().Unmarshal(f, &manifest); err != nil {
+		manifest, err := encoding.JSONUnmarshalTo[bundle.Manifest](f)
+		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal manifest file: %w", err)
 		}
 
@@ -785,8 +764,8 @@ func (rule *Rule) MarshalJSON() ([]byte, error) {
 }
 
 func (rule *Rule) UnmarshalJSON(data []byte) error {
-	var result map[string]any
-	if err := encoding.JSON().Unmarshal(data, &result); err != nil {
+	result, err := encoding.JSONUnmarshalTo[map[string]any](data)
+	if err != nil {
 		return fmt.Errorf("unmarshalling rule failed %w", err)
 	}
 

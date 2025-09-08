@@ -23,24 +23,20 @@ func NullToEmpty[T any](a []T) []T {
 // SearchMap searches map for value at provided path.
 func SearchMap(object map[string]any, path ...string) (any, error) {
 	current := object
-	traversed := make([]string, 0, len(path))
 
 	for i, p := range path {
 		var ok bool
 		if i == len(path)-1 {
-			value, ok := current[p]
-			if ok {
+			if value, ok := current[p]; ok {
 				return value, nil
 			}
 
-			return nil, fmt.Errorf("no '%v' attribute at path '%v'", p, strings.Join(traversed, "."))
+			return nil, fmt.Errorf("no '%v' attribute at path '%v'", p, strings.Join(path[:i], "."))
 		}
 
 		if current, ok = current[p].(map[string]any); !ok {
-			return nil, fmt.Errorf("no '%v' attribute at path '%v'", p, strings.Join(traversed, "."))
+			return nil, fmt.Errorf("no '%v' attribute at path '%v'", p, strings.Join(path[:i], "."))
 		}
-
-		traversed = append(traversed, p)
 	}
 
 	return current, nil
@@ -65,7 +61,6 @@ func Must[T any](v T, err error) T {
 // Map applies a function to each element of a slice and returns a new slice with the results.
 func Map[T, U any](a []T, f func(T) U) []U {
 	b := make([]U, len(a))
-
 	for i := range a {
 		b[i] = f(a[i])
 	}
@@ -76,7 +71,6 @@ func Map[T, U any](a []T, f func(T) U) []U {
 // MapKeys applies a function to each key of a map and returns a new slice with the results.
 func MapKeys[K comparable, V any, U any](m map[K]V, f func(K) U) []U {
 	keys := make([]U, 0, len(m))
-
 	for k := range m {
 		keys = append(keys, f(k))
 	}
@@ -126,8 +120,7 @@ func Filter[T any](s []T, f func(T) bool) []T {
 // FindClosestMatchingRoot finds the closest matching root for a given path.
 // If no matching root is found, an empty string is returned.
 func FindClosestMatchingRoot(path string, roots []string) string {
-	currentLongestSuffix := 0
-	longestSuffixIndex := -1
+	currentLongestSuffix, longestSuffixIndex := 0, -1
 
 	for i, root := range roots {
 		if root == path {
@@ -139,7 +132,6 @@ func FindClosestMatchingRoot(path string, roots []string) string {
 		}
 
 		suffix := strings.TrimPrefix(root, path)
-
 		if len(suffix) > currentLongestSuffix {
 			currentLongestSuffix = len(suffix)
 			longestSuffixIndex = i
@@ -233,9 +225,7 @@ func Partial2[T, U, R any](f func(a T, b U) R, a T) func(U) R {
 
 // EqualsAny checks if the provided value is equal to any of the values in the slice.
 func EqualsAny[T comparable](a ...T) func(T) bool {
-	return func(b T) bool {
-		return slices.Contains(a, b)
-	}
+	return Partial2(slices.Contains, a)
 }
 
 // SafeIntToUint will convert an int to a uint, clamping negative values to 0.
@@ -303,4 +293,16 @@ func WrapErr(err error, msg string) error {
 	}
 
 	return fmt.Errorf("%s: %w", msg, err)
+}
+
+func WithOpen[T any](path string, f func(*os.File) (T, error)) (T, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		var zero T
+
+		return zero, fmt.Errorf("failed to open file '%s': %w", path, err)
+	}
+	defer file.Close()
+
+	return f(file)
 }

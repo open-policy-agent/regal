@@ -16,13 +16,12 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/bundle"
 	ofilter "github.com/open-policy-agent/opa/v1/loader/filter"
-	"github.com/open-policy-agent/opa/v1/rego"
-	"github.com/open-policy-agent/opa/v1/types"
 	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
 	"github.com/open-policy-agent/regal/internal/util"
+	"github.com/open-policy-agent/regal/pkg/builtins/meta"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
@@ -183,19 +182,10 @@ func FindInputPath(file string, workspacePath string) string {
 // - This function doesn't do error handling. If the file can't be read, nothing is returned.
 // - While the input data theoretically could be anything JSON/YAML value, we only support an object.
 func FindInput(file string, workspacePath string) (inputPath string, input map[string]any) {
-	relative := strings.TrimPrefix(file, workspacePath)
-	components := strings.Split(filepath.Dir(relative), string(os.PathSeparator))
-	supported := []string{"input.json", "input.yaml"}
-
-	for i := range components {
-		current := filepath.Join(components[:len(components)-i]...)
-		for _, name := range supported {
-			inputPath := filepath.Join(workspacePath, current, name)
-			if content, err := os.ReadFile(inputPath); err == nil {
-				if err = unmarshallerFor(name)(content, &input); err == nil {
-					return inputPath, input
-				}
-			}
+	inputPath = FindInputPath(file, workspacePath)
+	if content, err := os.ReadFile(inputPath); err == nil {
+		if err = unmarshallerFor(filepath.Base(inputPath))(content, &input); err == nil {
+			return inputPath, input
 		}
 	}
 
@@ -320,32 +310,7 @@ func DirCleanUpPaths(target string, preserve []string) ([]string, error) {
 	return dirs, nil
 }
 
-// NOTE: These are mirrored here merely to provide correct capabilities for the
-// parser. Can't import other packages from here as almost all of them depend on
-// this package. We should probably move these definitions to somewhere where all
-// packages can import them from.
-
-var regalParseModuleMeta = &rego.Function{
-	Name: "regal.parse_module",
-	Decl: types.NewFunction(
-		types.Args(
-			types.Named("filename", types.S).Description("file name to attach to AST nodes' locations"),
-			types.Named("rego", types.S).Description("Rego module"),
-		),
-		types.Named("output", types.NewObject(nil, types.NewDynamicProperty(types.S, types.A))),
-	),
-}
-
-var regalLastMeta = &rego.Function{
-	Name: "regal.last",
-	Decl: types.NewFunction(
-		types.Args(
-			types.Named("array", types.NewArray(nil, types.A)).
-				Description("performance optimized last index retrieval"),
-		),
-		types.Named("element", types.A),
-	),
-}
+// TODO: This is currently done in too many places
 
 var OPACapabilities = ast.CapabilitiesForThisVersion()
 
@@ -354,14 +319,8 @@ var Capabilities = sync.OnceValue(capabilities)
 func capabilities() *ast.Capabilities {
 	cpy := *OPACapabilities
 	cpy.Builtins = append(cpy.Builtins,
-		&ast.Builtin{
-			Name: regalParseModuleMeta.Name,
-			Decl: regalParseModuleMeta.Decl,
-		},
-		&ast.Builtin{
-			Name: regalLastMeta.Name,
-			Decl: regalLastMeta.Decl,
-		})
+		meta.RegalParseModuleBuiltin, meta.RegalLastBuiltin, meta.RegalIsFormattedBuiltin,
+	)
 
 	return &cpy
 }
