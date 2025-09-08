@@ -1493,7 +1493,12 @@ func (l *LanguageServer) handleTextDocumentDefinition(params types.DefinitionPar
 
 	res := definition.Result
 
-	return types.Location{URI: res.File, Range: types.RangeBetween(res.Row-1, res.Col-1, res.Row-1, res.Col-1)}, nil
+	return types.Location{
+		// res.File will be relative to the workspace root. The response here needs
+		// a URI for the client to be able to navigate correctly.
+		URI:   util.EnsureSuffix(l.workspaceRootURI, "/") + res.File,
+		Range: types.RangeBetween(res.Row-1, res.Col-1, res.Row-1, res.Col-1),
+	}, nil
 }
 
 func (l *LanguageServer) handleTextDocumentDidOpen(params types.DidOpenTextDocumentParams) (any, error) {
