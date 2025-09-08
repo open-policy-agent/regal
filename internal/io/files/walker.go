@@ -192,6 +192,8 @@ func (fwr *WalkReducer[T]) Reduce(f func(string, T) (T, error)) (T, error) {
 // calling f for each file. The function f receives the path of the file and
 // the current value of the accumulator. It returns the new value of the
 // accumulator and an error if any.
+// NOTE: Unlike that path passed to f is always /-separated when walking an FS
+// implementation (as opposed to a directory, where the separator is OS-specific).
 func (fwr *WalkReducer[T]) ReduceFS(target fs.FS, f func(string, T) (T, error)) (T, error) {
 	curr := fwr.initial
 	err := fwr.WalkFS(target, func(path string) (err error) {

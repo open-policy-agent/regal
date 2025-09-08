@@ -1,7 +1,6 @@
 package compile
 
 import (
-	"os"
 	"strings"
 	"sync"
 
@@ -50,7 +49,11 @@ var RegalSchemaSet = sync.OnceValue(func() *ast.SchemaSet {
 
 			util.Must0(encoding.JSON().Unmarshal(util.Must(embeds.SchemasFS.ReadFile(path)), &schemaAny))
 
-			spl := strings.Split(strings.TrimSuffix(path, ".json"), string(os.PathSeparator))
+			// > This is unlike io/fs.WalkDir, which always uses slash separated paths.
+			// https://pkg.go.dev/path/filepath#WalkDir
+			//
+			// https://github.com/open-policy-agent/regal/issues/1679
+			spl := strings.Split(strings.TrimSuffix(path, ".json"), "/")
 			ref := ast.Ref([]*ast.Term{ast.SchemaRootDocument}).Extend(ast.MustParseRef(strings.Join(spl[1:], ".")))
 
 			schemaSet.Put(ref, schemaAny)
