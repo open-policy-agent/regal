@@ -9,6 +9,9 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 )
 
+// uris always use / as the uriSeparator, regardless of system.
+const uriSeparator = "/"
+
 var drivePattern = regexp.MustCompile(`^\/?([A-Za-z]):`)
 
 // FromPath converts a file path to a URI for a given client.
@@ -16,7 +19,7 @@ var drivePattern = regexp.MustCompile(`^\/?([A-Za-z]):`)
 // will convert the path to the appropriate format for the client.
 func FromPath(client clients.Identifier, path string) string {
 	path = strings.TrimPrefix(path, "file://")
-	path = strings.TrimPrefix(path, "/")
+	path = strings.TrimPrefix(path, uriSeparator)
 
 	var driveLetter string
 	if matches := drivePattern.FindStringSubmatch(path); len(matches) > 0 {
@@ -27,7 +30,7 @@ func FromPath(client clients.Identifier, path string) string {
 		path = strings.TrimPrefix(path, driveLetter)
 	}
 
-	parts := strings.Split(filepath.ToSlash(path), "/")
+	parts := strings.Split(filepath.ToSlash(path), uriSeparator)
 	for i, part := range parts {
 		parts[i] = url.QueryEscape(part)
 		parts[i] = strings.ReplaceAll(parts[i], "+", "%20")
@@ -35,17 +38,17 @@ func FromPath(client clients.Identifier, path string) string {
 
 	if client == clients.IdentifierVSCode {
 		if driveLetter != "" {
-			return "file:///" + url.QueryEscape(driveLetter) + strings.Join(parts, "/")
+			return "file:///" + url.QueryEscape(driveLetter) + strings.Join(parts, uriSeparator)
 		}
 
-		return "file:///" + strings.Join(parts, "/")
+		return "file:///" + strings.Join(parts, uriSeparator)
 	}
 
 	if driveLetter != "" {
-		return "file:///" + driveLetter + strings.Join(parts, "/")
+		return "file:///" + driveLetter + strings.Join(parts, uriSeparator)
 	}
 
-	return "file:///" + strings.Join(parts, "/")
+	return "file:///" + strings.Join(parts, uriSeparator)
 }
 
 // ToPath converts a URI to a file path from a format for a given client.
@@ -65,7 +68,7 @@ func ToPath(client clients.Identifier, uri string) string {
 	// handling case for windows when the drive letter is set
 	if client == clients.IdentifierVSCode &&
 		drivePattern.MatchString(path) {
-		path = strings.TrimPrefix(path, "/")
+		path = strings.TrimPrefix(path, uriSeparator)
 	}
 
 	// Convert path to use system separators

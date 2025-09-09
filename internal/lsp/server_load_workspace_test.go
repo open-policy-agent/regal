@@ -3,6 +3,7 @@ package lsp
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"testing"
 
@@ -117,6 +118,10 @@ func TestLoadWorkspaceContents(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+
+			if len(tc.unreadableFiles) > 0 && runtime.GOOS == "windows" {
+				t.Skip("file permissions used to test unreadableFiles doesn't work on windows")
+			}
 
 			tempDir := testutil.TempDirectoryOf(t, tc.files)
 

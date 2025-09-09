@@ -1,6 +1,7 @@
 package fixes
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -157,8 +158,8 @@ func TestFixDirectoryPackageMismatch(t *testing.T) {
 					t.Fatalf("expected from path to be %s, got %s", tc.expected.Rename.FromPath, fixResult.Rename.FromPath)
 				}
 
-				if fixResult.Rename.ToPath != tc.expected.Rename.ToPath {
-					t.Fatalf("expected to path to be %s, got %s", tc.expected.Rename.ToPath, fixResult.Rename.ToPath)
+				if exp, got := fixResult.Rename.ToPath, filepath.FromSlash(tc.expected.Rename.ToPath); exp != got {
+					t.Fatalf("expected to path to be %s, got %s", exp, got)
 				}
 			}
 		})

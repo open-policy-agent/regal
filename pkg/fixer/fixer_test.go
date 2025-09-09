@@ -1,6 +1,7 @@
 package fixer
 
 import (
+	"path/filepath"
 	"slices"
 	"testing"
 
@@ -120,12 +121,12 @@ func TestFixViolations(t *testing.T) {
 	// targeted specific fix for a given violation
 	violations := []report.Violation{{
 		Title:    "directory-package-mismatch",
-		Location: report.Location{File: "root/main.rego"},
+		Location: report.Location{File: filepath.FromSlash("root/main.rego")},
 	}}
 
 	memfp := fileprovider.NewInMemoryFileProvider(map[string]string{
-		"root/main.rego":         "package foo.bar\n\nallow := true\n",
-		"root/foo/bar/main.rego": "package foo.bar\n\nallow := true\n", // file in correct place
+		filepath.FromSlash("root/main.rego"):         "package foo.bar\n\nallow := true\n",
+		filepath.FromSlash("root/foo/bar/main.rego"): "package foo.bar\n\nallow := true\n", // file in correct place
 	})
 
 	f := NewFixer().SetOnConflictOperation(OnConflictRename).RegisterFixes(fixes.NewDefaultFixes()...)
@@ -136,14 +137,14 @@ func TestFixViolations(t *testing.T) {
 	}
 
 	expectedFileFixedViolations := map[string][]string{
-		"root/main.rego":           {"directory-package-mismatch"},
-		"root/foo/bar/main_1.rego": {"directory-package-mismatch"},
-		"root/foo/bar/main.rego":   {}, // no fixes
+		filepath.FromSlash("root/main.rego"):           {"directory-package-mismatch"},
+		filepath.FromSlash("root/foo/bar/main_1.rego"): {"directory-package-mismatch"},
+		filepath.FromSlash("root/foo/bar/main.rego"):   {}, // no fixes
 	}
 	expectedFileContents := map[string]string{
-		"root/main.rego":           "package foo.bar\n\nallow := true\n", // old file yet to be deleted
-		"root/foo/bar/main_1.rego": "package foo.bar\n\nallow := true\n",
-		"root/foo/bar/main.rego":   "package foo.bar\n\nallow := true\n", // file in correct place
+		filepath.FromSlash("root/main.rego"):           "package foo.bar\n\nallow := true\n", // old file yet to be deleted
+		filepath.FromSlash("root/foo/bar/main_1.rego"): "package foo.bar\n\nallow := true\n",
+		filepath.FromSlash("root/foo/bar/main.rego"):   "package foo.bar\n\nallow := true\n", // file in correct place
 	}
 
 	if got, exp := fixReport.TotalFixes(), uint(2); got != exp {

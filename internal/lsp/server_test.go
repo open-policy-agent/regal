@@ -14,9 +14,11 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/util"
 
+	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/lsp/uri"
 )
 
 const (
@@ -92,7 +94,10 @@ func createAndInitServer(
 
 	ls.SetConn(connServer)
 
-	request := types.InitializeParams{RootURI: fileURIScheme + tempDir, ClientInfo: types.ClientInfo{Name: "go test"}}
+	request := types.InitializeParams{
+		RootURI:    uri.FromPath(clients.IdentifierGeneric, tempDir),
+		ClientInfo: types.ClientInfo{Name: "go test"},
+	}
 
 	var response types.InitializeResult
 	if err := connClient.Call(ctx, "initialize", request, &response); err != nil {

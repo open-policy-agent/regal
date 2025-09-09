@@ -119,7 +119,7 @@ func TestFindConfig(t *testing.T) {
 				}
 
 				if testData.ExpectedName != "" {
-					if got, exp := strings.TrimPrefix(configFile.Name(), root), testData.ExpectedName; got != exp {
+					if got, exp := strings.TrimPrefix(configFile.Name(), root), filepath.FromSlash(testData.ExpectedName); got != exp {
 						t.Fatalf("expected config file %q, got %q", exp, got)
 					}
 				}
