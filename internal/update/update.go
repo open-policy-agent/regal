@@ -125,7 +125,6 @@ func getLatestCachedVersion(opts Options) (string, error) {
 			defer file.Close()
 
 			var preExistingState latestVersionFileContents
-
 			if err := encoding.JSON().NewDecoder(file).Decode(&preExistingState); err != nil {
 				return "", fmt.Errorf("failed to decode existing version state file: %w", err)
 			}

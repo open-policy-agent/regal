@@ -122,21 +122,16 @@ func (f *Fixer) FixViolations(
 	// to motivate cluttering the code
 	//nolint:gocritic
 	for _, violation := range violations {
-		file := violation.Location.File
-
 		fixInstance, ok := f.GetFixForName(violation.Title)
 		if !ok {
 			return nil, fmt.Errorf("no fix for violation %s", violation.Title)
 		}
 
+		file := violation.Location.File
+
 		fc, err := fp.Get(file)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get file %s: %w", file, err)
-		}
-
-		fixCandidate := fixes.FixCandidate{
-			Filename: file,
-			Contents: fc,
 		}
 
 		abs, err := filepath.Abs(file)
@@ -144,12 +139,10 @@ func (f *Fixer) FixViolations(
 			return nil, fmt.Errorf("failed to get absolute path for %s: %w", file, err)
 		}
 
-		fixResults, err := fixInstance.Fix(&fixCandidate, &fixes.RuntimeOptions{
-			BaseDir: util.FindClosestMatchingRoot(abs, f.registeredRoots),
-			Config:  config,
-			Locations: []report.Location{
-				violation.Location,
-			},
+		fixResults, err := fixInstance.Fix(&fixes.FixCandidate{Filename: file, Contents: fc}, &fixes.RuntimeOptions{
+			BaseDir:   util.FindClosestMatchingRoot(abs, f.registeredRoots),
+			Config:    config,
+			Locations: []report.Location{violation.Location},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to fix %s: %w", file, err)
@@ -159,21 +152,18 @@ func (f *Fixer) FixViolations(
 			continue
 		}
 
-		fixResult := fixResults[0]
-
-		if fixResult.Rename != nil {
-			err = f.handleRename(fp, fixReport, startingFiles, fixResult)
-			if err != nil {
+		if fixResults[0].Rename != nil {
+			if err = f.handleRename(fp, fixReport, startingFiles, fixResults[0]); err != nil {
 				return nil, fmt.Errorf("failed to handle rename: %w", err)
 			}
 		}
 
 		// Write the fixed content to the file
-		if err := fp.Put(file, fixResult.Contents); err != nil {
+		if err := fp.Put(file, fixResults[0].Contents); err != nil {
 			return nil, fmt.Errorf("failed to write fixed content to file %s: %w", file, err)
 		}
 
-		fixReport.AddFileFix(file, fixResult)
+		fixReport.AddFileFix(file, fixResults[0])
 	}
 
 	return fixReport, nil

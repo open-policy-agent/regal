@@ -33,7 +33,5 @@ func renameCandidate(oldName string) string {
 		base += "_1"
 	}
 
-	newBase := base + suffix + ext
-
-	return filepath.Join(dir, newBase)
+	return filepath.Join(dir, base+suffix+ext)
 }

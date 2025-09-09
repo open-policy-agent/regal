@@ -106,7 +106,6 @@ func init() {
 		Use:   "lint <path> [path [...]]",
 		Short: "Lint Rego source files",
 		Long:  `Lint Rego source files for linter rule violations.`,
-
 		PreRunE: func(_ *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return errors.New("at least one file or directory must be provided for linting")
@@ -114,7 +113,6 @@ func init() {
 
 			return nil
 		},
-
 		RunE: wrapProfiling(func(args []string) error {
 			rep, err := lint(args, params)
 			if err != nil {
@@ -124,8 +122,7 @@ func init() {
 				return exit(1)
 			}
 
-			errorsFound := 0
-			warningsFound := 0
+			errorsFound, warningsFound := 0, 0
 
 			for i := range rep.Violations {
 				switch rep.Violations[i].Level {

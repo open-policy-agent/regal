@@ -64,11 +64,11 @@ func GetRuleDetail(rule *ast.Rule, builtins map[string]*ast.Builtin) string {
 // IsConstant returns true if the rule is a "constant" rule, i.e.
 // one without conditions and scalar value in the head.
 func IsConstant(rule *ast.Rule) bool {
-	isScalar := false
-
 	if rule.Head.Value == nil {
 		return false
 	}
+
+	isScalar := false
 
 	switch rule.Head.Value.Value.(type) {
 	case ast.Boolean, ast.Number, ast.String, ast.Null:

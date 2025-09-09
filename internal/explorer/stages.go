@@ -66,11 +66,7 @@ func CompilerStages(path, rego string, useStrict, useAnno, usePrint bool) []Comp
 		WithEnablePrintStatements(usePrint).
 		WithUseTypeCheckAnnotations(useAnno)
 
-	result := make([]CompileResult, 0, len(stages)+1)
-	result = append(result, CompileResult{
-		Stage: "ParseModule",
-	})
-
+	result := append(make([]CompileResult, 0, len(stages)+1), CompileResult{Stage: "ParseModule"})
 	opts := parse.ParserOptions()
 	opts.ProcessAnnotation = useAnno
 
@@ -130,16 +126,8 @@ func Plan(ctx context.Context, path, rego string, usePrint bool) (string, error)
 		return "", err
 	}
 
-	b := &bundle.Bundle{
-		Modules: []bundle.ModuleFile{
-			{
-				URL:    "/url",
-				Path:   path,
-				Raw:    util.StringToByteSlice(rego),
-				Parsed: mod,
-			},
-		},
-	}
+	r := util.StringToByteSlice(rego)
+	b := &bundle.Bundle{Modules: []bundle.ModuleFile{{URL: "/url", Path: path, Raw: r, Parsed: mod}}}
 
 	compiler := compile.New().
 		WithTarget(compile.TargetPlan).
@@ -150,9 +138,8 @@ func Plan(ctx context.Context, path, rego string, usePrint bool) (string, error)
 		return "", err
 	}
 
-	var policy ir.Policy
-
-	if err := encoding.JSON().Unmarshal(compiler.Bundle().PlanModules[0].Raw, &policy); err != nil {
+	policy, err := encoding.JSONUnmarshalTo[ir.Policy](compiler.Bundle().PlanModules[0].Raw)
+	if err != nil {
 		return "", err
 	}
 

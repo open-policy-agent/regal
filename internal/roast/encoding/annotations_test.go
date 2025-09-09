@@ -82,16 +82,14 @@ func TestAnnotationsEncoding(t *testing.T) {
 	}
 
 	if !json.Valid(roast) {
-		err = json.Unmarshal(roast, &map[string]any{})
-		if err != nil {
+		if err = json.Unmarshal(roast, &map[string]any{}); err != nil {
 			t.Fatalf("produced invalid JSON: %v", err)
 		}
 	}
 
 	var resultMap map[string]any
 
-	err = json.Unmarshal(roast, &resultMap)
-	if err != nil {
+	if err = json.Unmarshal(roast, &resultMap); err != nil {
 		t.Fatalf("failed to unmarshal JSON: %v", err)
 	}
 

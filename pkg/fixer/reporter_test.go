@@ -13,7 +13,6 @@ func TestPrettyReporterOutput(t *testing.T) {
 	var buffer bytes.Buffer
 
 	reporter := NewPrettyReporter(&buffer)
-
 	report := NewReport()
 
 	report.AddFileFix("/workspace/bundle1/policy1.rego", fixes.FixResult{
@@ -92,9 +91,7 @@ func TestPrettyReporterOutputWithConflicts(t *testing.T) {
 	var buffer bytes.Buffer
 
 	reporter := NewPrettyReporter(&buffer)
-
 	report := NewReport()
-
 	root := "/workspace/bundle1"
 
 	// not conflicting rename

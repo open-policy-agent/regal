@@ -98,10 +98,7 @@ func (s *Server) Start(_ context.Context) {
 		}
 
 		cs := explorer.CompilerStages(path, policy, enableStrict, enableAnnotationProcessing, enablePrint)
-		st := state{
-			Code:   policy,
-			Result: make([]stringResult, len(cs)+1),
-		}
+		st := state{Code: policy, Result: make([]stringResult, len(cs)+1)}
 
 		for i := range cs {
 			st.Result[i].Stage = cs[i].Stage

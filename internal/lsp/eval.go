@@ -104,7 +104,6 @@ func prepareRegoArgs(
 	args := []func(*rego.Rego){rego.ParsedQuery(query), rego.EnablePrintStatements(true), rego.PrintHook(printHook)}
 	args = append(args, builtins.RegalBuiltinRegoFuncs...)
 	args = append(args, bundleArgs...)
-
 	args = append(args, rrego.SchemaResolvers()...)
 
 	var caps *config.Capabilities

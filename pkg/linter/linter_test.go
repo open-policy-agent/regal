@@ -5,7 +5,6 @@ import (
 	"embed"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/topdown"
@@ -317,13 +316,8 @@ func TestLintWithErrorInEnable(t *testing.T) {
 		WithInputModules(test.InputPolicy("p/p.rego", "package p"))
 
 	_, err := linter.Lint(t.Context())
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
 
-	if exp, got := "unknown rules: [foo]", err.Error(); !strings.Contains(got, exp) {
-		t.Fatalf("expected error to contain %q, got %q", exp, got)
-	}
+	testutil.ErrMustContain(err, "unknown rules: [foo]")(t)
 }
 
 //go:embed testdata/*

@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
 func TestLookupFromFile(t *testing.T) {
@@ -14,17 +16,8 @@ func TestLookupFromFile(t *testing.T) {
 		t.Skip()
 	}
 
-	// Test that we are able to load a capabilities file using a file://
-	// URL.
-
-	path, err := filepath.Abs("./testdata/capabilities.json")
-	if err != nil {
-		t.Fatalf("could not determine absolute path to test capabilities file: %v", err)
-	}
-
-	urlForPath := "file://" + path
-
-	caps, err := Lookup(t.Context(), urlForPath)
+	// Test that we are able to load a capabilities file using a file:// URL.
+	caps, err := Lookup(t.Context(), "file://"+testutil.Must(filepath.Abs("./testdata/capabilities.json"))(t))
 	if err != nil {
 		t.Errorf("unexpected error from Lookup: %v", err)
 	}
@@ -41,14 +34,8 @@ func TestLookupFromFile(t *testing.T) {
 func TestLookupFromEmbedded(t *testing.T) {
 	t.Parallel()
 
-	// Test that we can load a one of the existing OPA capabilities files
-	// via the embedded database.
-
-	caps, err := Lookup(t.Context(), "regal:///capabilities/opa/v0.55.0")
-	if err != nil {
-		t.Errorf("unexpected error from Lookup: %v", err)
-	}
-
+	// existing OPA capabilities files from embedded database.
+	caps := testutil.Must(Lookup(t.Context(), "regal:///capabilities/opa/v0.55.0"))(t)
 	if len(caps.Builtins) != 193 {
 		t.Errorf("OPA v0.55.0 capabilities should have 193 builtins, not %d", len(caps.Builtins))
 	}

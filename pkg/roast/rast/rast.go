@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 // UnquotedPath returns a slice of strings from a path without quotes.
@@ -69,31 +71,11 @@ func IsBodyGenerated(rule *ast.Rule) bool {
 // 330.7 ns/op	     496 B/op	      16 allocs/op - Split
 // 269.1 ns/op	     400 B/op	      15 allocs/op - IndexOf for loop (current).
 func RefStringToBody(path string) ast.Body {
-	var i int
-	if i = strings.Index(path, "."); i == -1 {
-		return ast.NewBody(ast.NewExpr(ast.RefTerm(refHeadTerm(path))))
-	}
-
-	terms := append(make([]*ast.Term, 0, strings.Count(path, ".")+1), refHeadTerm(path[:i]))
-
-	for {
-		path = path[i+1:]
-		if i = strings.Index(path, "."); i == -1 {
-			if len(path) > 0 {
-				terms = append(terms, ast.InternedTerm(path))
-			}
-
-			break
-		}
-
-		terms = append(terms, ast.InternedTerm(path[:i]))
-	}
-
-	return ast.NewBody(ast.NewExpr(ast.RefTerm(terms...)))
+	return ast.NewBody(ast.NewExpr(ast.NewTerm(RefStringToRef(path))))
 }
 
 // RefStringToRef converts a simple dot-delimited string path to an ast.Ref in the most
-// efficient way possible, using interned terms where applicable. See RefStringToBody for
+// efficient way possible, using interned terms where possible. See RefStringToBody for
 // more details on the limitations of this function.
 func RefStringToRef(path string) ast.Ref {
 	var i int
@@ -129,12 +111,7 @@ func ArrayTerm(a []string) *ast.Term {
 		return ast.InternedEmptyArray
 	}
 
-	terms := make([]*ast.Term, 0, len(a))
-	for _, item := range a {
-		terms = append(terms, ast.InternedTerm(item))
-	}
-
-	return ast.ArrayTerm(terms...)
+	return ast.ArrayTerm(util.Map(a, ast.InternedTerm)...)
 }
 
 func refHeadTerm(name string) *ast.Term {
@@ -152,20 +129,16 @@ func refHeadTerm(name string) *ast.Term {
 // but without an expensive JSON roundtrip.
 // Experimental: this is new and not yet battle-tested, so use with caution.
 func StructToValue(input any) ast.Value {
-	v := reflect.ValueOf(input)
-	t := reflect.TypeOf(input)
+	v, t := reflect.ValueOf(input), reflect.TypeOf(input)
 
 	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-		t = t.Elem()
+		v, t = v.Elem(), t.Elem()
 	}
 
 	kvs := make([][2]*ast.Term, 0, t.NumField())
 
 	for i := range t.NumField() {
-		field := t.Field(i)
-
-		tag := field.Tag.Get("json")
+		tag := t.Field(i).Tag.Get("json")
 		if tag == "" || tag == "-" {
 			continue
 		}
@@ -176,7 +149,7 @@ func StructToValue(input any) ast.Value {
 			parts := strings.Split(tag, ",")
 			tag = parts[0]
 
-			if omitempty := slices.Contains(parts[1:], "omitempty"); omitempty && isZeroValue(value) {
+			if slices.Contains(parts[1:], "omitempty") && isZeroValue(value) {
 				continue
 			}
 		}

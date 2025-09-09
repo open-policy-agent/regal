@@ -5,45 +5,29 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
 func TestCacheFileProvider(t *testing.T) {
 	t.Parallel()
 
 	c := cache.NewCache()
-
 	c.SetFileContents("file:///tmp/foo.rego", "package foo")
 	c.SetFileContents("file:///tmp/bar.rego", "package bar")
 
 	cfp := NewCacheFileProvider(c, clients.IdentifierGeneric)
 
-	err := cfp.Put("file:///tmp/foo.rego", "package wow")
-	if err != nil {
-		t.Fatalf("failed to put file: %s", err)
-	}
+	testutil.NoErr(cfp.Put("file:///tmp/foo.rego", "package wow"))(t)
 
-	contents, err := cfp.Get("file:///tmp/foo.rego")
-	if err != nil {
-		t.Fatalf("failed to get file: %s", err)
-	}
-
-	if contents != "package wow" {
+	if contents := testutil.Must(cfp.Get("file:///tmp/foo.rego"))(t); contents != "package wow" {
 		t.Fatalf("expected %s, got %s", "package wow", contents)
 	}
 
-	contentsStr, ok := c.GetFileContents("file:///tmp/foo.rego")
-	if !ok {
-		t.Fatalf("failed to get file contents")
+	if contentsStr := testutil.MustBeOK(c.GetFileContents("file:///tmp/foo.rego"))(t); contentsStr != "package wow" {
+		t.Fatalf("expected %s, got %s", "package wow", contentsStr)
 	}
 
-	if contentsStr != "package wow" {
-		t.Fatalf("expected %s, got %s", "package wow", contents)
-	}
-
-	err = cfp.Rename("file:///tmp/foo.rego", "file:///tmp/wow.rego")
-	if err != nil {
-		t.Fatalf("failed to rename file: %s", err)
-	}
+	testutil.NoErr(cfp.Rename("file:///tmp/foo.rego", "file:///tmp/wow.rego"))(t)
 
 	if !cfp.deletedFiles.Contains("file:///tmp/foo.rego") {
 		t.Fatalf("expected file to be deleted")
@@ -53,12 +37,7 @@ func TestCacheFileProvider(t *testing.T) {
 		t.Fatalf("expected file to be modified")
 	}
 
-	contents, err = cfp.Get("file:///tmp/wow.rego")
-	if err != nil {
-		t.Fatalf("failed to get file: %s", err)
-	}
-
-	if contents != "package wow" {
+	if contents := testutil.Must(cfp.Get("file:///tmp/wow.rego"))(t); contents != "package wow" {
 		t.Fatalf("expected %s, got %s", "package wow", contents)
 	}
 }

@@ -20,18 +20,11 @@ func (n *NoWhitespaceComment) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]Fix
 	fixed := false
 
 	for _, loc := range opts.Locations {
-		// unexpected line in file, skipping
-		if loc.Row > len(lines) {
-			continue
-		}
-
-		if loc.Column > len(lines[loc.Row-1]) || loc.Column < 1 {
+		if loc.Row > len(lines) || loc.Column > len(lines[loc.Row-1]) || loc.Column < 1 {
 			continue
 		}
 
 		line := lines[loc.Row-1]
-
-		// unexpected character at location column, skipping
 		if line[loc.Column-1] != byte('#') {
 			continue
 		}
@@ -44,9 +37,5 @@ func (n *NoWhitespaceComment) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]Fix
 		return nil, nil
 	}
 
-	return []FixResult{{
-		Title:    n.Name(),
-		Root:     opts.BaseDir,
-		Contents: strings.Join(lines, "\n"),
-	}}, nil
+	return []FixResult{{Title: n.Name(), Root: opts.BaseDir, Contents: strings.Join(lines, "\n")}}, nil
 }

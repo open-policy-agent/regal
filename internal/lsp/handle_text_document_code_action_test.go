@@ -50,7 +50,7 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 			Title:   "Replace = with := in assignment",
 			Command: "regal.fix.use-assignment-operator",
 			Tooltip: "Replace = with := in assignment",
-			Arguments: toAnySlice(string(util.Must(encoding.JSON().Marshal(types.CommandArgs{
+			Arguments: toAnySlicePtr(string(util.Must(encoding.JSON().Marshal(types.CommandArgs{
 				Target:     params.TextDocument.URI,
 				Diagnostic: &diag,
 			})))),
@@ -66,18 +66,11 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 		t.Fatalf("expected %d arguments, got %d", exp, got)
 	}
 
-	var expDecoded, actualDecoded map[string]any
+	expDecoded := testutil.Must(encoding.JSONUnmarshalTo[map[string]any]([]byte(expArgs[0].(string))))(t)
+	actDecoded := testutil.Must(encoding.JSONUnmarshalTo[map[string]any]([]byte(actualArgs[0].(string))))(t)
 
-	if err := encoding.JSON().Unmarshal([]byte(expArgs[0].(string)), &expDecoded); err != nil {
-		t.Fatalf("failed to unmarshal expected arguments: %v", err)
-	}
-
-	if err := encoding.JSON().Unmarshal([]byte(actualArgs[0].(string)), &actualDecoded); err != nil {
-		t.Fatalf("failed to unmarshal actual arguments: %v", err)
-	}
-
-	if !reflect.DeepEqual(expDecoded, actualDecoded) {
-		t.Errorf("expected Command.Arguments to be %v, got %v", expDecoded, actualDecoded)
+	if !reflect.DeepEqual(expDecoded, actDecoded) {
+		t.Errorf("expected Command.Arguments to be %v, got %v", expDecoded, actDecoded)
 	}
 }
 
@@ -107,7 +100,7 @@ func TestHandleTextDocumentCodeActionSourceExplorer(t *testing.T) {
 			Title:     "Explore compiler stages for this policy",
 			Command:   "vscode.open",
 			Tooltip:   "Explore compiler stages for this policy",
-			Arguments: toAnySlice("http://foo.bar/explorer/example.rego"),
+			Arguments: toAnySlicePtr("http://foo.bar/explorer/example.rego"),
 		},
 	}
 
@@ -227,7 +220,7 @@ func BenchmarkHandleTextDocumentCodeAction(b *testing.B) {
 	}
 }
 
-func toAnySlice(a ...string) *[]any {
+func toAnySlicePtr(a ...string) *[]any {
 	b := make([]any, len(a))
 	for i := range a {
 		b[i] = a[i]

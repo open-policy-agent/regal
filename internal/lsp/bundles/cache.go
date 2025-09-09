@@ -38,6 +38,14 @@ func NewCache(workspacePath string, logger *log.Logger) *Cache {
 	}
 }
 
+// cacheBundle is an internal struct that holds a bundle.Bundle and the MD5
+// hash of each source file in the bundle. Hashes are used to determine if
+// the bundle should be reloaded.
+type cacheBundle struct {
+	sourceDigests map[string][]byte
+	bundle        bundle.Bundle
+}
+
 // Refresh walks the workspace path and loads or refreshes any bundles that
 // have changed since the last refresh.
 func (c *Cache) Refresh() ([]string, error) {
@@ -76,13 +84,9 @@ func (c *Cache) Refresh() ([]string, error) {
 	}
 
 	// remove any bundles that are no longer present on disk
-	for root := range c.bundles {
-		found := slices.Contains(foundBundleRoots, root)
-
-		if !found {
-			delete(c.bundles, root)
-		}
-	}
+	maps.DeleteFunc(c.bundles, func(root string, _ *cacheBundle) bool {
+		return !slices.Contains(foundBundleRoots, root)
+	})
 
 	return refreshedBundles, nil
 }
@@ -112,14 +116,6 @@ func (c *Cache) All() map[string]bundle.Bundle {
 	}
 
 	return bundles
-}
-
-// cacheBundle is an internal struct that holds a bundle.Bundle and the MD5
-// hash of each source file in the bundle. Hashes are used to determine if
-// the bundle should be reloaded.
-type cacheBundle struct {
-	sourceDigests map[string][]byte
-	bundle        bundle.Bundle
 }
 
 // Refresh loads the bundle from disk and updates the cache if any of the
@@ -153,19 +149,14 @@ func (c *cacheBundle) Refresh(path string) (bool, error) {
 }
 
 func hasher(path string, curr map[string][]byte) (map[string][]byte, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file %q: %w", path, err)
-	}
-	defer file.Close()
+	return rutil.WithOpen(path, func(file *os.File) (map[string][]byte, error) {
+		hash := md5.New() //nolint:gosec
+		if _, err := io.Copy(hash, file); err != nil {
+			return nil, fmt.Errorf("failed to calculate MD5 hash for file %q: %w", path, err)
+		}
 
-	//nolint:gosec
-	hash := md5.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return nil, fmt.Errorf("failed to calculate MD5 hash for file %q: %w", path, err)
-	}
+		curr[path] = hash.Sum(nil)
 
-	curr[path] = hash.Sum(nil)
-
-	return curr, err
+		return curr, nil
+	})
 }

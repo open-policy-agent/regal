@@ -350,8 +350,7 @@ func ruleToObject(rule *ast.Rule) *ast.Term {
 		annotations := make([]*ast.Term, 0, len(rule.Annotations))
 
 		for _, a := range rule.Annotations {
-			obj := annotationsToObject(a)
-			annotations = append(annotations, ast.NewTerm(obj))
+			annotations = append(annotations, ast.NewTerm(annotationsToObject(a)))
 		}
 
 		if len(annotations) > 0 {

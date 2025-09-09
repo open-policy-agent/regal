@@ -9,6 +9,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 
 	"github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
 type illegalResolver struct{}
@@ -24,29 +25,12 @@ func TestPutFileModStoresRoastRepresentation(t *testing.T) {
 	fileURI := "file:///example.rego"
 	module := parse.MustParseModule("package example\n\nrule := true")
 
-	if err := PutFileMod(t.Context(), store, fileURI, module); err != nil {
-		t.Fatalf("PutFileMod failed: %v", err)
-	}
+	testutil.NoErr(PutFileMod(t.Context(), store, fileURI, module))(t)
 
-	parsed, err := storage.ReadOne(t.Context(), store, storage.Path{"workspace", "parsed", fileURI})
-	if err != nil {
-		t.Fatalf("store.Read failed: %v", err)
-	}
-
-	parsedVal, ok := parsed.(ast.Value)
-	if !ok {
-		t.Fatalf("expected ast.Value, got %T", parsed)
-	}
-
-	parsedMap, err := ast.ValueToInterface(parsedVal, illegalResolver{})
-	if err != nil {
-		t.Fatalf("ast.ValueToInterface failed: %v", err)
-	}
-
-	pretty, err := json.MarshalIndent(parsedMap, "", "  ")
-	if err != nil {
-		t.Fatalf("json.MarshalIndent failed: %v", err)
-	}
+	parsed := testutil.Must(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "parsed", fileURI}))(t)
+	parsedVal := testutil.MustBe[ast.Value](t, parsed)
+	parsedMap := testutil.Must(ast.ValueToInterface(parsedVal, illegalResolver{}))(t)
+	pretty := testutil.Must(json.MarshalIndent(parsedMap, "", "  "))(t)
 
 	// This is certainly testing the implementation rather than the behavior, but we actually
 	// want some tests to fail if the implementation changes, so we don't have to chase this
@@ -100,22 +84,12 @@ func TestPutFileRefs(t *testing.T) {
 	store := NewRegalStore()
 	fileURI := "file:///example.rego"
 
-	if err := PutFileRefs(t.Context(), store, fileURI, []string{"foo", "bar"}); err != nil {
-		t.Fatalf("PutFileRefs failed: %v", err)
-	}
+	testutil.NoErr(PutFileRefs(t.Context(), store, fileURI, []string{"foo", "bar"}))(t)
 
-	value, err := storage.ReadOne(t.Context(), store, storage.Path{"workspace", "defined_refs", fileURI})
-	if err != nil {
-		t.Fatalf("store.Read failed: %v", err)
-	}
+	val := testutil.Must(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "defined_refs", fileURI}))(t)
+	arr := testutil.MustBe[*ast.Array](t, val)
 
-	arr, ok := value.(*ast.Array)
-	if !ok {
-		t.Fatalf("expected *ast.Array, got %T", value)
-	}
-
-	expected := ast.NewArray(ast.StringTerm("foo"), ast.StringTerm("bar"))
-	if !expected.Equal(arr) {
+	if expected := ast.NewArray(ast.StringTerm("foo"), ast.StringTerm("bar")); !expected.Equal(arr) {
 		t.Errorf("expected %v, got %v", expected, arr)
 	}
 }
@@ -124,18 +98,11 @@ func TestPutBuiltins(t *testing.T) {
 	t.Parallel()
 
 	store := NewRegalStore()
-	builtins := map[string]*ast.Builtin{"count": ast.Count}
 
-	if err := PutBuiltins(t.Context(), store, builtins); err != nil {
-		t.Fatalf("PutBuiltins failed: %v", err)
-	}
+	testutil.NoErr(PutBuiltins(t.Context(), store, map[string]*ast.Builtin{"count": ast.Count}))(t)
 
-	value, err := storage.ReadOne(t.Context(), store, storage.Path{"workspace", "builtins", "count"})
-	if err != nil {
-		t.Fatalf("store.Read failed: %v", err)
-	}
-
-	if value == nil {
+	val := testutil.Must(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "builtins", "count"}))(t)
+	if val == nil {
 		t.Errorf("expected count builtin to exist in store")
 	}
 }

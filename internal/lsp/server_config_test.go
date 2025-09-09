@@ -103,7 +103,17 @@ allow := true
 func TestLanguageServerCachesEnabledRulesAndUsesDefaultConfig(t *testing.T) {
 	t.Parallel()
 
-	tempDir := t.TempDir()
+	tempDir := testutil.TempDirectoryOf(t, map[string]string{
+		".regal/config.yaml": `
+rules:
+  idiomatic:
+    directory-package-mismatch:
+      level: ignore
+  imports:
+    unresolved-import:
+      level: ignore
+`,
+	})
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
@@ -141,20 +151,6 @@ func TestLanguageServerCachesEnabledRulesAndUsesDefaultConfig(t *testing.T) {
 			t.Fatalf("timed out waiting for enabled rules to be correct")
 		}
 	}
-
-	testutil.MustMkdirAll(t, tempDir, ".regal")
-
-	configContents := `
-rules:
-  idiomatic:
-    directory-package-mismatch:
-      level: ignore
-  imports:
-    unresolved-import:
-      level: ignore
-`
-
-	testutil.MustWriteFile(t, filepath.Join(tempDir, ".regal", "config.yaml"), []byte(configContents))
 
 	// this event is sent to allow the server to detect the new config
 	if err := connClient.Notify(ctx, "workspace/didChangeWatchedFiles", types.WorkspaceDidChangeWatchedFilesParams{

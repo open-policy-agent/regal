@@ -8,6 +8,7 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
 func TestFormatting(t *testing.T) {
@@ -30,31 +31,22 @@ func TestFormatting(t *testing.T) {
 	// Simple as possible — opa fmt should just remove a newline
 	ls.cache.SetFileContents(mainRegoURI, "package main\n\n")
 
-	params := types.DocumentFormattingParams{
+	res := testutil.Must(ls.handleTextDocumentFormatting(ctx, types.DocumentFormattingParams{
 		TextDocument: types.TextDocumentIdentifier{URI: mainRegoURI},
 		Options:      types.FormattingOptions{},
+	}))(t)
+
+	edits := testutil.MustBe[[]types.TextEdit](t, res)
+	if len(edits) != 1 {
+		t.Fatalf("expected 1 edit, got %d", len(edits))
 	}
 
-	res, err := ls.handleTextDocumentFormatting(ctx, params)
-	if err != nil {
-		t.Fatalf("failed to format document: %s", err)
+	expectRange := types.RangeBetween(1, 0, 2, 0)
+	if edits[0].Range != expectRange {
+		t.Fatalf("expected range to be %v, got %v", expectRange, edits[0].Range)
 	}
 
-	if edits, ok := res.([]types.TextEdit); ok {
-		if len(edits) != 1 {
-			t.Fatalf("expected 1 edit, got %d", len(edits))
-		}
-
-		expectRange := types.RangeBetween(1, 0, 2, 0)
-
-		if edits[0].Range != expectRange {
-			t.Fatalf("expected range to be %v, got %v", expectRange, edits[0].Range)
-		}
-
-		if edits[0].NewText != "" {
-			t.Fatalf("expected new text to be empty, got %s", edits[0].NewText)
-		}
-	} else {
-		t.Fatalf("expected edits to be []types.TextEdit, got %T", res)
+	if edits[0].NewText != "" {
+		t.Fatalf("expected new text to be empty, got %s", edits[0].NewText)
 	}
 }

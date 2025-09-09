@@ -20,13 +20,8 @@ func (u *UseAssignmentOperator) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]F
 	fixed := false
 
 	for _, loc := range opts.Locations {
-		if loc.Row > len(lines) {
-			continue
-		}
-
 		line := lines[loc.Row-1]
-
-		if loc.Column-1 < 0 || loc.Column-1 >= len(line) {
+		if loc.Row > len(lines) || loc.Column-1 < 0 || loc.Column-1 >= len(line) {
 			continue
 		}
 
@@ -43,9 +38,5 @@ func (u *UseAssignmentOperator) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]F
 		return nil, nil
 	}
 
-	return []FixResult{{
-		Title:    u.Name(),
-		Root:     opts.BaseDir,
-		Contents: strings.Join(lines, "\n"),
-	}}, nil
+	return []FixResult{{Title: u.Name(), Root: opts.BaseDir, Contents: strings.Join(lines, "\n")}}, nil
 }

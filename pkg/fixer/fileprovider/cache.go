@@ -18,6 +18,8 @@ type CacheFileProvider struct {
 
 	modifiedFiles *util.Set[string]
 	deletedFiles  *util.Set[string]
+
+	toPath func(string) string
 }
 
 func NewCacheFileProvider(c *cache.Cache, ci clients.Identifier) *CacheFileProvider {
@@ -26,15 +28,12 @@ func NewCacheFileProvider(c *cache.Cache, ci clients.Identifier) *CacheFileProvi
 		ClientIdentifier: ci,
 		modifiedFiles:    util.NewSet[string](),
 		deletedFiles:     util.NewSet[string](),
+		toPath:           util.Partial2(uri.ToPath, ci),
 	}
 }
 
 func (c *CacheFileProvider) List() ([]string, error) {
-	paths := util.MapKeys(c.Cache.GetAllFiles(), func(u string) string {
-		return uri.ToPath(c.ClientIdentifier, u)
-	})
-
-	return paths, nil
+	return util.MapKeys(c.Cache.GetAllFiles(), c.toPath), nil
 }
 
 func (c *CacheFileProvider) Get(file string) (string, error) {

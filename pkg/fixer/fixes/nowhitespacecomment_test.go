@@ -16,41 +16,16 @@ func TestNoWhitespaceComment(t *testing.T) {
 		runtimeOptions  *RuntimeOptions
 	}{
 		"no change needed": {
-			fc: &FixCandidate{
-				Filename: "test.rego",
-				Contents: `package test\n
-
-# this is a comment
-`,
-			},
-			contentAfterFix: `package test\n
-
-# this is a comment
-`,
-			fixExpected:    false,
-			runtimeOptions: &RuntimeOptions{},
+			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\n# this is a comment\n"},
+			contentAfterFix: "package test\n\n# this is a comment\n",
+			fixExpected:     false,
+			runtimeOptions:  &RuntimeOptions{},
 		},
 		"single change": {
-			fc: &FixCandidate{
-				Filename: "test.rego",
-				Contents: `package test\n
-
-#this is a comment
-`,
-			},
-			contentAfterFix: `package test\n
-
-# this is a comment
-`,
-			fixExpected: true,
-			runtimeOptions: &RuntimeOptions{
-				Locations: []report.Location{
-					{
-						Row:    3,
-						Column: 1,
-					},
-				},
-			},
+			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\n#this is a comment\n"},
+			contentAfterFix: "package test\n\n# this is a comment\n",
+			fixExpected:     true,
+			runtimeOptions:  &RuntimeOptions{Locations: []report.Location{{Row: 3, Column: 1}}},
 		},
 		"many changes": {
 			fc: &FixCandidate{
@@ -70,20 +45,7 @@ func TestNoWhitespaceComment(t *testing.T) {
 `,
 			fixExpected: true,
 			runtimeOptions: &RuntimeOptions{
-				Locations: []report.Location{
-					{
-						Row:    3,
-						Column: 1,
-					},
-					{
-						Row:    4,
-						Column: 1,
-					},
-					{
-						Row:    5,
-						Column: 1,
-					},
-				},
+				Locations: []report.Location{{Row: 3, Column: 1}, {Row: 4, Column: 1}, {Row: 5, Column: 1}},
 			},
 		},
 		"many changes, different columns": {
@@ -104,20 +66,7 @@ func TestNoWhitespaceComment(t *testing.T) {
 `,
 			fixExpected: true,
 			runtimeOptions: &RuntimeOptions{
-				Locations: []report.Location{
-					{
-						Row:    3,
-						Column: 1,
-					},
-					{
-						Row:    4,
-						Column: 2,
-					},
-					{
-						Row:    5,
-						Column: 3,
-					},
-				},
+				Locations: []report.Location{{Row: 3, Column: 1}, {Row: 4, Column: 2}, {Row: 5, Column: 3}},
 			},
 		},
 	}
@@ -141,10 +90,8 @@ func TestNoWhitespaceComment(t *testing.T) {
 				return
 			}
 
-			fixedContent := fixResults[0].Contents
-
-			if tc.fixExpected && fixedContent != tc.contentAfterFix {
-				t.Fatalf("unexpected content, got:\n%s---\nexpected:\n%s---", fixedContent, tc.contentAfterFix)
+			if tc.fixExpected && fixResults[0].Contents != tc.contentAfterFix {
+				t.Fatalf("unexpected content, got:\n%s---\nexpected:\n%s---", fixResults[0].Contents, tc.contentAfterFix)
 			}
 		})
 	}

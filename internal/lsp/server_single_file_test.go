@@ -263,21 +263,11 @@ allow := neo4j.q
 				t.Fatalf("failed to send completion request: %s", err)
 			}
 
-			itemsList, ok := resp["items"].([]any)
-			if !ok {
-				t.Fatalf("failed to cast resp[items] to []any")
-			}
+			itemsList := testutil.MustBe[[]any](t, resp["items"])
 
 			for _, itemI := range itemsList {
-				item, ok := itemI.(map[string]any)
-				if !ok {
-					t.Fatalf("completion item '%+v' was not a JSON object", itemI)
-				}
-
-				label, ok := item["label"].(string)
-				if !ok {
-					t.Fatalf("completion item label is not a string: %+v", item["label"])
-				}
+				item := testutil.MustBe[map[string]any](t, itemI)
+				label := testutil.MustBe[string](t, item["label"])
 
 				if label == "neo4j.query" {
 					success = true

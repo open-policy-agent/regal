@@ -13,6 +13,9 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
+// testCaseFileURI is used in various tests in the providers package.
+const testCaseFileURI = "file:///foo/bar/file.rego"
+
 //nolint:paralleltest
 func TestPolicyProvider_Example1(t *testing.T) {
 	policy := `package p

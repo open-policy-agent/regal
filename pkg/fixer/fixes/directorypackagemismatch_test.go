@@ -2,9 +2,9 @@ package fixes
 
 import (
 	"path/filepath"
-	"strings"
 	"testing"
 
+	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
 
@@ -105,34 +105,18 @@ func TestFixDirectoryPackageMismatch(t *testing.T) {
 			t.Parallel()
 
 			dpm := DirectoryPackageMismatch{}
+			cnd := &FixCandidate{Filename: tc.name, Contents: tc.contents}
+			opt := &RuntimeOptions{BaseDir: tc.baseDir, Config: configWithExcludeTestSuffix(!tc.includeTestSuffix)}
 
-			fr, err := dpm.Fix(&FixCandidate{
-				Filename: tc.name,
-				Contents: tc.contents,
-			}, &RuntimeOptions{
-				BaseDir: tc.baseDir,
-				Config:  configWithExcludeTestSuffix(!tc.includeTestSuffix),
-			})
-			if err != nil {
-				if tc.wantErr == "" {
-					t.Errorf("failed to fix: %v", err)
-				}
-
-				if !strings.Contains(err.Error(), tc.wantErr) {
-					t.Errorf("expected error to contain %q, got %q", tc.wantErr, err.Error())
-				}
-			}
-
+			fr, err := dpm.Fix(cnd, opt)
 			if tc.wantErr != "" {
-				if err == nil {
-					t.Fatalf("expected error %q, got nil", tc.wantErr)
-				}
-
-				if !strings.Contains(err.Error(), tc.wantErr) {
-					t.Fatalf("expected error to contain %q, got %q", tc.wantErr, err.Error())
-				}
+				testutil.ErrMustContain(err, tc.wantErr)(t)
 
 				return
+			}
+
+			if err != nil {
+				t.Errorf("failed to fix: %v", err)
 			}
 
 			if len(fr) > 2 {
@@ -149,11 +133,11 @@ func TestFixDirectoryPackageMismatch(t *testing.T) {
 				t.Fatalf("expected %s, got %s", tc.expected.Contents, fr[0].Contents)
 			}
 
-			if fixResult.Rename == nil && tc.expected.Rename != nil {
-				t.Fatalf("expected rename to be non-nil, got nil")
-			}
-
 			if tc.expected.Rename != nil {
+				if fixResult.Rename == nil {
+					t.Fatal("expected rename to be non-nil, got nil")
+				}
+
 				if fixResult.Rename.FromPath != tc.expected.Rename.FromPath {
 					t.Fatalf("expected from path to be %s, got %s", tc.expected.Rename.FromPath, fixResult.Rename.FromPath)
 				}
@@ -167,16 +151,10 @@ func TestFixDirectoryPackageMismatch(t *testing.T) {
 }
 
 func configWithExcludeTestSuffix(exclude bool) *config.Config {
-	return &config.Config{
-		Rules: map[string]config.Category{
-			"idiomatic": {
-				"directory-package-mismatch": config.Rule{
-					Level: "ignore",
-					Extra: map[string]any{
-						"exclude-test-suffix": exclude,
-					},
-				},
-			},
+	return &config.Config{Rules: map[string]config.Category{"idiomatic": {
+		"directory-package-mismatch": config.Rule{
+			Level: "ignore",
+			Extra: map[string]any{"exclude-test-suffix": exclude},
 		},
-	}
+	}}}
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -18,7 +17,7 @@ import (
 )
 
 func init() {
-	verboseLogging := false
+	verbose := false
 
 	languageServerCommand := &cobra.Command{
 		Use:   "language-server",
@@ -29,34 +28,23 @@ func init() {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			exe, err := os.Executable()
-			if err != nil {
+			if exe, err := os.Executable(); err != nil {
 				fmt.Fprintln(os.Stderr, "error getting executable:", err)
 			} else {
-				absPath, err := filepath.Abs(exe)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, "error getting executable path:", err)
-				} else {
-					msg := "Regal Language Server (path: %s, version: %s)\n"
-					fmt.Fprintf(os.Stderr, msg, absPath, cmp.Or(version.Version, "Unknown"))
-				}
+				msg := "Regal Language Server (path: %s, version: %s)\n"
+				fmt.Fprintf(os.Stderr, msg, exe, cmp.Or(version.Version, "Unknown"))
 			}
 
 			if os.Getenv("REGAL_DEBUG") != "" {
 				fmt.Fprintln(os.Stderr, "Debug mode enabled")
-				verboseLogging = true
+				verbose = true
 			}
 
 			opts := &lsp.LanguageServerOptions{Logger: log.NewLogger(log.LevelMessage, os.Stderr)}
 			ls := lsp.NewLanguageServer(ctx, opts)
 
-			conn := connection.New(ctx, ls.Handle, &connection.Options{
-				LoggingConfig: connection.LoggingConfig{
-					Logger:      opts.Logger,
-					LogInbound:  verboseLogging,
-					LogOutbound: verboseLogging,
-				},
-			})
+			conf := connection.LoggingConfig{Logger: opts.Logger, LogInbound: verbose, LogOutbound: verbose}
+			conn := connection.New(ctx, ls.Handle, &connection.Options{LoggingConfig: conf})
 			defer conn.Close()
 
 			ls.SetConn(conn)
@@ -82,7 +70,7 @@ func init() {
 		}),
 	}
 
-	languageServerCommand.Flags().BoolVarP(&verboseLogging, "verbose", "v", verboseLogging, "Enable verbose logging")
+	languageServerCommand.Flags().BoolVarP(&verbose, "verbose", "v", verbose, "Enable verbose logging")
 
 	addPprofFlag(languageServerCommand.Flags())
 

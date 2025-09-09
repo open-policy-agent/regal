@@ -19,16 +19,12 @@ import (
 )
 
 var (
-	pathSeparatorTerm = ast.InternedTerm(string(os.PathSeparator))
-
-	environment [2]*ast.Term = ast.Item(ast.InternedTerm("environment"), ast.ObjectTerm(
+	pathSeparatorTerm              = ast.InternedTerm(string(os.PathSeparator))
+	environment       [2]*ast.Term = ast.Item(ast.InternedTerm("environment"), ast.ObjectTerm(
 		ast.Item(ast.InternedTerm("path_separator"), pathSeparatorTerm),
 	))
 
-	operationsLintItem = ast.Item(
-		ast.InternedTerm("operations"),
-		ast.ArrayTerm(ast.InternedTerm("lint")),
-	)
+	operationsLintItem        = ast.Item(ast.InternedTerm("operations"), ast.ArrayTerm(ast.InternedTerm("lint")))
 	operationsLintCollectItem = ast.Item(ast.InternedTerm("operations"), ast.ArrayTerm(
 		ast.InternedTerm("lint"),
 		ast.InternedTerm("collect")),
@@ -62,12 +58,7 @@ func ToOPAInputValue(x any) (ast.Value, error) {
 		return nil, err
 	}
 
-	value, err := AnyToValue(*ptr)
-	if err != nil {
-		return nil, err
-	}
-
-	return value, nil
+	return AnyToValue(*ptr)
 }
 
 // ToAST converts a Rego module to an ast.Value suitable for use as input in Regal.

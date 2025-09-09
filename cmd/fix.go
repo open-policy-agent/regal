@@ -286,22 +286,13 @@ func fix(args []string, params *fixParams) (err error) {
 			return fmt.Errorf("failed to get changed files: %w", err)
 		}
 
-		changedFiles := util.NewSet(cf...)
-
-		var conflictingFiles []string
-
-		for _, file := range fileProvider.ModifiedFiles() {
-			if changedFiles.Contains(file) {
-				conflictingFiles = append(conflictingFiles, file)
-			}
-		}
-
-		if len(conflictingFiles) > 0 {
+		conflictingFiles := util.NewSet(fileProvider.ModifiedFiles()...).Intersect(util.NewSet(cf...))
+		if conflictingFiles.Size() > 0 {
 			return fmt.Errorf(
 				`the following files have been changed since the fixer was run:
 - %s
 please run fix from a clean state to support the use of git to undo, or use --force to ignore`,
-				strings.Join(conflictingFiles, "\n- "),
+				strings.Join(conflictingFiles.Items(), "\n- "),
 			)
 		}
 	}
@@ -312,15 +303,12 @@ please run fix from a clean state to support the use of git to undo, or use --fo
 		}
 
 		for _, file := range fileProvider.ModifiedFiles() {
-			fmt.Fprintln(outputWriter, "Set:", file, "to:")
-
 			fc, err := fileProvider.Get(file)
 			if err != nil {
 				return fmt.Errorf("failed to get file %s: %w", file, err)
 			}
 
-			fmt.Fprintln(outputWriter, fc)
-			fmt.Fprintln(outputWriter, "----------")
+			fmt.Fprintln(outputWriter, "Set:", file, "to:\n", fc, "\n----------")
 		}
 
 		for _, file := range fileProvider.DeletedFiles() {
@@ -347,20 +335,18 @@ please run fix from a clean state to support the use of git to undo, or use --fo
 		}
 
 		for _, file := range fileProvider.ModifiedFiles() {
+			if err = os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+				return fmt.Errorf("failed to create directory for file %s: %w", file, err)
+			}
+
 			fc, err := fileProvider.Get(file)
 			if err != nil {
 				return fmt.Errorf("failed to get file %s: %w", file, err)
 			}
 
 			fileMode := fs.FileMode(0o600)
-
-			fileInfo, err := os.Stat(file)
-			if err == nil {
+			if fileInfo, err := os.Stat(file); err == nil {
 				fileMode = fileInfo.Mode()
-			}
-
-			if err = os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
-				return fmt.Errorf("failed to create directory for file %s: %w", file, err)
 			}
 
 			if err = os.WriteFile(file, []byte(fc), fileMode); err != nil {

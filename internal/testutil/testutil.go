@@ -2,8 +2,10 @@ package testutil
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -25,61 +27,114 @@ func Must[T any](x T, err error) func(testing.TB) T {
 	}
 }
 
-func TempDirectoryOf(t *testing.T, files map[string]string) string {
-	t.Helper()
+func MustBeOK[T any](x T, ok bool) func(testing.TB) T {
+	return func(tb testing.TB) T {
+		tb.Helper()
 
-	tmpDir := t.TempDir()
+		if !ok {
+			tb.Fatal("expected ok to be true, got false")
+		}
+
+		return x
+	}
+}
+
+func MustBe[T any](tb testing.TB, v any) T {
+	tb.Helper()
+
+	r, ok := v.(T)
+	if !ok {
+		tb.Fatalf("failed to convert %T to %T", v, r)
+	}
+
+	return r
+}
+
+func NoErr(err error) func(testing.TB) {
+	return func(tb testing.TB) {
+		tb.Helper()
+
+		if err != nil {
+			tb.Fatal(err)
+		}
+	}
+}
+
+func ErrMustContain(err error, substr string) func(testing.TB) {
+	return func(tb testing.TB) {
+		tb.Helper()
+
+		if err == nil {
+			tb.Fatal("expected error got nil")
+		} else if !strings.Contains(err.Error(), substr) {
+			tb.Fatalf("expected error to contain %q, got %q", substr, err.Error())
+		}
+	}
+}
+
+func TempDirectoryOf(tb testing.TB, files map[string]string) string {
+	tb.Helper()
+
+	tmpDir := tb.TempDir()
 
 	for file, contents := range files {
 		path := filepath.Join(tmpDir, file)
 
-		MustMkdirAll(t, filepath.Dir(path))
-		MustWriteFile(t, path, []byte(contents))
+		MustMkdirAll(tb, filepath.Dir(path))
+		MustWriteFile(tb, path, []byte(contents))
 	}
 
 	return tmpDir
 }
 
-func MustMkdirAll(t *testing.T, path ...string) {
-	t.Helper()
+func MustMkdirAll(tb testing.TB, path ...string) {
+	tb.Helper()
 
 	if err := os.MkdirAll(filepath.Join(path...), 0o755); err != nil {
-		t.Fatalf("failed to create directory %s: %v", path, err)
+		tb.Fatalf("failed to create directory %s: %v", path, err)
 	}
 }
 
-func MustReadFile(t *testing.T, path string) []byte {
-	t.Helper()
+func MustReadFile(tb testing.TB, path string) string {
+	tb.Helper()
 
 	contents, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("failed to read file %s: %v", path, err)
+		tb.Fatalf("failed to read file %s: %v", path, err)
 	}
 
-	return contents
+	return string(contents)
 }
 
-func MustWriteFile(t *testing.T, path string, contents []byte) {
-	t.Helper()
+func MustWrite(tb testing.TB, w io.Writer, contents string) {
+	tb.Helper()
+
+	if _, err := w.Write([]byte(contents)); err != nil {
+		tb.Fatalf("failed to write to writer: %v", err)
+	}
+}
+
+func MustWriteFile(tb testing.TB, path string, contents []byte) {
+	tb.Helper()
 
 	if err := os.WriteFile(path, contents, 0o600); err != nil {
-		t.Fatalf("failed to write file %s: %v", path, err)
+		tb.Fatalf("failed to write file %s: %v", path, err)
 	}
 }
 
-func MustRemove(t *testing.T, path string) {
-	t.Helper()
+func MustRemove(tb testing.TB, path string) {
+	tb.Helper()
 
 	if err := os.Remove(path); err != nil {
-		t.Fatalf("failed to remove file %s: %v", path, err)
+		tb.Fatalf("failed to remove file %s: %v", path, err)
 	}
 }
 
-func MustRemoveAll(t *testing.T, path ...string) {
-	t.Helper()
+func MustRemoveAll(tb testing.TB, path ...string) {
+	tb.Helper()
 
 	if err := os.RemoveAll(filepath.Join(path...)); err != nil {
-		t.Fatalf("failed to remove path %s: %v", path, err)
+		tb.Fatalf("failed to remove path %s: %v", path, err)
 	}
 }
 
@@ -100,40 +155,38 @@ func ViolationTitles(rep report.Report) *util.Set[string] {
 	return util.NewSet(titles...)
 }
 
-func AssertOnlyViolations(t *testing.T, rep report.Report, expected ...string) {
-	t.Helper()
+func AssertOnlyViolations(tb testing.TB, rep report.Report, expected ...string) {
+	tb.Helper()
 
 	violationNames := ViolationTitles(rep)
-
 	if violationNames.Size() != len(expected) {
-		t.Errorf("expected %d violations, got %d: %v", len(expected), violationNames.Size(), violationNames.Items())
+		tb.Errorf("expected %d violations, got %d: %v", len(expected), violationNames.Size(), violationNames.Items())
 	}
 
 	for _, name := range expected {
 		if !violationNames.Contains(name) {
-			t.Errorf("expected violation for rule %q, but it was not found", name)
+			tb.Errorf("expected violation for rule %q, but it was not found", name)
 		}
 	}
 }
 
-func AssertContainsViolations(t *testing.T, rep report.Report, expected ...string) {
-	t.Helper()
+func AssertContainsViolations(tb testing.TB, rep report.Report, expected ...string) {
+	tb.Helper()
 
 	violationNames := ViolationTitles(rep)
-
 	for _, name := range expected {
 		if !violationNames.Contains(name) {
-			t.Errorf("expected violation for rule %q, but it was not found", name)
+			tb.Errorf("expected violation for rule %q, but it was not found", name)
 		}
 	}
 }
 
-func AssertNotContainsViolations(t *testing.T, rep report.Report, unexpected ...string) {
-	t.Helper()
+func AssertNotContainsViolations(tb testing.TB, rep report.Report, unexpected ...string) {
+	tb.Helper()
 
 	violationNames := ViolationTitles(rep)
 	if violationNames.Contains(unexpected...) {
-		t.Errorf("expected no violations for rules %v, but found: %v", unexpected, violationNames.Items())
+		tb.Errorf("expected no violations for rules %v, but found: %v", unexpected, violationNames.Items())
 	}
 }
 
@@ -145,12 +198,12 @@ func RemoveIgnoreErr(paths ...string) func() {
 	}
 }
 
-func MustUnmarshalYAML[T any](t *testing.T, data []byte) T {
-	t.Helper()
+func MustUnmarshalYAML[T any](tb testing.TB, data []byte) T {
+	tb.Helper()
 
 	var result T
 	if err := yaml.Unmarshal(data, &result); err != nil {
-		t.Fatalf("failed to unmarshal YAML: %v", err)
+		tb.Fatalf("failed to unmarshal YAML: %v", err)
 	}
 
 	return result

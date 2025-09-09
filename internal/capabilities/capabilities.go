@@ -189,12 +189,9 @@ func lookupFileURL(parsedURL *url.URL) (*ast.Capabilities, error) {
 		path = path[1:]
 	}
 
-	fd, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("error opening file '%s': %w", path, err)
-	}
-
-	return util.Wrap(ast.LoadCapabilitiesJSON(fd))("failed to load capabilities")
+	return util.WithOpen(path, func(fd *os.File) (*ast.Capabilities, error) {
+		return util.Wrap(ast.LoadCapabilitiesJSON(fd))("failed to load capabilities")
+	})
 }
 
 func lookupWebURL(ctx context.Context, parsedURL *url.URL) (*ast.Capabilities, error) {

@@ -46,7 +46,6 @@ func (f *Fmt) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]FixResult, error) {
 	}
 
 	f.OPAFmtOpts.RegoVersion = module.RegoVersion()
-
 	if f.OPAFmtOpts.RegoVersion == ast.RegoV0 {
 		f.OPAFmtOpts.RegoVersion = ast.RegoV0CompatV1
 	}
@@ -57,14 +56,9 @@ func (f *Fmt) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]FixResult, error) {
 	}
 
 	formattedStr := string(formatted)
-
 	if fc.Contents == formattedStr {
 		return nil, nil
 	}
 
-	return []FixResult{{
-		Title:    f.Name(),
-		Root:     opts.BaseDir,
-		Contents: formattedStr,
-	}}, nil
+	return []FixResult{{Title: f.Name(), Root: opts.BaseDir, Contents: formattedStr}}, nil
 }

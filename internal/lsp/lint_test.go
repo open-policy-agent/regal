@@ -9,6 +9,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/report"
@@ -101,29 +102,24 @@ allow[msg] { 1 == 1; msg := "hello" }
 			c := cache.NewCache()
 			c.SetFileContents(testData.fileURI, testData.content)
 
-			success, err := updateParse(t.Context(), updateParseOpts{
+			success := testutil.Must(updateParse(t.Context(), updateParseOpts{
 				Cache:            c,
 				Store:            NewRegalStore(),
 				FileURI:          testData.fileURI,
 				Builtins:         ast.BuiltinMap,
 				RegoVersion:      testData.regoVersion,
 				WorkspaceRootURI: "",
-			})
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			}))(t)
 
 			if success != testData.expectSuccess {
 				t.Fatalf("expected success to be %v, got %v", testData.expectSuccess, success)
 			}
 
-			_, ok := c.GetModule(testData.fileURI)
-			if testData.expectModule && !ok {
+			if _, ok := c.GetModule(testData.fileURI); testData.expectModule && !ok {
 				t.Fatalf("expected module to be set, but it was not")
 			}
 
 			diags, _ := c.GetParseErrors(testData.fileURI)
-
 			if len(testData.expectedParseErrors) != len(diags) {
 				t.Fatalf("expected %v parse errors, got %v", len(testData.expectedParseErrors), len(diags))
 			}
@@ -226,9 +222,7 @@ func TestLintWithConfigIgnoreWildcards(t *testing.T) {
 		UpdateForRules:   []string{"prefer-snake-case"},
 	}
 
-	if err := updateFileDiagnostics(t.Context(), opts); err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
+	testutil.NoErr(updateFileDiagnostics(t.Context(), opts))(t)
 
 	diagnostics, _ := state.GetFileDiagnostics(fileURI)
 	if len(diagnostics) != 1 {
@@ -241,23 +235,18 @@ func TestLintWithConfigIgnoreWildcards(t *testing.T) {
 
 	// Clear the diagnostic and update the config with a wildcard ignore
 	// for any file in the ignore directory.
-
 	state.SetFileDiagnostics(fileURI, []types.Diagnostic{})
 
 	conf.Rules["style"] = config.Category{
 		"prefer-snake-case": config.Rule{
-			Level: "error",
-			Ignore: &config.Ignore{
-				Files: []string{"ignore/**"},
-			},
+			Level:  "error",
+			Ignore: &config.Ignore{Files: []string{"ignore/**"}},
 		},
 	}
 
 	opts.UpdateForRules = []string{"prefer-snake-case"}
 
-	if err := updateFileDiagnostics(t.Context(), opts); err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
+	testutil.NoErr(updateFileDiagnostics(t.Context(), opts))(t)
 
 	if diagnostics, _ := state.GetFileDiagnostics(fileURI); len(diagnostics) != 0 {
 		t.Fatalf("Expected no diagnostics, got %v", diagnostics)

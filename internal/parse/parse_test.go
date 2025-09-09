@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -69,9 +68,7 @@ func TestModuleUnknownVersionWithOpts(t *testing.T) {
 				if tc.expErr == "" {
 					t.Fatalf("unexpected error: %v", err)
 				} else {
-					if exp, got := tc.expErr, err.Error(); !strings.Contains(got, exp) {
-						t.Errorf("expected %q, got %q", exp, got)
-					}
+					testutil.ErrMustContain(err, tc.expErr)(t)
 				}
 			}
 
