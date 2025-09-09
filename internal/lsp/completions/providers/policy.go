@@ -18,24 +18,26 @@ import (
 )
 
 // Policy provides suggestions that have been determined by Rego policy.
-type Policy struct{}
+type Policy struct {
+	queryCache *query.Cache
+}
 
 // NewPolicy creates a new Policy provider. This provider is distinctly different from the other providers
 // as it acts like the entrypoint for all Rego-based providers, and not a single provider "function" like
 // the Go providers do.
-func NewPolicy(ctx context.Context, store storage.Store) *Policy {
-	if err := rego.StoreCachedQuery(ctx, query.Completion, store); err != nil {
+func NewPolicy(ctx context.Context, store storage.Store, qc *query.Cache) *Policy {
+	if err := qc.Store(ctx, query.Completion, store); err != nil {
 		panic(fmt.Errorf("failed to store cached query for completions: %w", err))
 	}
 
-	return &Policy{}
+	return &Policy{queryCache: qc}
 }
 
 func (*Policy) Name() string {
 	return "policy"
 }
 
-func (*Policy) Run(
+func (p *Policy) Run(
 	ctx context.Context,
 	c *cache.Cache,
 	params types.CompletionParams,
@@ -91,7 +93,7 @@ func (*Policy) Run(
 
 	var completions []types.CompletionItem
 
-	if err := rego.CachedQueryEval(ctx, query.Completion, input, &completions); err != nil {
+	if err := rego.CachedQueryEval(ctx, p.queryCache.Get(query.Completion), input, &completions); err != nil {
 		return nil, fmt.Errorf("failed querying for completion suggestions: %w", err)
 	}
 

@@ -570,7 +570,7 @@ func (l Linter) GetConfig() (*config.Config, error) {
 		return l.combinedCfg, nil
 	}
 
-	mergedConf, err := config.LoadConfigWithDefaultsFromBundle(rbundle.LoadedBundle(), l.userConfig)
+	mergedConf, err := config.WithDefaultsFromBundle(rbundle.LoadedBundle(), l.userConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read provided config: %w", err)
 	}

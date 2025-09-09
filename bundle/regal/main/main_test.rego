@@ -342,7 +342,7 @@ test_main_lint if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": "https://docs.styra.com/regal/rules/style/use-assignment-operator",
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator",
 		}],
 		"title": "use-assignment-operator",
 	}}

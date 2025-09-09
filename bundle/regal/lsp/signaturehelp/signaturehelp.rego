@@ -5,8 +5,6 @@
 #   - input.params: schema.regal.lsp.signaturehelp
 package regal.lsp.signaturehelp
 
-import rego.v1
-
 # METADATA
 # entrypoint: true
 result["response"] := signature

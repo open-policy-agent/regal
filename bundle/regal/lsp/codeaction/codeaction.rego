@@ -1,7 +1,7 @@
 # METADATA
 # description: Handler for Code Actions
 # related_resources:
-#   - https://docs.styra.com/regal/language-server#code-actions
+#   - https://www.openpolicyagent.org/projects/regal/language-server#code-actions
 #   - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_codeAction
 # schemas:
 #   - input:        schema.regal.lsp.common

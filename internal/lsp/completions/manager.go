@@ -9,6 +9,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/completions/providers"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
+	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 )
 
@@ -29,12 +30,12 @@ func NewManager(c *cache.Cache, opts *ManagerOptions) *Manager {
 	return &Manager{c: c, opts: opts}
 }
 
-func NewDefaultManager(ctx context.Context, c *cache.Cache, store storage.Store) *Manager {
+func NewDefaultManager(ctx context.Context, c *cache.Cache, store storage.Store, qc *query.Cache) *Manager {
 	m := NewManager(c, &ManagerOptions{})
 
 	m.RegisterProvider(&providers.BuiltIns{})
 	m.RegisterProvider(&providers.PackageRefs{})
-	m.RegisterProvider(providers.NewPolicy(ctx, store))
+	m.RegisterProvider(providers.NewPolicy(ctx, store, qc))
 
 	return m
 }

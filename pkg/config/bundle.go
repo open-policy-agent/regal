@@ -11,10 +11,10 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
-// LoadConfigWithDefaultsFromBundle returns a complete configuration based on the default
+// WithDefaultsFromBundle returns a complete configuration based on the default
 // (embedded) configuration and (optionally) a user-provided configuration. Panics if the
 // embedded configuration can't be read, as that is a hard dependency.
-func LoadConfigWithDefaultsFromBundle(regalBundle *bundle.Bundle, userConfig *Config) (Config, error) {
+func WithDefaultsFromBundle(regalBundle *bundle.Bundle, userConfig *Config) (Config, error) {
 	bundled := util.Must(util.SearchMap(regalBundle.Data, "regal", "config", "provided"))
 
 	bundledConf, ok := bundled.(map[string]any)

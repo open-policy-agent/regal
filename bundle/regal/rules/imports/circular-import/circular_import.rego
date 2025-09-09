@@ -2,7 +2,7 @@
 # description: Circular import
 # related_resources:
 # - description: documentation
-#   ref: https://docs.styra.com/regal/rules/imports/circular-import
+#   ref: https://www.openpolicyagent.org/projects/regal/rules/imports/circular-import
 # schemas:
 # - input: schema.regal.ast
 package regal.rules.imports["circular-import"]

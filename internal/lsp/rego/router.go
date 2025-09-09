@@ -10,11 +10,10 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
+	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/util"
 )
-
-const entrypoint = "data.regal.lsp.main.eval"
 
 var (
 	emptyResponse = map[string]any{
@@ -42,6 +41,7 @@ type (
 	RegoRouter struct {
 		routes    map[string]Route
 		providers Providers
+		query     *query.Prepared
 	}
 
 	Route struct {
@@ -49,13 +49,14 @@ type (
 		requires *Requirements
 	}
 
-	regoHandler        = func(context.Context, Providers, *jsonrpc2.Request) (any, error)
+	regoHandler        = func(context.Context, *query.Prepared, Providers, *jsonrpc2.Request) (any, error)
 	regoContextHandler = func(context.Context, RegalContext, *jsonrpc2.Request) (any, error)
 )
 
-func NewRegoRouter(ctx context.Context, store storage.Store, prvs Providers) *RegoRouter {
-	if err := StoreCachedQuery(ctx, entrypoint, store); err != nil {
-		panic(err)
+func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, prvs Providers) *RegoRouter {
+	pq, err := qc.GetOrSet(ctx, store, query.MainEval)
+	if err != nil {
+		panic(err) // can't recover here
 	}
 
 	routes := map[string]Route{
@@ -85,12 +86,12 @@ func NewRegoRouter(ctx context.Context, store storage.Store, prvs Providers) *Re
 		},
 	}
 
-	return &RegoRouter{routes: routes, providers: prvs}
+	return &RegoRouter{routes: routes, providers: prvs, query: pq}
 }
 
 func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
 	if route, ok := m.routes[req.Method]; ok {
-		return requirementsHandler(route)(ctx, m.providers, req)
+		return requirementsHandler(route)(ctx, m.query, m.providers, req)
 	}
 
 	return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound, Message: "method not supported: " + req.Method}
@@ -99,7 +100,7 @@ func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2
 // requirementsHandler wraps a regoHandler which first verifies that the text document URI isn't ignored
 // and then goes on to ensure that any custom requirements the handler may have are met.
 func requirementsHandler(route Route) regoHandler {
-	return func(ctx context.Context, prvs Providers, req *jsonrpc2.Request) (any, error) {
+	return func(ctx context.Context, query *query.Prepared, prvs Providers, req *jsonrpc2.Request) (any, error) {
 		// This is mandatory requirement for all routes managed here.
 		uri, err := decodeAndCheckURI(req, prvs.IgnoredProvider)
 		if err != nil {
@@ -112,6 +113,7 @@ func requirementsHandler(route Route) regoHandler {
 
 		// Set up a basic RegalContext, which while not used by all routes, is provided for all.
 		rctx := prvs.ContextProvider(uri, route.requires)
+		rctx.Query = query
 
 		if route.requires == nil {
 			return route.handler(ctx, rctx, req)
@@ -165,7 +167,7 @@ func textDocument[P, R any](ctx context.Context, rctx RegalContext, req *jsonrpc
 		return nil, err
 	}
 
-	result, err := QueryEval[P, R](ctx, entrypoint, NewInput(req.Method, rctx, params))
+	result, err := QueryEval[P, R](ctx, rctx.Query, NewInput(req.Method, rctx, params))
 	if err != nil {
 		return nil, err
 	}

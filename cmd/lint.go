@@ -268,7 +268,7 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 }
 
 func updateCheckAndWarn(params *lintParams, regalRules *bundle.Bundle, userConfig *config.Config) {
-	mergedConfig, err := config.LoadConfigWithDefaultsFromBundle(regalRules, userConfig)
+	mergedConfig, err := config.WithDefaultsFromBundle(regalRules, userConfig)
 	if err != nil {
 		if params.debug {
 			log.Printf("failed to merge user config with default config when checking version: %v", err)

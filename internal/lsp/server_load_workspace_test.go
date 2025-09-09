@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
@@ -132,7 +133,9 @@ func TestLoadWorkspaceContents(t *testing.T) {
 				}
 			}
 
-			server := NewLanguageServer(t.Context(), &LanguageServerOptions{})
+			opts := &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())}
+
+			server := NewLanguageServer(t.Context(), opts)
 			server.workspaceRootURI = "file://" + tempDir
 			server.client.Identifier = clients.IdentifierGeneric
 			server.loadedConfig = &config.Config{}

@@ -12,7 +12,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
-	rrego "github.com/open-policy-agent/regal/internal/lsp/rego"
+	rquery "github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/builtins"
 	"github.com/open-policy-agent/regal/pkg/config"
@@ -104,7 +104,7 @@ func prepareRegoArgs(
 	args := []func(*rego.Rego){rego.ParsedQuery(query), rego.EnablePrintStatements(true), rego.PrintHook(printHook)}
 	args = append(args, builtins.RegalBuiltinRegoFuncs...)
 	args = append(args, bundleArgs...)
-	args = append(args, rrego.SchemaResolvers()...)
+	args = append(args, rquery.SchemaResolvers()...)
 
 	var caps *config.Capabilities
 	if cfg != nil && cfg.Capabilities != nil {

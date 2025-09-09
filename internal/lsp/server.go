@@ -43,6 +43,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/inlayhint"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
+	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
@@ -113,6 +114,7 @@ type LanguageServer struct {
 
 	cache       *cache.Cache
 	bundleCache *bundles.Cache
+	queryCache  *query.Cache
 
 	completionsManager *completions.Manager
 	regoRouter         *rego.RegoRouter
@@ -161,10 +163,12 @@ func NewLanguageServer(ctx context.Context, opts *LanguageServerOptions) *Langua
 // instance. It's used from pkg/lsp for Websocket connectivity from web editors (playground, build/ws).
 func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, cfg *config.Config) *LanguageServer {
 	c := cache.NewCache()
+	qc := query.NewCache()
 	store := NewRegalStore()
 
 	ls := &LanguageServer{
 		cache:                       c,
+		queryCache:                  qc,
 		loadedConfig:                cfg,
 		regoStore:                   store,
 		log:                         opts.Logger,
@@ -174,20 +178,24 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		commandRequest:              make(chan types.ExecuteCommandParams, 10),
 		templateFileJobs:            make(chan lintFileJob, 10),
 		templatingFiles:             concurrent.MapOf(make(map[string]bool)),
-		completionsManager:          completions.NewDefaultManager(ctx, c, store),
+		completionsManager:          completions.NewDefaultManager(ctx, c, store, qc),
 		webServer:                   web.NewServer(c, opts.Logger),
 		loadedBuiltins:              concurrent.MapOf(make(map[string]map[string]*ast.Builtin)),
 		workspaceDiagnosticsPoll:    opts.WorkspaceDiagnosticsPoll,
 		loadedConfigAllRegoVersions: concurrent.MapOf(make(map[string]ast.RegoVersion)),
 	}
 
-	ls.regoRouter = rego.NewRegoRouter(ctx, store, rego.Providers{
+	ls.regoRouter = rego.NewRegoRouter(ctx, store, qc, rego.Providers{
 		ContextProvider:              ls.regalContext,
 		IgnoredProvider:              ls.ignoreURI,
 		ContentProvider:              ls.cache.GetFileContents,
 		ParseErrorsProvider:          ls.cache.GetParseErrors,
 		SuccessfulParseCountProvider: ls.cache.GetSuccessfulParseLineCount,
 	})
+
+	merged, _ := config.WithDefaultsFromBundle(rbundle.EmbeddedBundle(), cfg)
+
+	ls.loadConfig(ctx, merged)
 
 	return ls
 }
@@ -471,98 +479,14 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 				continue
 			}
 
-			mergedConfig, err := config.LoadConfigWithDefaultsFromBundle(rbundle.LoadedBundle(), &userConfig)
+			mergedConfig, err := config.WithDefaultsFromBundle(rbundle.LoadedBundle(), &userConfig)
 			if err != nil {
 				l.log.Message("failed to load config: %s", err)
 
 				continue
 			}
 
-			l.loadedConfigLock.Lock()
-			l.loadedConfig = &mergedConfig
-			l.loadedConfigLock.Unlock()
-
-			if err := PutConfig(ctx, l.regoStore, &mergedConfig); err != nil {
-				l.log.Message("failed to update config in storage: %v", err)
-			}
-
-			// Rego versions may have changed, so reload them.
-			allRegoVersions, err := config.AllRegoVersions(l.workspacePath(), l.getLoadedConfig())
-			if err != nil {
-				l.log.Message("failed to reload rego versions: %s", err)
-			}
-
-			l.loadedConfigAllRegoVersions.Clear()
-
-			for k, v := range allRegoVersions {
-				l.loadedConfigAllRegoVersions.Set(k, v)
-			}
-
-			// Enabled rules might have changed with the new config, so reload.
-			if err = l.loadEnabledRulesFromConfig(ctx, mergedConfig); err != nil {
-				l.log.Message("failed to cache enabled rules: %s", err)
-			}
-
-			// Capabilities URL may have changed, so we should reload it.
-			capsURL := cmp.Or(mergedConfig.CapabilitiesURL, capabilities.DefaultURL)
-
-			caps, err := capabilities.Lookup(ctx, capsURL)
-			if err != nil {
-				l.log.Message("failed to load capabilities for URL %q: %s", capsURL, err)
-
-				continue
-			}
-
-			bis := rego.BuiltinsForCapabilities(caps)
-
-			l.loadedBuiltins.Set(capsURL, bis)
-
-			if err := PutBuiltins(ctx, l.regoStore, bis); err != nil {
-				l.log.Message("failed to update builtins in storage: %v", err)
-			}
-
-			// the config may now ignore files that existed in the cache before,
-			// in which case we need to remove them to stop their contents being
-			// used in other ls functions.
-			for k := range l.cache.GetAllFiles() {
-				if !l.ignoreURI(k) {
-					continue
-				}
-
-				// move the contents to the ignored part of the cache
-				contents, ok := l.cache.GetFileContents(k)
-				if ok {
-					l.cache.Delete(k)
-					l.cache.SetIgnoredFileContents(k, contents)
-				}
-
-				if err := RemoveFileMod(ctx, l.regoStore, k); err != nil {
-					l.log.Message("failed to remove mod from store: %s", err)
-				}
-			}
-
-			// when a file is 'unignored', we move its contents to the
-			// standard file list if missing
-			for k, v := range l.cache.GetAllIgnoredFiles() {
-				if l.ignoreURI(k) {
-					continue
-				}
-
-				// ignored contents will only be used when there is no existing content
-				_, ok := l.cache.GetFileContents(k)
-				if !ok {
-					l.cache.SetFileContents(k, v)
-
-					// updating the parse here will enable things like go-to definition
-					// to start working right away without the need for a file content
-					// update to run updateParse.
-					if _, err = updateParse(ctx, l.parseOpts(k, bis)); err != nil {
-						l.log.Message("failed to update parse for previously ignored file %q: %s", k, err)
-					}
-				}
-
-				l.cache.ClearIgnoredFileContents(k)
-			}
+			l.loadConfig(ctx, mergedConfig)
 
 			//nolint:contextcheck
 			go func() {
@@ -581,7 +505,7 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 		case <-l.configWatcher.Drop:
 			l.loadedConfigLock.Lock()
 
-			defaultConfig, _ := config.LoadConfigWithDefaultsFromBundle(rbundle.LoadedBundle(), nil)
+			defaultConfig, _ := config.WithDefaultsFromBundle(rbundle.LoadedBundle(), nil)
 			l.loadedConfig = &defaultConfig
 			l.loadedConfigLock.Unlock()
 
@@ -710,9 +634,8 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 					break
 				}
 
-				query := args.Query
-				if query == "" {
-					l.log.Message("expected command query to be set, got %q", query)
+				if args.Query == "" {
+					l.log.Message("expected command query to be set, got %q", args.Query)
 
 					break
 				}
@@ -724,9 +647,20 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 					break
 				}
 
+				var pq *query.Prepared
+
+				pq, err = l.queryCache.GetOrSet(ctx, l.regoStore, query.RuleHeadLocations)
+				if err != nil {
+					l.log.Message("failed to prepare query %s", query.RuleHeadLocations, err)
+
+					break
+				}
+
 				var allRuleHeadLocations rego.RuleHeads
 
-				allRuleHeadLocations, err = rego.AllRuleHeadLocations(ctx, filepath.Base(l.toPath(fileURI)), contents, module)
+				allRuleHeadLocations, err = rego.AllRuleHeadLocations(
+					ctx, pq, filepath.Base(l.toPath(fileURI)), contents, module,
+				)
 				if err != nil {
 					l.log.Message("failed to get rule head locations: %s", err)
 
@@ -734,7 +668,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 				}
 
 				// if there are none, then it's a package evaluation
-				ruleHeadLocations := allRuleHeadLocations[query]
+				ruleHeadLocations := allRuleHeadLocations[args.Query]
 
 				var inputMap map[string]any
 
@@ -757,7 +691,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 
 				var result EvalResult
 
-				if result, err = l.EvalInWorkspace(ctx, query, inputMap); err != nil {
+				if result, err = l.EvalInWorkspace(ctx, args.Query, inputMap); err != nil {
 					fmt.Fprintf(os.Stderr, "failed to evaluate workspace path: %v\n", err)
 
 					break
@@ -765,7 +699,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 
 				target := "package"
 				if len(ruleHeadLocations) > 0 {
-					target = strings.TrimPrefix(query, module.Package.Path.String()+".")
+					target = strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
 				}
 
 				if l.client.InitOptions.EvalCodelensDisplayInline != nil &&
@@ -929,6 +863,94 @@ func (l *LanguageServer) getCustomRulesPath() string {
 	}
 
 	return ""
+}
+
+func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
+	l.loadedConfigLock.Lock()
+	l.loadedConfig = &conf
+	l.loadedConfigLock.Unlock()
+
+	if err := PutConfig(ctx, l.regoStore, &conf); err != nil {
+		l.log.Message("failed to update config in storage: %v", err)
+	}
+
+	// Rego versions may have changed, so reload them.
+	allRegoVersions, err := config.AllRegoVersions(l.workspacePath(), &conf)
+	if err != nil {
+		l.log.Debug("failed to reload rego versions: %s", err)
+	} else {
+		l.loadedConfigAllRegoVersions.Clear()
+
+		for k, v := range allRegoVersions {
+			l.loadedConfigAllRegoVersions.Set(k, v)
+		}
+	}
+
+	// Enabled rules might have changed with the new config, so reload.
+	if err = l.loadEnabledRulesFromConfig(ctx, conf); err != nil {
+		l.log.Message("failed to cache enabled rules: %s", err)
+	}
+
+	// Capabilities URL may have changed, so we should reload it.
+	capsURL := cmp.Or(conf.CapabilitiesURL, capabilities.DefaultURL)
+
+	caps, err := capabilities.Lookup(ctx, capsURL)
+	if err != nil {
+		l.log.Message("failed to load capabilities for URL %q: %s", capsURL, err)
+
+		return
+	}
+
+	bis := rego.BuiltinsForCapabilities(caps)
+
+	l.loadedBuiltins.Set(capsURL, bis)
+
+	if err := PutBuiltins(ctx, l.regoStore, bis); err != nil {
+		l.log.Message("failed to update builtins in storage: %v", err)
+	}
+
+	// the config may now ignore files that existed in the cache before,
+	// in which case we need to remove them to stop their contents being
+	// used in other ls functions.
+	for k := range l.cache.GetAllFiles() {
+		if !l.ignoreURI(k) {
+			continue
+		}
+
+		// move the contents to the ignored part of the cache
+		contents, ok := l.cache.GetFileContents(k)
+		if ok {
+			l.cache.Delete(k)
+			l.cache.SetIgnoredFileContents(k, contents)
+		}
+
+		if err := RemoveFileMod(ctx, l.regoStore, k); err != nil {
+			l.log.Message("failed to remove mod from store: %s", err)
+		}
+	}
+
+	// when a file is 'unignored', we move its contents to the
+	// standard file list if missing
+	for k, v := range l.cache.GetAllIgnoredFiles() {
+		if l.ignoreURI(k) {
+			continue
+		}
+
+		// ignored contents will only be used when there is no existing content
+		_, ok := l.cache.GetFileContents(k)
+		if !ok {
+			l.cache.SetFileContents(k, v)
+
+			// updating the parse here will enable things like go-to definition
+			// to start working right away without the need for a file content
+			// update to run updateParse.
+			if _, err = updateParse(ctx, l.parseOpts(k, bis)); err != nil {
+				l.log.Message("failed to update parse for previously ignored file %q: %s", k, err)
+			}
+		}
+
+		l.cache.ClearIgnoredFileContents(k)
+	}
 }
 
 // loadEnabledRulesFromConfig is used to cache the enabled rules for the current
@@ -1275,7 +1297,12 @@ func (l *LanguageServer) processHoverContentUpdate(ctx context.Context, fileURI 
 		return fmt.Errorf("failed to update builtin positions: %w", err)
 	}
 
-	if err := hover.UpdateKeywordLocations(ctx, l.cache, fileURI); err != nil {
+	pq, err := l.queryCache.GetOrSet(ctx, l.regoStore, query.Keywords)
+	if err != nil {
+		return fmt.Errorf("failed to prepare query %s, %w", query.Keywords, err)
+	}
+
+	if err := hover.UpdateKeywordLocations(ctx, pq, l.cache, fileURI); err != nil {
 		return fmt.Errorf("failed to update keyword locations: %w", err)
 	}
 
@@ -1907,7 +1934,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 		l.workspaceRootURI = uri.FromPath(l.client.Identifier, configRoots[0])
 	default:
 		l.log.Message(
-			"using supplied workspace root directory: %q, config may be inherited from parent directory",
+			"using workspace root directory: %q, custom config not found — may be inherited from parent directory",
 			workspaceRootPath,
 		)
 	}
@@ -1992,7 +2019,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 		},
 	}
 
-	defaultConfig, _ := config.LoadConfigWithDefaultsFromBundle(rbundle.LoadedBundle(), nil)
+	defaultConfig, _ := config.WithDefaultsFromBundle(rbundle.LoadedBundle(), nil)
 
 	l.loadedConfigLock.Lock()
 	l.loadedConfig = &defaultConfig
@@ -2128,7 +2155,7 @@ func (l *LanguageServer) handleWorkspaceDidChangeWatchedFiles(
 
 	for _, change := range params.Changes {
 		// this handles the case of a new config file being created when one did not exist before
-		if util.HasAnySuffix(change.URI, ".regal/config.yaml", ".regal.yaml") {
+		if util.HasAnySuffix(change.URI, filepath.Join(".regal", "config.yaml"), ".regal.yaml") {
 			if configFile, err := config.FindConfig(l.workspacePath()); err == nil {
 				l.configWatcher.Watch(configFile.Name())
 				configFile.Close()
