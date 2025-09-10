@@ -40,7 +40,7 @@ items contains item if {
 	col := loc.col + pos
 
 	item := {
-		"target": concat("/", ["https://docs.styra.com/regal/rules", _category_for[rule], rule]),
+		"target": concat("/", ["https://www.openpolicyagent.org/projects/regal/rules", _category_for[rule], rule]),
 		"range": {
 			"start": {"line": row, "character": col},
 			"end": {"line": row, "character": col + count(rule)},

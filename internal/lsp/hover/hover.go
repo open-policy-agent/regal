@@ -13,6 +13,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/examples"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
+	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	types2 "github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
 )
@@ -160,13 +161,13 @@ func UpdateBuiltinPositions(cache *cache.Cache, uri string, builtins map[string]
 	return nil
 }
 
-func UpdateKeywordLocations(ctx context.Context, cache *cache.Cache, uri string) error {
+func UpdateKeywordLocations(ctx context.Context, pq *query.Prepared, cache *cache.Cache, uri string) error {
 	fileContents, module, ok := cache.GetContentAndModule(uri)
 	if !ok {
 		return fmt.Errorf("failed to determine keyword locations: missing file contents for uri %q", uri)
 	}
 
-	keywords, err := rego.AllKeywords(ctx, filepath.Base(uri), fileContents, module)
+	keywords, err := rego.AllKeywords(ctx, pq, filepath.Base(uri), fileContents, module)
 	if err != nil {
 		return fmt.Errorf("failed to determine keyword locations: %w", err)
 	}

@@ -2,7 +2,7 @@
 # description: Avoid double negatives
 # related_resources:
 # - description: documentation
-#   ref: https://docs.styra.com/regal/rules/style/double-negative
+#   ref: https://www.openpolicyagent.org/projects/regal/rules/style/double-negative
 # schemas:
 # - input: schema.regal.ast
 package regal.rules.style["double-negative"]

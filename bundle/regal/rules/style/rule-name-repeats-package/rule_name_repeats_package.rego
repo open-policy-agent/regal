@@ -2,7 +2,7 @@
 # description: Rule name repeats package
 # related_resources:
 #   - description: documentation
-#     ref: https://docs.styra.com/regal/rules/style/rule-name-repeats-package
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/rule-name-repeats-package
 package regal.rules.style["rule-name-repeats-package"]
 
 import data.regal.ast

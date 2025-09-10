@@ -3,6 +3,9 @@ package rego
 import (
 	"testing"
 
+	"github.com/open-policy-agent/opa/v1/storage/inmem"
+
+	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
@@ -10,6 +13,7 @@ import (
 func TestAllRuleHeadLocations(t *testing.T) {
 	t.Parallel()
 
+	qc := query.NewCache()
 	contents := `package p
 
 	default allow := false
@@ -20,8 +24,9 @@ func TestAllRuleHeadLocations(t *testing.T) {
 	foo.bar[x] if x := 1
 	foo.bar[x] if x := 2`
 
+	pq := testutil.Must(qc.GetOrSet(t.Context(), inmem.New(), query.RuleHeadLocations))(t)
 	module := parse.MustParseModule(contents)
-	ruleHeads := testutil.Must(AllRuleHeadLocations(t.Context(), "p.rego", contents, module))(t)
+	ruleHeads := testutil.Must(AllRuleHeadLocations(t.Context(), pq, "p.rego", contents, module))(t)
 
 	if len(ruleHeads) != 2 {
 		t.Fatalf("expected 2 code lenses, got %d", len(ruleHeads))
@@ -39,6 +44,8 @@ func TestAllRuleHeadLocations(t *testing.T) {
 func TestAllKeywords(t *testing.T) {
 	t.Parallel()
 
+	qc := query.NewCache()
+
 	contents := `package p
 
 	import data.foo
@@ -46,8 +53,8 @@ func TestAllKeywords(t *testing.T) {
 	my_set contains "x" if true
 	`
 
-	module := parse.MustParseModule(contents)
-	keywords := testutil.Must(AllKeywords(t.Context(), "p.rego", contents, module))(t)
+	pq := testutil.Must(qc.GetOrSet(t.Context(), inmem.New(), query.Keywords))(t)
+	keywords := testutil.Must(AllKeywords(t.Context(), pq, "p.rego", contents, parse.MustParseModule(contents)))(t)
 
 	// this is "lines with keywords", not number of keywords
 	if len(keywords) != 3 {
@@ -64,14 +71,5 @@ func TestAllKeywords(t *testing.T) {
 
 	if len(keywords["5"]) != 2 {
 		t.Fatalf("expected 2 keywords on line 5, got %d", len(keywords["1"]))
-	}
-}
-
-// 2	 532180958 ns/op	348596532 B/op	 7898069 allocs/op
-func BenchmarkStoreAllCachedQueries(b *testing.B) {
-	for b.Loop() {
-		if err := StoreAllCachedQueries(b.Context(), nil); err != nil {
-			b.Fatalf("failed to store all cached queries: %v", err)
-		}
 	}
 }

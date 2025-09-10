@@ -1,10 +1,9 @@
 # METADATA
 # scope: subpackages
 # authors:
-#   - Styra
+#   - The OPA community
 # related_resources:
-#   - https://www.styra.com
-#   - https://docs.styra.com/regal
+#   - https://www.openpolicyagent.org/projects/regal
 # schemas:
 #   - input: schema.regal.ast
 package regal

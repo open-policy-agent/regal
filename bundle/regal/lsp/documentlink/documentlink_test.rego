@@ -27,7 +27,7 @@ test_documentlink_ranges_in_inline_ignores if {
 					"line": 2,
 				},
 			},
-			"target": "https://docs.styra.com/regal/rules/style/messy-rule",
+			"target": "https://www.openpolicyagent.org/projects/regal/rules/style/messy-rule",
 			"tooltip": "See documentation for messy-rule",
 		},
 		{
@@ -41,7 +41,7 @@ test_documentlink_ranges_in_inline_ignores if {
 					"line": 2,
 				},
 			},
-			"target": "https://docs.styra.com/regal/rules/imports/unresolved-reference",
+			"target": "https://www.openpolicyagent.org/projects/regal/rules/imports/unresolved-reference",
 			"tooltip": "See documentation for unresolved-reference",
 		},
 	}

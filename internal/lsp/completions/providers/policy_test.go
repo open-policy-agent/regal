@@ -7,6 +7,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
+	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/parse"
@@ -45,7 +46,7 @@ allow if {
 	params := types.NewCompletionParams(testCaseFileURI, 5, 11, nil)
 	opts := &Options{Client: types.NewGenericClient()}
 
-	result, err := NewPolicy(t.Context(), store).Run(t.Context(), c, params, opts)
+	result, err := NewPolicy(t.Context(), store, query.NewCache()).Run(t.Context(), c, params, opts)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -79,7 +80,7 @@ func TestPolicyProvider_Example2(t *testing.T) {
 	params := types.NewCompletionParams("file:///file2.rego", 5, 11, nil)
 	opts := &Options{Client: types.NewGenericClient()}
 
-	result, err := NewPolicy(t.Context(), store).Run(t.Context(), c, params, opts)
+	result, err := NewPolicy(t.Context(), store, query.NewCache()).Run(t.Context(), c, params, opts)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

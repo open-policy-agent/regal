@@ -49,7 +49,7 @@ _has_sub_attribute(ref) if {
 }
 
 # don't walk top level iteration refs:
-# https://docs.styra.com/regal/rules/bugs/top-level-iteration
+# https://www.openpolicyagent.org/projects/regal/rules/bugs/top-level-iteration
 _possible_top_level_iteration(rule) if {
 	not rule.body
 	rule.head.value.type == "ref"

@@ -15,7 +15,7 @@ path_prefix := data.internal.path_prefix
 
 # METADATA
 # description: the base URL for documentation of linter rules
-docs["base_url"] := "https://docs.styra.com/regal/rules"
+docs["base_url"] := "https://www.openpolicyagent.org/projects/regal/rules"
 
 # METADATA
 # description: returns the canonical URL for documentation of the given rule

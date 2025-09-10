@@ -1,25 +1,18 @@
 package lsp
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
 
 	"github.com/sourcegraph/jsonrpc2"
 
-	"github.com/open-policy-agent/opa/v1/ast"
-
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/testutil"
-	"github.com/open-policy-agent/regal/pkg/config"
 )
 
 func TestTextDocumentSignatureHelp(t *testing.T) {
 	t.Parallel()
-
-	ctx, cancel := context.WithCancel(t.Context())
-	t.Cleanup(cancel)
 
 	mainRegoURI := fileURIScheme + filepath.Join(t.TempDir(), "main.rego")
 	content := `package example
@@ -28,7 +21,8 @@ allow if regex.match(` + "`foo`" + `, "bar")
 allow if count([1,2,3]) == 2
 allow if concat(",", "a", "b") == "b,a"`
 
-	builtins := map[string]*ast.Builtin{"count": ast.Count, "concat": ast.Concat, "regex.match": ast.RegexMatch}
+	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	ls.cache.SetFileContents(mainRegoURI, content)
 
 	testCases := map[string]struct {
 		position       types.Position
@@ -60,13 +54,7 @@ allow if concat(",", "a", "b") == "b,a"`
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ls := NewLanguageServer(ctx, &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
-			ls.loadedConfig = &config.Config{}
-			ls.cache.SetFileContents(mainRegoURI, content)
-
-			testutil.NoErr(PutBuiltins(ctx, ls.regoStore, builtins))(t)
-
-			result := testutil.Must(ls.Handle(ctx, nil, &jsonrpc2.Request{
+			result := testutil.Must(ls.Handle(t.Context(), nil, &jsonrpc2.Request{
 				Method: "textDocument/signatureHelp",
 				Params: testutil.ToJSONRawMessage(t, types.SignatureHelpParams{
 					TextDocument: types.TextDocumentIdentifier{URI: mainRegoURI},
@@ -75,6 +63,10 @@ allow if concat(",", "a", "b") == "b,a"`
 			}))(t)
 
 			signatureHelp := testutil.MustBe[*types.SignatureHelp](t, result)
+
+			if signatureHelp == nil {
+				t.Fatal("expected signatureHelp, got nil")
+			}
 
 			if len(signatureHelp.Signatures) == 0 {
 				t.Error("expected at least one signature")

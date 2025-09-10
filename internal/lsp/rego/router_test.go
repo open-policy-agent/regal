@@ -12,6 +12,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
+	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -35,7 +36,7 @@ func newDocument(uri, content string) document {
 func TestRouteTextDocumentCodeAction(t *testing.T) {
 	t.Parallel()
 
-	mgr := rego.NewRegoRouter(t.Context(), nil, providers(regalContext(), "", ""))
+	mgr := rego.NewRegoRouter(t.Context(), nil, query.NewCache(), providers(regalContext(), "", ""))
 	req := request("textDocument/codeAction", codeActionParams(t, "file:///workspace/p.rego", 0, 0, 0, 10))
 	rsp := testutil.Must(mgr.Handle(t.Context(), nil, req))(t)
 
@@ -56,7 +57,7 @@ func TestRouteTextDocumentDocumentLink(t *testing.T) {
 			},
 		},
 	}}, inmem.OptRoundTripOnWrite(false))
-	mgr := rego.NewRegoRouter(t.Context(), stg, providers(regalContext(), "", ""))
+	mgr := rego.NewRegoRouter(t.Context(), stg, query.NewCache(), providers(regalContext(), "", ""))
 	rsp := testutil.Must(mgr.Handle(t.Context(), nil, request("textDocument/documentLink", linkParams(t, doc.uri))))(t)
 	res := testutil.MustBe[[]types.DocumentLink](t, rsp)
 
@@ -72,7 +73,7 @@ func TestRouteTextDocumentDocumentHighlight(t *testing.T) {
 	stg := inmem.NewFromObjectWithOpts(map[string]any{"workspace": map[string]any{
 		"parsed": map[string]any{doc.uri: doc.parsed},
 	}}, inmem.OptRoundTripOnWrite(false))
-	mgr := rego.NewRegoRouter(t.Context(), stg, rego.Providers{
+	mgr := rego.NewRegoRouter(t.Context(), stg, query.NewCache(), rego.Providers{
 		ContextProvider: func(string, *rego.Requirements) rego.RegalContext {
 			return regalContext()
 		},
@@ -92,7 +93,9 @@ func TestRouteTextDocumentDocumentHighlight(t *testing.T) {
 func TestRouteIgnoredDocument(t *testing.T) {
 	t.Parallel()
 
-	mgr := rego.NewRegoRouter(t.Context(), nil, providers(regalContext(), "", "file:///workspace/ignored.rego"))
+	mgr := rego.NewRegoRouter(
+		t.Context(), nil, query.NewCache(), providers(regalContext(), "", "file:///workspace/ignored.rego"),
+	)
 	req := request("textDocument/codeAction", codeActionParams(t, "file:///workspace/ignored.rego", 0, 0, 0, 10))
 	rsp := testutil.Must(mgr.Handle(t.Context(), nil, req))(t)
 	res := testutil.MustBe[[]types.CodeAction](t, rsp)
@@ -104,9 +107,6 @@ func TestRouteIgnoredDocument(t *testing.T) {
 
 func TestTextDocumentSignatureHelp(t *testing.T) {
 	t.Parallel()
-
-	ctx, cancel := context.WithCancel(t.Context())
-	t.Cleanup(cancel)
 
 	doc := newDocument("file:///workspace/p.rego", `package example
 
@@ -121,7 +121,7 @@ allow if concat(",", "a", "b") == "b,a"`)
 			"regex.match": ast.RegexMatch,
 		},
 		"parsed": map[string]any{doc.uri: doc.parsed},
-	}}, inmem.OptRoundTripOnWrite(true))
+	}}, inmem.OptRoundTripOnWrite(false))
 
 	testCases := map[string]struct {
 		position       types.Position
@@ -153,7 +153,10 @@ allow if concat(",", "a", "b") == "b,a"`)
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			mgr := rego.NewRegoRouter(ctx, store, providers(regalContext(), doc.content, ""))
+			ctx, cancel := context.WithCancel(t.Context())
+			t.Cleanup(cancel)
+
+			mgr := rego.NewRegoRouter(ctx, store, query.NewCache(), providers(regalContext(), doc.content, ""))
 			req := request("textDocument/signatureHelp", docPositionParams(t, doc.uri, tc.position))
 			rsp := testutil.Must(mgr.Handle(ctx, nil, req))(t)
 

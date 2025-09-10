@@ -101,7 +101,7 @@ test_code_actions_specific_to_vscode_reported_on_client_match if {
 			"title": "Show documentation for use-assignment-operator",
 			"kind": "quickfix",
 			"command": {
-				"arguments": ["https://docs.styra.com/regal/rules/style/use-assignment-operator"],
+				"arguments": ["https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator"],
 				"command": "vscode.open",
 				"title": "Show documentation for use-assignment-operator",
 				"tooltip": "Show documentation for use-assignment-operator",
@@ -158,7 +158,7 @@ test_code_actions_only_quickfix if {
 			"title": "Show documentation for use-assignment-operator",
 			"kind": "quickfix",
 			"command": {
-				"arguments": ["https://docs.styra.com/regal/rules/style/use-assignment-operator"],
+				"arguments": ["https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator"],
 				"command": "vscode.open",
 				"title": "Show documentation for use-assignment-operator",
 				"tooltip": "Show documentation for use-assignment-operator",
@@ -237,7 +237,7 @@ _diagnostics["use-assignment-operator"] := object.union(
 		"code": "use-assignment-operator",
 		"message": "Use := instead of = for assignment",
 		"range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 1}},
-		"codeDescription": {"href": "https://docs.styra.com/regal/rules/style/use-assignment-operator"},
+		"codeDescription": {"href": "https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator"},
 	},
 	{},
 )
