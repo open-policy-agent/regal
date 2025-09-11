@@ -4,6 +4,13 @@
 
 **Category**: Imports
 
+## Notice: Rule disabled by default since OPA 1.0
+
+This rule is only enabled for projects that have either been explicitly configured to target versions of OPA before 1.0,
+or if no configuration is provided — where Regal is able to determine that an older version of OPA/Rego is being
+targeted. Consult the documentation on Regal's [configuration](https://openpolicyagent.org/projects/regal#configuration)
+for information on how to best work with older versions of OPA and Rego.
+
 **Avoid**
 ```rego
 package policy
