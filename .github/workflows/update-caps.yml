@@ -6,13 +6,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   fetch:
     name: Fetch EOPA caps
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     env:
       RQ_VERSION: v0.0.9
     steps:
