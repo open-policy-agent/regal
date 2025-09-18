@@ -1538,7 +1538,7 @@ func (l *LanguageServer) handleTextDocumentDidOpen(
 	if l.workspaceRootURI == "" {
 		err := l.updateRootURI(ctx,
 			// get the URI of the file's immediate parent
-			uri.FromPath(l.client.Identifier, filepath.Dir(uri.ToPath(l.client.Identifier, params.TextDocument.URI))),
+			l.fromPath(filepath.Dir(l.toPath(params.TextDocument.URI))),
 		)
 		if err != nil {
 			l.log.Message("failed to update server root URI: %w", err)
@@ -2016,6 +2016,16 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 		if err != nil {
 			l.log.Message("failed to set rootURI: %w", err)
 		}
+	} else if params.WorkspaceFolders != nil && len(*params.WorkspaceFolders) != 0 {
+		// note, using workspace folders is untested, and is based on the spec alone.
+		if len(*params.WorkspaceFolders) > 1 {
+			l.log.Message("cannot operate with more than one workspace folder, using: %s", (*params.WorkspaceFolders)[0].URI)
+		}
+
+		err := l.updateRootURI(ctx, (*params.WorkspaceFolders)[0].URI)
+		if err != nil {
+			l.log.Message("failed to set rootURI to workspace folder: %w", err)
+		}
 	}
 
 	return initializeResult, nil
@@ -2026,7 +2036,7 @@ func (l *LanguageServer) updateRootURI(ctx context.Context, rootURI string) erro
 	// consistency
 	normalizedRootURI := strings.TrimSuffix(rootURI, string(os.PathSeparator))
 
-	configRoots, err := lsconfig.FindConfigRoots(uri.ToPath(l.client.Identifier, normalizedRootURI))
+	configRoots, err := lsconfig.FindConfigRoots(l.toPath(normalizedRootURI))
 	if err != nil {
 		return fmt.Errorf("failed to find config roots: %w", err)
 	}

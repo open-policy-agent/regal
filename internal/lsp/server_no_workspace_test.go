@@ -24,7 +24,7 @@ allow =  true
 
 	files := map[string]string{
 		"foo/main.rego": mainRegoContents,
-		// here we are ignoring two issues with the file, so we expect no to
+		// here we are ignoring two issues with the file, so we expect not to
 		// see these but to see another issue (opa-fmt)
 		".regal/config.yaml": `
 rules:
