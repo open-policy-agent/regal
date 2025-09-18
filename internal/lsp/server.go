@@ -218,7 +218,7 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	case "textDocument/diagnostic":
 		return l.handleTextDocumentDiagnostic()
 	case "textDocument/didOpen":
-		return handler.WithParams(req, l.handleTextDocumentDidOpen)
+		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentDidOpen)
 	case "textDocument/didClose":
 		return handler.WithParams(req, l.handleTextDocumentDidClose)
 	case "textDocument/didSave":
@@ -875,19 +875,21 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
 	}
 
 	// Rego versions may have changed, so reload them.
-	allRegoVersions, err := config.AllRegoVersions(l.workspacePath(), &conf)
-	if err != nil {
-		l.log.Debug("failed to reload rego versions: %s", err)
-	} else {
-		l.loadedConfigAllRegoVersions.Clear()
+	if l.workspacePath() != "" {
+		allRegoVersions, err := config.AllRegoVersions(l.workspacePath(), &conf)
+		if err != nil {
+			l.log.Debug("failed to reload rego versions: %s", err)
+		} else {
+			l.loadedConfigAllRegoVersions.Clear()
 
-		for k, v := range allRegoVersions {
-			l.loadedConfigAllRegoVersions.Set(k, v)
+			for k, v := range allRegoVersions {
+				l.loadedConfigAllRegoVersions.Set(k, v)
+			}
 		}
 	}
 
 	// Enabled rules might have changed with the new config, so reload.
-	if err = l.loadEnabledRulesFromConfig(ctx, conf); err != nil {
+	if err := l.loadEnabledRulesFromConfig(ctx, conf); err != nil {
 		l.log.Message("failed to cache enabled rules: %s", err)
 	}
 
@@ -1528,7 +1530,21 @@ func (l *LanguageServer) handleTextDocumentDefinition(params types.DefinitionPar
 	}, nil
 }
 
-func (l *LanguageServer) handleTextDocumentDidOpen(params types.DidOpenTextDocumentParams) (any, error) {
+func (l *LanguageServer) handleTextDocumentDidOpen(
+	ctx context.Context,
+	params types.DidOpenTextDocumentParams,
+) (any, error) {
+	// then we have started the server, and not yet received a suitable root to use.
+	if l.workspaceRootURI == "" {
+		err := l.updateRootURI(ctx,
+			// get the URI of the file's immediate parent
+			l.fromPath(filepath.Dir(l.toPath(params.TextDocument.URI))),
+		)
+		if err != nil {
+			l.log.Message("failed to update server root URI: %w", err)
+		}
+	}
+
 	// if the opened file is ignored, we only store the contents for file level operations like formatting
 	if l.ignoreURI(params.TextDocument.URI) {
 		l.cache.SetIgnoredFileContents(params.TextDocument.URI, params.TextDocument.Text)
@@ -1905,40 +1921,6 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 		Capabilities: params.Capabilities,
 	}
 
-	// params.RootURI not expected to have a trailing slash, remove if present for consistency
-	rootURI := strings.TrimSuffix(params.RootURI, string(os.PathSeparator))
-	if rootURI == "" {
-		return nil, errors.New("rootURI was not set by the client but is required")
-	}
-
-	workspaceRootPath := uri.ToPath(l.client.Identifier, rootURI)
-
-	configRoots, err := lsconfig.FindConfigRoots(workspaceRootPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find config roots: %w", err)
-	}
-
-	l.workspaceRootURI = rootURI
-
-	switch {
-	case len(configRoots) > 1:
-		l.log.Message("warning: multiple configuration root directories found in workspace:"+
-			"\n%s\nusing %q as workspace root directory",
-			strings.Join(configRoots, "\n"), configRoots[0],
-		)
-
-		l.workspaceRootURI = uri.FromPath(l.client.Identifier, configRoots[0])
-	case len(configRoots) == 1:
-		l.log.Message("using %q as workspace root directory", configRoots[0])
-
-		l.workspaceRootURI = uri.FromPath(l.client.Identifier, configRoots[0])
-	default:
-		l.log.Message(
-			"using workspace root directory: %q, custom config not found — may be inherited from parent directory",
-			workspaceRootPath,
-		)
-	}
-
 	if l.client.Identifier == clients.IdentifierGeneric {
 		l.log.Message(
 			"unable to match client identifier for initializing client, using generic functionality: %s",
@@ -2029,45 +2011,94 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 		l.log.Message("failed to cache enabled rules: %s", err)
 	}
 
-	if l.workspaceRootURI != "" {
-		workspaceRootPath := l.workspacePath()
-
-		l.bundleCache = bundles.NewCache(workspaceRootPath, l.log)
-
-		var configFilePath string
-		if configFile, err := config.FindConfig(workspaceRootPath); err == nil {
-			configFilePath = configFile.Name()
-		} else if globalConfigDir := config.GlobalConfigDir(false); globalConfigDir != "" {
-			// the file might not exist and we only want to log we're using the global file if it does.
-			if globalConfigFile := filepath.Join(globalConfigDir, "config.yaml"); rio.IsFile(globalConfigFile) {
-				configFilePath = globalConfigFile
-			}
-		}
-
-		if configFilePath != "" {
-			l.log.Message("using config file: %s", configFilePath)
-			l.configWatcher.Watch(configFilePath)
-		} else {
-			l.log.Message("no config file found for workspace")
-		}
-
-		_, failed, err := l.loadWorkspaceContents(ctx, false)
-		for _, f := range failed {
-			l.log.Message("failed to load file %s: %s", f.URI, f.Error)
-		}
-
+	if params.RootURI != "" {
+		err := l.updateRootURI(ctx, params.RootURI)
 		if err != nil {
-			l.log.Message("failed to load workspace contents: %s", err)
+			l.log.Message("failed to set rootURI: %w", err)
+		}
+	} else if params.WorkspaceFolders != nil && len(*params.WorkspaceFolders) != 0 {
+		// note, using workspace folders is untested, and is based on the spec alone.
+		if len(*params.WorkspaceFolders) > 1 {
+			l.log.Message("cannot operate with more than one workspace folder, using: %s", (*params.WorkspaceFolders)[0].URI)
 		}
 
-		l.webServer.SetWorkspaceURI(l.workspaceRootURI)
-
-		// 'OverwriteAggregates' is set to populate the cache's initial aggregate state.
-		// Subsequent runs of lintWorkspaceJobs will not set this and use the cached state.
-		l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "server initialize", OverwriteAggregates: true}
+		err := l.updateRootURI(ctx, (*params.WorkspaceFolders)[0].URI)
+		if err != nil {
+			l.log.Message("failed to set rootURI to workspace folder: %w", err)
+		}
 	}
 
 	return initializeResult, nil
+}
+
+func (l *LanguageServer) updateRootURI(ctx context.Context, rootURI string) error {
+	// rootURI not expected to have a trailing slash, remove if present for
+	// consistency
+	normalizedRootURI := strings.TrimSuffix(rootURI, string(os.PathSeparator))
+
+	configRoots, err := lsconfig.FindConfigRoots(l.toPath(normalizedRootURI))
+	if err != nil {
+		return fmt.Errorf("failed to find config roots: %w", err)
+	}
+
+	switch {
+	case len(configRoots) > 1:
+		l.log.Message("warning: multiple configuration root directories found in workspace:"+
+			"\n%s\nusing %q as workspace root directory",
+			strings.Join(configRoots, "\n"), configRoots[0],
+		)
+
+		l.workspaceRootURI = uri.FromPath(l.client.Identifier, configRoots[0])
+	case len(configRoots) == 1:
+		l.log.Message("using %q as workspace root directory", configRoots[0])
+
+		l.workspaceRootURI = uri.FromPath(l.client.Identifier, configRoots[0])
+	default:
+		l.workspaceRootURI = rootURI
+
+		l.log.Message(
+			"using workspace root directory: %q, custom config not found — may be inherited from parent directory",
+			rootURI,
+		)
+	}
+
+	workspaceRootPath := l.workspacePath()
+
+	l.bundleCache = bundles.NewCache(workspaceRootPath, l.log)
+
+	var configFilePath string
+	if configFile, err := config.FindConfig(workspaceRootPath); err == nil {
+		configFilePath = configFile.Name()
+	} else if globalConfigDir := config.GlobalConfigDir(false); globalConfigDir != "" {
+		// the file might not exist and we only want to log we're using the global file if it does.
+		if globalConfigFile := filepath.Join(globalConfigDir, "config.yaml"); rio.IsFile(globalConfigFile) {
+			configFilePath = globalConfigFile
+		}
+	}
+
+	if configFilePath != "" {
+		l.log.Message("using config file: %s", configFilePath)
+		l.configWatcher.Watch(configFilePath)
+	} else {
+		l.log.Message("no config file found for workspace")
+	}
+
+	_, failed, err := l.loadWorkspaceContents(ctx, false)
+	for _, f := range failed {
+		l.log.Message("failed to load file %s: %s", f.URI, f.Error)
+	}
+
+	if err != nil {
+		l.log.Message("failed to load workspace contents: %s", err)
+	}
+
+	l.webServer.SetWorkspaceURI(l.workspaceRootURI)
+
+	// 'OverwriteAggregates' is set to populate the cache's initial aggregate state.
+	// Subsequent runs of lintWorkspaceJobs will not set this and use the cached state.
+	l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "server initialize", OverwriteAggregates: true}
+
+	return nil
 }
 
 type fileLoadFailure struct {

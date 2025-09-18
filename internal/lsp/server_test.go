@@ -94,8 +94,14 @@ func createAndInitServer(
 
 	ls.SetConn(connServer)
 
+	// a blank tempDir means no workspace root was required.
+	rootURI := ""
+	if tempDir != "" {
+		rootURI = uri.FromPath(clients.IdentifierGeneric, tempDir)
+	}
+
 	request := types.InitializeParams{
-		RootURI:    uri.FromPath(clients.IdentifierGeneric, tempDir),
+		RootURI:    rootURI,
 		ClientInfo: types.ClientInfo{Name: "go test"},
 	}
 
