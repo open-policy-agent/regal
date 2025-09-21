@@ -20,6 +20,28 @@ import (
 	"github.com/open-policy-agent/regal/internal/util"
 )
 
+type (
+	Server struct {
+		cache        *cache.Cache
+		log          *log.Logger
+		workspaceURI string
+		baseURL      string
+		client       clients.Identifier
+	}
+
+	stringResult struct {
+		Class  string
+		Stage  string
+		Output string
+		Show   bool
+	}
+
+	state struct {
+		Code   string
+		Result []stringResult
+	}
+)
+
 const mainTemplate = "main.tpl"
 
 var (
@@ -28,14 +50,6 @@ var (
 	tpl            = template.Must(template.New(mainTemplate).ParseFS(assets, "assets/main.tpl"))
 	pprofEndpoints = os.Getenv("REGAL_DEBUG") != "" || os.Getenv("REGAL_DEBUG_PPROF") != ""
 )
-
-type Server struct {
-	cache        *cache.Cache
-	log          *log.Logger
-	workspaceURI string
-	baseURL      string
-	client       clients.Identifier
-}
 
 func NewServer(cache *cache.Cache, logger *log.Logger) *Server {
 	return &Server{cache: cache, log: logger}
@@ -59,30 +73,16 @@ func (s *Server) SetBaseURL(baseURL string) {
 	s.baseURL = baseURL
 }
 
-type state struct {
-	Code   string
-	Result []stringResult
-}
-
-type stringResult struct {
-	Class  string
-	Stage  string
-	Output string
-	Show   bool
-}
-
 func (s *Server) Start(_ context.Context) {
 	mux := http.NewServeMux()
-
 	if err := statsviz.Register(mux); err != nil {
 		s.log.Message("failed to register statsviz handler: %v", err)
 	}
 
 	mux.HandleFunc("GET /explorer/", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/explorer/")
-		policyURI := s.workspaceURI + "/" + path
 
-		policy, ok := s.cache.GetFileContents(policyURI)
+		policy, ok := s.cache.GetFileContents(s.workspaceURI + "/" + path)
 		if !ok {
 			http.NotFound(w, r)
 
@@ -124,8 +124,7 @@ func (s *Server) Start(_ context.Context) {
 		st.Result[n].Stage = "Plan"
 		st.Result[n].Show = true
 
-		p, err := explorer.Plan(r.Context(), path, policy, enablePrint)
-		if err != nil {
+		if p, err := explorer.Plan(r.Context(), path, policy, enablePrint); err != nil {
 			st.Result[n].Class = "bad"
 			st.Result[n].Output = err.Error()
 		} else {

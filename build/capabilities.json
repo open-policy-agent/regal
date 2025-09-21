@@ -687,7 +687,7 @@
     },
     {
       "name": "count",
-      "description": " Count takes a collection or string and returns the number of elements (or characters) in it.",
+      "description": "Count takes a collection or string and returns the number of elements (or characters) in it.",
       "categories": [
         "aggregates"
       ],

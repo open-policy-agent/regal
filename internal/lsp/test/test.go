@@ -8,13 +8,12 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
+	"github.com/open-policy-agent/regal/internal/lsp/connection"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 )
 
-type rpcHandler func(context.Context, *jsonrpc2.Conn, *jsonrpc2.Request) (any, error)
-
-func HandlerFor[T any](method string, h handler.Func[T]) rpcHandler {
+func HandlerFor[T any](method string, h handler.Func[T]) connection.HandlerFunc {
 	return func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
 		if req.Method != method {
 			return nil, fmt.Errorf("unexpected method: %s for handler of: %s", req.Method, method)

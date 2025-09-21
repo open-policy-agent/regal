@@ -12,13 +12,14 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
-	"github.com/open-policy-agent/opa/v1/util"
-
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/lsp/connection"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 const (
@@ -30,6 +31,8 @@ const (
 	defaultTimeout             = 20 * time.Second
 	defaultBufferedChannelSize = 5
 )
+
+type messages map[string]chan []string
 
 // determineTimeout returns a timeout duration based on whether
 // the test suite is running with race detection, if so, a more permissive
@@ -44,12 +47,7 @@ func determineTimeout() time.Duration {
 	return defaultTimeout
 }
 
-func createAndInitServer(
-	t *testing.T,
-	ctx context.Context,
-	tempDir string,
-	clientHandler func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error),
-) (
+func createAndInitServer(t *testing.T, ctx context.Context, tempDir string, clientHandler connection.HandlerFunc) (
 	*LanguageServer,
 	*jsonrpc2.Conn,
 ) {
@@ -72,22 +70,12 @@ func createAndInitServer(
 
 	netConnServer, netConnClient := net.Pipe()
 
-	connServer := jsonrpc2.NewConn(
-		ctx,
-		jsonrpc2.NewBufferedStream(netConnServer, jsonrpc2.VSCodeObjectCodec{}),
-		jsonrpc2.HandlerWithError(ls.Handle),
-	)
-
-	connClient := jsonrpc2.NewConn(
-		ctx,
-		jsonrpc2.NewBufferedStream(netConnClient, jsonrpc2.VSCodeObjectCodec{}),
-		jsonrpc2.HandlerWithError(clientHandler),
-	)
+	connServer := connection.New(ctx, netConnServer, ls.Handle)
+	connClient := connection.New(ctx, netConnClient, clientHandler)
 
 	go func() {
 		<-ctx.Done()
-		// we need only close the pipe connections as the jsonrpc2.Conn accept
-		// the ctx
+		// we need only close the pipe connections as the jsonrpc2.Conn accept the ctx
 		_ = netConnClient.Close()
 		_ = netConnServer.Close()
 	}()
@@ -100,35 +88,24 @@ func createAndInitServer(
 		rootURI = uri.FromPath(clients.IdentifierGeneric, tempDir)
 	}
 
-	request := types.InitializeParams{
-		RootURI:    rootURI,
-		ClientInfo: types.ClientInfo{Name: "go test"},
-	}
+	request := types.InitializeParams{RootURI: rootURI, ClientInfo: types.ClientInfo{Name: "go test"}}
 
 	var response types.InitializeResult
-	if err := connClient.Call(ctx, "initialize", request, &response); err != nil {
-		t.Fatalf("failed to initialize: %s", err)
-	}
+	testutil.NoErr(connClient.Call(ctx, "initialize", request, &response))(t)
 
 	// 2. Client sends initialized notification
 	// no response to the call is expected
-	if err := connClient.Call(ctx, "initialized", struct{}{}, nil); err != nil {
-		t.Fatalf("failed to complete initialized: %v", err)
-	}
+	testutil.NoErr(connClient.Call(ctx, "initialized", struct{}{}, nil))(t)
 
 	return ls, connClient
 }
 
-func createPublishDiagnosticsHandler(
-	t *testing.T,
-	logger io.Writer,
-	messages map[string]chan []string,
-) func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
+func createPublishDiagnosticsHandler(t *testing.T, out io.Writer, messages messages) connection.HandlerFunc {
 	t.Helper()
 
 	return func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
 		if req.Method != methodTdPublishDiagnostics {
-			fmt.Fprintln(logger, "createClientHandler: unexpected request method:", req.Method)
+			fmt.Fprintln(out, "createClientHandler: unexpected request method:", req.Method)
 
 			return struct{}{}, nil
 		}
@@ -142,7 +119,7 @@ func createPublishDiagnosticsHandler(
 			slices.Sort(violations)
 
 			fileBase := filepath.Base(params.URI)
-			fmt.Fprintln(logger, "createPublishDiagnosticsHandler: queue", fileBase, len(messages[fileBase]))
+			fmt.Fprintln(out, "createPublishDiagnosticsHandler: queue", fileBase, len(messages[fileBase]))
 
 			select {
 			case messages[fileBase] <- violations:
@@ -155,10 +132,10 @@ func createPublishDiagnosticsHandler(
 	}
 }
 
-func createMessageChannels(files map[string]string) map[string]chan []string {
-	messages := make(map[string]chan []string)
-	for _, file := range util.Keys(files) {
-		messages[filepath.Base(file)] = make(chan []string, 10)
+func createMessageChannels(files map[string]string) messages {
+	messages := make(messages, len(files))
+	for _, file := range util.MapKeys(files, filepath.Base) {
+		messages[file] = make(chan []string, 10)
 	}
 
 	return messages

@@ -2,7 +2,6 @@ package lsp
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -11,12 +10,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
-
-type illegalResolver struct{}
-
-func (illegalResolver) Resolve(ref ast.Ref) (any, error) {
-	return nil, fmt.Errorf("illegal value: %v", ref)
-}
 
 func TestPutFileModStoresRoastRepresentation(t *testing.T) {
 	t.Parallel()
@@ -29,7 +22,7 @@ func TestPutFileModStoresRoastRepresentation(t *testing.T) {
 
 	parsed := testutil.Must(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "parsed", fileURI}))(t)
 	parsedVal := testutil.MustBe[ast.Value](t, parsed)
-	parsedMap := testutil.Must(ast.ValueToInterface(parsedVal, illegalResolver{}))(t)
+	parsedMap := testutil.Must(ast.ValueToInterface(parsedVal, nil))(t)
 	pretty := testutil.Must(json.MarshalIndent(parsedMap, "", "  "))(t)
 
 	// This is certainly testing the implementation rather than the behavior, but we actually
@@ -98,11 +91,31 @@ func TestPutBuiltins(t *testing.T) {
 	t.Parallel()
 
 	store := NewRegalStore()
-
 	testutil.NoErr(PutBuiltins(t.Context(), store, map[string]*ast.Builtin{"count": ast.Count}))(t)
 
 	val := testutil.Must(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "builtins", "count"}))(t)
 	if val == nil {
 		t.Errorf("expected count builtin to exist in store")
+	}
+}
+
+func TestPutBuiltinsDeprecated(t *testing.T) {
+	t.Parallel()
+
+	store := NewRegalStore()
+	testutil.NoErr(PutBuiltins(t.Context(), store, map[string]*ast.Builtin{"all": ast.All}))(t)
+
+	val := testutil.Must(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "builtins", "all"}))(t)
+	if val == nil {
+		t.Errorf("expected count builtin to exist in store")
+	}
+
+	deprecated := testutil.MustBe[ast.Object](t, val).Get(ast.StringTerm("deprecated"))
+	if deprecated == nil {
+		t.Fatalf("expected deprecated field to be set")
+	}
+
+	if !ast.Boolean(true).Equal(deprecated.Value) {
+		t.Errorf("expected deprecated field to be true, got %v", deprecated.Value)
 	}
 }

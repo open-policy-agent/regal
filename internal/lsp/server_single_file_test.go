@@ -119,7 +119,7 @@ rules:
 				continue
 			}
 
-			codes := []string{}
+			codes := make([]string, 0, len(requestData.Items))
 			for _, d := range requestData.Items {
 				codes = append(codes, d.Code)
 			}
@@ -253,9 +253,8 @@ allow := neo4j.q
 			reqCtx, reqCtxCancel := context.WithTimeout(ctx, determineTimeout())
 
 			resp := make(map[string]any)
-			err := connClient.Call(
-				reqCtx, "textDocument/completion", types.NewCompletionParams(mainRegoURI, 5, 16, nil), &resp,
-			)
+			params := types.NewCompletionParams(mainRegoURI, 5, 16, nil)
+			err := connClient.Call(reqCtx, "textDocument/completion", params, &resp)
 
 			reqCtxCancel()
 
