@@ -1,7 +1,7 @@
 # Rego Style Guide rules in Regal
 
 Some notes, and a checklist for tracking, on implementing linter rules based on the
-[Rego Style Guide](https://github.com/StyraInc/rego-style-guide).
+[Rego Style Guide](https://openpolicyagent.org/docs/style-guide).
 
 Rules with a strikethrough are considered to be either impossible, or undesirable,
 for Regal to check, and should be targeted by other means.
