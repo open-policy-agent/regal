@@ -89,3 +89,26 @@ test_word_at if {
 		"text": "here",
 	}
 }
+
+test_word_with_number_at if {
+	line := "foo bar here2 baz qux"
+	word := location.word_at(line, 12) # col after 'r' in 'here2'
+
+	word == {
+		"text_before": "foo bar ",
+		"text_after": " baz qux",
+		"offset_before": 3,
+		"offset_after": 2,
+		"text": "here2",
+	}
+}
+
+test_ref_at if {
+	ref := location.ref_at("allow := neo4j.q", 17) # at end of 'neo4j.q'
+
+	ref == {
+		"offset_before": 7,
+		"offset_after": 0,
+		"text": "neo4j.q",
+	}
+}

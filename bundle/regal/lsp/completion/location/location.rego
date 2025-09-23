@@ -65,7 +65,7 @@ find_locals(rules, location) := ast.find_names_in_local_scope(find_rule(rules, l
 
 # METADATA
 # description: |
-#   return the range for a word object (as return by `word_at`)
+#   return the range for a word object (as return by `word_at`, or `ref_at`)
 word_range(word, position) := {
 	"start": {
 		"line": position.line,
@@ -83,10 +83,10 @@ word_range(word, position) := {
 #   and text from the position (before and after)
 word_at(line, col) := word if {
 	text_before := substring(line, 0, col - 1)
-	word_before := _to_string(regex.find_n(`[a-zA-Z_]+$|:{1}$`, text_before, 1))
+	word_before := _to_string(regex.find_n(`[a-zA-Z_][a-zA-Z0-9_]*$|:$`, text_before, 1))
 
 	text_after := trim_prefix(line, text_before)
-	word_after := _to_string(regex.find_n(`^[a-zA-Z_]+|^:{1}`, text_after, 1))
+	word_after := _to_string(regex.find_n(`^[a-zA-Z0-9_]+|^:`, text_after, 1))
 
 	offset_before := count(word_before)
 	offset_after := count(word_after)
@@ -107,10 +107,10 @@ word_at(line, col) := word if {
 #   this is similar to word_at but captures `.` as well
 ref_at(line, col) := word if {
 	text_before := substring(line, 0, col - 1)
-	word_before := _to_string(regex.find_n(`[a-zA-Z_\.]+$`, text_before, 1))
+	word_before := _to_string(regex.find_n(`[a-zA-Z_][a-zA-Z0-9_\.]*$`, text_before, 1))
 
 	text_after := substring(line, col - 1, count(line))
-	word_after := _to_string(regex.find_n(`^[a-zA-Z_\.]+`, text_after, 1))
+	word_after := _to_string(regex.find_n(`^[a-zA-Z0-9_\.]+`, text_after, 1))
 
 	word := {
 		"offset_before": count(word_before),

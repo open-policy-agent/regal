@@ -195,6 +195,9 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 
 	merged, _ := config.WithDefaultsFromBundle(rbundle.EmbeddedBundle(), cfg)
 
+	// Even though user configuration (if provided) will overwrite some of the default configuration,
+	// loading the default conf in the "constructor" ensures we can assume there's *some* configuration
+	// set everywhere in the language server code.
 	ls.loadConfig(ctx, merged)
 
 	return ls
@@ -1087,7 +1090,6 @@ func (l *LanguageServer) templateContentsForFile(fileURI string) (string, error)
 	}
 
 	longestPrefixRoot := ""
-
 	for _, root := range roots {
 		if strings.HasPrefix(dir, root) && len(root) > len(longestPrefixRoot) {
 			longestPrefixRoot = root

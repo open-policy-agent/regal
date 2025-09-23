@@ -33,13 +33,13 @@ func NewRegalStore() storage.Store {
 }
 
 func RemoveFileMod(ctx context.Context, store storage.Store, fileURI string) error {
-	return transact(ctx, store, func(txn storage.Transaction) error {
+	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
 		return remove(ctx, store, txn, append(pathWorkspaceParsed, fileURI))
 	})
 }
 
 func PutFileRefs(ctx context.Context, store storage.Store, fileURI string, refs []string) error {
-	return transact(ctx, store, func(txn storage.Transaction) error {
+	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
 		return write(ctx, store, txn, append(pathWorkspaceDefinedRefs, fileURI), refs)
 	})
 }
@@ -49,7 +49,26 @@ func PutFileMod(ctx context.Context, store storage.Store, fileURI string, mod *a
 }
 
 func PutBuiltins(ctx context.Context, store storage.Store, builtins map[string]*ast.Builtin) error {
-	return Put(ctx, store, pathWorkspaceBuiltins, builtins)
+	// Note(anderseknert): this is ugly, and should not be necessary, as the deprecated status
+	// should be part of a builtin's JSON representation: https://github.com/open-policy-agent/opa/issues/7912
+	// If that's fixed, we should be able to simply defer to Put with the builtins map directly here.
+	bmap, err := encoding.JSONRoundTripTo[map[string]any](builtins)
+	if err != nil {
+		return fmt.Errorf("failed to marshal value to JSON: %w", err)
+	}
+
+	for name, builtin := range builtins {
+		if builtin.IsDeprecated() {
+			if attr, ok := bmap[name].(map[string]any); ok {
+				attr["deprecated"] = true
+				bmap[name] = attr
+			}
+		}
+	}
+
+	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+		return write(ctx, store, txn, pathWorkspaceBuiltins, bmap)
+	})
 }
 
 func PutConfig(ctx context.Context, store storage.Store, config *config.Config) error {
@@ -57,7 +76,7 @@ func PutConfig(ctx context.Context, store storage.Store, config *config.Config) 
 }
 
 func Put[T any](ctx context.Context, store storage.Store, path storage.Path, value T) error {
-	return transact(ctx, store, func(txn storage.Transaction) error {
+	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
 		asMap, err := encoding.JSONRoundTripTo[map[string]any](value)
 		if err != nil {
 			return fmt.Errorf("failed to marshal value to JSON: %w", err)
@@ -91,33 +110,6 @@ func remove(ctx context.Context, store storage.Store, txn storage.Transaction, p
 	} else if err != nil {
 		return fmt.Errorf("failed to remove value at path %s in store: %w", path, err)
 	}
-
-	return nil
-}
-
-func transact(ctx context.Context, store storage.Store, op func(txn storage.Transaction) error) error {
-	txn, err := store.NewTransaction(ctx, storage.WriteParams)
-	if err != nil {
-		return fmt.Errorf("failed to create transaction: %w", err)
-	}
-
-	success := false
-
-	defer func() {
-		if !success {
-			store.Abort(ctx, txn)
-		}
-	}()
-
-	if err := op(txn); err != nil {
-		return err
-	}
-
-	if err := store.Commit(ctx, txn); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	success = true
 
 	return nil
 }

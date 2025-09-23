@@ -33,7 +33,6 @@ func NewManager(c *cache.Cache, opts *ManagerOptions) *Manager {
 func NewDefaultManager(ctx context.Context, c *cache.Cache, store storage.Store, qc *query.Cache) *Manager {
 	m := NewManager(c, &ManagerOptions{})
 
-	m.RegisterProvider(&providers.BuiltIns{})
 	m.RegisterProvider(&providers.PackageRefs{})
 	m.RegisterProvider(providers.NewPolicy(ctx, store, qc))
 

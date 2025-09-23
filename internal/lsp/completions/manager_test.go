@@ -21,7 +21,7 @@ func TestManagerEarlyExitInsideComment(t *testing.T) {
 	c.SetModule(fileURI, ast.MustParseModule(fileContents))
 
 	mgr := NewManager(c, &ManagerOptions{})
-	mgr.RegisterProvider(&providers.BuiltIns{})
+	mgr.RegisterProvider(&providers.PackageRefs{})
 
 	completions, err := mgr.Run(t.Context(), types.NewCompletionParams(fileURI, 2, 13, nil), nil)
 	if err != nil {

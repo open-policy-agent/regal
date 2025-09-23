@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp"
 	"github.com/open-policy-agent/regal/internal/lsp/connection"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
@@ -44,7 +45,8 @@ func init() {
 			ls := lsp.NewLanguageServer(ctx, opts)
 
 			conf := connection.LoggingConfig{Logger: opts.Logger, LogInbound: verbose, LogOutbound: verbose}
-			conn := connection.New(ctx, ls.Handle, &connection.Options{LoggingConfig: conf})
+			copt := &connection.Options{LoggingConfig: conf}
+			conn := connection.NewWithOptions(ctx, rio.NewReadWriteCloser(os.Stdin, os.Stdout), ls.Handle, copt)
 			defer conn.Close()
 
 			ls.SetConn(conn)
