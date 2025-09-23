@@ -59,5 +59,5 @@ rules:
 
 ## Related Resources
 
-- Rego Style Guide: [Use explicit imports for future keywords](https://github.com/StyraInc/rego-style-guide#use-explicit-imports-for-future-keywords)
+- Rego Style Guide: [Use explicit imports for future keywords](https://openpolicyagent.org/docs/style-guide#use-explicit-imports-for-future-keywords)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/imports/implicit-future-keywords/implicit_future_keywords.rego)

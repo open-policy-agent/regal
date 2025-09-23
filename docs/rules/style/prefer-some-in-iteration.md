@@ -130,7 +130,7 @@ rules:
 
 ## Related Resources
 
-- Rego Style Guide: [Prefer some .. in for iteration](https://github.com/StyraInc/rego-style-guide#prefer-some--in-for-iteration)
+- Rego Style Guide: [Prefer some .. in for iteration](https://openpolicyagent.org/docs/style-guide#prefer-some--in-for-iteration)
 - Regal Docs: [Use `some` to declare output variables](https://openpolicyagent.org/projects/regal/rules/idiomatic/use-some-for-output-vars)
 - OPA Docs: [Membership and Iteration: `in`](https://www.openpolicyagent.org/docs/policy-language/#membership-and-iteration-in)
 - OPA Docs: [Some Keyword](https://www.openpolicyagent.org/docs/policy-language/#some-keyword)

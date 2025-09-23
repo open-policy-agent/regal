@@ -81,5 +81,5 @@ rules:
 ## Related Resources
 
 - OPA Docs: [Equality: Assignment, Comparison, and Unification](https://www.openpolicyagent.org/docs/policy-language/#equality-assignment-comparison-and-unification)
-- Rego Style Guide: [Don't use unification operator for assignment or comparison](https://github.com/StyraInc/rego-style-guide#dont-use-unification-operator-for-assignment-or-comparison)
+- Rego Style Guide: [Don't use unification operator for assignment or comparison](https://openpolicyagent.org/docs/style-guide#dont-use-unification-operator-for-assignment-or-comparison)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/style/use-assignment-operator/use_assignment_operator.rego)
