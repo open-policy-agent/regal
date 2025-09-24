@@ -8,35 +8,18 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/completions/providers"
-	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 type Manager struct {
-	c         *cache.Cache
-	opts      *ManagerOptions
-	providers []Provider
-}
-
-type ManagerOptions struct{}
-
-type Provider interface {
-	Run(context.Context, *cache.Cache, types.CompletionParams, *providers.Options) ([]types.CompletionItem, error)
-	Name() string
-}
-
-func NewManager(c *cache.Cache, opts *ManagerOptions) *Manager {
-	return &Manager{c: c, opts: opts}
+	c      *cache.Cache
+	policy *providers.Policy
 }
 
 func NewDefaultManager(ctx context.Context, c *cache.Cache, store storage.Store, qc *query.Cache) *Manager {
-	m := NewManager(c, &ManagerOptions{})
-
-	m.RegisterProvider(&providers.PackageRefs{})
-	m.RegisterProvider(providers.NewPolicy(ctx, store, qc))
-
-	return m
+	return &Manager{c: c, policy: providers.NewPolicy(ctx, store, qc)}
 }
 
 func (m *Manager) Run(
@@ -44,47 +27,16 @@ func (m *Manager) Run(
 	params types.CompletionParams,
 	opts *providers.Options,
 ) ([]types.CompletionItem, error) {
-	if m.isInsideOfComment(params) {
-		// Exit early if caret position is inside a comment. We currently don't have any provider
-		// where doing completions inside of a comment makes much sense. Behavior is also editor-specific:
-		// - Zed: always on, with no way to disable
-		// - VSCode: disabled but can be enabled with "editor.quickSuggestions.comments" setting
-		return []types.CompletionItem{}, nil
+	completions, err := m.policy.Run(ctx, m.c, params, opts)
+	if err != nil {
+		return nil, fmt.Errorf("error running completion provider: %w", err)
 	}
 
-	var completionsList []types.CompletionItem
-
-	for _, provider := range m.providers {
-		providerCompletions, err := provider.Run(ctx, m.c, params, opts)
-		if err != nil {
-			return nil, fmt.Errorf("error running completion provider: %w", err)
-		}
-
-		for _, completion := range providerCompletions {
-			completion.Regal = nil
-			completionsList = append(completionsList, completion)
-		}
-	}
-
-	return completionsList, nil
+	return util.Map(completions, removeMetadata), nil
 }
 
-func (m *Manager) RegisterProvider(provider Provider) {
-	m.providers = append(m.providers, provider)
-}
+func removeMetadata(item types.CompletionItem) types.CompletionItem {
+	item.Regal = nil
 
-func (m *Manager) isInsideOfComment(params types.CompletionParams) bool {
-	if module, ok := m.c.GetModule(params.TextDocument.URI); ok {
-		for _, comment := range module.Comments {
-			cp := rego.PositionFromLocation(comment.Location)
-
-			if cp.Line == params.Position.Line {
-				if cp.Character <= params.Position.Character {
-					return true
-				}
-			}
-		}
-	}
-
-	return false
+	return item
 }

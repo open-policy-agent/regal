@@ -76,17 +76,11 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 
 		definedRefs := refs.DefinedInModule(module, opts.Builtins)
 
-		opts.Cache.SetFileRefs(opts.FileURI, definedRefs)
-
-		// TODO: consider how we use and generate these to avoid needing to have in the cache and the store
-		var ruleRefs []string
-
+		ruleRefs := make([]string, 0, len(definedRefs)-1)
 		for _, ref := range definedRefs {
-			if ref.Kind == types.Package {
-				continue
+			if ref.Kind != types.Package {
+				ruleRefs = append(ruleRefs, ref.Label)
 			}
-
-			ruleRefs = append(ruleRefs, ref.Label)
 		}
 
 		if err = PutFileRefs(ctx, opts.Store, opts.FileURI, ruleRefs); err != nil {
@@ -106,20 +100,16 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		}
 	} else {
 		// Check if err is a single ast.Error
-		var singleAstErr *ast.Error
-		if errors.As(err, &singleAstErr) {
-			astErrors = append(astErrors, ast.Error{
-				Code:     singleAstErr.Code,
-				Message:  singleAstErr.Message,
-				Location: singleAstErr.Location,
-			})
+		var e *ast.Error
+		if errors.As(err, &e) {
+			astErrors = append(astErrors, ast.Error{Code: e.Code, Message: e.Message, Location: e.Location})
 		} else {
 			// Unknown error type
 			return false, fmt.Errorf("unknown error type: %T", err)
 		}
 	}
 
-	diags := make([]types.Diagnostic, 0)
+	diags := make([]types.Diagnostic, 0, len(astErrors))
 
 	for _, astError := range astErrors {
 		line := max(astError.Location.Row-1, 0)
@@ -139,15 +129,13 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 			link = "https://docs.styra.com/opa/errors/" + hints[0]
 		}
 
-		diags = append(diags, types.Diagnostic{ /////////////////////// parse errors:
-			Severity: util.Pointer(uint(1)),                         // - the only error Diagnostic the server sends
-			Range:    types.RangeBetween(line, 0, line, lineLength), // - always highlights the whole line
-			Message:  astError.Message,
-			Source:   &key,
-			Code:     strings.ReplaceAll(astError.Code, "_", "-"),
-			CodeDescription: &types.CodeDescription{
-				Href: link,
-			},
+		diags = append(diags, types.Diagnostic{
+			Severity:        util.Pointer(uint(1)),                         // - only error Diagnostic the server sends
+			Range:           types.RangeBetween(line, 0, line, lineLength), // - always highlights the whole line
+			Message:         astError.Message,
+			Source:          &key,
+			Code:            strings.ReplaceAll(astError.Code, "_", "-"),
+			CodeDescription: &types.CodeDescription{Href: link},
 		})
 	}
 
@@ -171,8 +159,7 @@ func updateFileDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
 
 	module, ok := opts.Cache.GetModule(opts.FileURI)
 	if !ok {
-		// then there must have been a parse error
-		return nil
+		return nil // then there must have been a parse error
 	}
 
 	contents, ok := opts.Cache.GetFileContents(opts.FileURI)
@@ -183,10 +170,8 @@ func updateFileDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
 	input := rules.NewInput(map[string]string{opts.FileURI: contents}, map[string]*ast.Module{opts.FileURI: module})
 
 	regalInstance := linter.NewLinter().
-		// needed to get the aggregateData for this file
-		WithCollectQuery(true).
-		// needed to get the aggregateData out so we can update the cache
-		WithExportAggregates(true).
+		WithCollectQuery(true).     // needed to get the aggregateData for this file
+		WithExportAggregates(true). // needed to get the aggregateData out so we can update the cache
 		WithInputModules(&input).
 		WithPathPrefix(opts.WorkspaceRootURI)
 
@@ -240,8 +225,7 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) er
 
 	regalInstance := linter.NewLinter().
 		WithPathPrefix(opts.WorkspaceRootURI).
-		// aggregates need only be exported if they're to be used to overwrite.
-		WithExportAggregates(opts.OverwriteAggregates)
+		WithExportAggregates(opts.OverwriteAggregates) // aggregates need only be exported if used to overwrite
 
 	if opts.RegalConfig != nil {
 		regalInstance = regalInstance.WithUserConfig(*opts.RegalConfig)
