@@ -13,12 +13,11 @@ items contains item if {
 	input.regal.file.rego_version != "v1" # the rego.v1 import is not used in v1 Rego
 	not strings.any_prefix_match(input.regal.file.lines, "import rego.v1")
 
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 
 	startswith(line, "import ")
 
-	word := location.ref_at(line, input.regal.context.location.col)
+	word := location.ref_at(line, input.params.position.character + 1)
 
 	startswith("rego.v1", word.text)
 
@@ -27,7 +26,7 @@ items contains item if {
 		"kind": kind.module,
 		"detail": "use rego.v1",
 		"textEdit": {
-			"range": location.word_range(word, position),
+			"range": location.word_range(word, input.params.position),
 			"newText": "rego.v1\n\n",
 		},
 	}

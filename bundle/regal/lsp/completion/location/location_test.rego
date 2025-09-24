@@ -1,8 +1,6 @@
 package regal.lsp.completion.location_test
 
 import data.regal.ast
-import data.regal.capabilities
-import data.regal.config
 
 import data.regal.lsp.completion.location
 
@@ -70,9 +68,7 @@ another if {
 		[{"row": 16, "col": 1}, {"x", "y", "z"}],
 	}
 
-	r := location.find_locals(module.rules, loc) with input as module
-		with input.regal.file.lines as lines
-		with config.capabilities as capabilities.provided
+	r := location.find_locals(module.rules, loc) with input as module with input.regal.file.lines as lines
 
 	r == want
 }
