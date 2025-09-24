@@ -25,7 +25,6 @@ import (
 const (
 	Keywords          = "data.regal.ast.keywords"
 	RuleHeadLocations = "data.regal.ast.rule_head_locations"
-	Completion        = "data.regal.lsp.completion.items"
 	MainEval          = "data.regal.lsp.main.eval"
 )
 
@@ -190,10 +189,6 @@ func parseQuery(query string) ast.Body {
 	}
 
 	return ast.MustParseBody(query)
-}
-
-func AllQueries() []string {
-	return []string{Keywords, RuleHeadLocations, Completion}
 }
 
 func isBundleDevelopmentMode() bool {

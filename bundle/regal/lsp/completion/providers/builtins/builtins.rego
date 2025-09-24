@@ -9,14 +9,13 @@ import data.regal.lsp.template
 # METADATA
 # description: suggest built-in functions matching typed ref
 items contains item if {
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 
 	line != ""
 	not startswith(line, "default ")
 	location.in_rule_body(line)
 
-	ref := location.ref_at(line, input.regal.context.location.col)
+	ref := location.ref_at(line, input.params.position.character + 1)
 
 	some builtin in data.workspace.builtins
 
@@ -29,7 +28,7 @@ items contains item if {
 		"label": builtin.name,
 		"kind": kind.function,
 		"detail": "built-in function",
-		"textEdit": {"range": location.word_range(ref, position), "newText": builtin.name},
+		"textEdit": {"range": location.word_range(ref, input.params.position), "newText": builtin.name},
 		"documentation": {"kind": "markdown", "value": template.render_for_builtin(builtin)},
 	}
 }

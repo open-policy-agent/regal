@@ -11,8 +11,7 @@ import data.regal.lsp.completion.location
 # description: all completion suggestions for default keyword
 # scope: document
 items contains item if {
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 
 	startswith("default", line)
 
@@ -21,15 +20,14 @@ items contains item if {
 		"kind": kind.keyword,
 		"detail": "default <rule-name> := <value>",
 		"textEdit": {
-			"range": location.from_start_of_line_to_position(position),
+			"range": location.from_start_of_line_to_position(input.params.position),
 			"newText": "default ",
 		},
 	}
 }
 
 items contains item if {
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 
 	startswith("default", line)
 
@@ -40,7 +38,7 @@ items contains item if {
 		"kind": kind.keyword,
 		"detail": sprintf("add default assignment for %s rule", [name]),
 		"textEdit": {
-			"range": location.from_start_of_line_to_position(position),
+			"range": location.from_start_of_line_to_position(input.params.position),
 			"newText": sprintf("default %s := ", [name]),
 		},
 	}

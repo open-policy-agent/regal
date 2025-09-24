@@ -202,12 +202,10 @@ func (c *Cache) GetFileAggregates(fileURIs ...string) map[string][]report.Aggreg
 	allAggregates := make(map[string][]report.Aggregate)
 
 	for sourceFile, aggregates := range c.aggregateData.Clone() {
-		if !includedFiles.Contains(sourceFile) && !getAll {
-			continue
-		}
-
-		for _, aggregate := range aggregates {
-			allAggregates[aggregate.IndexKey()] = append(allAggregates[aggregate.IndexKey()], aggregate)
+		if getAll || includedFiles.Contains(sourceFile) {
+			for _, aggregate := range aggregates {
+				allAggregates[aggregate.IndexKey()] = append(allAggregates[aggregate.IndexKey()], aggregate)
+			}
 		}
 	}
 

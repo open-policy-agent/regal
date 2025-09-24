@@ -64,7 +64,6 @@ type Linter struct {
 	enableAll            bool
 	profiling            bool
 	instrumentation      bool
-	hasCustomRules       bool
 	isPrepared           bool
 
 	preparedQuery *rego.PreparedEvalQuery
@@ -124,64 +123,43 @@ func (l Linter) WithInputModules(input *rules.Input) Linter {
 // WithAddedBundle adds a bundle of rules and data to include in evaluation.
 func (l Linter) WithAddedBundle(b *bundle.Bundle) Linter {
 	l.ruleBundles = append(l.ruleBundles, b)
-	l.isPrepared = false
 
-	return l
+	return l.notPrepared()
 }
 
 // WithCustomRules adds custom rules for evaluation, from the Rego (and data) files provided at paths.
 func (l Linter) WithCustomRules(paths []string) Linter {
 	for _, path := range paths {
-		stat, err := os.Stat(path)
-		if err != nil {
-			l.customRuleError = fmt.Errorf("failed to stat custom rule file %s: %w", path, err)
-
-			return l
-		}
-
-		if stat.IsDir() {
+		if rio.IsDir(path) {
 			l = l.WithCustomRulesFromFS(os.DirFS(path), ".")
 		} else {
 			contents, err := os.ReadFile(path)
 			if err != nil {
 				l.customRuleError = fmt.Errorf("failed to read custom rule file %s: %w", path, err)
 
-				return l
+				return l.notPrepared()
 			}
 
-			l = l.WithCustomRulesFromFS(fstest.MapFS{
-				filepath.Base(path): &fstest.MapFile{Data: contents},
-			}, ".")
+			l = l.WithCustomRulesFromFS(fstest.MapFS{filepath.Base(path): &fstest.MapFile{Data: contents}}, ".")
 		}
 	}
 
-	l.isPrepared = false
-
-	return l
+	return l.notPrepared()
 }
 
 // WithCustomRulesFromFS adds custom rules for evaluation from a filesystem implementing the fs.FS interface.
 // A root path within the filesystem must also be specified. Note, _test.rego files will be ignored.
 func (l Linter) WithCustomRulesFromFS(f fs.FS, rootPath string) Linter {
-	if f == nil {
-		return l
+	if f != nil {
+		modules, err := rio.ModulesFromCustomRuleFS(f, rootPath)
+		if err != nil {
+			l.customRuleError = err
+		} else {
+			l.customRuleModules = append(l.customRuleModules, outil.Values(modules)...)
+		}
 	}
 
-	l.hasCustomRules = true
-	l.isPrepared = false
-
-	modules, err := rio.ModulesFromCustomRuleFS(f, rootPath)
-	if err != nil {
-		l.customRuleError = err
-
-		return l
-	}
-
-	for _, m := range modules {
-		l.customRuleModules = append(l.customRuleModules, m)
-	}
-
-	return l
+	return l.notPrepared()
 }
 
 // WithDebugMode enables debug mode.
@@ -194,65 +172,57 @@ func (l Linter) WithDebugMode(debugMode bool) Linter {
 // WithUserConfig provides config overrides set by the user.
 func (l Linter) WithUserConfig(cfg config.Config) Linter {
 	l.userConfig = &cfg
-	l.isPrepared = false
 
-	return l
+	return l.notPrepared()
 }
 
 // WithDisabledRules disables provided rules. This overrides configuration provided in file.
 func (l Linter) WithDisabledRules(disable ...string) Linter {
 	l.disable = disable
-	l.isPrepared = false
 
-	return l
+	return l.notPrepared()
 }
 
 // WithDisableAll disables all rules when set to true. This overrides configuration provided in file.
 func (l Linter) WithDisableAll(disableAll bool) Linter {
 	l.disableAll = disableAll
-	l.isPrepared = false
 
-	return l
+	return l.notPrepared()
 }
 
 // WithDisabledCategories disables provided categories of rules. This overrides configuration provided in file.
 func (l Linter) WithDisabledCategories(disableCategory ...string) Linter {
 	l.disableCategory = disableCategory
-	l.isPrepared = false
 
-	return l
+	return l.notPrepared()
 }
 
 // WithEnabledRules enables provided rules. This overrides configuration provided in file.
 func (l Linter) WithEnabledRules(enable ...string) Linter {
 	l.enable = enable
-	l.isPrepared = false
 
-	return l
+	return l.notPrepared()
 }
 
 // WithEnableAll enables all rules when set to true. This overrides configuration provided in file.
 func (l Linter) WithEnableAll(enableAll bool) Linter {
 	l.enableAll = enableAll
-	l.isPrepared = false
 
-	return l
+	return l.notPrepared()
 }
 
 // WithEnabledCategories enables provided categories of rules. This overrides configuration provided in file.
 func (l Linter) WithEnabledCategories(enableCategory ...string) Linter {
 	l.enableCategory = enableCategory
-	l.isPrepared = false
 
-	return l
+	return l.notPrepared()
 }
 
 // WithIgnore excludes files matching patterns. This overrides configuration provided in file.
 func (l Linter) WithIgnore(ignore []string) Linter {
 	l.ignoreFiles = ignore
-	l.isPrepared = false
 
-	return l
+	return l.notPrepared()
 }
 
 // WithMetrics enables metrics collection.
@@ -287,9 +257,8 @@ func (l Linter) WithInstrumentation(enabled bool) Linter {
 // referenced in the linter configuration with absolute file paths or URIs.
 func (l Linter) WithPathPrefix(pathPrefix string) Linter {
 	l.pathPrefix = pathPrefix
-	l.isPrepared = false
 
-	return l
+	return l.notPrepared()
 }
 
 // WithExportAggregates enables the setting of intermediate aggregate data
@@ -345,14 +314,11 @@ func (l Linter) Prepare(ctx context.Context) (Linter, error) {
 	l.combinedCfg = conf
 	l.dataBundle = l.createDataBundle(*conf)
 
-	l.preparedQuery, err = l.prepareQuery(ctx)
-	if err != nil {
+	if l.preparedQuery, err = l.prepareQuery(ctx); err != nil {
 		return l, fmt.Errorf("failed to prepare query: %w", err)
 	}
 
-	l.isPrepared = true
-
-	return l, nil
+	return l.notPrepared(), nil
 }
 
 // MustPrepare prepares the linter and panics on errors. Mostly used for tests.
@@ -374,9 +340,7 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 
 	if !l.isPrepared {
 		var err error
-
-		l, err = l.Prepare(ctx)
-		if err != nil {
+		if l, err = l.Prepare(ctx); err != nil {
 			return report.Report{}, fmt.Errorf("failed to prepare linter: %w", err)
 		}
 	}
@@ -601,6 +565,12 @@ func (l Linter) prepareQuery(ctx context.Context) (*rego.PreparedEvalQuery, erro
 	return &pq, nil
 }
 
+func (l Linter) notPrepared() Linter {
+	l.isPrepared = false
+
+	return l
+}
+
 func (l Linter) validate(conf *config.Config) error {
 	if len(l.inputPaths) == 0 && l.inputModules == nil && len(l.overriddenAggregates) == 0 {
 		return errors.New("nothing provided to lint")
@@ -724,6 +694,10 @@ func (l Linter) createDataBundle(conf config.Config) *bundle.Bundle {
 }
 
 func (l Linter) prepareRegoArgs(query ast.Body) ([]func(*rego.Rego), error) {
+	if l.customRuleError != nil {
+		return nil, fmt.Errorf("failed to load custom rules: %w", l.customRuleError)
+	}
+
 	regoArgs := append([]func(*rego.Rego){
 		rego.StoreReadAST(true),
 		rego.Metrics(l.metrics),
@@ -743,14 +717,8 @@ func (l Linter) prepareRegoArgs(query ast.Body) ([]func(*rego.Rego), error) {
 		regoArgs = append(regoArgs, rego.ParsedBundle("internal", l.dataBundle))
 	}
 
-	if l.hasCustomRules {
-		if l.customRuleError != nil {
-			return nil, fmt.Errorf("failed to load custom rules: %w", l.customRuleError)
-		}
-
-		for _, m := range l.customRuleModules {
-			regoArgs = append(regoArgs, rego.ParsedModule(m))
-		}
+	for _, m := range l.customRuleModules {
+		regoArgs = append(regoArgs, rego.ParsedModule(m))
 	}
 
 	if l.ruleBundles != nil {
@@ -780,9 +748,10 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 
 	operationCollect := len(input.FileNames) > 1 || l.useCollectQuery
 
-	var wg sync.WaitGroup
-
-	var mu sync.Mutex
+	var (
+		wg sync.WaitGroup
+		mu sync.Mutex
+	)
 
 	// the error channel is buffered to prevent blocking
 	// caused by the context cancellation happening before
@@ -803,10 +772,7 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 				return
 			}
 
-			evalArgs := []rego.EvalOption{
-				rego.EvalParsedInput(inputValue),
-				rego.EvalInstrument(l.instrumentation),
-			}
+			evalArgs := []rego.EvalOption{rego.EvalParsedInput(inputValue), rego.EvalInstrument(l.instrumentation)}
 
 			if l.baseCache != nil {
 				evalArgs = append(evalArgs, rego.EvalBaseCache(l.baseCache))

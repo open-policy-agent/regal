@@ -3,7 +3,6 @@ package types
 import (
 	"encoding/json"
 
-	"github.com/open-policy-agent/regal/internal/lsp/types/completion"
 	"github.com/open-policy-agent/regal/internal/lsp/types/symbols"
 )
 
@@ -114,8 +113,8 @@ type (
 	}
 
 	CompletionContext struct {
-		TriggerCharacter string                 `json:"triggerCharacter"`
-		TriggerKind      completion.TriggerKind `json:"triggerKind"`
+		TriggerCharacter string `json:"triggerCharacter"`
+		TriggerKind      uint   `json:"triggerKind"`
 	}
 
 	CompletionList struct {
@@ -129,19 +128,10 @@ type (
 		TextEdit        *TextEdit                   `json:"textEdit,omitempty"`
 		InserTextFormat *uint                       `json:"insertTextFormat,omitempty"`
 		SortText        *string                     `json:"sortText,omitempty"`
-		// Regal is used to store regal-specific metadata about the completion item.
-		// This is not part of the LSP spec, but used in the manager to post process
-		// items before returning them to the client.
-		Regal  *CompletionItemRegalMetadata `json:"_regal,omitempty"`
-		Label  string                       `json:"label"`
-		Detail string                       `json:"detail"`
-		// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#completionItemKind
-		Kind      completion.ItemKind `json:"kind"`
-		Preselect bool                `json:"preselect"`
-	}
-
-	CompletionItemRegalMetadata struct {
-		Provider string `json:"provider"`
+		Label           string                      `json:"label"`
+		Detail          string                      `json:"detail"`
+		Kind            uint                        `json:"kind"`
+		Preselect       bool                        `json:"preselect"`
 	}
 
 	CompletionItemLabelDetails struct {

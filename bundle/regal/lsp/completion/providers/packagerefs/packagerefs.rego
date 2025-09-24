@@ -10,12 +10,11 @@ import data.regal.lsp.completion.location
 # METADATA
 # description: suggest packages matching typed import ref
 items contains item if {
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 
 	startswith(line, "import ")
 
-	ref := location.ref_at(line, input.regal.context.location.col)
+	ref := location.ref_at(line, input.params.position.character + 1)
 
 	startswith(ref.text, "d")
 
@@ -28,7 +27,7 @@ items contains item if {
 		"kind": kind.module,
 		"detail": "package",
 		"textEdit": {
-			"range": location.word_range(ref, position),
+			"range": location.word_range(ref, input.params.position),
 			"newText": path,
 		},
 		# tell clients to sort paths first by the number of path components (shortest first),
@@ -41,7 +40,7 @@ _package_paths contains str if {
 	some uri
 	path := data.workspace.parsed[uri].package.path
 
-	uri != input.regal.file.uri # don't suggest the package of the current file
+	uri != input.params.textDocument.uri # don't suggest the package of the current file
 	not endswith(regal.last(path).value, "_test") # importing tests makes no sense
 
 	str := ast.ref_to_string(path)

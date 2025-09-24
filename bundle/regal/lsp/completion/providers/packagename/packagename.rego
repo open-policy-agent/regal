@@ -10,19 +10,18 @@ import data.regal.lsp.completion.location
 # METADATA
 # description: set of suggested package names
 items contains item if {
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 
 	startswith(line, "package ")
-	position.character > 7
+	input.params.position.character > 7
 
 	ps := input.regal.environment.path_separator
 
-	abs_dir := _base(input.regal.file.name)
-	rel_dir := trim_prefix(abs_dir, input.regal.context.workspace_root)
+	abs_dir := _base(input.params.textDocument.uri)
+	rel_dir := trim_prefix(abs_dir, input.regal.environment.workspace_root_path)
 	fix_dir := replace(replace(trim_prefix(rel_dir, ps), ".", "_"), ps, ".")
 
-	word := location.ref_at(line, input.regal.context.location.col)
+	word := location.ref_at(line, input.params.position.character + 1)
 
 	some suggestion in _suggestions(fix_dir, word.text)
 
@@ -31,13 +30,16 @@ items contains item if {
 		"kind": kind.folder,
 		"detail": "suggested package name based on directory structure",
 		"textEdit": {
-			"range": location.word_range(word, position),
+			"range": location.word_range(word, input.params.position),
 			"newText": concat("", [suggestion, "\n\n"]),
 		},
 	}
 }
 
-_base(path) := substring(path, 0, regal.last(indexof_n(path, "/")))
+_base(uri) := base if {
+	path := trim_prefix(uri, "file://")
+	base := substring(path, 0, regal.last(indexof_n(path, input.regal.environment.path_separator)))
+}
 
 _suggestions(dir, text) := [path |
 	parts := split(dir, ".")

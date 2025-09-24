@@ -16,13 +16,12 @@ import data.regal.lsp.completion.kind
 import data.regal.lsp.completion.location
 
 # METADATA
-# description: items contains found suggestions from `input.json``
+# description: items contains found suggestions from `input.json`
 items contains item if {
-	input.regal.context.input_dot_json_path
+	input.regal.environment.input_dot_json_path
 
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
-	word := location.ref_at(line, input.regal.context.location.col)
+	line := input.regal.file.lines[input.params.position.line]
+	word := location.ref_at(line, input.params.position.character + 1)
 
 	some [suggestion, type] in _matching_input_suggestions
 
@@ -32,23 +31,22 @@ items contains item if {
 		"detail": type,
 		"documentation": {
 			"kind": "markdown",
-			"value": sprintf("(inferred from [`input.json`](%s))", [input.regal.context.input_dot_json_path]),
+			"value": sprintf("(inferred from [`input.json`](%s))", [input.regal.environment.input_dot_json_path]),
 		},
 		"textEdit": {
-			"range": location.word_range(word, position),
+			"range": location.word_range(word, input.params.position),
 			"newText": suggestion,
 		},
 	}
 }
 
 _matching_input_suggestions contains [suggestion, type] if {
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 
 	line != ""
 	location.in_rule_body(line)
 
-	word := location.ref_at(line, input.regal.context.location.col)
+	word := location.ref_at(line, input.params.position.character + 1)
 
 	some [suggestion, type] in _input_paths
 
@@ -56,7 +54,7 @@ _matching_input_suggestions contains [suggestion, type] if {
 }
 
 _input_paths contains [input_path, input_type] if {
-	walk(input.regal.context.input_dot_json, [path, value])
+	walk(input.regal.environment.input_dot_json, [path, value])
 
 	count(path) > 0
 

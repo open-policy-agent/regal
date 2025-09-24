@@ -53,14 +53,31 @@
               "type": "string",
               "description": "URI of the workspace root"
             },
+            "workspace_root_path": {
+              "type": "string",
+              "description": "File system path of the workspace root"
+            },
             "web_server_base_uri": {
               "type": "string",
               "description": "Base URI for Regal's local web server server"
+            },
+            "input_dot_json_path": {
+              "type": ["string", "null"],
+              "description": "Path to the input.json file, if found"
+            },
+            "input_dot_json": {
+              "type": ["object", "null"],
+              "description": "Content of the input.json file, if found"
+            },
+            "path_separator": {
+              "type": "string",
+              "description": "Path separator used by the operating system (e.g., '/' or '\\')"
             }
           },
           "required": [
             "workspace_root_uri",
-            "web_server_base_uri"
+            "web_server_base_uri",
+            "path_separator"
           ]
         },
         "file": {

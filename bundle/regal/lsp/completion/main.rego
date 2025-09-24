@@ -3,16 +3,22 @@
 #   base package for completion suggestion provider policies, and acts
 #   like a router that collects suggestions from all provider policies
 #   under regal.lsp.completion.providers
+# related_resources:
+#   - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_completion
+# schemas:
+#   - input:        schema.regal.lsp.common
+#   - input.params: schema.regal.lsp.completion
+# scope: subpackages
 package regal.lsp.completion
 
 import data.regal.util
 
-# regal ignore:pointless-import
-import data.regal.lsp.completion.location
-
 # METADATA
 # entrypoint: true
-result["response"] := items
+result["response"] := {
+	"items": items,
+	"isIncomplete": true,
+}
 
 # METADATA
 # description: main entry point for completion suggestions
@@ -32,14 +38,12 @@ items contains object.union(completion, {"_regal": {"provider": provider}}) if {
 # description: |
 #   checks if the current position is inside a comment
 inside_comment if {
-	position := location.to_position(input.regal.context.location)
-
 	# avoid unmarshalling every comment location but only one that starts
 	# with the line number of the current position
-	line := sprintf("%d:", [position.line + 1])
+	line := sprintf("%d:", [input.params.position.line + 1])
 
-	some comment in data.workspace.parsed[input.regal.file.uri].comments
+	some comment in data.workspace.parsed[input.params.textDocument.uri].comments
 
 	startswith(comment.location, line)
-	util.to_location_no_text(comment.location).col <= position.character + 1
+	util.to_location_no_text(comment.location).col <= input.params.position.character + 1
 }
