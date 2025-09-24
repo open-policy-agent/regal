@@ -128,7 +128,7 @@ type (
 		Documentation   *MarkupContent              `json:"documentation,omitempty"`
 		TextEdit        *TextEdit                   `json:"textEdit,omitempty"`
 		InserTextFormat *uint                       `json:"insertTextFormat,omitempty"`
-
+		SortText        *string                     `json:"sortText,omitempty"`
 		// Regal is used to store regal-specific metadata about the completion item.
 		// This is not part of the LSP spec, but used in the manager to post process
 		// items before returning them to the client.

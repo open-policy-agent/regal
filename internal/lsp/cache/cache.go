@@ -49,11 +49,6 @@ type Cache struct {
 	// when a file is successfully parsed, the number of lines in the file is stored
 	// here. This is used to gracefully fail when exiting unparsable files.
 	successfulParseLineCounts *concurrent.Map[string, int]
-
-	// fileRefs is a map of file URI to refs that are defined in that file. These are
-	// intended to be used for completions in other files.
-	// fileRefs is expected to be updated when a file is successfully parsed.
-	fileRefs *concurrent.Map[string, map[string]types.Ref]
 }
 
 func NewCache() *Cache {
@@ -66,7 +61,6 @@ func NewCache() *Cache {
 		diagnosticsParseErrors:    concurrent.MapOf(make(map[string][]types.Diagnostic)),
 		builtinPositionsFile:      concurrent.MapOf(make(map[string]map[uint][]types.BuiltinPosition)),
 		keywordLocationsFile:      concurrent.MapOf(make(map[string]map[uint][]types.KeywordLocation)),
-		fileRefs:                  concurrent.MapOf(make(map[string]map[string]types.Ref)),
 		successfulParseLineCounts: concurrent.MapOf(make(map[string]int)),
 	}
 }
@@ -164,11 +158,6 @@ func (c *Cache) Rename(oldKey, newKey string) {
 	if keywordLocations, ok := c.keywordLocationsFile.Get(oldKey); ok {
 		c.keywordLocationsFile.Set(newKey, keywordLocations)
 		c.keywordLocationsFile.Delete(oldKey)
-	}
-
-	if refs, ok := c.fileRefs.Get(oldKey); ok {
-		c.fileRefs.Set(newKey, refs)
-		c.fileRefs.Delete(oldKey)
 	}
 
 	if lineCount, ok := c.successfulParseLineCounts.Get(oldKey); ok {
@@ -282,20 +271,6 @@ func (c *Cache) GetKeywordLocations(fileURI string) (map[uint][]types.KeywordLoc
 	return c.keywordLocationsFile.Get(fileURI)
 }
 
-func (c *Cache) SetFileRefs(fileURI string, items map[string]types.Ref) {
-	c.fileRefs.Set(fileURI, items)
-}
-
-func (c *Cache) GetFileRefs(fileURI string) map[string]types.Ref {
-	refs, _ := c.fileRefs.Get(fileURI)
-
-	return refs
-}
-
-func (c *Cache) GetAllFileRefs() map[string]map[string]types.Ref {
-	return c.fileRefs.Clone()
-}
-
 func (c *Cache) GetSuccessfulParseLineCount(fileURI string) (int, bool) {
 	return c.successfulParseLineCounts.Get(fileURI)
 }
@@ -315,7 +290,6 @@ func (c *Cache) Delete(fileURI string) {
 	c.diagnosticsParseErrors.Delete(fileURI)
 	c.builtinPositionsFile.Delete(fileURI)
 	c.keywordLocationsFile.Delete(fileURI)
-	c.fileRefs.Delete(fileURI)
 	c.successfulParseLineCounts.Delete(fileURI)
 }
 
