@@ -81,32 +81,21 @@ func CompilerStages(path, rego string, useStrict, useAnno, usePrint bool) []Comp
 
 	for i := range stages {
 		stage := stages[i]
-		c = c.WithStageAfter(stage.name,
-			ast.CompilerStageDefinition{
-				Name:       stage.name + "Record",
-				MetricName: stage.metricName + "_record",
-				Stage: func(c0 *ast.Compiler) *ast.Error {
-					result = append(result, CompileResult{
-						Stage:  stage.name,
-						Result: getOne(c0.Modules),
-					})
+		c = c.WithStageAfter(stage.name, ast.CompilerStageDefinition{
+			Name:       stage.name + "Record",
+			MetricName: stage.metricName + "_record",
+			Stage: func(c0 *ast.Compiler) *ast.Error {
+				result = append(result, CompileResult{Stage: stage.name, Result: getOne(c0.Modules)})
 
-					return nil
-				},
-			})
+				return nil
+			},
+		})
 	}
 
-	c.Compile(map[string]*ast.Module{
-		path: mod,
-	})
-
-	if len(c.Errors) > 0 {
+	if c.Compile(map[string]*ast.Module{path: mod}); len(c.Errors) > 0 {
 		// stage after the last than ran successfully
 		stage := stages[len(result)-1]
-		result = append(result, CompileResult{
-			Stage: stage.name + ": Failure",
-			Error: c.Errors.Error(),
-		})
+		result = append(result, CompileResult{Stage: stage.name + ": Failure", Error: c.Errors.Error()})
 	}
 
 	return result
@@ -127,13 +116,13 @@ func Plan(ctx context.Context, path, rego string, usePrint bool) (string, error)
 	}
 
 	r := util.StringToByteSlice(rego)
-	b := &bundle.Bundle{Modules: []bundle.ModuleFile{{URL: "/url", Path: path, Raw: r, Parsed: mod}}}
 
 	compiler := compile.New().
 		WithTarget(compile.TargetPlan).
-		WithBundle(b).
+		WithBundle(&bundle.Bundle{Modules: []bundle.ModuleFile{{URL: "/url", Path: path, Raw: r, Parsed: mod}}}).
 		WithRegoAnnotationEntrypoints(true).
 		WithEnablePrintStatements(usePrint)
+
 	if err := compiler.Build(ctx); err != nil {
 		return "", err
 	}

@@ -3,16 +3,20 @@ package rego
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/sourcegraph/jsonrpc2"
 
 	"github.com/open-policy-agent/opa/v1/storage"
 
+	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	ruri "github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/util"
+	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
 var (
@@ -21,7 +25,6 @@ var (
 		"textDocument/documentLink":      make([]types.DocumentLink, 0),
 		"textDocument/documentHighlight": make([]types.DocumentHighlight, 0),
 		"textDocument/documentSymbol":    make([]types.DocumentSymbol, 0),
-		"textDocument/completion":        make([]types.CompletionItem, 0),
 		"textDocument/codeLens":          make([]types.CodeLens, 0),
 		"textDocument/signatureHelp":     nil,
 	}
@@ -73,6 +76,13 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 				},
 			},
 		},
+		"textDocument/completion": {
+			handler: textDocument[types.CompletionParams, *types.CompletionList],
+			requires: &Requirements{
+				File:         FileRequirements{Lines: true},
+				InputDotJSON: true,
+			},
+		},
 		"textDocument/documentLink": {
 			handler: textDocument[types.DocumentLinkParams, []types.DocumentLink],
 		},
@@ -114,6 +124,7 @@ func requirementsHandler(route Route) regoHandler {
 		// Set up a basic RegalContext, which while not used by all routes, is provided for all.
 		rctx := prvs.ContextProvider(uri, route.requires)
 		rctx.Query = query
+		rctx.File.URI = uri
 
 		if route.requires == nil {
 			return route.handler(ctx, rctx, req)
@@ -152,6 +163,23 @@ func requirementsHandler(route Route) regoHandler {
 
 			if rctx.File.ParseErrors, _ = prvs.ParseErrorsProvider(uri); rctx.File.ParseErrors == nil {
 				rctx.File.ParseErrors = make([]types.Diagnostic, 0)
+			}
+		}
+
+		if route.requires.InputDotJSON {
+			path := ruri.ToPath(rctx.Client.Identifier, uri)
+			root := ruri.ToPath(rctx.Client.Identifier, rctx.Environment.WorkspaceRootURI)
+
+			// TODO: Avoid the intermediate map[string]any step and unmarshal directly into ast.Value.
+			inputDotJSONPath, inputDotJSONContent := io.FindInput(path, root)
+			if inputDotJSONPath != "" && inputDotJSONContent != nil {
+				inputDotJSONValue, err := transform.ToOPAInputValue(inputDotJSONContent)
+				if err != nil {
+					return nil, fmt.Errorf("failed to convert input.json to value: %w", err)
+				}
+
+				rctx.Environment.InputDotJSONPath = &inputDotJSONPath
+				rctx.Environment.InputDotJSON = inputDotJSONValue
 			}
 		}
 

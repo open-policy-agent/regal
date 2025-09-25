@@ -8,20 +8,20 @@ import data.regal.lsp.completion.location
 # METADATA
 # description: completion suggestions for local symbols
 items contains item if {
-	position := location.to_position(input.regal.context.location)
-
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 	line != ""
 
 	location.in_rule_body(line)
+	not _excluded(line, input.params.position)
 
-	not _excluded(line, position)
-
-	word := location.word_at(line, input.regal.context.location.col)
+	word := location.word_at(line, input.params.position.character + 1)
 
 	not endswith(word.text_before, ".")
 
-	some local in location.find_locals(data.workspace.parsed[input.regal.file.uri].rules, input.regal.context.location)
+	some local in location.find_locals(data.workspace.parsed[input.params.textDocument.uri].rules, {
+		"row": input.params.position.line + 1,
+		"col": input.params.position.character + 1,
+	})
 
 	startswith(local, word.text)
 
@@ -32,7 +32,7 @@ items contains item if {
 		"kind": kind.variable,
 		"detail": "local variable",
 		"textEdit": {
-			"range": location.word_range(word, position),
+			"range": location.word_range(word, input.params.position),
 			"newText": local,
 		},
 	}

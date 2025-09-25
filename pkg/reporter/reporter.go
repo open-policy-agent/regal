@@ -139,12 +139,7 @@ func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
 	}
 
 	if r.Summary.RulesSkipped > 0 {
-		footer += fmt.Sprintf(
-			" %d %s skipped:\n",
-			r.Summary.RulesSkipped,
-			pluralize("rule", r.Summary.RulesSkipped),
-		)
-
+		footer += fmt.Sprintf(" %d %s skipped:\n", r.Summary.RulesSkipped, pluralize("rule", r.Summary.RulesSkipped))
 		for _, notice := range r.Notices {
 			if notice.Severity != "none" {
 				footer += fmt.Sprintf("- %s: %s\n", notice.Title, notice.Description)
@@ -305,9 +300,7 @@ func (tr CompactReporter) Publish(_ context.Context, r report.Report) error {
 
 // Publish prints a JSON report to the configured output.
 func (tr JSONReporter) Publish(_ context.Context, r report.Report) error {
-	if r.Violations == nil {
-		r.Violations = []report.Violation{}
-	}
+	r.Violations = util.NullToEmpty(r.Violations)
 
 	bs, err := encoding.JSON().MarshalIndent(r, "", "  ")
 	if err != nil {
@@ -432,10 +425,7 @@ func getLocation(violation report.Violation) *sarif.Location {
 	physicalLocation := sarif.NewPhysicalLocation().
 		WithArtifactLocation(sarif.NewSimpleArtifactLocation(violation.Location.File))
 
-	region := sarif.NewRegion().
-		WithStartLine(violation.Location.Row).
-		WithStartColumn(violation.Location.Column)
-
+	region := sarif.NewRegion().WithStartLine(violation.Location.Row).WithStartColumn(violation.Location.Column)
 	if violation.Location.End != nil {
 		region = region.WithEndLine(violation.Location.End.Row).WithEndColumn(violation.Location.End.Column)
 	}
@@ -468,9 +458,7 @@ func getUniqueViolationURLs(violations []report.Violation) map[string]string {
 
 // Publish prints a JUnit XML report to the configured output.
 func (tr JUnitReporter) Publish(_ context.Context, r report.Report) error {
-	testSuites := junit.Testsuites{
-		Name: "regal",
-	}
+	testSuites := junit.Testsuites{Name: "regal"}
 
 	// group by file & sort by file
 	files := make([]string, 0)
@@ -484,9 +472,7 @@ func (tr JUnitReporter) Publish(_ context.Context, r report.Report) error {
 	slices.Sort(files)
 
 	for _, file := range files {
-		testsuite := junit.Testsuite{
-			Name: file,
-		}
+		testsuite := junit.Testsuite{Name: file}
 
 		for _, violation := range violationsPerFile[file] { //nolint:gocritic
 			text := ""

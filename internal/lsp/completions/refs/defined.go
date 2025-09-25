@@ -19,8 +19,7 @@ import (
 func DefinedInModule(module *ast.Module, builtins map[string]*ast.Builtin) map[string]types.Ref {
 	modKey := module.Package.Path.String()
 
-	// first, create a reference for the package using the metadata
-	// if present
+	// first, create a reference for the package using the metadata, if present
 	packagePrettyName := strings.TrimPrefix(module.Package.Path.String(), "data.")
 	packageDescription := defaultDescription(packagePrettyName)
 
@@ -30,34 +29,21 @@ func DefinedInModule(module *ast.Module, builtins map[string]*ast.Builtin) map[s
 	}
 
 	items := map[string]types.Ref{
-		modKey: {
-			Label:       modKey,
-			Kind:        types.Package,
-			Detail:      "Package",
-			Description: packageDescription,
-		},
+		modKey: {Label: modKey, Kind: types.Package, Detail: "Package", Description: packageDescription},
 	}
 
 	// Create groups of rules and functions sharing the same name
 	ruleGroups := make(map[string][]*ast.Rule, len(module.Rules))
-
 	for _, rule := range module.Rules {
-		name := rule.Head.Ref().String()
-
-		if strings.HasPrefix(name, "test_") {
-			continue
+		if name := rule.Head.Ref().String(); !strings.HasPrefix(name, "test_") {
+			ruleGroups[name] = append(ruleGroups[name], rule)
 		}
-
-		ruleGroups[name] = append(ruleGroups[name], rule)
 	}
 
 	for g, rs := range ruleGroups {
-		// this should not happen, but we depend on rules being present below
 		if len(rs) == 0 {
-			continue
+			continue // this should not happen, but we depend on rules being present below
 		}
-
-		ruleKey := fmt.Sprintf("%s.%s", modKey, g)
 
 		isConstant := true
 
@@ -69,17 +55,12 @@ func DefinedInModule(module *ast.Module, builtins map[string]*ast.Builtin) map[s
 			}
 		}
 
-		isFunc := false
-		if rs[0].Head.Args != nil {
-			isFunc = true
-		}
-
 		kind := types.Rule
 
 		switch {
 		case isConstant:
 			kind = types.ConstantRule
-		case isFunc:
+		case rs[0].Head.Args != nil:
 			kind = types.Function
 		}
 
@@ -87,6 +68,8 @@ func DefinedInModule(module *ast.Module, builtins map[string]*ast.Builtin) map[s
 		if ruleAnnotation, ok := findAnnotationForRuleGroup(rs); ok {
 			ruleDescription = documentAnnotatedRef(ruleAnnotation)
 		}
+
+		ruleKey := fmt.Sprintf("%s.%s", modKey, g)
 
 		items[ruleKey] = types.Ref{
 			Kind:        kind,

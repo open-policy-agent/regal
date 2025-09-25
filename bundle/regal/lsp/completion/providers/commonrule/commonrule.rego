@@ -15,8 +15,7 @@ _suggested_names := {
 # METADATA
 # description: all completion suggestions for common rule names
 items contains item if {
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 
 	some label in _suggested_names
 
@@ -31,7 +30,7 @@ items contains item if {
 			"value": sprintf("%q is a common rule name", [label]),
 		},
 		"textEdit": {
-			"range": location.from_start_of_line_to_position(position),
+			"range": location.from_start_of_line_to_position(input.params.position),
 			"newText": concat("", [label, " "]),
 		},
 	}

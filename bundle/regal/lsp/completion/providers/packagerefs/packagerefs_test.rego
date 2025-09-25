@@ -3,17 +3,17 @@ package regal.lsp.completion.providers.packagerefs_test
 import data.regal.lsp.completion.providers.packagerefs
 
 test_all_package_refs_sugggested_for_import if {
-	items := packagerefs.items with data.workspace.parsed as _workspace_parsed with input as {"regal": {
-		"context": {"location": {"row": 3, "col": 9}},
-		"file": {
-			"uri": "file:///example.rego",
-			"lines": [
-				"package foo.bar",
-				"",
-				"import d",
-			],
+	items := packagerefs.items with data.workspace.parsed as _workspace_parsed with input as {
+		"params": {
+			"textDocument": {"uri": "file:///example.rego"},
+			"position": {"line": 2, "character": 8},
 		},
-	}}
+		"regal": {"file": {"lines": [
+			"package foo.bar",
+			"",
+			"import d",
+		]}},
+	}
 
 	# 6 suggestions minus the current package and one test package
 	# also note how the sortText attribute hints to the client to sort not by
@@ -28,17 +28,20 @@ test_all_package_refs_sugggested_for_import if {
 }
 
 test_matching_package_refs_sugggested_for_import if {
-	items := packagerefs.items with data.workspace.parsed as _workspace_parsed with input as {"regal": {
-		"context": {"location": {"row": 3, "col": 14}},
-		"file": {
+	items := packagerefs.items with data.workspace.parsed as _workspace_parsed with input as {
+		"params": {
+			"textDocument": {"uri": "file:///example.rego"},
+			"position": {"line": 2, "character": 13},
+		},
+		"regal": {"file": {
 			"uri": "file:///example.rego",
 			"lines": [
 				"package foo.bar",
 				"",
 				"import data.f",
 			],
-		},
-	}}
+		}},
+	}
 
 	items == {
 		_suggestion("data.foo.baz", "002", [2, 7, 2, 13]),

@@ -10,17 +10,14 @@ import data.regal.lsp.completion.location
 items contains item if {
 	not strings.any_prefix_match(input.regal.file.lines, "package ")
 
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
-
-	startswith("package", line)
+	startswith("package", input.regal.file.lines[input.params.position.line])
 
 	item := {
 		"label": "package",
 		"kind": kind.keyword,
 		"detail": "package <package-name>",
 		"textEdit": {
-			"range": location.from_start_of_line_to_position(position),
+			"range": location.from_start_of_line_to_position(input.params.position),
 			"newText": "package ",
 		},
 	}

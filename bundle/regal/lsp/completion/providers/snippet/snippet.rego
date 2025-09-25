@@ -15,12 +15,11 @@ import data.regal.lsp.completion.location
 # description: all completion suggestions for snippets
 # scope: document
 items contains item if {
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 
 	location.in_rule_body(line)
 
-	word := location.word_at(line, input.regal.context.location.col)
+	word := location.word_at(line, input.params.position.character + 1)
 	before := trim_suffix(line, word.text)
 
 	# match empty line, or line ending with `if` or `|` plus whitespace
@@ -36,7 +35,7 @@ items contains item if {
 		"kind": kind.snippet,
 		"detail": label,
 		"textEdit": {
-			"range": location.word_range(word, position),
+			"range": location.word_range(word, input.params.position),
 			"newText": snippet.body,
 		},
 		"insertTextFormat": 2, # snippet
@@ -44,11 +43,11 @@ items contains item if {
 }
 
 items contains item if {
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 
 	startswith("metadata", line)
-	word := location.word_at(line, input.regal.context.location.col)
+	word := location.word_at(line, input.params.position.character + 1)
+	range := location.word_range(word, input.params.position)
 
 	some item in {
 		{
@@ -56,7 +55,7 @@ items contains item if {
 			"kind": kind.snippet,
 			"detail": "metadata annotation",
 			"textEdit": {
-				"range": location.word_range(word, position),
+				"range": range,
 				"newText": "# METADATA\n# title: ${1:title}\n# description: ${2:description}",
 			},
 			"insertTextFormat": 2, # snippet
@@ -66,7 +65,7 @@ items contains item if {
 			"kind": kind.snippet,
 			"detail": "metadata annotation",
 			"textEdit": {
-				"range": location.word_range(word, position),
+				"range": range,
 				"newText": "# METADATA\n# description: ${1:description}",
 			},
 			"insertTextFormat": 2, # snippet

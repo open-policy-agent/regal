@@ -7,6 +7,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 )
 
+var noBody = ast.NewBody(ast.NewExpr(ast.InternedTerm(true)))
+
 // GetRuleDetail returns a short descriptive string value for a given rule stating
 // if the rule is constant, multi-value, single-value etc and the type of the rule's
 // value if known.
@@ -24,7 +26,6 @@ func GetRuleDetail(rule *ast.Rule, builtins map[string]*ast.Builtin) string {
 	}
 
 	detail := "single-value "
-
 	if rule.Head.Key != nil {
 		detail += "map "
 	}
@@ -64,27 +65,16 @@ func GetRuleDetail(rule *ast.Rule, builtins map[string]*ast.Builtin) string {
 // IsConstant returns true if the rule is a "constant" rule, i.e.
 // one without conditions and scalar value in the head.
 func IsConstant(rule *ast.Rule) bool {
-	if rule.Head.Value == nil {
-		return false
-	}
-
-	isScalar := false
-
-	switch rule.Head.Value.Value.(type) {
-	case ast.Boolean, ast.Number, ast.String, ast.Null:
-		isScalar = true
-	}
-
-	return isScalar &&
+	return rule.Head.Value != nil &&
+		ast.IsScalar(rule.Head.Value.Value) &&
 		rule.Head.Args == nil &&
-		rule.Body.Equal(ast.NewBody(ast.NewExpr(ast.BooleanTerm(true)))) &&
+		rule.Body.Equal(noBody) &&
 		rule.Else == nil
 }
 
 // simplifyType removes anything but the base type from the type name.
 func simplifyType(name string) string {
 	result := name
-
 	if strings.Contains(result, ":") {
 		result = result[strings.Index(result, ":")+1:]
 	}

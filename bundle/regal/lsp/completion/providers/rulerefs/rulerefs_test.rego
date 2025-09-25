@@ -5,7 +5,7 @@ import data.regal.ast
 import data.regal.lsp.completion.providers.rulerefs as provider
 
 workspace := {
-	"current_file.rego": `package foo
+	"file:///current_file.rego": `package foo
 
 import rego.v1
 
@@ -45,20 +45,16 @@ defined_refs[file_uri] contains concat(".", [package_name, ast.ref_to_string(rul
 }
 
 test_rule_refs_no_word if {
-	current_file_contents := concat("", [workspace["current_file.rego"], `
+	current_file_contents := concat("", [workspace["file:///current_file.rego"], `
 another_local_rule := `])
 
-	regal_module := {"regal": {
-		"file": {
-			"name": "current_file.rego",
-			"uri": "current_file.rego", # would be file:// prefixed in server
-			"lines": split(current_file_contents, "\n"),
+	regal_module := {
+		"params": {
+			"textDocument": {"uri": "file:///current_file.rego"},
+			"position": {"line": 9, "character": 20},
 		},
-		"context": {"location": {
-			"row": 10,
-			"col": 21,
-		}},
-	}}
+		"regal": {"file": {"lines": split(current_file_contents, "\n")}},
+	}
 
 	items := provider.items with input as regal_module
 		with data.workspace.parsed as parsed_modules
@@ -78,20 +74,16 @@ another_local_rule := `])
 }
 
 test_rule_refs_partial_word if {
-	current_file_contents := concat("", [workspace["current_file.rego"], `
+	current_file_contents := concat("", [workspace["file:///current_file.rego"], `
 another_local_rule := imp`])
 
-	regal_module := {"regal": {
-		"file": {
-			"name": "current_file.rego",
-			"uri": "current_file.rego", # would be file:// prefixed in server
-			"lines": split(current_file_contents, "\n"),
+	regal_module := {
+		"params": {
+			"textDocument": {"uri": "file:///current_file.rego"},
+			"position": {"line": 9, "character": 25},
 		},
-		"context": {"location": {
-			"row": 10,
-			"col": 26,
-		}},
-	}}
+		"regal": {"file": {"lines": split(current_file_contents, "\n")}},
+	}
 
 	items := provider.items with input as regal_module
 		with data.workspace.parsed as parsed_modules
@@ -108,23 +100,19 @@ another_local_rule := imp`])
 }
 
 test_rule_refs_not_in_rule if {
-	current_file_contents := concat("", [workspace["current_file.rego"], `
+	current_file_contents := concat("", [workspace["file:///current_file.rego"], `
 
 a`])
 
 	lines := split(current_file_contents, "\n")
 
-	regal_module := {"regal": {
-		"file": {
-			"name": "current_file.rego",
-			"uri": "current_file.rego", # would be file:// prefixed in server
-			"lines": lines,
+	regal_module := {
+		"params": {
+			"textDocument": {"uri": "file:///current_file.rego"},
+			"position": {"line": count(lines) - 1, "character": 0},
 		},
-		"context": {"location": {
-			"row": count(lines),
-			"col": 1,
-		}},
-	}}
+		"regal": {"file": {"lines": lines}},
+	}
 
 	items := provider.items with input as regal_module
 		with data.workspace.parsed as parsed_modules
@@ -134,23 +122,19 @@ a`])
 }
 
 test_rule_refs_no_recursion if {
-	current_file_contents := concat("", [workspace["current_file.rego"], `
+	current_file_contents := concat("", [workspace["file:///current_file.rego"], `
 
 local_rule if local`])
 
 	lines := split(current_file_contents, "\n")
 
-	regal_module := {"regal": {
-		"file": {
-			"name": "current_file.rego",
-			"uri": "current_file.rego", # would be file:// prefixed in server
-			"lines": lines,
+	regal_module := {
+		"params": {
+			"textDocument": {"uri": "file:///current_file.rego"},
+			"position": {"line": count(lines) - 1, "character": 18},
 		},
-		"context": {"location": {
-			"row": count(lines),
-			"col": 19,
-		}},
-	}}
+		"regal": {"file": {"lines": lines}},
+	}
 
 	items := provider.items with input as regal_module
 		with data.workspace.parsed as parsed_modules
@@ -160,7 +144,7 @@ local_rule if local`])
 }
 
 test_rule_refs_no_recursion_func if {
-	current_file_contents := concat("", [workspace["current_file.rego"], `
+	current_file_contents := concat("", [workspace["file:///current_file.rego"], `
 
 local_fun("") := foo {
 	true
@@ -170,17 +154,13 @@ local_func("foo") := local_f`])
 
 	lines := split(current_file_contents, "\n")
 
-	regal_module := {"regal": {
-		"file": {
-			"name": "current_file.rego",
-			"uri": "current_file.rego", # would be file:// prefixed in server
-			"lines": lines,
+	regal_module := {
+		"params": {
+			"textDocument": {"uri": "file:///current_file.rego"},
+			"position": {"line": count(lines) - 1, "character": 25},
 		},
-		"context": {"location": {
-			"row": count(lines),
-			"col": 26,
-		}},
-	}}
+		"regal": {"file": {"lines": lines}},
+	}
 
 	items := provider.items with input as regal_module
 		with data.workspace.parsed as parsed_modules
