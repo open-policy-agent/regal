@@ -22,7 +22,7 @@ test_fail_unconditional_assignment_in_body if {
 			"file": "policy.rego",
 			"row": 4,
 			"end": {
-				"col": 9,
+				"col": 7,
 				"row": 4,
 			},
 			"text": "\t\ty := 1",
@@ -49,7 +49,7 @@ test_fail_unconditional_eq_in_body if {
 			"file": "policy.rego",
 			"row": 4,
 			"end": {
-				"col": 8,
+				"col": 6,
 				"row": 4,
 			},
 			"text": "\t\ty = 1",
@@ -96,7 +96,7 @@ test_fail_unconditional_multi_value_assignment if {
 			"file": "policy.rego",
 			"row": 6,
 			"end": {
-				"col": 9,
+				"col": 7,
 				"row": 6,
 			},
 			"text": "\t\ty := 1",
@@ -123,7 +123,7 @@ test_fail_unconditional_map_assignment if {
 			"file": "policy.rego",
 			"row": 6,
 			"end": {
-				"col": 9,
+				"col": 7,
 				"row": 6,
 			},
 			"text": "\t\ty := 1",

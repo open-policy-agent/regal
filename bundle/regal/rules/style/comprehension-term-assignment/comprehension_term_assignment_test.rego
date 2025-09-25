@@ -14,12 +14,12 @@ test_fail_comprehension_term_assignment_last_expr if {
 
 	r == {{
 		"category": "style",
-		"description": "Assignment can be moved to comprehension term",
+		"description": "Assigned value can be moved to comprehension term",
 		"level": "error",
 		"location": {
 			"col": 3,
 			"end": {
-				"col": 9,
+				"col": 7,
 				"row": 7,
 			},
 			"file": "policy.rego",
@@ -40,13 +40,13 @@ test_fail_comprehension_term_assignment_not_last_expr if {
 		x := y
 		x == 1
 	]`)
-
 	r := rule.report with input as module
+
 	r == {{
 		"category": "style",
-		"description": "Assignment can be moved to comprehension term",
+		"description": "Assigned value can be moved to comprehension term",
 		"level": "error",
-		"location": {"col": 3, "end": {"col": 9, "row": 7}, "file": "policy.rego", "row": 7, "text": "\t\tx := y"},
+		"location": {"col": 3, "end": {"col": 7, "row": 7}, "file": "policy.rego", "row": 7, "text": "\t\tx := y"},
 		"related_resources": [{
 			"description": "documentation",
 			"ref": config.docs.resolve_url("$baseUrl/$category/comprehension-term-assignment", "style"),
@@ -60,15 +60,15 @@ test_fail_comprehension_term_assignment_static_ref if {
 		some y in input
 		x := y.attribute
 	]`)
-
 	r := rule.report with input as module
+
 	r == {{
 		"category": "style",
-		"description": "Assignment can be moved to comprehension term",
+		"description": "Assigned value can be moved to comprehension term",
 		"level": "error",
 		"location": {
 			"col": 3,
-			"end": {"col": 19, "row": 7},
+			"end": {"col": 7, "row": 7},
 			"file": "policy.rego",
 			"row": 7,
 			"text": "\t\tx := y.attribute",
@@ -90,11 +90,11 @@ test_fail_object_comprehension_key_assignment_static_ref if {
 	r := rule.report with input as module
 	r == {{
 		"category": "style",
-		"description": "Assignment can be moved to comprehension term",
+		"description": "Assigned value can be moved to comprehension term",
 		"level": "error",
 		"location": {
 			"col": 3,
-			"end": {"col": 19, "row": 7},
+			"end": {"col": 7, "row": 7},
 			"file": "policy.rego",
 			"row": 7, "text": "\t\tk := y.attribute",
 		},
@@ -115,11 +115,11 @@ test_fail_object_comprehension_value_assignment_static_ref if {
 	r := rule.report with input as module
 	r == {{
 		"category": "style",
-		"description": "Assignment can be moved to comprehension term",
+		"description": "Assigned value can be moved to comprehension term",
 		"level": "error",
 		"location": {
 			"col": 3,
-			"end": {"col": 19, "row": 7},
+			"end": {"col": 7, "row": 7},
 			"file": "policy.rego",
 			"row": 7, "text": "\t\tv := y.attribute",
 		},
