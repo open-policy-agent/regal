@@ -21,7 +21,7 @@ test_fail_with_used_outside_test if {
 			"file": "policy.rego",
 			"row": 5,
 			"end": {
-				"col": 32,
+				"col": 20,
 				"row": 5,
 			},
 			"text": "\t\tnot foo.deny with input as {}",
