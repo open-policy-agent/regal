@@ -1,5 +1,5 @@
 # METADATA
-# description: Assignment can be moved to comprehension term
+# description: Assigned value can be moved to comprehension term
 package regal.rules.style["comprehension-term-assignment"]
 
 import data.regal.ast
