@@ -11,8 +11,8 @@ test_fail_pointless_reassignment_in_rule_head if {
 
 	bar := foo
 	`)
-
 	r := rule.report with input as module
+
 	r == {{
 		"category": "style",
 		"description": "Pointless reassignment of variable",
@@ -43,8 +43,8 @@ test_fail_pointless_reassignment_in_rule_body if {
 		bar := foo
 	}
 	`)
-
 	r := rule.report with input as module
+
 	r == {{
 		"category": "style",
 		"description": "Pointless reassignment of variable",
@@ -54,7 +54,7 @@ test_fail_pointless_reassignment_in_rule_body if {
 			"file": "policy.rego",
 			"row": 9,
 			"end": {
-				"col": 13,
+				"col": 9,
 				"row": 9,
 			},
 			"text": "\t\tbar := foo",

@@ -211,10 +211,10 @@ ranged_from_ref(ref) := ranged_location_between(ref[0], regal.last(ref))
 # METADATA
 # description: |
 #   creates a ranged location where the start location is the left hand side of an infix
-#   expression, like `"foo" == "bar"`, and the end location is the end of the expression
-infix_expr_location(expr) := location(range) if {
-	[row, col, _, _] := split(expr[1].location, ":")
-	[_, _, end_row, end_col] := split(regal.last(expr).location, ":")
-
-	range := sprintf("%v:%v:%v:%v", [row, col, end_row, end_col])
-}
+#   expression, like `"foo" == "bar"`, and the end location is the end of the infix operator
+# # narrow-argument false positive: https://github.com/open-policy-agent/regal/issues/1701
+# # regal ignore:narrow-argument
+infix_expr_location(terms) := location(sprintf("%s:%s:%s:%s", array.concat(
+	array.slice(split(terms[1].location, ":"), 0, 2),
+	array.slice(split(terms[0].location, ":"), 2, 4),
+)))
