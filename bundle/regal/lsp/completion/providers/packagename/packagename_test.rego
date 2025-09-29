@@ -4,21 +4,24 @@ import data.regal.lsp.completion.providers.packagename as provider
 
 test_package_name_completion_on_typing if {
 	policy := `package f`
-	provider_input := {"regal": {
-		"file": {
-			"name": "/Users/joe/policy/foo/bar/baz/p.rego",
-			"lines": split(policy, "\n"),
+	provider_input := {
+		"params": {
+			"textDocument": {"uri": "file:///Users/joe/policy/foo/bar/baz/p.rego"},
+			"position": {"line": 0, "character": 9},
 		},
-		"context": {
-			"workspace_root": "/Users/joe/policy",
-			"location": {
-				"row": 1,
-				"col": 10,
+		"regal": {
+			"file": {
+				"lines": split(policy, "\n"),
+				"uri": "file:///Users/joe/policy/foo/bar/baz/p.rego",
+			},
+			"environment": {
+				"path_separator": "/",
+				"workspace_root_path": "/Users/joe/policy",
 			},
 		},
-		"environment": {"path_separator": "/"},
-	}}
+	}
 	items := provider.items with input as provider_input
+
 	items == {{
 		"detail": "suggested package name based on directory structure",
 		"kind": 19,
@@ -35,21 +38,25 @@ test_package_name_completion_on_typing if {
 
 test_package_name_completion_on_typing_multiple_suggestions if {
 	policy := `package b`
-	provider_input := {"regal": {
-		"file": {
-			"name": "/Users/joe/policy/foo/bar/baz/p.rego",
-			"lines": split(policy, "\n"),
+	provider_input := {
+		"params": {
+			"textDocument": {"uri": "file:///Users/joe/policy/foo/bar/baz/p.rego"},
+			"position": {"line": 0, "character": 9},
 		},
-		"context": {
-			"workspace_root": "/Users/joe/policy",
-			"location": {
-				"row": 1,
-				"col": 10,
+		"regal": {
+			"file": {
+				"lines": split(policy, "\n"),
+				"uri": "file:///Users/joe/policy/foo/bar/baz/p.rego",
+			},
+			"environment": {
+				"path_separator": "/",
+				"workspace_root_path": "/Users/joe/policy",
 			},
 		},
-		"environment": {"path_separator": "/"},
-	}}
+	}
+
 	items := provider.items with input as provider_input
+
 	items == {
 		{
 			"detail": "suggested package name based on directory structure",
@@ -80,21 +87,24 @@ test_package_name_completion_on_typing_multiple_suggestions if {
 
 test_package_name_completion_on_typing_multiple_suggestions_when_invoked if {
 	policy := `package `
-	provider_input := {"regal": {
-		"file": {
-			"name": "/Users/joe/policy/foo/bar/baz/p.rego",
-			"lines": split(policy, "\n"),
+	provider_input := {
+		"params": {
+			"textDocument": {"uri": "file:///Users/joe/policy/foo/bar/baz/p.rego"},
+			"position": {"line": 0, "character": 8},
 		},
-		"context": {
-			"workspace_root": "/Users/joe/policy",
-			"location": {
-				"row": 1,
-				"col": 9,
+		"regal": {
+			"file": {
+				"lines": split(policy, "\n"),
+				"uri": "file:///Users/joe/policy/foo/bar/baz/p.rego",
+			},
+			"environment": {
+				"path_separator": "/",
+				"workspace_root_path": "/Users/joe/policy",
 			},
 		},
-		"environment": {"path_separator": "/"},
-	}}
+	}
 	items := provider.items with input as provider_input
+
 	items == {
 		{
 			"detail": "suggested package name based on directory structure",
@@ -137,22 +147,24 @@ test_package_name_completion_on_typing_multiple_suggestions_when_invoked if {
 
 test_package_name_quoted if {
 	policy := `package f`
-	provider_input := {"regal": {
-		"file": {
-			"name": "/Users/joe/foo/bar/baz-are/foo/baz-are/foo/p.rego",
-			"lines": split(policy, "\n"),
+	provider_input := {
+		"params": {
+			"textDocument": {"uri": "file:////Users/joe/foo/bar/baz-are/foo/baz-are/foo/p.rego"},
+			"position": {"line": 0, "character": 9},
 		},
-		"context": {
-			"workspace_root": "/Users/joe/policy",
-			"location": {
-				"row": 1,
-				"col": 10,
+		"regal": {
+			"file": {
+				"lines": split(policy, "\n"),
+				"uri": "file:////Users/joe/foo/bar/baz-are/foo/baz-are/foo/p.rego",
+			},
+			"environment": {
+				"path_separator": "/",
+				"workspace_root_path": "/Users/joe/policy",
 			},
 		},
-		"environment": {"path_separator": "/"},
-	}}
-
+	}
 	items := provider.items with input as provider_input
+
 	items == {
 		{
 			"detail": "suggested package name based on directory structure",

@@ -8,13 +8,12 @@ import data.regal.lsp.completion.location
 # METADATA
 # description: all completion suggestions for the input keyword
 items contains item if {
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 
 	line != ""
 	location.in_rule_body(line)
 
-	word := location.word_at(line, input.regal.context.location.col)
+	word := location.word_at(line, input.params.position.character + 1)
 
 	startswith("input", word.text)
 
@@ -27,7 +26,7 @@ items contains item if {
 		"kind": kind.keyword,
 		"detail": "input document",
 		"textEdit": {
-			"range": location.word_range(word, position),
+			"range": location.word_range(word, input.params.position),
 			"newText": "input",
 		},
 		"documentation": {

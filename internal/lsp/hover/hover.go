@@ -15,6 +15,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	types2 "github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
 )
 
@@ -144,15 +145,14 @@ func UpdateBuiltinPositions(cache *cache.Cache, uri string, builtins map[string]
 
 	builtinsOnLine := map[uint][]types2.BuiltinPosition{}
 
-	//nolint:gosec
 	for _, call := range rego.AllBuiltinCalls(module, builtins) {
-		line := uint(call.Location.Row)
+		line := util.SafeIntToUint(call.Location.Row)
 
 		builtinsOnLine[line] = append(builtinsOnLine[line], types2.BuiltinPosition{
 			Builtin: call.Builtin,
 			Line:    line,
-			Start:   uint(call.Location.Col),
-			End:     uint(call.Location.Col + len(call.Builtin.Name)),
+			Start:   util.SafeIntToUint(call.Location.Col),
+			End:     util.SafeIntToUint(call.Location.Col + len(call.Builtin.Name)),
 		})
 	}
 

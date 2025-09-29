@@ -18,37 +18,24 @@ var drivePattern = regexp.MustCompile(`^\/?([A-Za-z]):`)
 // Since clients expect URIs to be in a specific format, this function
 // will convert the path to the appropriate format for the client.
 func FromPath(client clients.Identifier, path string) string {
-	path = strings.TrimPrefix(path, "file://")
-	path = strings.TrimPrefix(path, uriSeparator)
+	path = strings.TrimPrefix(strings.TrimPrefix(path, "file://"), uriSeparator)
 
 	var driveLetter string
 	if matches := drivePattern.FindStringSubmatch(path); len(matches) > 0 {
 		driveLetter = matches[1] + ":"
-	}
-
-	if driveLetter != "" {
 		path = strings.TrimPrefix(path, driveLetter)
 	}
 
 	parts := strings.Split(filepath.ToSlash(path), uriSeparator)
 	for i, part := range parts {
-		parts[i] = url.QueryEscape(part)
-		parts[i] = strings.ReplaceAll(parts[i], "+", "%20")
+		parts[i] = strings.ReplaceAll(url.QueryEscape(part), "+", "%20")
 	}
 
-	if client == clients.IdentifierVSCode {
-		if driveLetter != "" {
-			return "file:///" + url.QueryEscape(driveLetter) + strings.Join(parts, uriSeparator)
-		}
-
-		return "file:///" + strings.Join(parts, uriSeparator)
+	if client == clients.IdentifierVSCode && driveLetter != "" {
+		driveLetter = url.QueryEscape(driveLetter)
 	}
 
-	if driveLetter != "" {
-		return "file:///" + driveLetter + strings.Join(parts, uriSeparator)
-	}
-
-	return "file:///" + strings.Join(parts, uriSeparator)
+	return "file:///" + driveLetter + strings.Join(parts, uriSeparator)
 }
 
 // ToPath converts a URI to a file path from a format for a given client.
@@ -59,15 +46,13 @@ func ToPath(client clients.Identifier, uri string) string {
 	path, hadPrefix := strings.CutPrefix(uri, "file://")
 	if hadPrefix {
 		// if it looks like a URI, then try and decode the path
-		decodedPath, err := url.QueryUnescape(path)
-		if err == nil {
+		if decodedPath, err := url.QueryUnescape(path); err == nil {
 			path = decodedPath
 		}
 	}
 
 	// handling case for windows when the drive letter is set
-	if client == clients.IdentifierVSCode &&
-		drivePattern.MatchString(path) {
+	if client == clients.IdentifierVSCode && drivePattern.MatchString(path) {
 		path = strings.TrimPrefix(path, uriSeparator)
 	}
 

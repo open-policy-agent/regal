@@ -60,12 +60,20 @@ type (
 		RegoVersion          string             `json:"rego_version"`
 		SuccessfulParseCount uint               `json:"successful_parse_count"`
 		ParseErrors          []types.Diagnostic `json:"parse_errors"`
+
+		// This exists only for compatibility with some rules in the AST package,
+		// where we can't reference e.g. input.params.textDocument.uri without violating
+		// the input schema. We should find a better solution for this long-term.
+		URI string `json:"uri"`
 	}
 
 	Environment struct {
-		PathSeparator    string `json:"path_separator"`
-		WorkspaceRootURI string `json:"workspace_root_uri"`
-		WebServerBaseURI string `json:"web_server_base_uri"`
+		PathSeparator     string    `json:"path_separator"`
+		WorkspaceRootURI  string    `json:"workspace_root_uri"`
+		WorkspaceRootPath string    `json:"workspace_root_path"`
+		WebServerBaseURI  string    `json:"web_server_base_uri"`
+		InputDotJSON      ast.Value `json:"input_dot_json,omitempty"`
+		InputDotJSONPath  *string   `json:"input_dot_json_path,omitempty"`
 	}
 
 	RegalContext struct {
@@ -77,7 +85,8 @@ type (
 	}
 
 	Requirements struct {
-		File FileRequirements `json:"file"`
+		File         FileRequirements `json:"file"`
+		InputDotJSON bool             `json:"input_dot_json"`
 	}
 
 	FileRequirements struct {

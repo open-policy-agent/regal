@@ -114,8 +114,7 @@ func fix(args []string, params *fixParams) (err error) {
 	)
 
 	if len(args) == 1 {
-		configSearchPath = args[0]
-		if !strings.HasPrefix(args[0], "/") {
+		if configSearchPath = args[0]; !strings.HasPrefix(args[0], "/") {
 			configSearchPath = filepath.Join(rio.Getwd(), args[0])
 		}
 	} else {
@@ -125,8 +124,7 @@ func fix(args []string, params *fixParams) (err error) {
 	if configSearchPath == "" {
 		log.Println("failed to determine relevant directory for config file search - won't search for custom config or rules")
 	} else {
-		regalDir, err = config.FindRegalDirectory(configSearchPath)
-		if err == nil {
+		if regalDir, err = config.FindRegalDirectory(configSearchPath); err == nil {
 			defer regalDir.Close()
 
 			if customRulesPath := filepath.Join(regalDir.Name(), "rules"); rio.IsDir(customRulesPath) {
@@ -171,8 +169,7 @@ func fix(args []string, params *fixParams) (err error) {
 			log.Printf("found user config file: %s", userConfigFile.Name())
 		}
 
-		err := yaml.NewDecoder(userConfigFile).Decode(&userConfig)
-		if errors.Is(err, io.EOF) {
+		if err := yaml.NewDecoder(userConfigFile).Decode(&userConfig); errors.Is(err, io.EOF) {
 			log.Printf("user config file %q is empty, will use the default config", userConfigFile.Name())
 		} else if err != nil {
 			if regalDir != nil {
@@ -239,8 +236,7 @@ func fix(args []string, params *fixParams) (err error) {
 			continue
 		}
 
-		absFiltered[i], err = filepath.Abs(f)
-		if err != nil {
+		if absFiltered[i], err = filepath.Abs(f); err != nil {
 			return fmt.Errorf("failed to get absolute path for %s: %w", f, err)
 		}
 	}

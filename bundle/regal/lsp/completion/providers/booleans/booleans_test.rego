@@ -8,16 +8,13 @@ test_suggested_in_head if {
 
 allow := f`}
 
-	regal_module := {"regal": {
-		"file": {
-			"name": "p.rego",
-			"lines": split(workspace["file:///p.rego"], "\n"),
+	regal_module := {
+		"params": {
+			"textDocument": {"uri": "file:///p.rego"},
+			"position": {"line": 2, "character": 9},
 		},
-		"context": {"location": {
-			"row": 3,
-			"col": 10,
-		}},
-	}}
+		"regal": {"file": {"lines": split(workspace["file:///p.rego"], "\n")}},
+	}
 
 	items := provider.items with input as regal_module with data.workspace.parsed as utils.parsed_modules(workspace)
 
@@ -35,16 +32,13 @@ allow if {
   foo := t
 }`}
 
-	regal_module := {"regal": {
-		"file": {
-			"name": "p.rego",
-			"lines": split(workspace["file:///p.rego"], "\n"),
+	regal_module := {
+		"params": {
+			"textDocument": {"uri": "file:///p.rego"},
+			"position": {"line": 3, "character": 9},
 		},
-		"context": {"location": {
-			"row": 4,
-			"col": 10,
-		}},
-	}}
+		"regal": {"file": {"lines": split(workspace["file:///p.rego"], "\n")}},
+	}
 
 	items := provider.items with input as regal_module with data.workspace.parsed as utils.parsed_modules(workspace)
 
@@ -62,16 +56,13 @@ allow if {
   foo == t
 }`}
 
-	regal_module := {"regal": {
-		"file": {
-			"name": "p.rego",
-			"lines": split(workspace["file:///p.rego"], "\n"),
+	regal_module := {
+		"params": {
+			"textDocument": {"uri": "file:///p.rego"},
+			"position": {"line": 3, "character": 9},
 		},
-		"context": {"location": {
-			"row": 4,
-			"col": 10,
-		}},
-	}}
+		"regal": {"file": {"lines": split(workspace["file:///p.rego"], "\n")}},
+	}
 
 	items := provider.items with input as regal_module with data.workspace.parsed as utils.parsed_modules(workspace)
 
@@ -89,16 +80,13 @@ allow if {
   t
 }`}
 
-	regal_module := {"regal": {
-		"file": {
-			"name": "p.rego",
-			"lines": split(workspace["file:///p.rego"], "\n"),
+	regal_module := {
+		"params": {
+			"textDocument": {"uri": "file:///p.rego"},
+			"position": {"line": 3, "character": 2},
 		},
-		"context": {"location": {
-			"row": 4,
-			"col": 3,
-		}},
-	}}
+		"regal": {"file": {"lines": split(workspace["file:///p.rego"], "\n")}},
+	}
 
 	items := provider.items with input as regal_module with data.workspace.parsed as utils.parsed_modules(workspace)
 

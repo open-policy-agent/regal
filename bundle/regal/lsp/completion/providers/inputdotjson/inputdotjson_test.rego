@@ -57,43 +57,45 @@ test_matching_input_suggestions if {
 }
 
 test_not_matching_input_suggestions if {
-	input_obj_new_loc := object.union(input_obj, {"regal": {"context": {"location": {
-		"row": 1,
-		"col": 1,
-	}}}})
+	input_obj_new_loc := object.union(input_obj, {"params": {
+		"textDocument": {"uri": "file:///example.rego"},
+		"position": {"line": 0, "character": 0},
+	}})
 	items := provider.items with input as input_obj_new_loc
 	items == set()
 }
 
-input_obj := {"regal": {
-	"context": {
-		"location": {
-			"row": 6,
-			"col": 12,
-		},
-		"input_dot_json": {
-			"user": {
-				"name": {
-					"first": "John",
-					"last": "Doe",
-				},
-				"email": "john@doe.com",
-				"roles": [{"name": "admin"}, {"name": "user"}],
-			},
-			"request": {
-				"method": "GET",
-				"url": "https://example.com",
-			},
-		},
-		"input_dot_json_path": "/foo/bar/input.json",
+input_obj := {
+	"params": {
+		"textDocument": {"uri": "file:///example.rego"},
+		"position": {"line": 5, "character": 11},
 	},
-	"file": {"lines": [
-		"package p",
-		"",
-		"import rego.v1",
-		"",
-		"allow if {",
-		"    f(input.r",
-		"}",
-	]},
-}}
+	"regal": {
+		"environment": {
+			"input_dot_json": {
+				"user": {
+					"name": {
+						"first": "John",
+						"last": "Doe",
+					},
+					"email": "john@doe.com",
+					"roles": [{"name": "admin"}, {"name": "user"}],
+				},
+				"request": {
+					"method": "GET",
+					"url": "https://example.com",
+				},
+			},
+			"input_dot_json_path": "/foo/bar/input.json",
+		},
+		"file": {"lines": [
+			"package p",
+			"",
+			"import rego.v1",
+			"",
+			"allow if {",
+			"    f(input.r",
+			"}",
+		]},
+	},
+}

@@ -9,18 +9,16 @@ import data.regal.lsp.completion.location
 
 _ref_is_internal(ref) if contains(ref, "._")
 
-_position := location.to_position(input.regal.context.location)
+_line := input.regal.file.lines[input.params.position.line]
 
-_line := input.regal.file.lines[_position.line]
-
-_word := location.ref_at(_line, input.regal.context.location.col)
+_word := location.ref_at(_line, input.params.position.character + 1)
 
 _workspace_rule_refs contains ref if {
 	some refs in data.workspace.defined_refs
 	some ref in refs
 }
 
-_parsed_current_file := data.workspace.parsed[input.regal.file.uri]
+_parsed_current_file := data.workspace.parsed[input.params.textDocument.uri]
 
 _current_file_package := ast.ref_to_string(_parsed_current_file.package.path)
 
@@ -103,7 +101,7 @@ items contains item if {
 		"kind": kind.variable,
 		"detail": "reference",
 		"textEdit": {
-			"range": location.word_range(_word, _position),
+			"range": location.word_range(_word, input.params.position),
 			"newText": ref,
 		},
 	}

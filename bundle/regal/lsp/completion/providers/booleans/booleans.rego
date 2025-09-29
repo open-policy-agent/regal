@@ -8,9 +8,7 @@ import data.regal.lsp.completion.location
 # METADATA
 # description: completion suggestions for true/false
 items contains item if {
-	position := location.to_position(input.regal.context.location)
-
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 	line != ""
 
 	words := regex.split(`\s+`, line)
@@ -20,7 +18,7 @@ items contains item if {
 
 	previous_word in {"==", ":="}
 
-	word := location.word_at(line, input.regal.context.location.col)
+	word := location.word_at(line, input.params.position.character + 1)
 
 	some b in ["true", "false"]
 
@@ -31,7 +29,7 @@ items contains item if {
 		"kind": kind.constant,
 		"detail": "boolean value",
 		"textEdit": {
-			"range": location.word_range(word, position),
+			"range": location.word_range(word, input.params.position),
 			"newText": b,
 		},
 	}

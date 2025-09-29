@@ -14,14 +14,13 @@ import data.regal.lsp.completion.location
 items contains item if {
 	count(input.regal.file.lines) > 1
 
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
-	word := location.word_at(line, input.regal.context.location.col)
+	line := input.regal.file.lines[input.params.position.line]
+	word := location.word_at(line, input.params.position.character + 1)
 
 	not regex.match(`\s`, word.text_before)
 
 	rules := {[name, _rule_kind(rule)] |
-		some rule in data.workspace.parsed[input.regal.file.uri].rules
+		some rule in data.workspace.parsed[input.params.textDocument.uri].rules
 		name := ast.ref_static_to_string(rule.head.ref)
 		not startswith(name, "test_")
 	}
@@ -35,7 +34,7 @@ items contains item if {
 		"kind": kind,
 		"detail": _kind_detail[kind],
 		"textEdit": {
-			"range": location.word_range(word, position),
+			"range": location.word_range(word, input.params.position),
 			"newText": concat("", [name, " "]),
 		},
 	}

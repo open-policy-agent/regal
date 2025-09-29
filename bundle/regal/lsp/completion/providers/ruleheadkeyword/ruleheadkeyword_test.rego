@@ -3,20 +3,13 @@ package regal.lsp.completion.providers.ruleheadkeyword_test
 import data.regal.lsp.completion.providers.ruleheadkeyword as provider
 
 test_keyword_completion_after_rule_name_no_prefix[label] if {
-	items := provider.items with input as {"regal": {
-		"file": {
-			"name": "/ws/p.rego",
-			"lines": split("package p\n\nrule ", "\n"),
+	items := provider.items with input as {
+		"params": {
+			"textDocument": {"uri": "file:///ws/p.rego"},
+			"position": {"line": 2, "character": 5},
 		},
-		"context": {
-			"workspace_root": "/ws",
-			"location": {
-				"row": 3,
-				"col": 6,
-			},
-		},
-		"environment": {"path_separator": "/"},
-	}}
+		"regal": {"file": {"lines": split("package p\n\nrule ", "\n")}},
+	}
 
 	count(items) == 3
 
@@ -33,20 +26,13 @@ test_keyword_completion_after_rule_name_no_prefix[label] if {
 }
 
 test_keyword_completion_after_rule_name_i_prefix_suggests_only_if if {
-	items := provider.items with input as {"regal": {
-		"file": {
-			"name": "/ws/p.rego",
-			"lines": split("package p\n\nrule i", "\n"),
+	items := provider.items with input as {
+		"params": {
+			"textDocument": {"uri": "file:///ws/p.rego"},
+			"position": {"line": 2, "character": 6},
 		},
-		"context": {
-			"workspace_root": "/ws",
-			"location": {
-				"row": 3,
-				"col": 7,
-			},
-		},
-		"environment": {"path_separator": "/"},
-	}}
+		"regal": {"file": {"lines": split("package p\n\nrule i", "\n")}},
+	}
 
 	items == {object.union(provider.completions["if"], {"textEdit": {
 		"newText": "if ",
@@ -58,20 +44,13 @@ test_keyword_completion_after_rule_name_i_prefix_suggests_only_if if {
 }
 
 test_completion_after_contains_only_has_if if {
-	items := provider.items with input as {"regal": {
-		"file": {
-			"name": "/ws/p.rego",
-			"lines": split("package p\n\nrule contains 100 ", "\n"),
+	items := provider.items with input as {
+		"params": {
+			"textDocument": {"uri": "file:///ws/p.rego"},
+			"position": {"line": 2, "character": 18},
 		},
-		"context": {
-			"workspace_root": "/ws",
-			"location": {
-				"row": 3,
-				"col": 19,
-			},
-		},
-		"environment": {"path_separator": "/"},
-	}}
+		"regal": {"file": {"lines": split("package p\n\nrule contains 100 ", "\n")}},
+	}
 
 	expected := {{
 		"kind": 14,

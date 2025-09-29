@@ -7,11 +7,15 @@
       "properties": {
         "textDocument": {
           "$ref": "#/$defs/textDocument"
+        },
+        "position": {
+          "$ref": "#/$defs/position"
         }
       },
       "type": "object",
       "required": [
-        "textDocument"
+        "textDocument",
+        "position"
       ]
     },
     "textDocument": {
@@ -25,6 +29,24 @@
       },
       "required": [
         "uri"
+      ]
+    },
+    "position": {
+      "type": "object",
+      "description": "Position in the text document",
+      "properties": {
+        "line": {
+          "type": "integer",
+          "description": "Line number (0-based)"
+        },
+        "character": {
+          "type": "integer",
+          "description": "Character offset in the line (0-based)"
+        }
+      },
+      "required": [
+        "line",
+        "character"
       ]
     }
   }

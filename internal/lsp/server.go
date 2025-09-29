@@ -32,8 +32,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/bundles"
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/lsp/completions"
-	"github.com/open-policy-agent/regal/internal/lsp/completions/providers"
 	lsconfig "github.com/open-policy-agent/regal/internal/lsp/config"
 	"github.com/open-policy-agent/regal/internal/lsp/documentsymbol"
 	"github.com/open-policy-agent/regal/internal/lsp/examples"
@@ -73,7 +71,6 @@ const (
 
 var (
 	noDocumentSymbols = make([]types.DocumentSymbol, 0)
-	noCompletionItems = make([]types.CompletionItem, 0)
 	noFoldingRanges   = make([]types.FoldingRange, 0)
 	noDiagnostics     = make([]types.Diagnostic, 0)
 
@@ -116,8 +113,7 @@ type LanguageServer struct {
 	bundleCache *bundles.Cache
 	queryCache  *query.Cache
 
-	completionsManager *completions.Manager
-	regoRouter         *rego.RegoRouter
+	regoRouter *rego.RegoRouter
 
 	commandRequest       chan types.ExecuteCommandParams
 	lintWorkspaceJobs    chan lintWorkspaceJob
@@ -152,6 +148,11 @@ type lintWorkspaceJob struct {
 	AggregateReportOnly bool
 }
 
+type fileLoadFailure struct {
+	URI   string
+	Error error
+}
+
 func NewLanguageServer(ctx context.Context, opts *LanguageServerOptions) *LanguageServer {
 	ls := NewLanguageServerMinimal(ctx, opts, nil)
 	ls.configWatcher = lsconfig.NewWatcher(&lsconfig.WatcherOpts{Logger: ls.log})
@@ -178,7 +179,6 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		commandRequest:              make(chan types.ExecuteCommandParams, 10),
 		templateFileJobs:            make(chan lintFileJob, 10),
 		templatingFiles:             concurrent.MapOf(make(map[string]bool)),
-		completionsManager:          completions.NewDefaultManager(ctx, c, store, qc),
 		webServer:                   web.NewServer(c, opts.Logger),
 		loadedBuiltins:              concurrent.MapOf(make(map[string]map[string]*ast.Builtin)),
 		workspaceDiagnosticsPoll:    opts.WorkspaceDiagnosticsPoll,
@@ -238,8 +238,6 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return handler.WithParams(req, l.handleTextDocumentHover)
 	case "textDocument/inlayHint":
 		return handler.WithParams(req, l.handleTextDocumentInlayHint)
-	case "textDocument/completion":
-		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentCompletion)
 	case "workspace/didChangeWatchedFiles":
 		return handler.WithParams(req, l.handleWorkspaceDidChangeWatchedFiles)
 	case "workspace/diagnostic":
@@ -284,6 +282,7 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	// Handles:
 	// - textDocument/codeAction
 	// - textDocument/codeLens
+	// - textDocument/completion
 	// - textDocument/documentLink
 	// - textDocument/documentHighlight
 	// - textDocument/signatureHelp
@@ -1443,31 +1442,6 @@ func (l *LanguageServer) handleTextDocumentInlayHint(params types.InlayHintParam
 	return inlayhint.FromModule(module, bis), nil
 }
 
-func (l *LanguageServer) handleTextDocumentCompletion(ctx context.Context, params types.CompletionParams) (any, error) {
-	// when config ignores a file, then we return an empty completion list as a no-op.
-	if l.ignoreURI(params.TextDocument.URI) {
-		return types.CompletionList{IsIncomplete: false, Items: []types.CompletionItem{}}, nil
-	}
-
-	// items is allocated here so that the return value is always a non-nil CompletionList
-	items, err := l.completionsManager.Run(ctx, params, &providers.Options{
-		Client:      l.client,
-		RootURI:     l.workspaceRootURI,
-		Builtins:    l.builtinsForCurrentCapabilities(),
-		RegoVersion: l.regoVersionForURI(params.TextDocument.URI),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to find completions: %w", err)
-	}
-
-	if items == nil {
-		// make sure the items is always [] instead of null as is required by the spec
-		items = noCompletionItems
-	}
-
-	return types.CompletionList{IsIncomplete: items != nil, Items: items}, nil
-}
-
 // Note: currently ignoring params.Query, as the client seems to do a good
 // job of filtering anyway, and that would merely be an optimization here.
 // But perhaps a good one to do at some point, and I'm not sure all clients
@@ -1724,7 +1698,6 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 
 	// opa-fmt is the default formatter if not set in the client options
 	formatter := "opa-fmt"
-
 	if l.client.InitOptions != nil && l.client.InitOptions.Formatter != nil {
 		formatter = *l.client.InitOptions.Formatter
 	}
@@ -2103,11 +2076,6 @@ func (l *LanguageServer) updateRootURI(ctx context.Context, rootURI string) erro
 	return nil
 }
 
-type fileLoadFailure struct {
-	URI   string
-	Error error
-}
-
 func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool) (
 	[]string, []fileLoadFailure, error,
 ) {
@@ -2319,9 +2287,10 @@ func (l *LanguageServer) regalContext(uri string, req *rego.Requirements) rego.R
 			Abs:         l.toPath(uri),
 		},
 		Environment: rego.Environment{
-			PathSeparator:    string(os.PathSeparator),
-			WebServerBaseURI: l.webServer.GetBaseURL(),
-			WorkspaceRootURI: l.workspaceRootURI,
+			PathSeparator:     string(os.PathSeparator),
+			WebServerBaseURI:  l.webServer.GetBaseURL(),
+			WorkspaceRootURI:  l.workspaceRootURI,
+			WorkspaceRootPath: l.workspacePath(),
 		},
 	}
 

@@ -8,19 +8,18 @@ import data.regal.lsp.completion.location
 # METADATA
 # description: all completion suggestions for the import keyword
 items contains item if {
-	position := location.to_position(input.regal.context.location)
-	line := input.regal.file.lines[position.line]
+	line := input.regal.file.lines[input.params.position.line]
 
 	startswith("import", line)
 
-	word := location.word_at(line, input.regal.context.location.col)
+	word := location.word_at(line, input.params.position.character + 1)
 
 	item := {
 		"label": "import",
 		"kind": kind.keyword,
 		"detail": "import <path>",
 		"textEdit": {
-			"range": location.word_range(word, position),
+			"range": location.word_range(word, input.params.position),
 			"newText": "import ",
 		},
 	}

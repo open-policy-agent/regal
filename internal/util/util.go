@@ -42,13 +42,6 @@ func SearchMap(object map[string]any, path ...string) (any, error) {
 	return current, nil
 }
 
-// Must0 an error (as commonly returned by Go functions) and panics if the error is not nil.
-func Must0(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 // Must takes a value and an error (as commonly returned by Go functions) and panics if the error is not nil.
 func Must[T any](v T, err error) T {
 	if err != nil {
