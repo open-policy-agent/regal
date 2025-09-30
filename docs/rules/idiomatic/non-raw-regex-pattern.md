@@ -22,7 +22,7 @@ all_digits if {
 
 ## Rationale
 
-[Raw strings](https://www.openpolicyagent.org/docs/edge/policy-language/#strings) are interpreted literally, allowing
+[Raw strings](https://www.openpolicyagent.org/docs/policy-language/#strings) are interpreted literally, allowing
 you to avoid having to escape special characters like `\` in your regex patterns. Using raw strings for regex patterns
 additionally makes them easier to identify as such.
 

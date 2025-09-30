@@ -19,6 +19,6 @@ to get a feel for the different features and capabilities of Regal.
     about Regal's advanced editor capabilities.
   - [DAP](https://openpolicyagent.org/projects/regal/debug-adapter): Live debug your Rego policies with Regal's DAP support.
 - [Fixing Issues](https://openpolicyagent.org/projects/regal/fixing): See Regal can help you fix issues in your Rego policies automatically.
-- [CI/CD](https://openpolicyagent.org/projects/regal/ci-cd): Run Regal as part of your automated checks.
+- [CI/CD](https://openpolicyagent.org/projects/regal/cicd): Run Regal as part of your automated checks.
 - [Custom Rules](https://openpolicyagent.org/projects/regal/custom-rules): Learn how to write your own rules for Regal.
 - [Adopters](https://openpolicyagent.org/projects/regal/adopters): See who else is using Regal.
