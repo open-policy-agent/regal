@@ -2129,7 +2129,7 @@
     },
     {
       "name": "io.jwt.decode_verify",
-      "description": "Verifies a JWT signature under parameterized constraints and decodes the claims if it is valid.\nSupports the following algorithms: HS256, HS384, HS512, RS256, RS384, RS512, ES256, ES384, ES512, PS256, PS384 and PS512.",
+      "description": "Verifies a JWT signature under parameterized constraints and decodes the claims if it is valid.\nSupports the following algorithms: HS256, HS384, HS512, RS256, RS384, RS512, ES256, ES384, ES512, PS256, PS384, PS512, and EdDSA.",
       "categories": [
         "tokens"
       ],
@@ -2279,6 +2279,33 @@
         "type": "function"
       },
       "nondeterministic": true
+    },
+    {
+      "name": "io.jwt.verify_eddsa",
+      "description": "Verifies if an EdDSA JWT signature is valid.",
+      "categories": [
+        "tokens"
+      ],
+      "decl": {
+        "args": [
+          {
+            "description": "JWT token whose signature is to be verified",
+            "name": "jwt",
+            "type": "string"
+          },
+          {
+            "description": "PEM encoded certificate, PEM encoded public key, or the JWK key (set) used to verify the signature",
+            "name": "certificate",
+            "type": "string"
+          }
+        ],
+        "result": {
+          "description": "`true` if the signature is valid, `false` otherwise",
+          "name": "result",
+          "type": "boolean"
+        },
+        "type": "function"
+      }
     },
     {
       "name": "io.jwt.verify_es256",

@@ -145,6 +145,7 @@ func init() {
 					exitCode = 2
 				}
 			}
+
 			if exitCode != 0 {
 				return exit(exitCode)
 			}

@@ -635,12 +635,9 @@ import data.unresolved`,
 	}
 }
 
-// 930767688 ns/op	2765064504 B/op	50859905 allocs/op    OPA v1.5.0
-// 948058583 ns/op	2826178208 B/op	51937635 allocs/op    OPA v1.5.1
-// 952606688 ns/op	2808314460 B/op	51658499 allocs/op
-// 892354312 ns/op	2669512068 B/op	48780541 allocs/op
-// ...
-// 884346375 ns/op	2419933936 B/op	50442824 allocs/op
+// 735509354 ns/op	2514529464 B/op	52228980 allocs/op // v1.8.0
+// 733834834 ns/op	2503450832 B/op	52042332 allocs/op // v1.9.0
+
 func BenchmarkRegalLintingItself(b *testing.B) {
 	conf := testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
 
