@@ -9,7 +9,7 @@ import (
 	_ "github.com/open-policy-agent/regal/pkg/roast/intern"
 )
 
-// Fallback config in case the faster number handling fails.
+// SafeNumberConfig is the fallback config in case faster number handling fails.
 // See: https://github.com/open-policy-agent/regal/issues/1592
 var SafeNumberConfig = jsoniter.Config{
 	UseNumber:                     true,

@@ -38,7 +38,7 @@ func ModuleToValue(mod *ast.Module) (ast.Value, error) {
 	return module.ToValue(mod)
 }
 
-// InterfaceToValue converts a native Go value x to a Value.
+// AnyToValue converts a native Go value x to a Value.
 // This is an optimized version of the same function in the OPA codebase,
 // and optimized in a way that makes it useful only for a map[string]any
 // unmarshaled from RoAST JSON. Don't use it for anything else.

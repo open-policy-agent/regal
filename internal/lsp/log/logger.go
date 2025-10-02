@@ -14,10 +14,10 @@ type Level int
 const (
 	// LevelOff is used to disable logging completely.
 	LevelOff Level = iota
-	// LogLevelMessage are intended to contain errors and other messages that
+	// LevelMessage are intended to contain errors and other messages that
 	// should be shown in normal operation.
 	LevelMessage
-	// LogLevelDebug is includes LogLevelMessage, but also information that is
+	// LevelDebug is includes LogLevelMessage, but also information that is
 	// not expected to be useful unless debugging the server.
 	LevelDebug
 )

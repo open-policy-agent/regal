@@ -40,6 +40,7 @@ func init() {
 			case formatJSON:
 				e := encoding.JSON().NewEncoder(os.Stdout)
 				e.SetIndent("", "  ")
+
 				if err := e.Encode(vi); err != nil {
 					log.SetOutput(os.Stderr)
 					log.Println(err)
