@@ -38,6 +38,7 @@ func init() {
 
 			if os.Getenv("REGAL_DEBUG") != "" {
 				fmt.Fprintln(os.Stderr, "Debug mode enabled")
+
 				verbose = true
 			}
 
@@ -46,10 +47,12 @@ func init() {
 
 			conf := connection.LoggingConfig{Logger: opts.Logger, LogInbound: verbose, LogOutbound: verbose}
 			copt := &connection.Options{LoggingConfig: conf}
+
 			conn := connection.NewWithOptions(ctx, rio.NewReadWriteCloser(os.Stdin, os.Stdout), ls.Handle, copt)
 			defer conn.Close()
 
 			ls.SetConn(conn)
+
 			go ls.StartDiagnosticsWorker(ctx)
 			go ls.StartHoverWorker(ctx)
 			go ls.StartCommandWorker(ctx)

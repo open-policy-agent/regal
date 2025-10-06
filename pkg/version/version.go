@@ -8,8 +8,8 @@ import (
 
 const platform = runtime.GOOS + "/" + runtime.GOARCH
 
+// Values injected at build time using -ldflags.
 var (
-	// Values injected at build time using -ldflags.
 	Version   = ""
 	Commit    = ""
 	Timestamp = ""

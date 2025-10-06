@@ -124,7 +124,7 @@ func formatRego(source []byte, opts format.Opts) (result []byte, err error) {
 
 	result, err = format.SourceWithOpts("", source, opts)
 
-	return
+	return result, err
 }
 
 // TestContextBuiltins returns the list of builtins as expected by the test runner.

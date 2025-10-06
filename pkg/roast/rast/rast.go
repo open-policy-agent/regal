@@ -1,4 +1,4 @@
-// Package providing tools for working with Rego's AST library (not RoAST)
+// Package rast provides tools for working with Rego's AST library (not RoAST)
 package rast
 
 import (
