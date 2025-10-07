@@ -12,8 +12,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/types/symbols"
 )
 
-// TODO: Rewrite in Rego.
 func All(contents string, module *ast.Module, builtins map[string]*ast.Builtin) []types.DocumentSymbol {
+	// TODO: Rewrite in Rego.
 	// Only pkgSymbols would likely suffice, but we're keeping docSymbols around in case
 	// we ever want to add more top-level symbols than the package.
 	docSymbols := make([]types.DocumentSymbol, 0)
