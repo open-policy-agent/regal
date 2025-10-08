@@ -131,12 +131,12 @@ func TestCompactReporterPublish(t *testing.T) {
 	var buf bytes.Buffer
 	testutil.NoErr(NewCompactReporter(&buf).Publish(t.Context(), rep))(t)
 
-	expect := `+--------------+------------------------------+
-|   Location   |         Description          |
-+--------------+------------------------------+
-| a.rego:1:1   | Rego must not break the law! |
-| b.rego:22:18 | Questionable decision found  |
-+--------------+------------------------------+
+	expect := `┌──────────────┬──────────────────────────────┐
+│   LOCATION   │         DESCRIPTION          │
+├──────────────┼──────────────────────────────┤
+│ a.rego:1:1   │ Rego must not break the law! │
+│ b.rego:22:18 │ Questionable decision found  │
+└──────────────┴──────────────────────────────┘
  3 files linted , 2 violations found.
 `
 
@@ -185,7 +185,7 @@ func TestGitHubReporterPublish(t *testing.T) {
 	var buf bytes.Buffer
 	testutil.NoErr(NewGitHubReporter(&buf).Publish(t.Context(), rep))(t)
 
-	if expectTable := "Rule:         \tbreaking-the-law"; !strings.Contains(buf.String(), expectTable) {
+	if expectTable := "Rule:           breaking-the-law"; !strings.Contains(buf.String(), expectTable) {
 		t.Errorf("expected table output %q, got %q", expectTable, buf.String())
 	}
 
