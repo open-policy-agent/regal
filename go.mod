@@ -16,7 +16,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/json-iterator/go v1.1.12
 	github.com/jstemmer/go-junit-report/v2 v2.1.0
-	github.com/olekukonko/tablewriter v0.0.5
+	github.com/olekukonko/tablewriter v1.1.0
 	github.com/open-policy-agent/opa v1.9.0
 	github.com/owenrumney/go-sarif/v2 v2.3.3
 	github.com/pdevine/go-asciisprite v0.1.6
@@ -89,6 +89,8 @@ require (
 	github.com/mozillazg/go-slugify v0.2.0 // indirect
 	github.com/mozillazg/go-unidecode v0.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/olekukonko/errors v1.1.0 // indirect
+	github.com/olekukonko/ll v0.0.9 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/philandstuff/dhall-golang/v6 v6.0.2 // indirect
 	github.com/pjbgf/sha1cd v0.5.0 // indirect
@@ -98,6 +100,7 @@ require (
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af // indirect

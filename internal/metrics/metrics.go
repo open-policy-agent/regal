@@ -12,9 +12,11 @@ const (
 	RegalFilterIgnoredFiles   = "regal_filter_ignored_files"
 	RegalFilterIgnoredModules = "regal_filter_ignored_modules"
 	RegalInputParse           = "regal_input_parse"
+	RegalPrepare              = "regal_prepare"
 	RegalLint                 = "regal_lint_total"
 	RegalLintRego             = "regal_lint_rego"
 	RegalLintRegoAggregate    = "regal_lint_rego_aggregate"
+	RegalMergeReport          = "regal_assemble_report"
 )
 
 func FromExprStats(stats profiler.ExprStats) report.ProfileEntry {

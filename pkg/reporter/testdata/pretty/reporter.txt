@@ -1,18 +1,18 @@
-Rule:         	breaking-the-law                	
-Level:        	error                           	
-Description:  	Rego must not break the law!    	
-Category:     	legal                           	
-Location:     	a.rego:1:1                      	
-Text:         	package illegal                 	
-Documentation:	https://example.com/illegal     	
-              	
-Rule:         	questionable-decision           	
-Level:        	warning                         	
-Description:  	Questionable decision found     	
-Category:     	really?                         	
-Location:     	b.rego:22:18                    	
-Text:         	default allow = true            	
-Documentation:	https://example.com/questionable	
+Rule:           breaking-the-law                 
+Level:          error                            
+Description:    Rego must not break the law!     
+Category:       legal                            
+Location:       a.rego:1:1                       
+Text:           package illegal                  
+Documentation:  https://example.com/illegal      
+                                                 
+Rule:           questionable-decision            
+Level:          warning                          
+Description:    Questionable decision found      
+Category:       really?                          
+Location:       b.rego:22:18                     
+Text:           default allow = true             
+Documentation:  https://example.com/questionable 
 
 3 files linted. 2 violations (1 error, 1 warning) found in 2 files. 1 rule skipped:
 - rule-missing-capability: Rule missing capability bar

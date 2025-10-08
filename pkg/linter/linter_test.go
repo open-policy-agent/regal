@@ -9,8 +9,6 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/topdown"
 
-	"github.com/open-policy-agent/regal/bundle"
-	"github.com/open-policy-agent/regal/internal/cache"
 	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/test"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -632,116 +630,5 @@ import data.unresolved`,
 
 	if exp, got := []string{"bar.rego", "baz.rego", "foo.rego"}, foundFiles; !slices.Equal(exp, got) {
 		t.Fatalf("unexpected files: %v", got)
-	}
-}
-
-// 930767688 ns/op	2765064504 B/op	50859905 allocs/op    OPA v1.5.0
-// 948058583 ns/op	2826178208 B/op	51937635 allocs/op    OPA v1.5.1
-// 952606688 ns/op	2808314460 B/op	51658499 allocs/op
-// 892354312 ns/op	2669512068 B/op	48780541 allocs/op
-// ...
-// 884346375 ns/op	2419933936 B/op	50442824 allocs/op
-func BenchmarkRegalLintingItself(b *testing.B) {
-	conf := testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
-
-	linter := NewLinter().
-		WithInputPaths([]string{"../../bundle"}).
-		WithBaseCache(cache.NewBaseCache()).
-		WithUserConfig(conf)
-
-	var rep report.Report
-
-	for b.Loop() {
-		rep = testutil.Must(linter.Lint(b.Context()))(b)
-	}
-
-	testutil.AssertNumViolations(b, 0, rep)
-}
-
-// 955670792 ns/op	3004937416 B/op	57408554 allocs/op
-// ...
-func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
-	conf := testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
-
-	linter := NewLinter().
-		WithInputPaths([]string{"../../bundle"}).
-		WithBaseCache(cache.NewBaseCache()).
-		WithUserConfig(conf).
-		MustPrepare(b.Context())
-
-	var rep report.Report
-
-	for b.Loop() {
-		rep = testutil.Must(linter.Lint(b.Context()))(b)
-	}
-
-	testutil.AssertNumViolations(b, 0, rep)
-}
-
-// 6	 168875708 ns/op	455586606 B/op	 8537889 allocs/op
-// 8	 139592615 ns/op	326694376 B/op	 5996314 allocs/op
-// ...
-func BenchmarkRegalNoEnabledRules(b *testing.B) {
-	linter := NewLinter().
-		WithInputPaths([]string{"../../bundle"}).
-		WithBaseCache(cache.NewBaseCache()).
-		WithDisableAll(true)
-
-	var rep report.Report
-
-	for b.Loop() {
-		rep = testutil.Must(linter.Lint(b.Context()))(b)
-	}
-
-	testutil.AssertNumViolations(b, 0, rep)
-}
-
-// 97546746 ns/op	401323023 B/op	 7427903 allocs/op
-// ...
-func BenchmarkRegalNoEnabledRulesPrepareOnce(b *testing.B) {
-	linter := NewLinter().
-		WithInputPaths([]string{"../../bundle"}).
-		WithBaseCache(cache.NewBaseCache()).
-		WithDisableAll(true).
-		MustPrepare(b.Context())
-
-	var rep report.Report
-
-	for b.Loop() {
-		rep = testutil.Must(linter.Lint(b.Context()))(b)
-	}
-
-	testutil.AssertNumViolations(b, 0, rep)
-}
-
-// Runs a separate benchmark for each rule in the bundle. Note that this will take *several* minutes to run,
-// meaning you do NOT want to do this more than occasionally. You may however find it helpful to use this with
-// a single, or handful of rules to get a better idea of how long they take to run, and relative to each other.
-func BenchmarkEachRule(b *testing.B) {
-	conf := testutil.Must(config.WithDefaultsFromBundle(bundle.LoadedBundle(), nil))(b)
-
-	linter := NewLinter().
-		WithInputPaths([]string{"../../bundle"}).
-		WithBaseCache(cache.NewBaseCache()).
-		WithDisableAll(true).
-		MustPrepare(b.Context())
-
-	for _, category := range conf.Rules {
-		for ruleName := range category {
-			// Uncomment / modify this to benchmark specific rule(s) only
-			//
-			// if ruleName != "metasyntactic-variable" {
-			// 	continue
-			// }
-			b.Run(ruleName, func(b *testing.B) {
-				var rep report.Report
-
-				for b.Loop() {
-					rep = testutil.Must(linter.WithEnabledRules(ruleName).Lint(b.Context()))(b)
-				}
-
-				testutil.AssertNumViolations(b, 0, rep)
-			})
-		}
 	}
 }
