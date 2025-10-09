@@ -193,11 +193,7 @@ func EnsureSuffix(s, suf string) string {
 // IsAnyError checks if the provided error "Is" any of the provided errors.
 func IsAnyError(err error, errs ...error) bool {
 	if err != nil {
-		for _, e := range errs {
-			if errors.Is(err, e) {
-				return true
-			}
-		}
+		return slices.ContainsFunc(errs, Partial2(errors.Is, err))
 	}
 
 	return false
@@ -275,7 +271,7 @@ func Wrap[T any](v T, err error) func(string) (T, error) {
 		}
 	}
 
-	return func(_ string) (T, error) {
+	return func(string) (T, error) {
 		return v, nil
 	}
 }
