@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,6 +20,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/metrics"
 	"github.com/open-policy-agent/opa/v1/profiler"
 	"github.com/open-policy-agent/opa/v1/rego"
+	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 	outil "github.com/open-policy-agent/opa/v1/util"
@@ -32,7 +32,6 @@ import (
 	"github.com/open-policy-agent/regal/pkg/builtins"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/report"
-	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 	"github.com/open-policy-agent/regal/pkg/rules"
 )
@@ -302,6 +301,9 @@ func (l Linter) WithBaseCache(baseCache topdown.BaseCache) Linter {
 // are very likely to change in the future, and this method should not yet be
 // relied on by external clients.
 func (l Linter) Prepare(ctx context.Context) (Linter, error) {
+	l.startTimer(regalmetrics.RegalPrepare)
+	defer l.stopTimer(regalmetrics.RegalPrepare)
+
 	conf, err := l.GetConfig()
 	if err != nil {
 		return l, fmt.Errorf("failed to merge config: %w", err)
@@ -318,7 +320,9 @@ func (l Linter) Prepare(ctx context.Context) (Linter, error) {
 		return l, fmt.Errorf("failed to prepare query: %w", err)
 	}
 
-	return l.notPrepared(), nil
+	l.isPrepared = true
+
+	return l, nil
 }
 
 // MustPrepare prepares the linter and panics on errors. Mostly used for tests.
@@ -335,8 +339,6 @@ func (l Linter) MustPrepare(ctx context.Context) Linter {
 // Lint runs the linter on provided policies.
 func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 	l.startTimer(regalmetrics.RegalLint)
-
-	finalReport := report.Report{}
 
 	if !l.isPrepared {
 		var err error
@@ -406,17 +408,16 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 		return report.Report{}, fmt.Errorf("failed to lint using Rego rules: %w", err)
 	}
 
-	finalReport.Violations = append(finalReport.Violations, regoReport.Violations...)
-
 	rulesSkippedCounter := 0
 
-	for _, notice := range regoReport.Notices {
-		if !slices.Contains(finalReport.Notices, notice) {
-			finalReport.Notices = append(finalReport.Notices, notice)
+	slices.SortFunc(regoReport.Notices, func(a, b report.Notice) int {
+		return strings.Compare(a.Title, b.Title)
+	})
+	regoReport.Notices = slices.Compact(regoReport.Notices)
 
-			if notice.Severity != "none" {
-				rulesSkippedCounter++
-			}
+	for _, notice := range regoReport.Notices {
+		if notice.Severity != "none" {
+			rulesSkippedCounter++
 		}
 	}
 
@@ -438,45 +439,36 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 			return report.Report{}, fmt.Errorf("failed to lint using Rego aggregate rules: %w", err)
 		}
 
-		finalReport.Violations = append(finalReport.Violations, aggregateReport.Violations...)
+		regoReport.Violations = append(regoReport.Violations, aggregateReport.Violations...)
 
 		if l.profiling {
-			finalReport.AggregateProfile = aggregateReport.AggregateProfile
+			regoReport.AggregateProfile = aggregateReport.AggregateProfile
 		}
 	}
 
-	finalReport.Summary = report.Summary{
+	regoReport.Summary = report.Summary{
 		FilesScanned:  len(input.FileNames),
-		FilesFailed:   len(finalReport.ViolationsFileCount()),
+		FilesFailed:   len(regoReport.ViolationsFileCount()),
 		RulesSkipped:  rulesSkippedCounter,
-		NumViolations: len(finalReport.Violations),
+		NumViolations: len(regoReport.Violations),
 	}
 
-	if l.exportAggregates {
-		finalReport.Aggregates = make(map[string][]report.Aggregate, len(regoReport.Aggregates))
-		for k, aggregates := range regoReport.Aggregates {
-			finalReport.Aggregates[k] = append(finalReport.Aggregates[k], aggregates...)
-		}
+	if !l.exportAggregates {
+		regoReport.Aggregates = nil
 	}
+
+	l.stopTimer(regalmetrics.RegalLint)
 
 	if l.metrics != nil {
-		l.metrics.Timer(regalmetrics.RegalLint).Stop()
-
-		finalReport.Metrics = l.metrics.All()
+		regoReport.Metrics = l.metrics.All()
 	}
 
-	if l.profiling {
-		if finalReport.AggregateProfile == nil {
-			finalReport.AggregateProfile = regoReport.AggregateProfile
-		} else {
-			maps.Copy(finalReport.AggregateProfile, regoReport.AggregateProfile)
-		}
-
-		finalReport.AggregateProfileToSortedProfile(10)
-		finalReport.AggregateProfile = nil
+	if l.profiling && regoReport.AggregateProfile != nil {
+		regoReport.AggregateProfileToSortedProfile(10)
+		regoReport.AggregateProfile = nil
 	}
 
-	return finalReport, nil
+	return regoReport, nil
 }
 
 // DetermineEnabledRules returns the list of rules that are enabled based on
@@ -586,7 +578,7 @@ func (l Linter) validate(conf *config.Config) error {
 	// Add all built-in rules
 	for _, b := range l.ruleBundles {
 		for _, module := range b.Modules {
-			parts := rast.UnquotedPath(module.Parsed.Package.Path)
+			parts, _ := storage.NewPathForRef(module.Parsed.Package.Path)
 			// 1     2     3   4
 			// regal.rules.cat.rule
 			if len(parts) != 4 {
@@ -600,7 +592,7 @@ func (l Linter) validate(conf *config.Config) error {
 
 	// Add any custom rules
 	for _, module := range l.customRuleModules {
-		parts := rast.UnquotedPath(module.Package.Path)
+		parts, _ := storage.NewPathForRef(module.Package.Path)
 		// 1      2     3     4   5
 		// custom.regal.rules.cat.rule
 		if len(parts) != 5 {
@@ -742,16 +734,9 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	regoReport := report.Report{}
-	regoReport.Aggregates = make(map[string][]report.Aggregate, len(input.FileNames))
-	regoReport.IgnoreDirectives = make(map[string]map[string][]string, len(input.FileNames))
-
 	operationCollect := len(input.FileNames) > 1 || l.useCollectQuery
 
-	var (
-		wg sync.WaitGroup
-		mu sync.Mutex
-	)
+	var wg sync.WaitGroup
 
 	// the error channel is buffered to prevent blocking
 	// caused by the context cancellation happening before
@@ -759,7 +744,9 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 	errCh := make(chan error, len(input.FileNames))
 	doneCh := make(chan bool)
 
-	for _, name := range input.FileNames {
+	results := make([]report.Report, len(input.FileNames))
+
+	for i, name := range input.FileNames {
 		wg.Add(1)
 
 		go func(name string) {
@@ -814,36 +801,7 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 				}
 			}
 
-			mu.Lock()
-			defer mu.Unlock()
-
-			regoReport.Violations = append(regoReport.Violations, result.Violations...)
-			regoReport.Notices = append(regoReport.Notices, result.Notices...)
-
-			for k := range result.Aggregates {
-				// Custom aggregate rules that have been invoked but not returned any data
-				// will return an empty map to signal that they have been called, and that
-				// the aggregate report for this rule should be invoked even when no data
-				// was aggregated. This because the absence of data is exactly what some rules
-				// will want to report on.
-				for _, agg := range result.Aggregates[k] {
-					if len(agg) == 0 {
-						if _, ok := regoReport.Aggregates[k]; !ok {
-							regoReport.Aggregates[k] = make([]report.Aggregate, 0)
-						}
-					} else {
-						regoReport.Aggregates[k] = append(regoReport.Aggregates[k], agg)
-					}
-				}
-			}
-
-			for k := range result.IgnoreDirectives {
-				regoReport.IgnoreDirectives[k] = result.IgnoreDirectives[k]
-			}
-
-			if l.profiling {
-				regoReport.AddProfileEntries(result.AggregateProfile)
-			}
+			results[i] = result
 		}(name)
 	}
 
@@ -859,6 +817,43 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 	case err := <-errCh:
 		return report.Report{}, fmt.Errorf("error encountered in rule evaluation %w", err)
 	case <-doneCh:
+		l.startTimer(regalmetrics.RegalMergeReport)
+		defer l.stopTimer(regalmetrics.RegalMergeReport)
+
+		regoReport := report.Report{}
+		regoReport.Aggregates = make(map[string][]report.Aggregate, len(input.FileNames))
+		regoReport.IgnoreDirectives = make(map[string]map[string][]string, len(input.FileNames))
+
+		for i := range results {
+			regoReport.Violations = append(regoReport.Violations, results[i].Violations...)
+			regoReport.Notices = append(regoReport.Notices, results[i].Notices...)
+
+			for k := range results[i].Aggregates {
+				// Custom aggregate rules that have been invoked but not returned any data
+				// will return an empty map to signal that they have been called, and that
+				// the aggregate report for this rule should be invoked even when no data
+				// was aggregated. This because the absence of data is exactly what some rules
+				// will want to report on.
+				for _, agg := range results[i].Aggregates[k] {
+					if len(agg) == 0 {
+						if _, ok := regoReport.Aggregates[k]; !ok {
+							regoReport.Aggregates[k] = make([]report.Aggregate, 0)
+						}
+					} else {
+						regoReport.Aggregates[k] = append(regoReport.Aggregates[k], agg)
+					}
+				}
+			}
+
+			for k := range results[i].IgnoreDirectives {
+				regoReport.IgnoreDirectives[k] = results[i].IgnoreDirectives[k]
+			}
+
+			if l.profiling {
+				regoReport.AddProfileEntries(results[i].AggregateProfile)
+			}
+		}
+
 		return regoReport, nil
 	}
 }

@@ -64,10 +64,6 @@ allow if concat(",", "a", "b") == "b,a"`
 
 			signatureHelp := testutil.MustBe[*types.SignatureHelp](t, result)
 
-			if signatureHelp == nil {
-				t.Fatal("expected signatureHelp, got nil")
-			}
-
 			if len(signatureHelp.Signatures) == 0 {
 				t.Error("expected at least one signature")
 			}

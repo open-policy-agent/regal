@@ -47,56 +47,52 @@ func NewInput(fileContent map[string]string, modules map[string]*ast.Module) Inp
 // the corresponding Rego version. If not provided, the file may be parsed multiple times in order to determine the
 // version (best-effort and may include false positives).
 func InputFromPaths(paths []string, prefix string, versionsMap map[string]ast.RegoVersion) (Input, error) {
-	if len(paths) == 1 && paths[0] == "-" {
+	numPaths := len(paths)
+	if numPaths == 1 && paths[0] == "-" {
 		return inputFromStdin()
 	}
 
-	content := make(map[string]string, len(paths))
-	modules := make(map[string]*ast.Module, len(paths))
-
 	var versionedDirs []string
-
 	if len(versionsMap) > 0 {
 		// Sort directories by length, so that the most specific path is found first
 		versionedDirs = util.KeysSorted(versionsMap)
 		slices.Reverse(versionedDirs)
 	}
 
-	var mu sync.Mutex
-
 	var wg sync.WaitGroup
 
-	wg.Add(len(paths))
+	wg.Add(numPaths)
 
-	errors := make([]error, 0, len(paths))
+	errors := make([]error, numPaths)
+	parsed := make([]*regoFile, numPaths)
 
-	for _, path := range paths {
-		go func(path string) {
-			defer wg.Done()
+	for i, path := range paths {
+		go func(i int, path string) {
+			opts := parse.ParserOptions()
+			opts.RegoVersion = RegoVersionFromMap(versionsMap, strings.TrimPrefix(path, prefix), ast.RegoUndefined)
 
-			parserOptions := parse.ParserOptions()
-			parserOptions.RegoVersion = RegoVersionFromMap(versionsMap, strings.TrimPrefix(path, prefix), ast.RegoUndefined)
-
-			result, err := regoWithOpts(path, parserOptions)
-
-			mu.Lock()
-			defer mu.Unlock()
-
-			if err != nil {
-				errors = append(errors, err)
-
-				return
+			if result, err := regoWithOpts(path, opts); err != nil {
+				errors[i] = err
+			} else {
+				parsed[i] = result
 			}
 
-			content[result.name] = util.ByteSliceToString(result.raw)
-			modules[result.name] = result.parsed
-		}(path)
+			wg.Done()
+		}(i, path)
 	}
 
 	wg.Wait()
 
-	if len(errors) > 0 {
+	if errors = rutil.Filter(errors, errNotNil); len(errors) > 0 {
 		return Input{}, fmt.Errorf("failed to parse %d module(s) — first error: %w", len(errors), errors[0])
+	}
+
+	content := make(map[string]string, numPaths)
+	modules := make(map[string]*ast.Module, numPaths)
+
+	for _, file := range parsed {
+		content[file.name] = util.ByteSliceToString(file.raw)
+		modules[file.name] = file.parsed
 	}
 
 	return NewInput(content, modules), nil
@@ -211,4 +207,8 @@ func InputFromTextWithOptions(fileName, text string, opts ast.ParserOptions) (In
 	}
 
 	return NewInput(map[string]string{fileName: text}, map[string]*ast.Module{fileName: mod}), nil
+}
+
+func errNotNil(err error) bool {
+	return err != nil
 }

@@ -11,9 +11,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/jstemmer/go-junit-report/v2/junit"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/renderer"
+	"github.com/olekukonko/tablewriter/tw"
 	"github.com/owenrumney/go-sarif/v2/sarif"
-
-	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/mode"
 	"github.com/open-policy-agent/regal/internal/novelty"
@@ -147,7 +147,7 @@ func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
 		}
 	}
 
-	_, err := fmt.Fprint(tr.out, table+footer+"\n")
+	_, err := fmt.Fprintln(tr.out, table+footer)
 	if err != nil {
 		return fmt.Errorf("failed to write report: %w", err)
 	}
@@ -198,17 +198,16 @@ func (tr FestiveReporter) Publish(ctx context.Context, r report.Report) error {
 
 func buildPrettyViolationsTable(violations []report.Violation) string {
 	sb := &strings.Builder{}
-	table := tablewriter.NewWriter(sb)
-
-	table.SetNoWhiteSpace(true)
-	table.SetTablePadding("\t")
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetCenterSeparator("")
-	table.SetColumnSeparator("")
-	table.SetRowSeparator("")
-	table.SetHeaderLine(false)
-	table.SetBorder(false)
-	table.SetAutoWrapText(false)
+	table := tablewriter.NewTable(sb, tablewriter.WithConfig(tablewriter.Config{
+		Row: tw.CellConfig{
+			Padding: tw.CellPadding{PerColumn: []tw.Padding{{Right: " "}, tw.PaddingDefault}},
+		},
+	}), tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
+		Borders: tw.BorderNone,
+		Settings: tw.Settings{
+			Separators: tw.Separators{BetweenRows: tw.Off, BetweenColumns: tw.Off},
+		},
+	})))
 
 	numViolations := len(violations)
 
@@ -275,13 +274,15 @@ func (tr CompactReporter) Publish(_ context.Context, r report.Report) error {
 	}
 
 	sb := &strings.Builder{}
-	table := tablewriter.NewWriter(sb)
+	table := tablewriter.NewTable(sb, tablewriter.WithConfig(tablewriter.Config{
+		Row: tw.CellConfig{
+			Formatting:   tw.CellFormatting{AutoWrap: tw.WrapNormal},
+			Alignment:    tw.CellAlignment{Global: tw.AlignLeft},
+			ColMaxWidths: tw.CellWidth{Global: 80},
+		},
+	}))
 
-	table.SetHeader([]string{"Location", "Description"})
-	table.SetAutoFormatHeaders(false)
-
-	table.SetColWidth(80)
-	table.SetAutoWrapText(true)
+	table.Header([]string{"Location", "Description"})
 
 	for i := range r.Violations {
 		table.Append([]string{r.Violations[i].Location.String(), r.Violations[i].Description})
@@ -302,14 +303,10 @@ func (tr CompactReporter) Publish(_ context.Context, r report.Report) error {
 func (tr JSONReporter) Publish(_ context.Context, r report.Report) error {
 	r.Violations = util.NullToEmpty(r.Violations)
 
-	bs, err := encoding.JSON().MarshalIndent(r, "", "  ")
-	if err != nil {
-		return fmt.Errorf("json marshalling of report failed: %w", err)
-	}
+	enc := encoding.JSON().NewEncoder(tr.out)
+	enc.SetIndent("", "  ")
 
-	_, err = fmt.Fprintln(tr.out, outil.ByteSliceToString(bs))
-
-	return err
+	return enc.Encode(r)
 }
 
 // Publish first prints the pretty formatted report to console for easy access in the logs. It then goes on
