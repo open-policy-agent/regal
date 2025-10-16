@@ -102,3 +102,33 @@ test_fail_redundant_existence_check_function_arg if {
 		"title": "redundant-existence-check",
 	}}
 }
+
+test_success_not_redundant_existence_check_negated if {
+	r := rule.report with input as ast.policy(`
+	not_redundant if {
+		rule.foo
+		not rule.foo.bar == 1
+	}`)
+
+	r == set()
+}
+
+test_success_not_redundant_existence_check_arg_negated if {
+	# ugly, but not an existence check
+	r := rule.report with input as ast.policy(`
+	fun(foo) if {
+		not foo
+	}`)
+
+	r == set()
+}
+
+test_success_not_redundant_existence_check_head_ref_negated if {
+	# even worse, and should be flagged. but not by this rule
+	r := rule.report with input as ast.policy(`
+	rule := input.foo if {
+		not input.foo < 4
+	}`)
+
+	r == set()
+}

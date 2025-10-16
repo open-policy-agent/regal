@@ -15,6 +15,7 @@ report contains violation if {
 
 	not expr.with
 
+	not rule.body[expr_index + 1].negated
 	ast.static_ref(expr.terms)
 
 	some term in rule.body[expr_index + 1].terms
@@ -35,6 +36,7 @@ report contains violation if {
 	some func in ast.functions
 	some expr in func.body
 
+	not expr.negated
 	expr.terms.type == "var"
 
 	some arg in func.head.args
@@ -54,6 +56,7 @@ report contains violation if {
 
 	some expr in _exprs[rule_index]
 
+	not expr.negated
 	expr.terms.type == "ref"
 	ast.is_terms_subset(expr.terms.value, rule.head.value.value)
 
