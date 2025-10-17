@@ -154,7 +154,7 @@ func opaTest(args []string) int {
 		return 1
 	}
 
-	regalBundle := rbundle.LoadedBundle()
+	regalBundle := rbundle.Loaded()
 
 	if err := store.Write(
 		ctx,

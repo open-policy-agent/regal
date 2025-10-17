@@ -301,7 +301,7 @@ func (tr CompactReporter) Publish(_ context.Context, r report.Report) error {
 
 // Publish prints a JSON report to the configured output.
 func (tr JSONReporter) Publish(_ context.Context, r report.Report) error {
-	r.Violations = util.NullToEmpty(r.Violations)
+	r.Violations = util.NilSliceToEmpty(r.Violations)
 
 	enc := encoding.JSON().NewEncoder(tr.out)
 	enc.SetIndent("", "  ")
@@ -317,7 +317,7 @@ func (tr GitHubReporter) Publish(ctx context.Context, r report.Report) error {
 		return err
 	}
 
-	r.Violations = util.NullToEmpty(r.Violations)
+	r.Violations = util.NilSliceToEmpty(r.Violations)
 
 	for _, violation := range r.Violations { //nolint:gocritic
 		if _, err := fmt.Fprintf(tr.out,

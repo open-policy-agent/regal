@@ -169,7 +169,7 @@ func (l *LanguageServer) assembleEvalBundles() map[string]bundle.Bundle {
 	if hasCustomRules {
 		// If someone evaluates a custom Regal rule, provide them the Regal bundle
 		// in order to make all Regal functions available
-		allBundles["regal"] = *rbundle.LoadedBundle()
+		allBundles["regal"] = *rbundle.Loaded()
 	}
 
 	return allBundles

@@ -11,8 +11,8 @@ import (
 	"strings"
 )
 
-// NullToEmpty returns empty slice if provided slice is nil.
-func NullToEmpty[T any](a []T) []T {
+// NilSliceToEmpty returns empty slice if provided slice is nil.
+func NilSliceToEmpty[T any](a []T) []T {
 	if a == nil {
 		return []T{}
 	}
@@ -281,15 +281,11 @@ func WrapErr(err error, msg string) error {
 	return fmt.Errorf("%s: %w", msg, err)
 }
 
-// WithOpen opens a file at the provided path, and passes the opened file to f.
-func WithOpen[T any](path string, f func(*os.File) (T, error)) (T, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return Zero[T](), fmt.Errorf("failed to open file '%s': %w", path, err)
+// SendToAll sends the provided value to all provided channels.
+func SendToAll[T any](val T, ch ...chan T) {
+	for _, c := range ch {
+		c <- val
 	}
-	defer file.Close()
-
-	return f(file)
 }
 
 // Pointer returns a pointer to the provided value.

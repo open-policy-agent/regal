@@ -105,7 +105,7 @@ func BenchmarkRegalNoEnabledRulesPrepareOnce(b *testing.B) {
 // meaning you do NOT want to do this more than occasionally. You may however find it helpful to use this with
 // a single, or handful of rules to get a better idea of how long they take to run, and relative to each other.
 func BenchmarkEachRule(b *testing.B) {
-	conf := testutil.Must(config.WithDefaultsFromBundle(bundle.LoadedBundle(), nil))(b)
+	conf := testutil.Must(config.WithDefaultsFromBundle(bundle.Loaded(), nil))(b)
 
 	linter := NewLinter().
 		WithInputPaths([]string{"../../bundle"}).

@@ -13,7 +13,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"testing"
 	"time"
 
 	"github.com/sourcegraph/jsonrpc2"
@@ -24,7 +23,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	outil "github.com/open-policy-agent/opa/v1/util"
 
-	rbundle "github.com/open-policy-agent/regal/bundle"
+	"github.com/open-policy-agent/regal/bundle"
 	"github.com/open-policy-agent/regal/internal/capabilities"
 	"github.com/open-policy-agent/regal/internal/compile"
 	rio "github.com/open-policy-agent/regal/internal/io"
@@ -120,6 +119,7 @@ type LanguageServer struct {
 	lintFileJobs         chan lintFileJob
 	builtinsPositionJobs chan lintFileJob
 	templateFileJobs     chan lintFileJob
+	prepareQueryJobs     chan struct{}
 
 	// templatingFiles tracks files currently being templated to ensure
 	// other updates are not processed while the file is being updated.
@@ -178,6 +178,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		builtinsPositionJobs:        make(chan lintFileJob, 10),
 		commandRequest:              make(chan types.ExecuteCommandParams, 10),
 		templateFileJobs:            make(chan lintFileJob, 10),
+		prepareQueryJobs:            make(chan struct{}, 1),
 		templatingFiles:             concurrent.MapOf(make(map[string]bool)),
 		webServer:                   web.NewServer(c, opts.Logger),
 		loadedBuiltins:              concurrent.MapOf(make(map[string]map[string]*ast.Builtin)),
@@ -193,7 +194,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		SuccessfulParseCountProvider: ls.cache.GetSuccessfulParseLineCount,
 	})
 
-	merged, _ := config.WithDefaultsFromBundle(rbundle.EmbeddedBundle(), cfg)
+	merged, _ := config.WithDefaultsFromBundle(bundle.Embedded(), cfg)
 
 	// Even though user configuration (if provided) will overwrite some of the default configuration,
 	// loading the default conf in the "constructor" ensures we can assume there's *some* configuration
@@ -462,6 +463,33 @@ func (l *LanguageServer) StartHoverWorker(ctx context.Context) {
 	}
 }
 
+// StartQueryCacheWorker starts a worker that waits for query strings on the
+// queryCacheJobs channel, and re-prepares and stores them in the query cache,
+// upon receiving them. This is currently used only when the REGAL_BUNDLE_PATH
+// development mode is set, to ensure we recompile on live bundle updates.
+func (l *LanguageServer) StartQueryCacheWorker(ctx context.Context) {
+	if bundle.DevModeEnabled() {
+		l.log.Debug("LSP development mode not enabled — not starting query cache worker")
+
+		return
+	}
+
+	bundle.Dev.Subscribe(l.prepareQueryJobs)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-l.prepareQueryJobs:
+			if err := l.queryCache.Store(ctx, query.MainEval, l.regoStore); err != nil {
+				l.log.Message("failed to prepare query %s: %s", query.MainEval, err)
+			} else {
+				l.log.Message("prepared query %s", query.MainEval)
+			}
+		}
+	}
+}
+
 func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 	if err := l.configWatcher.Start(ctx); err != nil {
 		l.log.Message("failed to start config watcher: %s", err)
@@ -481,7 +509,7 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 				continue
 			}
 
-			mergedConfig, err := config.WithDefaultsFromBundle(rbundle.LoadedBundle(), &userConfig)
+			mergedConfig, err := config.WithDefaultsFromBundle(bundle.Loaded(), &userConfig)
 			if err != nil {
 				l.log.Message("failed to load config: %s", err)
 
@@ -507,7 +535,7 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 		case <-l.configWatcher.Drop:
 			l.loadedConfigLock.Lock()
 
-			defaultConfig, _ := config.WithDefaultsFromBundle(rbundle.LoadedBundle(), nil)
+			defaultConfig, _ := config.WithDefaultsFromBundle(bundle.Loaded(), nil)
 			l.loadedConfig = &defaultConfig
 			l.loadedConfigLock.Unlock()
 
@@ -740,7 +768,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 							_, err = f.Write(jsonVal)
 						}
 
-						f.Close()
+						rio.CloseIgnore(f)
 					}
 				}
 			}
@@ -1532,7 +1560,7 @@ func (l *LanguageServer) handleTextDocumentDidOpen(
 			l.cache.SetFileContents(params.TextDocument.URI, params.TextDocument.Text)
 		}
 
-		sendToAll(lintFileJob{Reason: "textDocument/didOpen", URI: params.TextDocument.URI},
+		util.SendToAll(lintFileJob{Reason: "textDocument/didOpen", URI: params.TextDocument.URI},
 			l.lintFileJobs, l.builtinsPositionJobs,
 		)
 	}
@@ -1574,7 +1602,7 @@ func (l *LanguageServer) handleTextDocumentDidChange(params types.DidChangeTextD
 	}
 
 	if ignored := l.setMaybeIgnoredContents(params.TextDocument.URI, contents); !ignored {
-		sendToAll(lintFileJob{Reason: "textDocument/didChange", URI: params.TextDocument.URI},
+		util.SendToAll(lintFileJob{Reason: "textDocument/didChange", URI: params.TextDocument.URI},
 			l.lintFileJobs,
 			l.builtinsPositionJobs,
 		)
@@ -1618,6 +1646,9 @@ func (l *LanguageServer) handleTextDocumentDidSave(
 	ctx context.Context,
 	params types.DidSaveTextDocumentParams,
 ) (any, error) {
+	// If dev mode is enabled, reload the bundle on save. Otherwise, this is a no-op.
+	bundle.Dev.Reload()
+
 	if params.Text == nil || !strings.Contains(*params.Text, "\r\n") {
 		return struct{}{}, nil
 	}
@@ -1778,7 +1809,7 @@ func (l *LanguageServer) handleWorkspaceDidCreateFiles(params types.CreateFilesP
 			return nil, fmt.Errorf("failed to update cache for uri %q: %w", createOp.URI, err)
 		}
 
-		sendToAll(lintFileJob{Reason: "textDocument/didCreate", URI: createOp.URI},
+		util.SendToAll(lintFileJob{Reason: "textDocument/didCreate", URI: createOp.URI},
 			l.lintFileJobs,
 			l.builtinsPositionJobs,
 			l.templateFileJobs,
@@ -1841,7 +1872,7 @@ func (l *LanguageServer) handleWorkspaceDidRenameFiles(
 
 		l.cache.SetFileContents(renameOp.NewURI, content)
 
-		sendToAll(lintFileJob{Reason: "textDocument/didRename", URI: renameOp.NewURI},
+		util.SendToAll(lintFileJob{Reason: "textDocument/didRename", URI: renameOp.NewURI},
 			l.lintFileJobs,
 			l.builtinsPositionJobs,
 			l.templateFileJobs, // if the file being moved is empty, we template it too (if empty)
@@ -1876,13 +1907,11 @@ func (l *LanguageServer) handleWorkspaceDiagnostic() (any, error) {
 }
 
 func (l *LanguageServer) handleInitialize(ctx context.Context, params types.InitializeParams) (any, error) {
-	// Allow the Regal bundle to be read from path instead of the one embedded in the binary.
-	// This allows an extremely fast feedback loop when working on language server policies.
-	// TODO: Get this from init options or config instead.
-	if devPath := os.Getenv("REGAL_BUNDLE_PATH"); devPath != "" && !testing.Testing() {
-		fmt.Fprintln(os.Stderr, "REGAL_BUNDLE_PATH set. Will attempt to use development bundle from:", devPath)
+	if bundle.DevModeEnabled() {
+		path := os.Getenv("REGAL_BUNDLE_PATH")
+		fmt.Fprintln(os.Stderr, "Development mode enabled. Will attempt to build bundle from:", path)
 
-		rbundle.Dev.SetBundlePath(devPath)
+		bundle.Dev.SetPath(path)
 	}
 
 	if os.Getenv("REGAL_DEBUG") != "" {
@@ -1976,7 +2005,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 		},
 	}
 
-	defaultConfig, _ := config.WithDefaultsFromBundle(rbundle.LoadedBundle(), nil)
+	defaultConfig, _ := config.WithDefaultsFromBundle(bundle.Loaded(), nil)
 
 	l.loadedConfigLock.Lock()
 	l.loadedConfig = &defaultConfig
@@ -2042,7 +2071,7 @@ func (l *LanguageServer) updateRootURI(ctx context.Context, rootURI string) erro
 	l.bundleCache = bundles.NewCache(workspaceRootPath, l.log)
 
 	var configFilePath string
-	if configFile, err := config.FindConfig(workspaceRootPath); err == nil {
+	if configFile, err := config.Find(workspaceRootPath); err == nil {
 		configFilePath = configFile.Name()
 	} else if globalConfigDir := config.GlobalConfigDir(false); globalConfigDir != "" {
 		// the file might not exist and we only want to log we're using the global file if it does.
@@ -2090,8 +2119,10 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 
 		// if the caller has requested only new files, then we can exit early
 		// if the file is already in the cache.
-		if _, ok := l.cache.GetFileContents(fileURI); newOnly && ok {
-			return nil
+		if newOnly {
+			if _, ok := l.cache.GetFileContents(fileURI); ok {
+				return nil
+			}
 		}
 
 		changed, _, err := l.cache.UpdateForURIFromDisk(fileURI, path)
@@ -2157,9 +2188,9 @@ func (l *LanguageServer) handleWorkspaceDidChangeWatchedFiles(
 	for _, change := range params.Changes {
 		// this handles the case of a new config file being created when one did not exist before
 		if util.HasAnySuffix(change.URI, filepath.Join(".regal", "config.yaml"), ".regal.yaml") {
-			if configFile, err := config.FindConfig(l.workspacePath()); err == nil {
+			if configFile, err := config.Find(l.workspacePath()); err == nil {
 				l.configWatcher.Watch(configFile.Name())
-				configFile.Close()
+				rio.CloseIgnore(configFile)
 			}
 		}
 
@@ -2326,10 +2357,4 @@ func positionToOffset(text string, p types.Position) int {
 	}
 
 	return -1
-}
-
-func sendToAll[T any](val T, ch ...chan T) {
-	for _, c := range ch {
-		c <- val
-	}
 }
