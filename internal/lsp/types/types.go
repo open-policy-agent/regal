@@ -87,14 +87,17 @@ type (
 		DocumentSymbolProvider     bool                    `json:"documentSymbolProvider"`
 		WorkspaceSymbolProvider    bool                    `json:"workspaceSymbolProvider"`
 		DefinitionProvider         bool                    `json:"definitionProvider"`
+		SelectionRangeProvider     bool                    `json:"selectionRangeProvider"`
+		LinkedEditingRangeProvider bool                    `json:"linkedEditingRangeProvider"`
 	}
 
 	TextDocumentPositionParams struct {
 		TextDocument TextDocumentIdentifier `json:"textDocument"`
 		Position     Position               `json:"position"`
 	}
-	DefinitionParams        = TextDocumentPositionParams
-	TextDocumentHoverParams = TextDocumentPositionParams
+	DefinitionParams         = TextDocumentPositionParams
+	TextDocumentHoverParams  = TextDocumentPositionParams
+	LinkedEditingRangeParams = TextDocumentPositionParams
 
 	CompletionOptions struct {
 		CompletionItem    CompletionItemOptions `json:"completionItem"`
@@ -196,6 +199,21 @@ type (
 	DocumentHighlight struct {
 		Range Range `json:"range"`
 		Kind  uint  `json:"kind"`
+	}
+
+	LinkedEditingRanges struct {
+		Ranges      []Range `json:"ranges"`
+		WordPattern *string `json:"wordPattern,omitempty"`
+	}
+
+	SelectionRangeParams struct {
+		TextDocument TextDocumentIdentifier `json:"textDocument"`
+		Positions    []Position             `json:"positions"`
+	}
+
+	SelectionRange struct {
+		Range  Range           `json:"range"`
+		Parent *SelectionRange `json:"parent,omitempty"`
 	}
 
 	ExecuteCommandOptions struct {
