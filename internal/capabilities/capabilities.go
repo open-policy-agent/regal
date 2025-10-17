@@ -19,6 +19,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/capabilities/embedded"
+	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/util"
 )
 
@@ -189,7 +190,7 @@ func lookupFileURL(parsedURL *url.URL) (*ast.Capabilities, error) {
 		path = path[1:]
 	}
 
-	return util.WithOpen(path, func(fd *os.File) (*ast.Capabilities, error) {
+	return io.WithOpen(path, func(fd *os.File) (*ast.Capabilities, error) {
 		return util.Wrap(ast.LoadCapabilitiesJSON(fd))("failed to load capabilities")
 	})
 }
