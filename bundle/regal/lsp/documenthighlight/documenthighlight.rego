@@ -7,11 +7,11 @@
 #   - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentHighlight
 # schemas:
 #   - input:        schema.regal.lsp.common
-#   - input.params: schema.regal.lsp.documenthighlight
+#   - input.params: schema.regal.lsp.textdocumentposition
 package regal.lsp.documenthighlight
 
 import data.regal.ast
-import data.regal.lsp.completion.location
+import data.regal.lsp.util.find
 import data.regal.lsp.util.location as uloc
 import data.regal.util
 
@@ -22,10 +22,10 @@ result["response"] := items
 # METADATA
 # description: Highlights a function args in position
 items contains item if {
-	[arg, _] := _arg_at_position
+	[arg, _] := find.arg_at_position
 
 	item := {
-		"range": uloc.to_range(util.to_location_object(arg.location)),
+		"range": uloc.parse_range(arg.location),
 		"kind": 2, # Write
 	}
 }
@@ -33,7 +33,7 @@ items contains item if {
 # METADATA
 # description: Highlights function arg references in function body when clicked
 items contains item if {
-	[arg, i] := _arg_at_position
+	[arg, i] := find.arg_at_position
 
 	some expr in ast.found.expressions[sprintf("%d", [i])]
 
@@ -43,7 +43,7 @@ items contains item if {
 	value.value == arg.value
 
 	item := {
-		"range": uloc.to_range(util.to_location_object(value.location)),
+		"range": uloc.parse_range(value.location),
 		"kind": 3, # Read
 	}
 }
@@ -51,7 +51,7 @@ items contains item if {
 # METADATA
 # description: Highlights function arg references in head value body when clicked
 items contains item if {
-	[arg, i] := _arg_at_position
+	[arg, i] := find.arg_at_position
 
 	walk(data.workspace.parsed[input.params.textDocument.uri].rules[i].head.value, [_, value])
 
@@ -59,7 +59,7 @@ items contains item if {
 	value.value == arg.value
 
 	item := {
-		"range": uloc.to_range(util.to_location_object(value.location)),
+		"range": uloc.parse_range(value.location),
 		"kind": 3, # Read
 	}
 }
@@ -115,23 +115,6 @@ items contains item if {
 		},
 		"kind": 1,
 	}
-}
-
-_arg_at_position := [arg, i] if {
-	text := input.regal.file.lines[input.params.position.line]
-	word := location.word_at(text, input.params.position.character)
-
-	some i, rule in data.workspace.parsed[input.params.textDocument.uri].rules
-	some arg in rule.head.args
-
-	arg.type == "var"
-	arg.value == word.text
-
-	loc := util.to_location_object(arg.location)
-
-	input.params.position.line + 1 == loc.row
-	input.params.position.character >= loc.col - 1
-	input.params.position.character <= (loc.col - 1) + count(arg.value)
 }
 
 _find_annotation(module, row) := annotation if {

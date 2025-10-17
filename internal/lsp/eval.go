@@ -96,8 +96,7 @@ func prepareRegoArgs(
 	cfg *config.Config,
 ) []func(*rego.Rego) {
 	bundleArgs := make([]func(*rego.Rego), 0, len(bundles))
-	// this copy is expensive, but I don't think we can avoid it
-	for key, b := range bundles { //nolint:gocritic
+	for key, b := range bundles { //nolint:gocritic // expensive copy, but I don't think we can avoid it
 		bundleArgs = append(bundleArgs, rego.ParsedBundle(key, &b))
 	}
 
