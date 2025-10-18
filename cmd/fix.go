@@ -163,7 +163,7 @@ func fix(args []string, params *fixParams) (err error) {
 	userConfigFile, err := readUserConfig(params.lintAndFixParams, configSearchPath)
 	switch {
 	case err == nil:
-		defer rio.CloseFileIgnore(userConfigFile)
+		defer rio.CloseIgnore(userConfigFile)
 
 		if params.debug {
 			log.Printf("found user config file: %s", userConfigFile.Name())

@@ -80,6 +80,7 @@ func LoadRegalBundlePath(path string) (*bundle.Bundle, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open root: %w", err)
 	}
+	defer CloseIgnore(root)
 
 	return LoadRegalBundleFS(root.FS())
 }
@@ -103,10 +104,10 @@ func ToMap(a any) map[string]any {
 	return r
 }
 
-// CloseFileIgnore closes file ignoring errors, mainly for deferred cleanup.
-func CloseFileIgnore(file *os.File) {
-	if file != nil {
-		_ = file.Close()
+// CloseIgnore closes handle ignoring errors, mainly for deferred cleanup.
+func CloseIgnore(handle io.Closer) {
+	if handle != nil {
+		_ = handle.Close()
 	}
 }
 
@@ -137,6 +138,20 @@ func Exists(path string) bool {
 	return err == nil
 }
 
+// WithOpen opens the file at path, defers close, and invokes f with the *os.File.
+// It returns the result and preserves the original error semantics from the previous location.
+func WithOpen[T any](path string, f func(*os.File) (T, error)) (T, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		var zero T
+
+		return zero, fmt.Errorf("failed to open file '%s': %w", path, err)
+	}
+	defer file.Close()
+
+	return f(file)
+}
+
 // WithCreateRecursive creates a file at the given path, ensuring that all parent directories
 // are created recursively. It then calls the provided function with the created file as an argument
 // before closing the file.
@@ -149,7 +164,7 @@ func WithCreateRecursive(path string, fn func(f *os.File) error) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer CloseIgnore(file)
 
 	return fn(file)
 }

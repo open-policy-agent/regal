@@ -59,6 +59,7 @@ func init() {
 			go ls.StartConfigWorker(ctx)
 			go ls.StartWorkspaceStateWorker(ctx)
 			go ls.StartTemplateWorker(ctx)
+			go ls.StartQueryCacheWorker(ctx)
 			go ls.StartWebServer(ctx)
 
 			sigChan := make(chan os.Signal, 1)

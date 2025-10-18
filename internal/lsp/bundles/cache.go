@@ -149,7 +149,7 @@ func (c *cacheBundle) Refresh(path string) (bool, error) {
 }
 
 func hasher(path string, curr map[string][]byte) (map[string][]byte, error) {
-	return rutil.WithOpen(path, func(file *os.File) (map[string][]byte, error) {
+	return rio.WithOpen(path, func(file *os.File) (map[string][]byte, error) {
 		hash := md5.New() //nolint:gosec
 		if _, err := io.Copy(hash, file); err != nil {
 			return nil, fmt.Errorf("failed to calculate MD5 hash for file %q: %w", path, err)
