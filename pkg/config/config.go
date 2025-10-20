@@ -123,7 +123,7 @@ func (d *Default) mapToConfig(result any) error {
 }
 
 func FromPath(path string) (Config, error) {
-	return util.Wrap(util.WithOpen(path, FromFile))("failed to open config file")
+	return util.Wrap(rio.WithOpen(path, FromFile))("failed to open config file")
 }
 
 func FromFile(file *os.File) (Config, error) {
@@ -133,9 +133,9 @@ func FromFile(file *os.File) (Config, error) {
 	return conf, err
 }
 
-// FindConfig attempts to find either the .regal directory or .regal.yaml
+// Find attempts to find either the .regal directory or .regal.yaml
 // config file, and returns the appropriate file or an error.
-func FindConfig(path string) (*os.File, error) {
+func Find(path string) (*os.File, error) {
 	regalDir, regalDirError := FindRegalDirectory(path)
 	regalConfigFile, regalConfigFileError := FindRegalConfigFile(path)
 
@@ -284,7 +284,7 @@ func FindBundleRootDirectories(path string) ([]string, error) {
 			// Opening files as part of walking is generally not a good idea...
 			// but I think we can assume the number of .regal directories in a project
 			// is limited to a reasonable number.
-			roots, err := util.WithOpen(path, rootsFromRegalConfigDirOrFile)
+			roots, err := rio.WithOpen(path, rootsFromRegalConfigDirOrFile)
 			if err != nil {
 				return fmt.Errorf("failed to get roots from .regal directory: %w", err)
 			}

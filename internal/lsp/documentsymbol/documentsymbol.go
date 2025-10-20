@@ -10,6 +10,7 @@ import (
 	rast "github.com/open-policy-agent/regal/internal/ast"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/types/symbols"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 func All(contents string, module *ast.Module, builtins map[string]*ast.Builtin) []types.DocumentSymbol {
@@ -87,31 +88,27 @@ func All(contents string, module *ast.Module, builtins map[string]*ast.Builtin) 
 		pkg.Children = &pkgSymbols
 	}
 
-	docSymbols = append(docSymbols, pkg)
-
-	return docSymbols
+	return append(docSymbols, pkg)
 }
 
-//nolint:gosec
 func locationToRange(location *ast.Location) types.Range {
 	lines := bytes.Split(location.Text, []byte("\n"))
+	numLines := len(lines)
+	startLine := util.SafeIntToUint(location.Row - 1)
 
-	endLine := uint(location.Row - 1)
-	if len(lines) != 1 {
-		endLine += uint(len(lines) - 1)
+	endLine := startLine
+	if numLines != 1 {
+		endLine += util.SafeIntToUint(numLines - 1)
 	}
 
-	return types.RangeBetween(location.Row-1, location.Col-1, endLine, len(lines[len(lines)-1]))
+	return types.RangeBetween(startLine, location.Col-1, endLine, len(lines[numLines-1]))
 }
 
 func toWorkspaceSymbol(docSym types.DocumentSymbol, docURL string) types.WorkspaceSymbol {
 	return types.WorkspaceSymbol{
-		Name: docSym.Name,
-		Kind: docSym.Kind,
-		Location: types.Location{
-			URI:   docURL,
-			Range: docSym.Range,
-		},
+		Name:     docSym.Name,
+		Kind:     docSym.Kind,
+		Location: types.Location{URI: docURL, Range: docSym.Range},
 	}
 }
 

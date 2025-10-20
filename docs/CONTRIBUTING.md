@@ -41,7 +41,7 @@ Regal.
 - A rule that misses a few cases is better than no rule at all, but it's good to document any known edge cases
 - False positives should however always be avoided
 - Add tests for as many cases as you can think of
-- Any new rule should have an example violation added in `e2e/testada/violations/most_violations.rego`
+- Any new rule should have an example violation added in `e2e/testdata/violations/most_violations.rego`
 - All the steps for building, testing and linting in this document should pass
 
 If you're struggling with any of the above points, or you're unsure of what to do, no worries! Just say so in your PR,
@@ -64,6 +64,36 @@ the evaluation feature automatically use the AST of the file as input. This allo
 the policy you're working on, providing an extremely fast feedback loop for developing new rules!
 
 ![Use AST of file as input](./assets/lsp/eval_use_as_input.png)
+
+## Contributing to the Language Server
+
+Since the linter is also a core component of the language server, it's likely a good strategy to first understand how
+that works, and the suggested rules development workflow described above. That said, working with a *server* is by
+nature different from a one-off process. So what would a good workflow for language server development look like?
+
+By default, Regal uses policies and data from its `bundle` directory, which it embeds **at compile time**. This means
+that if you make a change in any Rego policy, you'll need to re-run `go build`/`go run` for the change to take effect.
+And since you most likely will be testing the language server via an editor, that too will have to be either restarted,
+or instructed to reload the language server after each compilation. This is frankly a pretty frustrating development
+experience, and even more so when you're used to the fast feedback loop of linter rules development.
+
+While changing any Go code in the language server still requires recompilation, it's now possible to tell the language
+server to load its bundle (i.e. all Rego policies and JSON files that Regal depend on) from disk instead of using the
+bundle embedded in the binary. By setting the `REGAL_BUNDLE_PATH` environment variable to the path of your Regal
+repository's `bundle` directory, the language server will prefer to load its bundle from there instead, falling back to
+the embedded bundle only when issues prevent the bundle on disk from being loaded.
+
+When `REGAL_BUNDLE_PATH` is set, any change you make inside the target `bundle` directory will trigger an update of the
+bundle, immediately propagating the change to the language server. While obviously less efficient than loading the
+bundle only once, this provides a **very** nice language server development experience, where any change you make is
+immediately reflected in your editor's UI. Try it out!
+
+### Caveats
+
+- The language server reloads the bundle only on file **save** events, so if you don't see your changes reflected, you
+  probably forgot to save the file you changed.
+- The `REGAL_BUNDLE_PATH` variable is only read on server initialization, and changing this while the language server
+  is running has no effect until the server is restarted.
 
 ## Building
 

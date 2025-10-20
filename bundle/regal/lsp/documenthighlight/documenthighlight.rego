@@ -1,10 +1,8 @@
 # METADATA
 # description: |
-#   Highlights text in document depending on cursor position. Currently highlights only
-#   metadata attributes when clicked, which is a nice little touch, but mostly just a first
-#   test of this feature, and an implementation to easily extend in the future. One example
-#   of this feature being helpful could be clicking a variable, and have its source highlighted,
-#   or clicking a definition and highlight locations where used, and so on.
+#   Highlights text in document depending on cursor position. Currently highlights:
+#     - metadata attributes at cursor position
+#     - function arguments and references to them in the function head and body
 # related_resources:
 #   - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentHighlight
 # schemas:
@@ -12,11 +10,59 @@
 #   - input.params: schema.regal.lsp.documenthighlight
 package regal.lsp.documenthighlight
 
+import data.regal.ast
+import data.regal.lsp.completion.location
+import data.regal.lsp.util.location as uloc
 import data.regal.util
 
 # METADATA
 # entrypoint: true
 result["response"] := items
+
+# METADATA
+# description: Highlights a function args in position
+items contains item if {
+	[arg, _] := _arg_at_position
+
+	item := {
+		"range": uloc.to_range(util.to_location_object(arg.location)),
+		"kind": 2, # Write
+	}
+}
+
+# METADATA
+# description: Highlights function arg references in function body when clicked
+items contains item if {
+	[arg, i] := _arg_at_position
+
+	some expr in ast.found.expressions[sprintf("%d", [i])]
+
+	walk(expr, [_, value])
+
+	value.type == "var"
+	value.value == arg.value
+
+	item := {
+		"range": uloc.to_range(util.to_location_object(value.location)),
+		"kind": 3, # Read
+	}
+}
+
+# METADATA
+# description: Highlights function arg references in head value body when clicked
+items contains item if {
+	[arg, i] := _arg_at_position
+
+	walk(data.workspace.parsed[input.params.textDocument.uri].rules[i].head.value, [_, value])
+
+	value.type == "var"
+	value.value == arg.value
+
+	item := {
+		"range": uloc.to_range(util.to_location_object(value.location)),
+		"kind": 3, # Read
+	}
+}
 
 # METADATA
 # description: Highlights METADATA itself when clicked
@@ -69,6 +115,23 @@ items contains item if {
 		},
 		"kind": 1,
 	}
+}
+
+_arg_at_position := [arg, i] if {
+	text := input.regal.file.lines[input.params.position.line]
+	word := location.word_at(text, input.params.position.character)
+
+	some i, rule in data.workspace.parsed[input.params.textDocument.uri].rules
+	some arg in rule.head.args
+
+	arg.type == "var"
+	arg.value == word.text
+
+	loc := util.to_location_object(arg.location)
+
+	input.params.position.line + 1 == loc.row
+	input.params.position.character >= loc.col - 1
+	input.params.position.character <= (loc.col - 1) + count(arg.value)
 }
 
 _find_annotation(module, row) := annotation if {

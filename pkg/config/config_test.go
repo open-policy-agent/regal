@@ -105,7 +105,7 @@ func TestFindConfig(t *testing.T) {
 			t.Parallel()
 
 			test.WithTempFS(testData.FS, func(root string) {
-				configFile, err := FindConfig(filepath.Join(root, "foo", "bar", "baz"))
+				configFile, err := Find(filepath.Join(root, "foo", "bar", "baz"))
 				if testData.Error != "" {
 					testutil.ErrMustContain(err, testData.Error)(t)
 				} else if err != nil {

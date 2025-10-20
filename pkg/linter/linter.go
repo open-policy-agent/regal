@@ -94,7 +94,7 @@ func init() {
 // NewLinter creates a new Regal linter.
 func NewLinter() Linter {
 	return Linter{
-		ruleBundles: []*bundle.Bundle{rbundle.LoadedBundle()},
+		ruleBundles: []*bundle.Bundle{rbundle.Loaded()},
 	}
 }
 
@@ -526,7 +526,7 @@ func (l Linter) GetConfig() (*config.Config, error) {
 		return l.combinedCfg, nil
 	}
 
-	mergedConf, err := config.WithDefaultsFromBundle(rbundle.LoadedBundle(), l.userConfig)
+	mergedConf, err := config.WithDefaultsFromBundle(rbundle.Loaded(), l.userConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read provided config: %w", err)
 	}
@@ -659,12 +659,12 @@ func getEnabledRules(rs rego.ResultSet) ([]string, error) {
 func (l Linter) createDataBundle(conf config.Config) *bundle.Bundle {
 	params := map[string]any{
 		"disable_all":      l.disableAll,
-		"disable_category": util.NullToEmpty(l.disableCategory),
-		"disable":          util.NullToEmpty(l.disable),
+		"disable_category": util.NilSliceToEmpty(l.disableCategory),
+		"disable":          util.NilSliceToEmpty(l.disable),
 		"enable_all":       l.enableAll,
-		"enable_category":  util.NullToEmpty(l.enableCategory),
-		"enable":           util.NullToEmpty(l.enable),
-		"ignore_files":     util.NullToEmpty(l.ignoreFiles),
+		"enable_category":  util.NilSliceToEmpty(l.enableCategory),
+		"enable":           util.NilSliceToEmpty(l.enable),
+		"ignore_files":     util.NilSliceToEmpty(l.ignoreFiles),
 	}
 
 	return &bundle.Bundle{

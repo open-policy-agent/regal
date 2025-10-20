@@ -100,7 +100,7 @@ func (c *Cache) GetOrSet(ctx context.Context, store storage.Store, query string)
 		return cq, nil
 	}
 
-	if isBundleDevelopmentMode() {
+	if rbundle.DevModeEnabled() {
 		// In dev mode, we always prepare the query to ensure changes in the bundle are reflected
 		// immediately. We can however reuse the query and the store (if set).
 		pq, err := prepareQuery(ctx, cq.body, cq.store)
@@ -115,7 +115,7 @@ func (c *Cache) GetOrSet(ctx context.Context, store storage.Store, query string)
 }
 
 func prepareQuery(ctx context.Context, query ast.Body, store storage.Store) (*rego.PreparedEvalQuery, error) {
-	args, txn := prepareQueryArgs(ctx, query, store, rbundle.LoadedBundle())
+	args, txn := prepareQueryArgs(ctx, query, store, rbundle.Loaded())
 
 	// Note that we currently don't provide metrics or profiling here, and
 	// most likely we should — need to consider how to best make that conditional
@@ -126,11 +126,11 @@ func prepareQuery(ctx context.Context, query ast.Body, store storage.Store) (*re
 			store.Abort(ctx, txn)
 		}
 
-		if isBundleDevelopmentMode() {
+		if rbundle.DevModeEnabled() {
 			// Try falling back to the embedded bundle, or else we'll
 			// easily have errors popping up as notifications, making it
 			// really hard to fix the issue that broke the query (like a parse error)
-			args, txn = prepareQueryArgs(ctx, query, store, rbundle.EmbeddedBundle())
+			args, txn = prepareQueryArgs(ctx, query, store, rbundle.Embedded())
 			if pq, err = rego.New(args...).PrepareForEval(ctx); err == nil {
 				if store != nil && txn != nil {
 					if err = store.Commit(ctx, txn); err != nil {
@@ -191,16 +191,12 @@ func parseQuery(query string) ast.Body {
 	return ast.MustParseBody(query)
 }
 
-func isBundleDevelopmentMode() bool {
-	return os.Getenv("REGAL_BUNDLE_PATH") != ""
-}
-
 var schemaResolvers = sync.OnceValue(func() (resolvers []func(*rego.Rego)) {
 	ss := compile.RegalSchemaSet()
 	added := util.NewSet[string]()
 
 	// Find all schema references in the bundle and add the schemas to the base cache.
-	for _, module := range rbundle.LoadedBundle().Modules {
+	for _, module := range rbundle.Loaded().Modules {
 		for _, annos := range module.Parsed.Annotations {
 			for _, s := range annos.Schemas {
 				if len(s.Schema) == 0 || added.Contains(s.Schema.String()) {

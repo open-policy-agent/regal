@@ -44,7 +44,7 @@ type (
 	RegoRouter struct {
 		routes    map[string]Route
 		providers Providers
-		query     *query.Prepared
+		qc        *query.Cache
 	}
 
 	Route struct {
@@ -57,8 +57,7 @@ type (
 )
 
 func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, prvs Providers) *RegoRouter {
-	pq, err := qc.GetOrSet(ctx, store, query.MainEval)
-	if err != nil {
+	if _, err := qc.GetOrSet(ctx, store, query.MainEval); err != nil {
 		panic(err) // can't recover here
 	}
 
@@ -96,20 +95,27 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 		},
 	}
 
-	return &RegoRouter{routes: routes, providers: prvs, query: pq}
+	router := &RegoRouter{routes: routes, providers: prvs, qc: qc}
+
+	return router
 }
 
 func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
 	if route, ok := m.routes[req.Method]; ok {
-		return requirementsHandler(route)(ctx, m.query, m.providers, req)
+		pq := m.qc.Get(query.MainEval)
+		if pq == nil {
+			return nil, fmt.Errorf("no prepared query for %s", query.MainEval)
+		}
+
+		return handlerFor(route)(ctx, pq, m.providers, req)
 	}
 
 	return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound, Message: "method not supported: " + req.Method}
 }
 
-// requirementsHandler wraps a regoHandler which first verifies that the text document URI isn't ignored
+// handlerFor wraps a regoHandler which first verifies that the text document URI isn't ignored
 // and then goes on to ensure that any custom requirements the handler may have are met.
-func requirementsHandler(route Route) regoHandler {
+func handlerFor(route Route) regoHandler {
 	return func(ctx context.Context, query *query.Prepared, prvs Providers, req *jsonrpc2.Request) (any, error) {
 		// This is mandatory requirement for all routes managed here.
 		uri, err := decodeAndCheckURI(req, prvs.IgnoredProvider)

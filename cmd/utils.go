@@ -75,7 +75,7 @@ func readUserConfig(params lintAndFixParams, searchPath string) (userConfig *os.
 		log.Println("no user-provided config file found, will use the default config")
 	}
 
-	userConfig, err = config.FindConfig(searchPath)
+	userConfig, err = config.Find(searchPath)
 	if err != nil {
 		// if no config was found, attempt to load the user's global config if it exists
 		if globalConfigDir := config.GlobalConfigDir(false); globalConfigDir != "" {
@@ -100,7 +100,7 @@ func loadUserConfig(params lintAndFixParams, root string) (cfg config.Config, pa
 		return config.Config{}, "", nil // No user config provided, use default
 	}
 
-	defer rio.CloseFileIgnore(file)
+	defer rio.CloseIgnore(file)
 
 	cfg, err = config.FromFile(file)
 	if err != nil {
@@ -118,10 +118,9 @@ func loadUserConfig(params lintAndFixParams, root string) (cfg config.Config, pa
 }
 
 func getLinterContext(params lintAndFixParams) (context.Context, func()) {
-	ctx := context.Background()
 	if to := params.timeout; to != 0 {
-		return context.WithTimeout(ctx, to)
+		return context.WithTimeout(context.Background(), to)
 	}
 
-	return ctx, func() {}
+	return context.Background(), func() {}
 }

@@ -248,7 +248,7 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 
 	regal = regal.WithUserConfig(userConfig)
 
-	go updateCheckAndWarn(params, rbundle.LoadedBundle(), &userConfig)
+	go updateCheckAndWarn(params, rbundle.Loaded(), &userConfig)
 
 	regal, err = regal.Prepare(ctx)
 	if err != nil {

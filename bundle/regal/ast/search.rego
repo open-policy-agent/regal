@@ -181,11 +181,17 @@ find_vars(node) := array.concat(
 _rules := input.rules
 _rules := data.workspace.parsed[input.regal.file.uri].rules if not input.rules
 
+# even worse hack to support the new LSP router, and to allow those handlers to use code from
+# the AST package. object.get used here to circument schema validation of input..
+# there's no doubt that we need to find a better model for this going forward
+_rules := data.workspace.parsed[object.get(input, ["params", "textDocument", "uri"], null)].rules if not input.rules
+
 # METADATA:
 # description: |
 #   object containing all variables found in the input AST, keyed first by the index of
 #   the rule where the variables were found (as a numeric string), and then the context
 #   of the variable, which will be one of:
+#   - args
 #   - term
 #   - assign
 #   - every

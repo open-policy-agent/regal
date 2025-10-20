@@ -127,8 +127,7 @@ func (c Input[T]) String() string { // For debugging only
 }
 
 func PositionFromLocation(loc *ast.Location) types.Position {
-	//nolint:gosec
-	return types.Position{Line: uint(loc.Row - 1), Character: uint(loc.Col - 1)}
+	return types.Position{Line: util.SafeIntToUint(loc.Row - 1), Character: util.SafeIntToUint(loc.Col - 1)}
 }
 
 func LocationFromPosition(pos types.Position) *ast.Location {
@@ -232,12 +231,13 @@ func policyToValue[T any](ctx context.Context, pq *query.Prepared, policy policy
 }
 
 func toValidResult(rs rego.ResultSet, err error) (rego.Result, error) {
+	rsLen := len(rs)
 	switch {
 	case err != nil:
 		return emptyResult, fmt.Errorf("evaluation failed: %w", err)
-	case len(rs) == 0:
+	case rsLen == 0:
 		return emptyResult, errNoResults
-	case len(rs) != 1:
+	case rsLen != 1:
 		return emptyResult, errExcpectedOneResult
 	case len(rs[0].Expressions) != 1:
 		return emptyResult, errExcpectedOneExpr
