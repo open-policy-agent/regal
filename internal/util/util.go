@@ -236,12 +236,11 @@ func FreePort(preferred ...int) (port int, err error) {
 		}
 		defer l.Close()
 
-		addr, ok := l.Addr().(*net.TCPAddr)
-		if !ok {
-			return 0, errors.New("failed to get port from listener")
+		if addr, ok := l.Addr().(*net.TCPAddr); ok {
+			return addr.Port, nil
 		}
 
-		return addr.Port, nil
+		return 0, errors.New("failed to get port from listener")
 	}
 
 	for _, p := range preferred {
@@ -260,10 +259,7 @@ func FreePort(preferred ...int) (port int, err error) {
 	return 0, fmt.Errorf("failed to find free port: %w", err)
 }
 
-func Pointer[T any](v T) *T {
-	return &v
-}
-
+// Wrap wraps a value and an error into a function that returns the value and error.
 func Wrap[T any](v T, err error) func(string) (T, error) {
 	if err != nil {
 		return func(msg string) (T, error) {
@@ -276,6 +272,7 @@ func Wrap[T any](v T, err error) func(string) (T, error) {
 	}
 }
 
+// WrapErr wraps an error with a message if the error is not nil.
 func WrapErr(err error, msg string) error {
 	if err == nil {
 		return nil
@@ -284,14 +281,25 @@ func WrapErr(err error, msg string) error {
 	return fmt.Errorf("%s: %w", msg, err)
 }
 
+// WithOpen opens a file at the provided path, and passes the opened file to f.
 func WithOpen[T any](path string, f func(*os.File) (T, error)) (T, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		var zero T
-
-		return zero, fmt.Errorf("failed to open file '%s': %w", path, err)
+		return Zero[T](), fmt.Errorf("failed to open file '%s': %w", path, err)
 	}
 	defer file.Close()
 
 	return f(file)
+}
+
+// Pointer returns a pointer to the provided value.
+func Pointer[T any](v T) *T {
+	return &v
+}
+
+// Zero returns the zero value for any type T.
+func Zero[T any]() T {
+	var zero T
+
+	return zero
 }

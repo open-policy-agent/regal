@@ -1,4 +1,4 @@
-package rules
+package rules_test
 
 import (
 	"path/filepath"
@@ -7,6 +7,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/pkg/rules"
 )
 
 func TestInputFromTextWithOptions(t *testing.T) {
@@ -35,8 +36,7 @@ p { true }`,
 			opts := parse.ParserOptions()
 			opts.RegoVersion = tc.RegoVersion
 
-			_, err := InputFromTextWithOptions("p.rego", tc.Module, opts)
-			if err != nil {
+			if _, err := rules.InputFromTextWithOptions("p.rego", tc.Module, opts); err != nil {
 				t.Errorf("Expected no error, got %v", err)
 			}
 		})
@@ -47,9 +47,9 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]struct {
-		VersionsMap     map[string]ast.RegoVersion
-		Filename        string
-		ExpectedVersion ast.RegoVersion
+		VersionsMap map[string]ast.RegoVersion
+		Filename    string
+		Expected    ast.RegoVersion
 	}{
 		"file has no root in version map": {
 			VersionsMap: map[string]ast.RegoVersion{
@@ -57,8 +57,8 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"bar":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename:        "/baz/qux.rego",
-			ExpectedVersion: ast.RegoUndefined,
+			Filename: "/baz/qux.rego",
+			Expected: ast.RegoUndefined,
 		},
 		"use project value": {
 			VersionsMap: map[string]ast.RegoVersion{
@@ -66,8 +66,8 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"bar":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename:        "/baz/qux.rego",
-			ExpectedVersion: ast.RegoV1,
+			Filename: "/baz/qux.rego",
+			Expected: ast.RegoV1,
 		},
 		"file has version from current dir": {
 			VersionsMap: map[string]ast.RegoVersion{
@@ -75,8 +75,8 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"bar":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename:        "/foo/bar.rego",
-			ExpectedVersion: ast.RegoV1,
+			Filename: "/foo/bar.rego",
+			Expected: ast.RegoV1,
 		},
 		"file has version from current dir (no leading slash)": {
 			VersionsMap: map[string]ast.RegoVersion{
@@ -84,8 +84,8 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"bar":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename:        "/foo/bar.rego",
-			ExpectedVersion: ast.RegoV1,
+			Filename: "/foo/bar.rego",
+			Expected: ast.RegoV1,
 		},
 		"file has version from parent dir": {
 			VersionsMap: map[string]ast.RegoVersion{
@@ -93,8 +93,8 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"bar":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename:        "/foo/bar/baz.rego",
-			ExpectedVersion: ast.RegoV1,
+			Filename: "/foo/bar/baz.rego",
+			Expected: ast.RegoV1,
 		},
 		"file has version from grandparent dir": {
 			VersionsMap: map[string]ast.RegoVersion{
@@ -102,8 +102,8 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"bar":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename:        "/foo/bar/baz/qux.rego",
-			ExpectedVersion: ast.RegoV1,
+			Filename: "/foo/bar/baz/qux.rego",
+			Expected: ast.RegoV1,
 		},
 		"project roots are subdirs and overlap": {
 			VersionsMap: map[string]ast.RegoVersion{
@@ -111,8 +111,8 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"foo":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename:        "/foo/bar/baz/qux.rego",
-			ExpectedVersion: ast.RegoV1,
+			Filename: "/foo/bar/baz/qux.rego",
+			Expected: ast.RegoV1,
 		},
 	}
 
@@ -120,9 +120,9 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			actualVersion := RegoVersionFromMap(tc.VersionsMap, filepath.FromSlash(tc.Filename), ast.RegoUndefined)
-			if actualVersion != tc.ExpectedVersion {
-				t.Errorf("Expected %v, got %v", tc.ExpectedVersion, actualVersion)
+			got := rules.RegoVersionFromMap(tc.VersionsMap, filepath.FromSlash(tc.Filename), ast.RegoUndefined)
+			if got != tc.Expected {
+				t.Errorf("Expected %v, got %v", tc.Expected, got)
 			}
 		})
 	}
@@ -149,7 +149,7 @@ allow[msg] { msg := "hello" }
 `,
 	}
 
-	input, err := InputFromMap(files, versionsMap)
+	input, err := rules.InputFromMap(files, versionsMap)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}

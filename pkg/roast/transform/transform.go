@@ -97,11 +97,9 @@ func RegalContext(name, content, regoVersion string) ast.Object {
 // RegalContextWithOperations creates a Regal context object with operations
 // for linting or collecting, depending on the collect parameter.
 func RegalContextWithOperations(name, content, regoVersion string, collect bool) ast.Object {
-	var operations [2]*ast.Term
+	operations := operationsLintItem
 	if collect {
 		operations = operationsLintCollectItem
-	} else {
-		operations = operationsLintItem
 	}
 
 	context := RegalContext(name, content, regoVersion)

@@ -95,7 +95,7 @@ func TestPutBuiltins(t *testing.T) {
 
 	val := testutil.Must(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "builtins", "count"}))(t)
 	if val == nil {
-		t.Errorf("expected count builtin to exist in store")
+		t.Fatal("expected count builtin to exist in store")
 	}
 }
 
@@ -107,13 +107,10 @@ func TestPutBuiltinsDeprecated(t *testing.T) {
 
 	val := testutil.Must(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "builtins", "all"}))(t)
 	if val == nil {
-		t.Errorf("expected count builtin to exist in store")
+		t.Fatal("expected count builtin to exist in store")
 	}
 
 	deprecated := testutil.MustBe[ast.Object](t, val).Get(ast.StringTerm("deprecated"))
-	if deprecated == nil {
-		t.Fatalf("expected deprecated field to be set")
-	}
 
 	if !ast.Boolean(true).Equal(deprecated.Value) {
 		t.Errorf("expected deprecated field to be true, got %v", deprecated.Value)

@@ -32,6 +32,7 @@ func init() {
 		"unknown",
 		"import",
 		"# METADATA",
+		" METADATA",
 
 		// These are strings commonly found in linter policies, but
 		// not necessarily anywhere else.
@@ -84,12 +85,15 @@ func init() {
 		"with",
 		"target",
 		"capabilities",
+		"system",
+		"main",
 
 		// Regal specific keys
 		"file",
 		"abs",
 		"environment",
 		"path_separator",
+		"line",
 		"lines",
 		"operations",
 		"regal",
@@ -114,5 +118,12 @@ func init() {
 		"modules",
 		"data.regal.ast",
 		"data.regal.config",
+		"data.regal.result",
+		"docs",
+		"path_prefix",
+
+		// Common
+		"a", "b", "c",
+		"i", "j", "k",
 	)
 }

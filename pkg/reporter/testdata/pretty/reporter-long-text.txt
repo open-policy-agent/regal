@@ -1,9 +1,9 @@
-Rule:         	long-violation                                                                                                          	
-Level:        	warning                                                                                                                 	
-Description:  	violation with a long description                                                                                       	
-Category:     	long                                                                                                                    	
-Location:     	b.rego:22:18                                                                                                            	
-Text:         	long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,lo...	
-Documentation:	https://example.com/to-long                                                                                             	
+Rule:           long-violation                                                                                                           
+Level:          warning                                                                                                                  
+Description:    violation with a long description                                                                                        
+Category:       long                                                                                                                     
+Location:       b.rego:22:18                                                                                                             
+Text:           long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,long,lo... 
+Documentation:  https://example.com/to-long                                                                                              
 
 3 files linted. 1 violation (0 errors, 1 warning) found.
