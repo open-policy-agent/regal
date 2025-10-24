@@ -286,6 +286,8 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	// - textDocument/completion
 	// - textDocument/documentLink
 	// - textDocument/documentHighlight
+	// - textDocument/linkedEditingRange
+	// - textDocument/selectionRange
 	// - textDocument/signatureHelp
 	//
 	// returns jsonrpc2.Error with code jsonrpc2.CodeMethodNotFound if provided unknown method.
@@ -468,7 +470,7 @@ func (l *LanguageServer) StartHoverWorker(ctx context.Context) {
 // upon receiving them. This is currently used only when the REGAL_BUNDLE_PATH
 // development mode is set, to ensure we recompile on live bundle updates.
 func (l *LanguageServer) StartQueryCacheWorker(ctx context.Context) {
-	if bundle.DevModeEnabled() {
+	if !bundle.DevModeEnabled() {
 		l.log.Debug("LSP development mode not enabled — not starting query cache worker")
 
 		return
@@ -484,7 +486,7 @@ func (l *LanguageServer) StartQueryCacheWorker(ctx context.Context) {
 			if err := l.queryCache.Store(ctx, query.MainEval, l.regoStore); err != nil {
 				l.log.Message("failed to prepare query %s: %s", query.MainEval, err)
 			} else {
-				l.log.Message("prepared query %s", query.MainEval)
+				l.log.Message("re-prepared query %s", query.MainEval)
 			}
 		}
 	}
@@ -1919,10 +1921,23 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 		l.log.SetLevel(log.LevelDebug)
 	}
 
+	var capsValue ast.Value
+
+	if params.Capabilities != nil {
+		m, err := encoding.JSONUnmarshalTo[map[string]any](*params.Capabilities)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal client capabilities: %w", err)
+		}
+
+		if capsValue, err = ast.InterfaceToValue(m); err != nil {
+			return nil, err
+		}
+	}
+
 	l.client = types.Client{
 		Identifier:   clients.DetermineIdentifier(params.ClientInfo.Name),
 		InitOptions:  params.InitializationOptions,
-		Capabilities: params.Capabilities,
+		Capabilities: capsValue,
 	}
 
 	if l.client.Identifier == clients.IdentifierGeneric {
@@ -1999,9 +2014,11 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 					".", // for refs
 				},
 			},
-			CodeLensProvider:          types.ResolveProviderOption{},
-			DocumentLinkProvider:      types.ResolveProviderOption{},
-			DocumentHighlightProvider: true,
+			CodeLensProvider:           types.ResolveProviderOption{},
+			DocumentLinkProvider:       types.ResolveProviderOption{},
+			DocumentHighlightProvider:  true,
+			SelectionRangeProvider:     true,
+			LinkedEditingRangeProvider: true,
 		},
 	}
 

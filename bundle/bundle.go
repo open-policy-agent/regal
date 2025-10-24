@@ -24,10 +24,7 @@ var (
 	//go:embed *
 	regalBundle embed.FS
 
-	lastErrMsg     = atomic.Pointer[string]{}
-	successLogOnce = sync.OnceFunc(func() {
-		fmt.Fprintln(os.Stderr, "Successfully loaded development bundle")
-	})
+	lastErrMsg = atomic.Pointer[string]{}
 )
 
 type devMode struct {
@@ -92,8 +89,6 @@ func (dm *devMode) Reload() {
 	for _, c := range dm.subscribers {
 		c <- struct{}{}
 	}
-
-	successLogOnce()
 }
 
 func (dm *devMode) Subscribe(c chan struct{}) {

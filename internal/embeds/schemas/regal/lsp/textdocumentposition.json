@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "regal.lsp.textdocumentposition",
+  "$ref": "#/$defs/params",
+  "$defs": {
+    "params": {
+      "properties": {
+        "textDocument": {
+          "$ref": "#/$defs/textDocument"
+        },
+        "position": {
+          "$ref": "#/$defs/position"
+        }
+      },
+      "type": "object",
+      "required": [
+        "textDocument",
+        "position"
+      ]
+    },
+    "textDocument": {
+      "type": "object",
+      "description": "Text document properties",
+      "properties": {
+        "uri": {
+          "type": "string",
+          "description": "URI of the text document"
+        }
+      },
+      "required": [
+        "uri"
+      ]
+    },
+    "position": {
+      "type": "object",
+      "description": "Position in the text document",
+      "properties": {
+        "line": {
+          "type": "integer",
+          "description": "Line number (0-based)"
+        },
+        "character": {
+          "type": "integer",
+          "description": "Character offset in the line (0-based)"
+        }
+      },
+      "required": [
+        "line",
+        "character"
+      ]
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "regal.lsp.documenthighlight",
+  "$id": "regal.lsp.selectionrange",
   "$ref": "#/$defs/params",
   "$defs": {
     "params": {
@@ -8,14 +8,18 @@
         "textDocument": {
           "$ref": "#/$defs/textDocument"
         },
-        "position": {
-          "$ref": "#/$defs/position"
+        "positions": {
+          "type": "array",
+          "description": "The positions inside the text document",
+          "items": {
+            "$ref": "#/$defs/position"
+          }
         }
       },
       "type": "object",
       "required": [
         "textDocument",
-        "position"
+        "positions"
       ]
     },
     "textDocument": {

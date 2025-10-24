@@ -89,6 +89,13 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 			handler:  textDocument[types.DocumentHighlightParams, []types.DocumentHighlight],
 			requires: &Requirements{File: FileRequirements{Lines: true}},
 		},
+		"textDocument/linkedEditingRange": {
+			handler:  textDocument[types.LinkedEditingRangeParams, types.LinkedEditingRanges],
+			requires: &Requirements{File: FileRequirements{Lines: true}},
+		},
+		"textDocument/selectionRange": {
+			handler: textDocument[types.SelectionRangeParams, []types.SelectionRange],
+		},
 		"textDocument/signatureHelp": {
 			handler:  textDocument[types.SignatureHelpParams, *types.SignatureHelp],
 			requires: &Requirements{File: FileRequirements{Lines: true}},

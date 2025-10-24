@@ -199,3 +199,21 @@ longest_prefix(coll) := [] if {
 
 	prefix := array.slice(arr[0], 0, eqn + 1)
 }
+
+# METADATA
+# description: |
+#   parse given string as boolean, where values "1", "true", "True, "TRUE" parse a `true`,
+#   "0", "false", "False", "FALSE" parse as `false`, and anything else is undefined
+# scope: document
+parse_bool("1")
+parse_bool("true")
+parse_bool("True")
+parse_bool("TRUE")
+parse_bool("0") := false
+parse_bool("false") := false
+parse_bool("False") := false
+parse_bool("FALSE") := false
+
+# METADATA
+# description: creates a string where s is repeated n times
+repeat(s, n) := replace(sprintf("%-*s", [n, " "]), " ", s)
