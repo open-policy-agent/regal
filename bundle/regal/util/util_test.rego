@@ -79,6 +79,10 @@ test_longest_prefix[test.coll] if {
 			"coll": [["a", "b", "c"], ["a", "b", "c", 1], ["a", "b", "c", "d"]],
 			"want": ["a", "b", "c"],
 		},
+		{
+			"coll": [["a", 1, "b"], ["a", 2, "b"]],
+			"want": ["a"],
+		},
 	]
 
 	some test in tests

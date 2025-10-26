@@ -12,7 +12,9 @@ items contains item if {
 	line != ""
 
 	location.in_rule_body(line)
-	not _excluded(line, input.params.position)
+
+	# no suggestions in function args definition, as those would recursively contribute to themselves
+	not _function_args_position(substring(line, 0, input.params.position.character))
 
 	word := location.word_at(line, input.params.position.character + 1)
 
@@ -24,7 +26,6 @@ items contains item if {
 	})
 
 	startswith(local, word.text)
-
 	not local in _same_line_loop_vars(line)
 
 	item := {
@@ -37,11 +38,6 @@ items contains item if {
 		},
 	}
 }
-
-# exclude local suggestions in function args definition,
-# as those would recursively contribute to themselves
-# regal ignore:narrow-argument
-_excluded(line, position) if _function_args_position(substring(line, 0, position.character))
 
 _function_args_position(text) if {
 	contains(text, "(")
