@@ -17,16 +17,15 @@ report contains violation if {
 	violation := result.fail(rego.metadata.chain(), result.location(rule))
 }
 
-# pointless reassignment in rule body
+# pointless reassignment in expressions
 report contains violation if {
-	expr := input.rules[_].body[_]
+	some expr
+	ast.found.expressions[_][expr].terms[0].value[0].value == "assign"
 
 	not expr.with
-
-	[lhs, rhs] := ast.assignment_terms(expr.terms)
-
-	lhs.type == "var"
-	rhs.type == "var"
+	expr.terms[0].type == "ref"
+	expr.terms[1].type == "var"
+	expr.terms[2].type == "var"
 
 	violation := result.fail(rego.metadata.chain(), result.infix_expr_location(expr.terms))
 }
