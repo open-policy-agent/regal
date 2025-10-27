@@ -21,12 +21,6 @@ report contains violation if {
 	violation := result.fail(rego.metadata.chain(), result.location(block[0]))
 }
 
-_annotation_at_row(row) := annotation if {
-	some annotation in ast.annotations
-
-	util.to_location_object(annotation.location).row == row
-}
-
 # detached metadata is allowed only if another metadata block follows
 # directly after the metadata block
 _allow_detached(last_row, i, blocks, lines) if {

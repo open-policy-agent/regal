@@ -10,7 +10,7 @@ import data.regal.ast
 import data.regal.result
 import data.regal.util
 
-import data.regal.lsp.util.location
+import data.regal.lsp.util.range
 
 # METADATA
 # entrypoint: true
@@ -39,7 +39,7 @@ debug_supported if input.regal.client.init_options.enableDebugCodelens == true
 _module := data.workspace.parsed[input.params.textDocument.uri]
 
 _eval_lenses contains {
-	"range": location.to_range(result.location(_module.package).location),
+	"range": range.from_location(result.location(_module.package).location),
 	"command": {
 		"title": "Evaluate",
 		"command": "regal.eval",
@@ -62,7 +62,7 @@ _debug_lenses contains lens if {
 	debug_supported
 
 	lens := {
-		"range": location.to_range(result.location(_module.package).location),
+		"range": range.from_location(result.location(_module.package).location),
 		"command": {
 			"title": "Debug",
 			"command": "regal.debug",
@@ -90,7 +90,7 @@ _debug_lenses contains lens if {
 }
 
 _rule_lens(file_uri, rule, command, title) := {
-	"range": location.to_range(result.location(rule).location),
+	"range": range.from_location(result.location(rule).location),
 	"command": {
 		"title": title,
 		"command": command,

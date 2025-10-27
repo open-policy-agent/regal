@@ -16,7 +16,7 @@ import data.regal.ast
 import data.regal.util
 
 import data.regal.lsp.util.find
-import data.regal.lsp.util.location as uloc
+import data.regal.lsp.util.range
 
 # METADATA
 # entrypoint: true
@@ -29,15 +29,11 @@ result.response.ranges := ranges if util.parse_bool(opa.runtime().env.REGAL_EXPE
 
 # METADATA
 # description: Link a function args in position
-ranges contains range if {
-	[arg, _] := find.arg_at_position
-
-	range := uloc.parse_range(arg.location)
-}
+ranges contains range.parse(arg.location) if [arg, _] := find.arg_at_position
 
 # METADATA
 # description: Link function arg references in function body to arg
-ranges contains range if {
+ranges contains range.parse(value.location) if {
 	[arg, i] := find.arg_at_position
 
 	some expr in ast.found.expressions[sprintf("%d", [i])]
@@ -46,19 +42,15 @@ ranges contains range if {
 
 	value.type == "var"
 	value.value == arg.value
-
-	range := uloc.parse_range(value.location)
 }
 
 # METADATA
 # description: Link function arg references in head value to arg
-ranges contains range if {
+ranges contains range.parse(value.location) if {
 	[arg, i] := find.arg_at_position
 
 	walk(data.workspace.parsed[input.params.textDocument.uri].rules[i].head.value, [_, value])
 
 	value.type == "var"
 	value.value == arg.value
-
-	range := uloc.parse_range(value.location)
 }

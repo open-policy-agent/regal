@@ -10,7 +10,7 @@ package regal.lsp.selectionrange
 import data.regal.util
 
 import data.regal.lsp.util.find
-import data.regal.lsp.util.location
+import data.regal.lsp.util.range
 
 # METADATA
 # description: as per spec, return SelectionRange[] or null
@@ -49,8 +49,8 @@ package_ranges := [item |
 	# Note: pkg.path[0] is currently just {"type": "var", "value": "data"}
 	# which is useless, but an issue inherited from OPA we should get rid of in RoAST
 	path_range := {"range": {
-		"start": location.parse_range(pkg.path[1].location).start,
-		"end": location.parse_range(regal.last(pkg.path).location).end,
+		"start": range.parse(pkg.path[1].location).start,
+		"end": range.parse(regal.last(pkg.path).location).end,
 	}}
 
 	line_range := {"range": {
@@ -100,12 +100,12 @@ rule_ranges := [item |
 
 # collect all ranges within the node that contain position
 # ordered from most specific to least specific
-_find_ranges(node, position) := array.reverse([{"range": range} |
+_find_ranges(node, position) := array.reverse([{"range": value_range} |
 	walk(node, [_, value])
 
-	range := location.parse_range(value.location)
+	value_range := range.parse(value.location)
 
-	location.within_range(position, range)
+	range.contains_position(value_range, position)
 ])
 
 # the SelectionRange object is recursive, so we need to reach for tricks here!
@@ -115,11 +115,11 @@ _to_selection_range(ranges) := json.patch(ranges[0], [patch |
 	patch := {"op": "add", "path": util.repeat("/parent", i + 1), "value": r}
 ])
 
-_estimated_import_range(imp) := range if {
+_estimated_import_range(imp) := import_range if {
 	not imp.alias
 
-	path_range := location.parse_range(imp.path.location)
-	range := {
+	path_range := range.parse(imp.path.location)
+	import_range := {
 		"start": {
 			"line": path_range.start.line,
 			"character": 0,
@@ -131,11 +131,11 @@ _estimated_import_range(imp) := range if {
 	}
 }
 
-_estimated_import_range(imp) := range if {
+_estimated_import_range(imp) := import_range if {
 	imp.alias
 
-	path_range := location.parse_range(imp.path.location)
-	range := {
+	path_range := range.parse(imp.path.location)
+	import_range := {
 		"start": {
 			"line": path_range.start.line,
 			"character": 0,
