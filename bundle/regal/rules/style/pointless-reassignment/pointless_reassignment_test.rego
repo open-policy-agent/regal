@@ -67,6 +67,40 @@ test_fail_pointless_reassignment_in_rule_body if {
 	}}
 }
 
+test_fail_pointless_reassignment_in_rule_body_nested if {
+	module := ast.with_rego_v1(`
+	rule if {
+		foo := "foo"
+
+		comp := [bar |
+			bar := foo
+		]
+	}
+	`)
+	r := rule.report with input as module
+
+	r == {{
+		"category": "style",
+		"description": "Pointless reassignment of variable",
+		"level": "error",
+		"location": {
+			"col": 4,
+			"row": 10,
+			"end": {
+				"col": 10,
+				"row": 10,
+			},
+			"file": "policy.rego",
+			"text": "\t\t\tbar := foo",
+		},
+		"related_resources": [{
+			"description": "documentation",
+			"ref": config.docs.resolve_url("$baseUrl/$category/pointless-reassignment", "style"),
+		}],
+		"title": "pointless-reassignment",
+	}}
+}
+
 test_success_pointless_reassignment_in_rule_body_using_with if {
 	module := ast.with_rego_v1(`
 	foo := input
