@@ -1,8 +1,6 @@
 package types
 
 import (
-	"encoding/json"
-
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
@@ -62,7 +60,7 @@ type CommandArgs struct {
 type Client struct {
 	Identifier   clients.Identifier     `json:"identifier"`
 	InitOptions  *InitializationOptions `json:"init_options,omitempty"`
-	Capabilities *json.RawMessage       `json:"capabilities,omitempty"`
+	Capabilities ast.Value              `json:"capabilities,omitempty"`
 }
 
 func NewGenericClient() Client {

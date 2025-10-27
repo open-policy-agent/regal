@@ -12,5 +12,10 @@
   "go.buildFlags": [
     "-tags",
     "e2e"
-  ]
+  ],
+  "[rego]": {
+    // This is better handled by Regal's selection ranges implementation
+    "editor.smartSelect.selectLeadingAndTrailingWhitespace": false,
+    "editor.smartSelect.selectSubwords": false
+  }
 }

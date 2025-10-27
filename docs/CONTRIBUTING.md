@@ -197,3 +197,18 @@ wasmtime-cli 13.0.0
 $ wasmtime --dir $(pwd) regal -- lint bundle
 90 files linted. No violations found.
 ```
+
+## Environment variables for development and debugging
+
+The following environment variables can be used to modify the behavior of Regal, commonly for development purposes:
+
+- `REGAL_BUNDLE_PATH`: When set to a valid path, Regal will load its bundle from disk instead of using the embedded
+  bundle. See [Contributing to the Language Server](#contributing-to-the-language-server) for details.
+- `REGAL_EXPERIMENTAL`: When set to `true`, enables experimental features in Regal, such as
+  [linked editing ranges](./language-server.md#linked-editing-ranges) in the language server.
+- `REGAL_DEBUG`: When set to `true`, enables debug logging in Regal.
+- `REGAL_BIN`: When set to a valid path, E2E tests will use the specified `regal` binary instead of looking for one in
+   the top-level directory.
+- `REGAL_DISABLE_VERSION_CHECK`: When set to `true`, disables the version check (querying only GitHub's API) that runs
+  on startup of the `regal` CLI. If you want to disable this permanently, a better option is to do so in your Regal
+  config file.

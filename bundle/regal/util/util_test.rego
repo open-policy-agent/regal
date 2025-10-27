@@ -89,3 +89,24 @@ test_longest_prefix[test.coll] if {
 
 	util.longest_prefix(test.coll) == test.want
 }
+
+test_parse_bool[str] if {
+	some [str, want] in [
+		["1", true],
+		["true", true],
+		["True", true],
+		["TRUE", true],
+		["0", false],
+		["false", false],
+		["False", false],
+		["FALSE", false],
+	]
+
+	util.parse_bool(str) == want
+}
+
+test_parse_bool_undefined[str] if {
+	some str in ["yes", "no", "foo", "bar", ""]
+
+	not util.parse_bool(str)
+}
