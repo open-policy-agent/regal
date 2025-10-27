@@ -91,6 +91,8 @@ rules:
       level: error
     non-raw-regex-pattern:
       level: error
+    prefer-equals-comparison:
+      level: error
     prefer-set-or-object-rule:
       level: error
     single-item-in:
@@ -135,9 +137,9 @@ rules:
     unresolved-import:
       level: error
     unresolved-reference:
-      level: error
       excepted_export_patterns:
         - "**.test_*"
+      level: error
     use-rego-v1:
       level: error
   performance:

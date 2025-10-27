@@ -15,7 +15,7 @@ test_documentlink_ranges_in_inline_ignores if {
 			"imports": {"unresolved-reference": {}},
 		}
 
-	items = {
+	items == {
 		{
 			"range": {
 				"end": {
