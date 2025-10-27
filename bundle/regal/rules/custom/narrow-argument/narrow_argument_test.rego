@@ -89,6 +89,14 @@ test_fail_can_be_narrowed_prefixed_array_ref if {
 	}}
 }
 
+test_success_can_not_be_narrowed_prefixed_array_ref_arg_is_least_common_denominator if {
+	r := rule.report with input as ast.policy(`
+		fun(terms) := [terms[1].location, terms[0].location]
+	`)
+
+	r == set()
+}
+
 test_success_can_not_be_narrowed_arg_is_least_common_denominator if {
 	r := rule.report with input as ast.policy(`
 		fun(obj) if obj.typ == "string"

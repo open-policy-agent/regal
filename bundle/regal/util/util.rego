@@ -188,14 +188,20 @@ longest_prefix(coll) := [] if {
 	arr := to_array(coll)
 	end := min([count(seq) | some seq in arr]) - 1
 	rng := numbers.range(0, end)
-	eqn := max([n |
+
+	# collect indices where items differ
+	# we only care about the first diff, but no way to exit early with that value
+	dif := [n |
 		some n in rng
 
 		first := arr[0][n]
-		every sub in arr {
-			sub[n] == first
-		}
-	])
 
-	prefix := array.slice(arr[0], 0, eqn + 1)
+		some sub in arr
+		sub[n] != first
+	]
+
+	prefix := array.slice(arr[0], 0, _longest_dif(dif, end))
 }
+
+_longest_dif(diff, len) := len + 1 if count(diff) == 0
+_longest_dif(diff, _) := diff[0] if count(diff) > 0
