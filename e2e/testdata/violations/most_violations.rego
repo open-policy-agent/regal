@@ -159,6 +159,8 @@ equals_pattern_matching(x) := x == "x"
 
 boolean_assignment := 1 < input.two
 
+prefer_equals_comparison if input.enabled = true
+
 # METADATA
 # description: ambiguous scope
 incremental if input.x
