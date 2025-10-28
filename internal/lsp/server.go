@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -1510,7 +1511,7 @@ func (l *LanguageServer) handleTextDocumentDefinition(params types.DefinitionPar
 
 	query := oracle.DefinitionQuery{
 		// The value of Filename is used if the defn in the current buffer.
-		Filename: params.TextDocument.URI,
+		Filename: strings.TrimPrefix(params.TextDocument.URI, util.EnsureSuffix(l.workspaceRootURI, "/")),
 		Pos:      positionToOffset(contents, params.Position),
 		Modules:  modules,
 		Buffer:   outil.StringToByteSlice(contents),
@@ -1531,7 +1532,7 @@ func (l *LanguageServer) handleTextDocumentDefinition(params types.DefinitionPar
 	return types.Location{
 		// res.File will be relative to the workspace root. The response here needs
 		// a URI for the client to be able to navigate correctly.
-		URI:   util.EnsureSuffix(l.workspaceRootURI, "/") + res.File,
+		URI:   path.Join(l.workspaceRootURI, res.File),
 		Range: types.RangeBetween(res.Row-1, res.Col-1, res.Row-1, res.Col-1),
 	}, nil
 }
