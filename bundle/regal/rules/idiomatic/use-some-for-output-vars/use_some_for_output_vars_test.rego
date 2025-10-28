@@ -160,3 +160,10 @@ test_success_not_an_output_var if {
 
 	r == set()
 }
+
+# verify fix for https://github.com/open-policy-agent/regal/issues/1489
+test_success_nested_ref_head_var_declared if {
+	r := rule.report with input as ast.policy(`rule[input[i]] contains i if some i`)
+
+	r == set()
+}

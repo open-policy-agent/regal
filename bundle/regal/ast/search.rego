@@ -274,12 +274,25 @@ found.expressions[rule_index] contains value if {
 
 # METADATA
 # description: |
+#   answers whether a variable of the given name (value) is declared in the
+#   local scope of the provided rule at the provided location
+is_in_local_scope(rule, location, value) if {
+	some var
+	found.vars[_rule_index(rule)][_][var].value == value
+	var.location != location
+
+	_before_location(rule.head, var, util.to_location_object(location))
+}
+
+# METADATA
+# description: |
 #   finds all vars declared in `rule` *before* the `location` provided
 #   note: this isn't 100% accurate, as it doesn't take into account `=`
 #   assignments / unification, but it's likely good enough since other rules
 #   recommend against those
 find_vars_in_local_scope(rule, location) := [var |
-	var := found.vars[_rule_index(rule)][_][_]
+	some var
+	found.vars[_rule_index(rule)][_][var]
 
 	not startswith(var.value, "$")
 	_before_location(rule.head, var, util.to_location_object(location))
@@ -309,32 +322,25 @@ _before_location(_, var, loc) if {
 
 # METADATA
 # description: find *only* names in the local scope, and not e.g. rule names
-find_names_in_local_scope(rule, location) := names if {
-	fn_arg_names := {arg.value |
-		some arg in rule.head.args
-		arg.type == "var"
-	}
-	var_names := {var.value | some var in find_vars_in_local_scope(rule, util.to_location_object(location))}
-
-	names := fn_arg_names | var_names
+find_names_in_local_scope(rule, location) := {var.value |
+	some var in find_vars_in_local_scope(rule, util.to_location_object(location))
 }
 
 # METADATA
 # description: |
 #   similar to `find_vars_in_local_scope`, but returns all variable names in scope
 #   of the given location *and* the rule names present in the scope (i.e. module)
-find_names_in_scope(rule, location) := names if {
-	locals := find_names_in_local_scope(rule, util.to_location_object(location))
-
-	# parens below added by opa-fmt :)
-	names := (rule_names | imported_identifiers) | locals
-}
+find_names_in_scope(rule, location) := (rule_names | imported_identifiers) | find_names_in_local_scope(
+	rule,
+	util.to_location_object(location),
+)
 
 # METADATA
 # description: |
 #   find all variables declared via `some` declarations (and *not* `some .. in`)
 #   in the scope of the given location
 find_some_decl_names_in_scope(rule, location) := {some_var.value |
+	loc := util.to_location_object(location)
 	some some_var in found.vars[_rule_index(rule)].some
-	_before_location(rule.head, some_var, util.to_location_object(location))
+	_before_location(rule.head, some_var, loc)
 }
