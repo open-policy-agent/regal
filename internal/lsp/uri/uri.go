@@ -54,7 +54,7 @@ func ToPath(client clients.Identifier, uri string) string {
 	}
 
 	// handling case for windows when the drive letter is set
-	if client == clients.IdentifierVSCode && drivePattern.MatchString(path) {
+	if drivePattern.MatchString(path) {
 		path = strings.TrimPrefix(path, uriSeparator)
 	}
 

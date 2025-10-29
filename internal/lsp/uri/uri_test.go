@@ -106,6 +106,14 @@ func TestURIToPath(t *testing.T) {
 			uri:  "file://c:/foo/bar",
 			want: filepath.FromSlash("c:/foo/bar"),
 		},
+		"windows leading /": {
+			uri:  "file:///C:/Users/RUNNER~1/AppData/Local/Temp/test.rego",
+			want: filepath.FromSlash("C:/Users/RUNNER~1/AppData/Local/Temp/test.rego"),
+		},
+		"windows leading / lower case": {
+			uri:  "file:///c:/workspace/policy.rego",
+			want: filepath.FromSlash("c:/workspace/policy.rego"),
+		},
 	}
 
 	for label, tc := range testCases {
