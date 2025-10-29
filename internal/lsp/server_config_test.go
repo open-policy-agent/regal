@@ -9,6 +9,7 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
+	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
@@ -47,7 +48,10 @@ allow := true
 
 	// mainRegoFileURI is used throughout the test to refer to the main.rego file
 	// and so it is defined here for convenience
-	mainRegoFileURI := fileURIScheme + childDir + mainRegoFileName
+	mainRegoFileURI := uri.FromPath(
+		clients.IdentifierGoTest,
+		filepath.Join(childDir, filepath.FromSlash(mainRegoFileName)),
+	)
 
 	// set up the server and client connections
 	ctx, cancel := context.WithCancel(t.Context())
@@ -155,7 +159,7 @@ rules:
 	// this event is sent to allow the server to detect the new config
 	if err := connClient.Notify(ctx, "workspace/didChangeWatchedFiles", types.WorkspaceDidChangeWatchedFilesParams{
 		Changes: []types.FileEvent{{
-			URI:  fileURIScheme + filepath.Join(tempDir, ".regal", "config.yaml"),
+			URI:  uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, ".regal", "config.yaml")),
 			Type: 1, // created
 		}},
 	}, nil); err != nil {

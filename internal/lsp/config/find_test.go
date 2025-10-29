@@ -2,6 +2,7 @@ package config
 
 import (
 	"cmp"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -38,28 +39,28 @@ func TestFindConfigRoots(t *testing.T) {
 				"foo/.regal.yaml":    "",
 			},
 			Expected: []string{
-				"/",
-				"/foo",
+				filepath.FromSlash("/"),
+				filepath.FromSlash("/foo"),
 			},
 		},
 		"two config roots, one higher, not in root dir": {
 			FS: map[string]string{
-				"foo/.regal.yaml":            "",
-				"bar/baz/.regal/config.yaml": "",
+				filepath.FromSlash("foo/.regal.yaml"):            "",
+				filepath.FromSlash("bar/baz/.regal/config.yaml"): "",
 			},
 			Expected: []string{
-				"/bar/baz",
-				"/foo",
+				filepath.FromSlash("/bar/baz"),
+				filepath.FromSlash("/foo"),
 			},
 		},
 		"two config roots, equal depth": {
 			FS: map[string]string{
-				"bar/.regal/config.yaml": "",
-				"foo/.regal.yaml":        "",
+				filepath.FromSlash("bar/.regal/config.yaml"): "",
+				filepath.FromSlash("foo/.regal.yaml"):        "",
 			},
 			Expected: []string{
-				"/bar",
-				"/foo",
+				filepath.FromSlash("/bar"),
+				filepath.FromSlash("/foo"),
 			},
 		},
 	}

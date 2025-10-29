@@ -3,6 +3,8 @@ package config
 import (
 	"slices"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestFilterIgnoredPaths(t *testing.T) {
@@ -94,17 +96,11 @@ func TestFilterIgnoredPaths(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if len(filtered) != len(tc.expected) {
-				t.Fatalf("expected %d paths, got %d", len(tc.expected), len(filtered))
-			}
-
 			slices.Sort(filtered)
 			slices.Sort(tc.expected)
 
-			for i, path := range filtered {
-				if path != tc.expected[i] {
-					t.Errorf("expected path %s, got %s", tc.expected[i], path)
-				}
+			if !cmp.Equal(filtered, tc.expected) {
+				t.Errorf("filtered paths mismatch (-want +got):\n%s", cmp.Diff(tc.expected, filtered))
 			}
 		})
 	}

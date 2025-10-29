@@ -19,7 +19,8 @@ var drivePattern = regexp.MustCompile(`^\/?([A-Za-z]):`)
 // Since clients expect URIs to be in a specific format, this function
 // will convert the path to the appropriate format for the client.
 func FromPath(client clients.Identifier, path string) string {
-	path = strings.TrimPrefix(strings.TrimPrefix(path, "file://"), uriSeparator)
+	path = strings.TrimPrefix(path, "file://")
+	path = strings.TrimPrefix(path, uriSeparator)
 
 	var driveLetter string
 	if matches := drivePattern.FindStringSubmatch(path); len(matches) > 0 {
@@ -36,13 +37,26 @@ func FromPath(client clients.Identifier, path string) string {
 		driveLetter = url.QueryEscape(driveLetter)
 	}
 
-	return "file:///" + driveLetter + strings.Join(parts, uriSeparator)
+	joinedParts := strings.Join(parts, uriSeparator)
+
+	// Handle Unix paths that start with / and have no drive letter
+	if driveLetter == "" && strings.HasPrefix(joinedParts, uriSeparator) {
+		return "file://" + joinedParts
+	}
+
+	// Handle Windows paths with drive letters
+	if driveLetter != "" {
+		return "file:///" + driveLetter + joinedParts
+	}
+
+	// Handle other cases (no drive letter, no leading slash)
+	return "file:///" + joinedParts
 }
 
 // ToPath converts a URI to a file path from a format for a given client.
 // Some clients represent URIs differently, and so this function exists to convert
 // client URIs into a standard file paths.
-func ToPath(client clients.Identifier, uri string) string {
+func ToPath(uri string) string {
 	// if it looks like uri was a file URI, then there might be encoded characters in the path
 	path, hadPrefix := strings.CutPrefix(uri, "file://")
 	if hadPrefix {
@@ -53,7 +67,7 @@ func ToPath(client clients.Identifier, uri string) string {
 	}
 
 	// handling case for windows when the drive letter is set
-	if client == clients.IdentifierVSCode && drivePattern.MatchString(path) {
+	if drivePattern.MatchString(path) {
 		path = strings.TrimPrefix(path, uriSeparator)
 	}
 
@@ -62,13 +76,13 @@ func ToPath(client clients.Identifier, uri string) string {
 }
 
 // ToRelativePath converts a URI to a file path relative to the given workspace root URI.
-func ToRelativePath(client clients.Identifier, uri, workspaceRootURI string) string {
-	absolutePath := ToPath(client, uri)
-	workspaceRootPath := ToPath(client, workspaceRootURI)
+func ToRelativePath(uri, workspaceRootURI string) string {
+	absolutePath := ToPath(uri)
+	workspaceRootPath := ToPath(workspaceRootURI)
 
 	// Ensure workspace root path has trailing separator for consistent trimming
 	if workspaceRootPath != "" {
-		workspaceRootPath = util.EnsureSuffix(workspaceRootPath, "/")
+		workspaceRootPath = util.EnsureSuffix(workspaceRootPath, string(filepath.Separator))
 	}
 
 	return strings.TrimPrefix(absolutePath, workspaceRootPath)
@@ -76,7 +90,7 @@ func ToRelativePath(client clients.Identifier, uri, workspaceRootURI string) str
 
 // FromRelativePath creates a URI from a relative path and workspace root URI.
 func FromRelativePath(client clients.Identifier, relativePath, workspaceRootURI string) string {
-	workspaceRootPath := ToPath(client, workspaceRootURI)
+	workspaceRootPath := ToPath(workspaceRootURI)
 	absolutePath := filepath.Join(workspaceRootPath, relativePath)
 
 	return FromPath(client, absolutePath)

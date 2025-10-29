@@ -13,6 +13,7 @@ import (
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
 	rquery "github.com/open-policy-agent/regal/internal/lsp/rego/query"
+	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/builtins"
 	"github.com/open-policy-agent/regal/pkg/config"
@@ -140,7 +141,7 @@ func (l *LanguageServer) assembleEvalBundles() map[string]bundle.Bundle {
 	hasCustomRules := false
 
 	for fileURI, module := range modules {
-		moduleFiles = append(moduleFiles, bundle.ModuleFile{URL: fileURI, Parsed: module, Path: l.toPath(fileURI)})
+		moduleFiles = append(moduleFiles, bundle.ModuleFile{URL: fileURI, Parsed: module, Path: uri.ToPath(fileURI)})
 		hasCustomRules = hasCustomRules || strings.Contains(module.Package.Path.String(), "custom.regal.rules")
 	}
 

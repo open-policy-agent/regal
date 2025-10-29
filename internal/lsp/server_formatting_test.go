@@ -7,7 +7,9 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
+	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -26,7 +28,7 @@ func TestFormatting(t *testing.T) {
 
 	tempDir := t.TempDir()
 	ls, _ := createAndInitServer(t, ctx, tempDir, clientHandler)
-	mainRegoURI := fileURIScheme + filepath.Join(tempDir, "main", "main.rego")
+	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main", "main.rego"))
 
 	// Simple as possible — opa fmt should just remove a newline
 	ls.cache.SetFileContents(mainRegoURI, "package main\n\n")

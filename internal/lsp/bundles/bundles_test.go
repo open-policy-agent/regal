@@ -29,9 +29,9 @@ func TestLoadDataBundle(t *testing.T) {
 		"nested bundle": {
 			path: "foo",
 			files: map[string]string{
-				"foo/.manifest":     `{"roots":["foo", "bar"]}`,
-				"foo/data.yml":      `foo: bar`,
-				"foo/bar/data.yaml": `bar: baz`,
+				filepath.FromSlash("foo/.manifest"):     `{"roots":["foo", "bar"]}`,
+				filepath.FromSlash("foo/data.yml"):      `foo: bar`,
+				filepath.FromSlash("foo/bar/data.yaml"): `bar: baz`,
 			},
 			expectedData: map[string]any{
 				"foo": "bar",
@@ -43,8 +43,8 @@ func TestLoadDataBundle(t *testing.T) {
 		"array data": {
 			path: "foo",
 			files: map[string]string{
-				"foo/.manifest":     `{"roots":["bar"]}`,
-				"foo/bar/data.json": `[{"foo": "bar"}]`,
+				filepath.FromSlash("foo/.manifest"):     `{"roots":["bar"]}`,
+				filepath.FromSlash("foo/bar/data.json"): `[{"foo": "bar"}]`,
 			},
 			expectedData: map[string]any{
 				"bar": []any{

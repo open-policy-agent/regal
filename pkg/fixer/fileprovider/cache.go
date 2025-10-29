@@ -28,7 +28,7 @@ func NewCacheFileProvider(c *cache.Cache, ci clients.Identifier) *CacheFileProvi
 		ClientIdentifier: ci,
 		modifiedFiles:    util.NewSet[string](),
 		deletedFiles:     util.NewSet[string](),
-		toPath:           util.Partial2(uri.ToPath, ci),
+		toPath:           uri.ToPath,
 	}
 }
 

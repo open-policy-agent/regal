@@ -10,6 +10,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
@@ -101,12 +102,16 @@ allow if {
 			// edits are sent to the clinet by the command worker
 			go ls.StartCommandWorker(ctx)
 
-			mainRegoURI := fileURIScheme + filepath.Join(tempDir, "main.rego")
+			mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
 			ls.cache.SetFileContents(mainRegoURI, content)
+
+			// Create command arguments with proper JSON marshaling for Windows backslash escapes
+			commandArgs := types.CommandArgs{Target: mainRegoURI}
+			argsJSON := testutil.Must(encoding.JSON().Marshal(commandArgs))(t)
 
 			executeParams := types.ExecuteCommandParams{
 				Command:   "regal.fix.opa-fmt",
-				Arguments: []any{`{"target":"` + mainRegoURI + `"}`},
+				Arguments: []any{string(argsJSON)},
 			}
 
 			var executeResponse any

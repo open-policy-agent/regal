@@ -10,8 +10,10 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
+	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/report"
 )
@@ -66,7 +68,7 @@ import rego.v1
 		}
 	}
 
-	barURI := fileURIScheme + filepath.Join(tempDir, "bar.rego")
+	barURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego"))
 
 	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
 		TextDocument: types.TextDocumentIdentifier{
@@ -102,7 +104,7 @@ import rego.v1
 		}
 	}
 
-	fooURI := fileURIScheme + filepath.Join(tempDir, "foo.rego")
+	fooURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "foo.rego"))
 
 	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
 		TextDocument: types.TextDocumentIdentifier{
@@ -291,7 +293,7 @@ import data.quz
 	// 2. check the aggregates for a file are updated after an update
 	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
 		TextDocument: types.TextDocumentIdentifier{
-			URI: fileURIScheme + filepath.Join(tempDir, "bar.rego"),
+			URI: uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego")),
 		},
 		ContentChanges: []types.TextDocumentContentChangeEvent{
 			{
@@ -386,7 +388,7 @@ import rego.v1
 	}
 
 	// update the contents of the bar.rego file to address the unresolved-import
-	barURI := fileURIScheme + filepath.Join(tempDir, "bar.rego")
+	barURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego"))
 
 	err = connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
 		TextDocument: types.TextDocumentIdentifier{

@@ -22,14 +22,14 @@ const levelError = "error"
 func TestFindRegalDirectory(t *testing.T) {
 	t.Parallel()
 
-	fs := map[string]string{"/foo/bar/baz/p.rego": ""}
+	fs := map[string]string{filepath.FromSlash("/foo/bar/baz/p.rego"): ""}
 
 	test.WithTempFS(fs, func(root string) {
 		testutil.MustMkdirAll(t, root, ".regal")
 		testutil.Must(FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz")))(t)
 	})
 
-	fs = map[string]string{"/foo/bar/baz/p.rego": "", "/foo/bar/bax.json": ""}
+	fs = map[string]string{filepath.FromSlash("/foo/bar/baz/p.rego"): "", filepath.FromSlash("/foo/bar/bax.json"): ""}
 
 	test.WithTempFS(fs, func(root string) {
 		if _, err := FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz")); err == nil {
@@ -48,55 +48,55 @@ func TestFindConfig(t *testing.T) {
 	}{
 		"no config file": {
 			FS: map[string]string{
-				"/foo/bar/baz/p.rego": "",
-				"/foo/bar/bax.json":   "",
+				filepath.FromSlash("/foo/bar/baz/p.rego"): "",
+				filepath.FromSlash("/foo/bar/bax.json"):   "",
 			},
 			Error: "could not find Regal config",
 		},
 		".regal/config.yaml": {
 			FS: map[string]string{
-				"/foo/bar/baz/p.rego":         "",
-				"/foo/bar/.regal/config.yaml": "",
+				filepath.FromSlash("/foo/bar/baz/p.rego"):         "",
+				filepath.FromSlash("/foo/bar/.regal/config.yaml"): "",
 			},
-			ExpectedName: "/foo/bar/.regal/config.yaml",
+			ExpectedName: filepath.FromSlash("/foo/bar/.regal/config.yaml"),
 		},
 		".regal/ dir missing config file": {
 			FS: map[string]string{
-				"/foo/bar/baz/p.rego":   "",
-				"/foo/bar/.regal/.keep": "", // .keep file to ensure the dir is present
+				filepath.FromSlash("/foo/bar/baz/p.rego"):   "",
+				filepath.FromSlash("/foo/bar/.regal/.keep"): "", // .keep file to ensure the dir is present
 			},
 			Error: "config file was not found in .regal directory",
 		},
 		".regal.yaml": {
 			FS: map[string]string{
-				"/foo/bar/baz/p.rego":  "",
-				"/foo/bar/.regal.yaml": "",
+				filepath.FromSlash("/foo/bar/baz/p.rego"):  "",
+				filepath.FromSlash("/foo/bar/.regal.yaml"): "",
 			},
-			ExpectedName: "/foo/bar/.regal.yaml",
+			ExpectedName: filepath.FromSlash("/foo/bar/.regal.yaml"),
 		},
 		".regal.yaml and .regal/config.yaml": {
 			FS: map[string]string{
-				"/foo/bar/baz/p.rego":         "",
-				"/foo/bar/.regal.yaml":        "",
-				"/foo/bar/.regal/config.yaml": "",
+				filepath.FromSlash("/foo/bar/baz/p.rego"):         "",
+				filepath.FromSlash("/foo/bar/.regal.yaml"):        "",
+				filepath.FromSlash("/foo/bar/.regal/config.yaml"): "",
 			},
 			Error: "conflicting config files: both .regal directory and .regal.yaml found",
 		},
 		".regal.yaml with .regal/config.yaml at higher directory": {
 			FS: map[string]string{
-				"/foo/bar/baz/p.rego":  "",
-				"/foo/bar/.regal.yaml": "",
-				"/.regal/config.yaml":  "",
+				filepath.FromSlash("/foo/bar/baz/p.rego"):  "",
+				filepath.FromSlash("/foo/bar/.regal.yaml"): "",
+				filepath.FromSlash("/.regal/config.yaml"):  "",
 			},
-			ExpectedName: "/foo/bar/.regal.yaml",
+			ExpectedName: filepath.FromSlash("/foo/bar/.regal.yaml"),
 		},
 		".regal/config.yaml with .regal.yaml at higher directory": {
 			FS: map[string]string{
-				"/foo/bar/baz/p.rego":         "",
-				"/foo/bar/.regal/config.yaml": "",
-				"/.regal.yaml":                "",
+				filepath.FromSlash("/foo/bar/baz/p.rego"):         "",
+				filepath.FromSlash("/foo/bar/.regal/config.yaml"): "",
+				filepath.FromSlash("/.regal.yaml"):                "",
 			},
-			ExpectedName: "/foo/bar/.regal/config.yaml",
+			ExpectedName: filepath.FromSlash("/foo/bar/.regal/config.yaml"),
 		},
 	}
 
@@ -133,11 +133,11 @@ project:
 `
 
 	fs := map[string]string{
-		"/.regal/config.yaml":       cfg, // root from config
-		"/.regal/rules/policy.rego": "",  // custom rules directory
-		"/bundle/.manifest":         "",  // bundle from .manifest
-		"/foo/bar/baz/policy.rego":  "",  // foo/bar from config
-		"/baz":                      "",  // baz from config
+		filepath.FromSlash("/.regal/config.yaml"):       cfg, // root from config
+		filepath.FromSlash("/.regal/rules/policy.rego"): "",  // custom rules directory
+		filepath.FromSlash("/bundle/.manifest"):         "",  // bundle from .manifest
+		filepath.FromSlash("/foo/bar/baz/policy.rego"):  "",  // foo/bar from config
+		filepath.FromSlash("/baz"):                      "",  // baz from config
 	}
 
 	test.WithTempFS(fs, func(root string) {
@@ -164,10 +164,10 @@ project:
 `
 
 	fs := map[string]string{
-		"/.regal.yaml":             cfg, // root from config
-		"/bundle/.manifest":        "",  // bundle from .manifest
-		"/foo/bar/baz/policy.rego": "",  // foo/bar from config
-		"/baz":                     "",  // baz from config
+		filepath.FromSlash("/.regal.yaml"):             cfg, // root from config
+		filepath.FromSlash("/bundle/.manifest"):        "",  // bundle from .manifest
+		filepath.FromSlash("/foo/bar/baz/policy.rego"): "",  // foo/bar from config
+		filepath.FromSlash("/baz"):                     "",  // baz from config
 	}
 
 	test.WithTempFS(fs, func(root string) {
@@ -468,16 +468,16 @@ func TestAllRegoVersions(t *testing.T) {
     - path: foo
       rego-version: 1
 `,
-			FS: map[string]string{"bar/baz/.manifest": `{"rego_version": 1}`},
+			FS: map[string]string{filepath.FromSlash("bar/baz/.manifest"): `{"rego_version": 1}`},
 			Expected: map[string]ast.RegoVersion{
-				"":        ast.RegoV0,
-				"bar/baz": ast.RegoV1,
-				"foo":     ast.RegoV1,
+				"":                            ast.RegoV0,
+				filepath.FromSlash("bar/baz"): ast.RegoV1,
+				"foo":                         ast.RegoV1,
 			},
 		},
 		"no config": {
 			Config:   "",
-			FS:       map[string]string{"bar/baz/.manifest": `{"rego_version": 1}`},
+			FS:       map[string]string{filepath.FromSlash("bar/baz/.manifest"): `{"rego_version": 1}`},
 			Expected: map[string]ast.RegoVersion{},
 		},
 	}

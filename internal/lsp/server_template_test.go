@@ -80,26 +80,26 @@ func TestTemplateContentsForFile(t *testing.T) {
 			ExpectedContents: "package foo.bar.baz\n\n",
 		},
 		"v0 templating using rego version setting": {
-			FileKey:           "foo/bar/baz/bax.rego",
+			FileKey:           filepath.FromSlash("foo/bar/baz/bax.rego"),
 			CacheFileContents: "",
 			ServerAllRegoVersions: concurrent.MapOf(map[string]ast.RegoVersion{
 				"foo": ast.RegoV0,
 			}),
 			DiskContents: map[string]string{
-				"foo/bar/baz/bax.rego": "",
-				".regal/config.yaml":   "", // we manually set the versions, config not loaded in these tests
+				filepath.FromSlash("foo/bar/baz/bax.rego"): "",
+				filepath.FromSlash(".regal/config.yaml"):   "", // we manually set the versions, config not loaded in these tests
 			},
 			ExpectedContents: "package foo.bar.baz\n\nimport rego.v1\n",
 		},
 		"v1 templating using rego version setting": {
-			FileKey:           "foo/bar/baz/bax.rego",
+			FileKey:           filepath.FromSlash("foo/bar/baz/bax.rego"),
 			CacheFileContents: "",
 			ServerAllRegoVersions: concurrent.MapOf(map[string]ast.RegoVersion{
 				"foo": ast.RegoV1,
 			}),
 			DiskContents: map[string]string{
-				"foo/bar/baz/bax.rego": "",
-				".regal/config.yaml":   "", // we manually set the versions, config not loaded in these tests
+				filepath.FromSlash("foo/bar/baz/bax.rego"): "",
+				filepath.FromSlash(".regal/config.yaml"):   "", // we manually set the versions, config not loaded in these tests
 			},
 			ExpectedContents: "package foo.bar.baz\n\n",
 		},
@@ -226,6 +226,10 @@ func TestNewFileTemplating(t *testing.T) {
 	// Validate that the client received a workspace edit
 	timeout.Reset(determineTimeout())
 
+	// Construct proper URI for delete operation
+	deleteTargetPath := filepath.Join(tempDir, "foo", "bar")
+	deleteTargetURI := uri.FromPath(clients.IdentifierGeneric, deleteTargetPath)
+
 	expectedMessage := fmt.Sprintf(`{
   "edit": {
     "documentChanges": [
@@ -265,12 +269,12 @@ func TestNewFileTemplating(t *testing.T) {
           "ignoreIfNotExists": true,
           "recursive": true
         },
-        "uri": "file://%[3]s/foo/bar"
+        "uri": "%[3]s"
       }
     ]
   },
   "label": "Template new Rego file"
-}`, newFileURI, expectedNewFileURI, tempDir)
+}`, newFileURI, expectedNewFileURI, deleteTargetURI)
 
 	for success := false; !success; {
 		select {

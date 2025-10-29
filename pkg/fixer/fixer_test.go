@@ -18,7 +18,7 @@ func TestFixer(t *testing.T) {
 	t.Parallel()
 
 	policies := map[string]string{
-		"/root/main/main.rego": `package test
+		filepath.FromSlash("/root/main/main.rego"): `package test
 
 allow if {
 true #no space
@@ -30,7 +30,7 @@ deny = true
 	memfp := fileprovider.NewInMemoryFileProvider(policies)
 
 	input, err := memfp.ToInput(map[string]ast.RegoVersion{
-		"/root/main": ast.RegoV1,
+		filepath.FromSlash("/root/main"): ast.RegoV1,
 	})
 	if err != nil {
 		t.Fatalf("failed to create input: %v", err)
@@ -38,8 +38,8 @@ deny = true
 
 	l := linter.NewLinter().WithEnableAll(true).WithInputModules(&input)
 
-	f := NewFixer().RegisterFixes(fixes.NewDefaultFixes()...).RegisterRoots("/root").SetRegoVersionsMap(
-		map[string]ast.RegoVersion{"/root/main": ast.RegoV1})
+	f := NewFixer().RegisterFixes(fixes.NewDefaultFixes()...).RegisterRoots(filepath.FromSlash("/root")).
+		SetRegoVersionsMap(map[string]ast.RegoVersion{filepath.FromSlash("/root/main"): ast.RegoV1})
 
 	fixReport, err := f.Fix(t.Context(), &l, memfp)
 	if err != nil {
@@ -48,10 +48,10 @@ deny = true
 
 	expectedFileFixedViolations := map[string][]string{
 		// use-assigment-operator is correct in formatting so does not appear.
-		"/root/test/main.rego": {"directory-package-mismatch", "no-whitespace-comment", "opa-fmt"},
+		filepath.FromSlash("/root/test/main.rego"): {"directory-package-mismatch", "no-whitespace-comment", "opa-fmt"},
 	}
 	expectedFileContents := map[string]string{
-		"/root/test/main.rego": `package test
+		filepath.FromSlash("/root/test/main.rego"): `package test
 
 allow := true
 

@@ -180,8 +180,8 @@ func handlerFor(route Route) regoHandler {
 		}
 
 		if route.requires.InputDotJSON {
-			path := ruri.ToPath(rctx.Client.Identifier, uri)
-			root := ruri.ToPath(rctx.Client.Identifier, rctx.Environment.WorkspaceRootURI)
+			path := ruri.ToPath(uri)
+			root := ruri.ToPath(rctx.Environment.WorkspaceRootURI)
 
 			// TODO: Avoid the intermediate map[string]any step and unmarshal directly into ast.Value.
 			inputDotJSONPath, inputDotJSONContent := io.FindInput(path, root)

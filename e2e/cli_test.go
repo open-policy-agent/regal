@@ -499,9 +499,9 @@ allow if {
 	input.admin
 }
 `,
-		"wow/foo-bar/baz/main.rego": `package wow["foo-bar"].baz
+		filepath.FromSlash("wow/foo-bar/baz/main.rego"): `package wow["foo-bar"].baz
 `,
-		"wow/foo-bar/baz/main_test.rego": `package wow["foo-bar"].baz_test
+		filepath.FromSlash("wow/foo-bar/baz/main_test.rego"): `package wow["foo-bar"].baz_test
 
 test_allow := true
 `,
@@ -542,12 +542,12 @@ allow := true
 
 func TestFixWithConflicts(t *testing.T) {
 	initialState := map[string]string{
-		".regal/config.yaml":   "",              // needed to find the root in the right place
-		"foo/foo.rego":         "package foo\n", // this file is in the correct location
-		"quz/foo.rego":         "package foo\n", // should be at foo/foo.rego, but that file already exists
-		"foo/bar.rego":         "package bar\n", // should be at bar/bar.rego, but they cannot all be moved there
-		"baz/bar.rego":         "package bar\n", // should be at bar/bar.rego, but they cannot all be moved there
-		"bax/foo/wow/bar.rego": "package bar\n", // should be at bar/bar.rego, but they cannot all be moved there
+		filepath.FromSlash(".regal/config.yaml"):   "",              // needed to find the root in the right place
+		filepath.FromSlash("foo/foo.rego"):         "package foo\n", // this file is in the correct location
+		filepath.FromSlash("quz/foo.rego"):         "package foo\n", // should be at foo/foo.rego, but that file already exists
+		filepath.FromSlash("foo/bar.rego"):         "package bar\n", // should be at bar/bar.rego, but they cannot all be moved there
+		filepath.FromSlash("baz/bar.rego"):         "package bar\n", // should be at bar/bar.rego, but they cannot all be moved there
+		filepath.FromSlash("bax/foo/wow/bar.rego"): "package bar\n", // should be at bar/bar.rego, but they cannot all be moved there
 	}
 
 	td := testutil.TempDirectoryOf(t, initialState)
