@@ -19,7 +19,8 @@ var drivePattern = regexp.MustCompile(`^\/?([A-Za-z]):`)
 // Since clients expect URIs to be in a specific format, this function
 // will convert the path to the appropriate format for the client.
 func FromPath(client clients.Identifier, path string) string {
-	path = strings.TrimPrefix(strings.TrimPrefix(path, "file://"), uriSeparator)
+	path = strings.TrimPrefix(path, "file://")
+	path = strings.TrimPrefix(path, uriSeparator)
 
 	var driveLetter string
 	if matches := drivePattern.FindStringSubmatch(path); len(matches) > 0 {
