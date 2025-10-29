@@ -7,39 +7,39 @@ import data.regal.result
 import data.regal.util
 
 report contains violation if {
-	some rule_index, i
-	elem := ast.found.refs[rule_index][_].value[i]
+	some rule_index, term
+	ast.found.vars[rule_index].ref[term]
 
-	# first item can't be a loop or key ref
-	i != 0
-	elem.type == "var"
-	not ast.is_wildcard(elem)
+	not startswith(term.value, "$")
+	not term.value in ast.imported_identifiers
+	not term.value in ast.rule_names
 
 	rule := input.rules[to_number(rule_index)]
 
-	not elem.value in ast.find_names_in_scope(rule, elem.location)
+	not ast.is_in_local_scope(rule, term.location, term.value)
 
-	path := _location_path(rule, elem.location)
+	walk(rule, [path, term.location])
 
-	not _var_in_comprehension_body(elem, rule, path)
+	not _var_in_ref_head_declared(path, rule_index, term.value)
+	not _var_in_comprehension_body(path, term.value, rule)
 
-	violation := result.fail(rego.metadata.chain(), result.location(elem))
+	violation := result.fail(rego.metadata.chain(), result.location(term))
 }
 
-_location_path(rule, location) := path if walk(rule, [path, location])
-
-_var_in_comprehension_body(var, rule, path) if {
-	some v in _comprehension_body_vars(rule, path)
-	v.type == var.type
-	v.value == var.value
-}
-
-_comprehension_body_vars(rule, path) := [vars |
+_var_in_comprehension_body(path, value, rule) if {
 	some parent_path in array.reverse(util.all_paths(path))
 
 	node := object.get(rule, parent_path, {})
 
 	node.type in {"arraycomprehension", "objectcomprehension", "setcomprehension"}
 
-	vars := ast.find_vars(node.value.body)
-][0]
+	some v in ast.find_vars(node.value.body)
+	v.type == "var"
+	v.value == value
+}
+
+_var_in_ref_head_declared(path, rule_index, value) if {
+	path[0] == "head"
+	path[1] == "ref"
+	ast.found.vars[rule_index]["some"][_].value == value
+}
