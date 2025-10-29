@@ -80,26 +80,26 @@ func TestTemplateContentsForFile(t *testing.T) {
 			ExpectedContents: "package foo.bar.baz\n\n",
 		},
 		"v0 templating using rego version setting": {
-			FileKey:           "foo/bar/baz/bax.rego",
+			FileKey:           filepath.FromSlash("foo/bar/baz/bax.rego"),
 			CacheFileContents: "",
 			ServerAllRegoVersions: concurrent.MapOf(map[string]ast.RegoVersion{
 				"foo": ast.RegoV0,
 			}),
 			DiskContents: map[string]string{
-				"foo/bar/baz/bax.rego": "",
-				".regal/config.yaml":   "", // we manually set the versions, config not loaded in these tests
+				filepath.FromSlash("foo/bar/baz/bax.rego"): "",
+				filepath.FromSlash(".regal/config.yaml"):   "", // we manually set the versions, config not loaded in these tests
 			},
 			ExpectedContents: "package foo.bar.baz\n\nimport rego.v1\n",
 		},
 		"v1 templating using rego version setting": {
-			FileKey:           "foo/bar/baz/bax.rego",
+			FileKey:           filepath.FromSlash("foo/bar/baz/bax.rego"),
 			CacheFileContents: "",
 			ServerAllRegoVersions: concurrent.MapOf(map[string]ast.RegoVersion{
 				"foo": ast.RegoV1,
 			}),
 			DiskContents: map[string]string{
-				"foo/bar/baz/bax.rego": "",
-				".regal/config.yaml":   "", // we manually set the versions, config not loaded in these tests
+				filepath.FromSlash("foo/bar/baz/bax.rego"): "",
+				filepath.FromSlash(".regal/config.yaml"):   "", // we manually set the versions, config not loaded in these tests
 			},
 			ExpectedContents: "package foo.bar.baz\n\n",
 		},

@@ -16,11 +16,11 @@ func TestFindManifestLocations(t *testing.T) {
 	t.Parallel()
 
 	fs := map[string]string{
-		"/.git":                          "",
-		"/foo/bar/baz/.manifest":         "",
-		"/foo/bar/qux/.manifest":         "",
-		"/foo/bar/.regal/.manifest.yaml": "",
-		"/node_modules/.manifest":        "",
+		filepath.FromSlash("/.git"):                          "",
+		filepath.FromSlash("/foo/bar/baz/.manifest"):         "",
+		filepath.FromSlash("/foo/bar/qux/.manifest"):         "",
+		filepath.FromSlash("/foo/bar/.regal/.manifest.yaml"): "",
+		filepath.FromSlash("/node_modules/.manifest"):        "",
 	}
 
 	test.WithTempFS(fs, func(root string) {
@@ -69,11 +69,11 @@ func TestDirCleanUpPaths(t *testing.T) {
 			Expected: []string{},
 		},
 		"all the way up": {
-			DeleteTarget: "foo/bar/baz/bax.rego",
+			DeleteTarget: filepath.FromSlash("foo/bar/baz/bax.rego"),
 			State: map[string]string{
-				"foo/bar/baz/bax.rego": "package baz",
+				filepath.FromSlash("foo/bar/baz/bax.rego"): "package baz",
 			},
-			Expected: []string{"foo/bar/baz", "foo/bar", "foo"},
+			Expected: []string{filepath.FromSlash("foo/bar/baz"), filepath.FromSlash("foo/bar"), "foo"},
 		},
 		"almost all the way up": {
 			DeleteTarget: "foo/bar/baz/bax.rego",

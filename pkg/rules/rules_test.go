@@ -132,17 +132,17 @@ func TestInputFromMap(t *testing.T) {
 	t.Parallel()
 
 	versionsMap := map[string]ast.RegoVersion{
-		"/foo/bar": ast.RegoV1,
-		"/foo":     ast.RegoV0,
+		filepath.FromSlash("/foo/bar"): ast.RegoV1,
+		filepath.FromSlash("/foo"):     ast.RegoV0,
 	}
 
 	files := map[string]string{
-		"/foo/bar/main.rego": `package main
+		filepath.FromSlash("/foo/bar/main.rego"): `package main
 # v1 syntax is allowed
 
 allow if input.admin
 `,
-		"/foo/main.rego": `package main
+		filepath.FromSlash("/foo/main.rego"): `package main
 # v0 syntax is allowed
 
 allow[msg] { msg := "hello" }

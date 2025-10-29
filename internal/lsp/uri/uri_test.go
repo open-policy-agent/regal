@@ -185,12 +185,12 @@ func TestToRelativePath(t *testing.T) {
 		"unix simple": {
 			uri:              "file:///workspace/foo/bar.rego",
 			workspaceRootURI: "file:///workspace",
-			want:             "foo/bar.rego",
+			want:             filepath.FromSlash("foo/bar.rego"),
 		},
 		"unix with trailing slash in workspace": {
 			uri:              "file:///workspace/foo/bar.rego",
 			workspaceRootURI: "file:///workspace/",
-			want:             "foo/bar.rego",
+			want:             filepath.FromSlash("foo/bar.rego"),
 		},
 		"windows": {
 			uri:              "file:///c:/workspace/foo/bar.rego",
@@ -225,17 +225,17 @@ func TestFromRelativePath(t *testing.T) {
 		want             string
 	}{
 		"unix simple": {
-			relativePath:     "foo/bar.rego",
+			relativePath:     filepath.FromSlash("foo/bar.rego"),
 			workspaceRootURI: "file:///workspace",
 			want:             "file:///workspace/foo/bar.rego",
 		},
 		"unix with trailing slash in workspace": {
-			relativePath:     "foo/bar.rego",
+			relativePath:     filepath.FromSlash("foo/bar.rego"),
 			workspaceRootURI: "file:///workspace/",
 			want:             "file:///workspace/foo/bar.rego",
 		},
 		"windows": {
-			relativePath:     "foo/bar.rego",
+			relativePath:     filepath.FromSlash("foo/bar.rego"),
 			workspaceRootURI: "file:///c:/workspace",
 			want:             "file:///c:/workspace/foo/bar.rego",
 		},
