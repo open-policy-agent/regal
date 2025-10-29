@@ -183,12 +183,6 @@ is_output_var(rule, var) if {
 }
 
 # METADATA
-# description: as the name implies, answers whether provided value is a ref
-# scope: document
-is_ref(value) if value.type == "ref"
-is_ref(value) if value[0].type == "ref"
-
-# METADATA
 # description: |
 #   returns an array of all rule indices, as strings. this will be needed until
 #   https://github.com/open-policy-agent/opa/issues/6736 is fixed
@@ -234,6 +228,18 @@ ref_value_equal(v1, v2) if {
 		part.value == v2[i].value
 	}
 }
+
+# METADATA
+# description: |
+#   returns a new ref value made by extending terms1 with terms2,
+#   where the first term of terms2 transformed to string
+extend_ref_terms(terms1, terms2) := array.concat(
+	terms1,
+	array.concat(
+		[object.union(terms2[0], {"type": "string"})],
+		array.slice(terms2, 1, 100),
+	),
+)
 
 # METADATA
 # description: |
