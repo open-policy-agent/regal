@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -1511,7 +1510,7 @@ func (l *LanguageServer) handleTextDocumentDefinition(params types.DefinitionPar
 
 	query := oracle.DefinitionQuery{
 		// The value of Filename is used if the defn in the current buffer.
-		Filename: strings.TrimPrefix(params.TextDocument.URI, util.EnsureSuffix(l.workspaceRootURI, "/")),
+		Filename: l.toRelativePath(params.TextDocument.URI),
 		Pos:      positionToOffset(contents, params.Position),
 		Modules:  modules,
 		Buffer:   outil.StringToByteSlice(contents),
@@ -1532,7 +1531,7 @@ func (l *LanguageServer) handleTextDocumentDefinition(params types.DefinitionPar
 	return types.Location{
 		// res.File will be relative to the workspace root. The response here needs
 		// a URI for the client to be able to navigate correctly.
-		URI:   path.Join(l.workspaceRootURI, res.File),
+		URI:   uri.FromRelativePath(l.client.Identifier, res.File, l.workspaceRootURI),
 		Range: types.RangeBetween(res.Row-1, res.Col-1, res.Row-1, res.Col-1),
 	}, nil
 }
@@ -2285,7 +2284,7 @@ func (l *LanguageServer) toPath(fileURI string) string {
 }
 
 func (l *LanguageServer) toRelativePath(fileURI string) string {
-	return strings.TrimPrefix(l.toPath(fileURI), l.workspacePath()+string(os.PathSeparator))
+	return uri.ToRelativePath(l.client.Identifier, fileURI, l.workspaceRootURI)
 }
 
 func (l *LanguageServer) fromPath(filePath string) string {
@@ -2324,6 +2323,7 @@ func (l *LanguageServer) parseOpts(fileURI string, bis map[string]*ast.Builtin) 
 		Builtins:         bis,
 		RegoVersion:      l.regoVersionForURI(fileURI),
 		WorkspaceRootURI: l.workspaceRootURI,
+		ClientIdentifier: l.client.Identifier,
 	}
 }
 

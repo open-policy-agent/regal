@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 // uris always use / as the uriSeparator, regardless of system.
@@ -58,4 +59,25 @@ func ToPath(client clients.Identifier, uri string) string {
 
 	// Convert path to use system separators
 	return filepath.FromSlash(path)
+}
+
+// ToRelativePath converts a URI to a file path relative to the given workspace root URI.
+func ToRelativePath(client clients.Identifier, uri, workspaceRootURI string) string {
+	absolutePath := ToPath(client, uri)
+	workspaceRootPath := ToPath(client, workspaceRootURI)
+
+	// Ensure workspace root path has trailing separator for consistent trimming
+	if workspaceRootPath != "" {
+		workspaceRootPath = util.EnsureSuffix(workspaceRootPath, "/")
+	}
+
+	return strings.TrimPrefix(absolutePath, workspaceRootPath)
+}
+
+// FromRelativePath creates a URI from a relative path and workspace root URI.
+func FromRelativePath(client clients.Identifier, relativePath, workspaceRootURI string) string {
+	workspaceRootPath := ToPath(client, workspaceRootURI)
+	absolutePath := filepath.Join(workspaceRootPath, relativePath)
+
+	return FromPath(client, absolutePath)
 }
