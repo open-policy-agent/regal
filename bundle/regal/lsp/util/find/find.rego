@@ -5,7 +5,7 @@
 package regal.lsp.util.find
 
 import data.regal.lsp.completion.location
-import data.regal.lsp.util.location as uloc
+import data.regal.lsp.util.range
 
 # METADATA
 # description: find the function argument at the given position, if any
@@ -21,7 +21,7 @@ arg_at_position := [arg, rule_index] if {
 	arg.type == "var"
 	arg.value == word.text
 
-	arg_pos := uloc.parse_range(arg.location)
+	arg_pos := range.parse(arg.location)
 
 	input.params.position.line == arg_pos.start.line
 	input.params.position.character >= arg_pos.start.character
@@ -35,7 +35,7 @@ arg_at_position := [arg, rule_index] if {
 rule_at_position := [rule, rule_index] if {
 	some rule_index, rule in data.workspace.parsed[input.params.textDocument.uri].rules
 
-	uloc.within_range(input.params.position, uloc.parse_range(rule.location))
+	range.contains_position(range.parse(rule.location), input.params.position)
 }
 
 # METADATA
@@ -45,5 +45,5 @@ rule_at_position := [rule, rule_index] if {
 import_at_position := imp if {
 	some imp in data.workspace.parsed[input.params.textDocument.uri].imports
 
-	uloc.within_range(input.params.position, uloc.parse_range(imp.path.location))
+	range.contains_position(range.parse(imp.path.location), input.params.position)
 }

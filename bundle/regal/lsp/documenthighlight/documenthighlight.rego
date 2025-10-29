@@ -12,7 +12,7 @@ package regal.lsp.documenthighlight
 
 import data.regal.ast
 import data.regal.lsp.util.find
-import data.regal.lsp.util.location as uloc
+import data.regal.lsp.util.range
 import data.regal.util
 
 # METADATA
@@ -25,7 +25,7 @@ items contains item if {
 	[arg, _] := find.arg_at_position
 
 	item := {
-		"range": uloc.parse_range(arg.location),
+		"range": range.parse(arg.location),
 		"kind": 2, # Write
 	}
 }
@@ -43,7 +43,7 @@ items contains item if {
 	value.value == arg.value
 
 	item := {
-		"range": uloc.parse_range(value.location),
+		"range": range.parse(value.location),
 		"kind": 3, # Read
 	}
 }
@@ -59,7 +59,7 @@ items contains item if {
 	value.value == arg.value
 
 	item := {
-		"range": uloc.parse_range(value.location),
+		"range": range.parse(value.location),
 		"kind": 3, # Read
 	}
 }
