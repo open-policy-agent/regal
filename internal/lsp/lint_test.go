@@ -7,6 +7,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
+	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -109,6 +110,7 @@ allow[msg] { 1 == 1; msg := "hello" }
 				Builtins:         ast.BuiltinMap,
 				RegoVersion:      testData.regoVersion,
 				WorkspaceRootURI: "",
+				ClientIdentifier: clients.IdentifierGeneric,
 			}))(t)
 
 			if success != testData.expectSuccess {

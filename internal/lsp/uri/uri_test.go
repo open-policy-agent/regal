@@ -173,3 +173,87 @@ func TestURIToPath_VSCode(t *testing.T) {
 		})
 	}
 }
+
+func TestToRelativePath(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		uri              string
+		workspaceRootURI string
+		want             string
+	}{
+		"unix simple": {
+			uri:              "file:///workspace/foo/bar.rego",
+			workspaceRootURI: "file:///workspace",
+			want:             "foo/bar.rego",
+		},
+		"unix with trailing slash in workspace": {
+			uri:              "file:///workspace/foo/bar.rego",
+			workspaceRootURI: "file:///workspace/",
+			want:             "foo/bar.rego",
+		},
+		"windows": {
+			uri:              "file:///c:/workspace/foo/bar.rego",
+			workspaceRootURI: "file:///c:/workspace",
+			want:             filepath.FromSlash("foo/bar.rego"),
+		},
+		"root path": {
+			uri:              "file:///workspace/policy.rego",
+			workspaceRootURI: "file:///workspace",
+			want:             "policy.rego",
+		},
+	}
+
+	for label, tc := range testCases {
+		t.Run(label, func(t *testing.T) {
+			t.Parallel()
+
+			got := ToRelativePath(clients.IdentifierGeneric, tc.uri, tc.workspaceRootURI)
+			if got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestFromRelativePath(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		relativePath     string
+		workspaceRootURI string
+		want             string
+	}{
+		"unix simple": {
+			relativePath:     "foo/bar.rego",
+			workspaceRootURI: "file:///workspace",
+			want:             "file:///workspace/foo/bar.rego",
+		},
+		"unix with trailing slash in workspace": {
+			relativePath:     "foo/bar.rego",
+			workspaceRootURI: "file:///workspace/",
+			want:             "file:///workspace/foo/bar.rego",
+		},
+		"windows": {
+			relativePath:     "foo/bar.rego",
+			workspaceRootURI: "file:///c:/workspace",
+			want:             "file:///c:/workspace/foo/bar.rego",
+		},
+		"root file": {
+			relativePath:     "policy.rego",
+			workspaceRootURI: "file:///workspace/",
+			want:             "file:///workspace/policy.rego",
+		},
+	}
+
+	for label, tc := range testCases {
+		t.Run(label, func(t *testing.T) {
+			t.Parallel()
+
+			got := FromRelativePath(clients.IdentifierGeneric, tc.relativePath, tc.workspaceRootURI)
+			if got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

@@ -5,13 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
@@ -40,12 +40,12 @@ func TestEvalWorkspacePath(t *testing.T) {
 	}
 	`
 
-	policy1URI := ls.workspaceRootURI + "/policy1.rego"
-	policy1RelativeFileName := strings.TrimPrefix(policy1URI, ls.workspaceRootURI+"/")
+	policy1URI := uri.FromRelativePath(ls.client.Identifier, "policy1.rego", ls.workspaceRootURI)
+	policy1RelativeFileName := uri.ToRelativePath(ls.client.Identifier, policy1URI, ls.workspaceRootURI)
 	module1 := testutil.Must(rparse.ModuleWithOpts(policy1RelativeFileName, policy1, rparse.ParserOptions()))(t)
 
-	policy2URI := ls.workspaceRootURI + "/policy2.rego"
-	policy2RelativeFileName := strings.TrimPrefix(policy2URI, ls.workspaceRootURI+"/")
+	policy2URI := uri.FromRelativePath(ls.client.Identifier, "policy2.rego", ls.workspaceRootURI)
+	policy2RelativeFileName := uri.ToRelativePath(ls.client.Identifier, policy2URI, ls.workspaceRootURI)
 	module2 := testutil.Must(rparse.ModuleWithOpts(policy2RelativeFileName, policy2, rparse.ParserOptions()))(t)
 
 	ls.cache.SetFileContents(policy1URI, policy1)

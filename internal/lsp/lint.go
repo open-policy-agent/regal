@@ -11,8 +11,10 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
+	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/completions/refs"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
@@ -46,6 +48,7 @@ type updateParseOpts struct {
 	Builtins         map[string]*ast.Builtin
 	RegoVersion      ast.RegoVersion
 	WorkspaceRootURI string
+	ClientIdentifier clients.Identifier
 }
 
 // updateParse updates the module cache with the latest parse result for a given URI,
@@ -61,7 +64,7 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 	options := rparse.ParserOptions()
 	options.RegoVersion = opts.RegoVersion
 
-	presentedFileName := strings.TrimPrefix(opts.FileURI, opts.WorkspaceRootURI+"/")
+	presentedFileName := uri.ToRelativePath(opts.ClientIdentifier, opts.FileURI, opts.WorkspaceRootURI)
 
 	module, err := rparse.ModuleWithOpts(presentedFileName, content, options)
 	if err == nil {
