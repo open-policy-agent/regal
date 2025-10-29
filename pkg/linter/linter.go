@@ -869,27 +869,22 @@ func (l Linter) lintWithAggregateRules(
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	input := map[string]any{
-		// This will be replaced by the routing policy to provide each
-		// aggregate rule only the aggregated data from the same rule
-		"aggregates_internal": aggregates,
-		// There is no file provided in input here, but we'll provide *something* for
-		// consistency, and to avoid silently failing with undefined should someone
-		// refer to input.regal in an aggregate_report rule
-		"ignore_directives": ignoreDirectives,
-		"regal": map[string]any{
-			"operations": []string{"aggregate"},
-			"file": map[string]any{
-				"name":  "__aggregate_report__",
-				"lines": []string{},
-			},
-		},
-	}
+	regal := ast.ObjectTerm(
+		ast.Item(ast.InternedTerm("operations"), ast.ArrayTerm(ast.InternedTerm("aggregate"))),
+		ast.Item(ast.InternedTerm("file"), ast.ObjectTerm(
+			ast.Item(ast.InternedTerm("name"), ast.InternedTerm("__aggregate_report__")),
+			ast.Item(ast.InternedTerm("lines"), ast.InternedEmptyArray),
+		)),
+	)
 
-	inputValue, err := transform.ToOPAInputValue(input)
-	if err != nil {
-		return report.Report{}, fmt.Errorf("failed to transform input value: %w", err)
-	}
+	aggParsed, _ := transform.ToOPAInputValue(aggregates)
+	dirParsed, _ := transform.ToOPAInputValue(ignoreDirectives)
+
+	inputValue := ast.NewObject(
+		ast.Item(ast.InternedTerm("aggregates_internal"), ast.NewTerm(aggParsed)),
+		ast.Item(ast.InternedTerm("ignore_directives"), ast.NewTerm(dirParsed)),
+		ast.Item(ast.InternedTerm("regal"), regal),
+	)
 
 	evalArgs := []rego.EvalOption{
 		rego.EvalParsedInput(inputValue),
