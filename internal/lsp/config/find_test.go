@@ -39,8 +39,8 @@ func TestFindConfigRoots(t *testing.T) {
 				"foo/.regal.yaml":    "",
 			},
 			Expected: []string{
-				"/",
-				"/foo",
+				filepath.FromSlash("/"),
+				filepath.FromSlash("/foo"),
 			},
 		},
 		"two config roots, one higher, not in root dir": {
@@ -49,8 +49,8 @@ func TestFindConfigRoots(t *testing.T) {
 				filepath.FromSlash("bar/baz/.regal/config.yaml"): "",
 			},
 			Expected: []string{
-				"/bar/baz",
-				"/foo",
+				filepath.FromSlash("/bar/baz"),
+				filepath.FromSlash("/foo"),
 			},
 		},
 		"two config roots, equal depth": {
@@ -59,8 +59,8 @@ func TestFindConfigRoots(t *testing.T) {
 				filepath.FromSlash("foo/.regal.yaml"):        "",
 			},
 			Expected: []string{
-				"/bar",
-				"/foo",
+				filepath.FromSlash("/bar"),
+				filepath.FromSlash("/foo"),
 			},
 		},
 	}

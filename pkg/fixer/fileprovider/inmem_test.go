@@ -1,6 +1,7 @@
 package fileprovider
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -31,8 +32,8 @@ func TestRenameConflict(t *testing.T) {
 		filepath.FromSlash("/foo/bar/baz"): "bar",
 		filepath.FromSlash("/bar/foo"):     "baz",
 	})
-	exp := `rename conflict: "` + filepath.FromSlash("/foo/bar/baz") +
-		`" cannot be renamed as the target location "` + filepath.FromSlash("/bar/foo") + `" already exists`
+	exp := fmt.Sprintf("rename conflict: %q cannot be renamed as the target location %q already exists",
+		filepath.FromSlash("/foo/bar/baz"), filepath.FromSlash("/bar/foo"))
 
 	testutil.ErrMustContain(fp.Rename(filepath.FromSlash("/foo/bar/baz"), filepath.FromSlash("/bar/foo")), exp)(t)
 }

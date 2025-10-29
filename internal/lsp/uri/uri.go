@@ -68,7 +68,7 @@ func ToRelativePath(client clients.Identifier, uri, workspaceRootURI string) str
 
 	// Ensure workspace root path has trailing separator for consistent trimming
 	if workspaceRootPath != "" {
-		workspaceRootPath = util.EnsureSuffix(workspaceRootPath, "/")
+		workspaceRootPath = util.EnsureSuffix(workspaceRootPath, string(filepath.Separator))
 	}
 
 	return strings.TrimPrefix(absolutePath, workspaceRootPath)
