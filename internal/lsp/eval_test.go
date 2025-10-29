@@ -106,16 +106,19 @@ func TestFindInputPath(t *testing.T) {
 				t.Fatalf("did not expect to find input.%s", tc.fileExt)
 			}
 
-			createWithContent(t, tmpDir+"/workspace/foo/bar/input."+tc.fileExt, tc.fileContent)
+			inputPath := filepath.Join(workspacePath, "foo", "bar", "input."+tc.fileExt)
+			createWithContent(t, inputPath, tc.fileContent)
 
-			if path, exp := rio.FindInputPath(file, workspacePath), workspacePath+"/foo/bar/input."+tc.fileExt; path != exp {
+			if path, exp := rio.FindInputPath(file, workspacePath), inputPath; path != exp {
 				t.Errorf(`expected input at %s, got %s`, exp, path)
 			}
 
-			testutil.MustRemove(t, tmpDir+"/workspace/foo/bar/input."+tc.fileExt)
-			createWithContent(t, tmpDir+"/workspace/input."+tc.fileExt, tc.fileContent)
+			testutil.MustRemove(t, inputPath)
 
-			if path, exp := rio.FindInputPath(file, workspacePath), workspacePath+"/input."+tc.fileExt; path != exp {
+			workspaceInputPath := filepath.Join(workspacePath, "input."+tc.fileExt)
+			createWithContent(t, workspaceInputPath, tc.fileContent)
+
+			if path, exp := rio.FindInputPath(file, workspacePath), workspaceInputPath; path != exp {
 				t.Errorf(`expected input at %s, got %s`, exp, path)
 			}
 		})
@@ -141,18 +144,30 @@ func TestFindInput(t *testing.T) {
 				t.Fatalf("did not expect to find input.%s", tc.fileType)
 			}
 
-			createWithContent(t, tmpDir+"/workspace/foo/bar/input."+tc.fileType, tc.fileContent)
+			inputPath := filepath.Join(workspacePath, "foo", "bar", "input."+tc.fileType)
+
+			createWithContent(t, inputPath, tc.fileContent)
 
 			path, content := rio.FindInput(file, workspacePath)
-			if path != workspacePath+"/foo/bar/input."+tc.fileType || !maps.Equal(content, map[string]any{"x": true}) {
-				t.Errorf(`expected input {"x": true} at, got %s`, content)
+			if path != inputPath {
+				t.Errorf(`expected input at %s, got %s`, inputPath, path)
 			}
 
-			testutil.MustRemove(t, tmpDir+"/workspace/foo/bar/input."+tc.fileType)
-			createWithContent(t, tmpDir+"/workspace/input."+tc.fileType, tc.fileContent)
+			if !maps.Equal(content, map[string]any{"x": true}) {
+				t.Errorf(`expected input {"x": true}, got %s`, content)
+			}
+
+			testutil.MustRemove(t, inputPath)
+
+			workspaceInputPath := filepath.Join(workspacePath, "input."+tc.fileType)
+			createWithContent(t, workspaceInputPath, tc.fileContent)
 
 			path, content = rio.FindInput(file, workspacePath)
-			if path != workspacePath+"/input."+tc.fileType || !maps.Equal(content, map[string]any{"x": true}) {
+			if path != workspaceInputPath {
+				t.Errorf(`expected input at %s, got %s`, workspaceInputPath, path)
+			}
+
+			if !maps.Equal(content, map[string]any{"x": true}) {
 				t.Errorf(`expected input {"x": true} at, got %s`, content)
 			}
 		})

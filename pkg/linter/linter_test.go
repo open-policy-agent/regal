@@ -438,7 +438,7 @@ func TestLintWithPrintHook(t *testing.T) {
 func TestLintWithAggregateRule(t *testing.T) {
 	t.Parallel()
 
-	policies := make(map[string]string)
+	policies := make(map[string]string, 2)
 	policies["foo.rego"] = `package foo
 		import data.bar
 

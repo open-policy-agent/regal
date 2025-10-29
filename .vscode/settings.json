@@ -17,5 +17,13 @@
     // This is better handled by Regal's selection ranges implementation
     "editor.smartSelect.selectLeadingAndTrailingWhitespace": false,
     "editor.smartSelect.selectSubwords": false
-  }
+  },
+  // Enable to have values displayed inline during debugging
+  // The default value is "auto", which consults the language extension on whethher
+  // to have this enabled or not. And since the extension currently doesn't do anything
+  // on its own to support this, we need to explicitly enable it here if we want this.
+  // Long term, the extension + Regal should provide support for this, as it'll also
+  // result in a better experience when we can be more selective about what to show,
+  // and how.
+  "debug.inlineValues": "on"
 }

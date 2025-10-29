@@ -169,8 +169,8 @@ func WithCreateRecursive(path string, fn func(f *os.File) error) error {
 	return fn(file)
 }
 
-// FindInputPath consults the filesystem and returns the input.json or input.yaml closes to the
-// file provided as arguments.
+// FindInputPath consults the filesystem and returns the location of the input.json
+// or input.yaml closest to the file provided.
 func FindInputPath(file string, workspacePath string) string {
 	relative := strings.TrimPrefix(file, workspacePath)
 	components := strings.Split(filepath.Dir(relative), string(os.PathSeparator))
