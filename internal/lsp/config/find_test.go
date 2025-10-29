@@ -77,7 +77,10 @@ func TestFindConfigRoots(t *testing.T) {
 				gotTrimmed := make([]string, len(got))
 
 				for i, path := range got {
-					trimmed := cmp.Or(strings.TrimPrefix(path, root), "/")
+					// Normalize path separators to ensure TrimPrefix works correctly on Windows
+					normalizedPath := filepath.ToSlash(path)
+					normalizedRoot := filepath.ToSlash(root)
+					trimmed := cmp.Or(strings.TrimPrefix(normalizedPath, normalizedRoot), "/")
 					gotTrimmed[i] = trimmed
 				}
 

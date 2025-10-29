@@ -6,15 +6,17 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
+	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
 func TestTextDocumentSignatureHelp(t *testing.T) {
 	t.Parallel()
 
-	mainRegoURI := fileURIScheme + filepath.Join(t.TempDir(), "main.rego")
+	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(t.TempDir(), "main.rego"))
 	content := `package example
 
 allow if regex.match(` + "`foo`" + `, "bar")

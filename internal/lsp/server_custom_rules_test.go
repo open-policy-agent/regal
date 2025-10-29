@@ -7,8 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -61,7 +63,7 @@ allow if {
 	// send textDocument/didOpen notification to trigger diagnostics
 	if err := connClient.Notify(ctx, "textDocument/didOpen", types.DidOpenTextDocumentParams{
 		TextDocument: types.TextDocumentItem{
-			URI:  fileURIScheme + filepath.Join(tempDir, "example", "foo.rego"),
+			URI:  uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "example", "foo.rego")),
 			Text: files["example/foo.rego"],
 		},
 	}, nil); err != nil {

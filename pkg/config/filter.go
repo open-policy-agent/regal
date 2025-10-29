@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gobwas/glob"
@@ -71,6 +72,9 @@ func excludeFile(pattern, filename, pathPrefix string) (bool, error) {
 	if pathPrefix != "" {
 		filename = strings.TrimPrefix(filename, pathPrefix)
 	}
+
+	// Normalize path separators to forward slashes for consistent glob matching
+	filename = filepath.ToSlash(filename)
 
 	// Internal slashes means path is relative to root, otherwise it can
 	// appear anywhere in the directory (--> **/)

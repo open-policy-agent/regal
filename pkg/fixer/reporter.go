@@ -192,5 +192,5 @@ func relOrDefault(root, path, defaultValue string) string {
 		return defaultValue
 	}
 
-	return rel
+	return filepath.ToSlash(rel)
 }

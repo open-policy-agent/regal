@@ -7,8 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -127,7 +129,7 @@ ignore:
 	// for authz.rego no response to the call is expected
 	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
 		TextDocument: types.TextDocumentIdentifier{
-			URI: fileURIScheme + filepath.Join(tempDir, "authz.rego"),
+			URI: uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "authz.rego")),
 		},
 		ContentChanges: []types.TextDocumentContentChangeEvent{
 			{
