@@ -64,7 +64,7 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 	options := rparse.ParserOptions()
 	options.RegoVersion = opts.RegoVersion
 
-	presentedFileName := uri.ToRelativePath(opts.ClientIdentifier, opts.FileURI, opts.WorkspaceRootURI)
+	presentedFileName := uri.ToRelativePath(opts.FileURI, opts.WorkspaceRootURI)
 
 	module, err := rparse.ModuleWithOpts(presentedFileName, content, options)
 	if err == nil {

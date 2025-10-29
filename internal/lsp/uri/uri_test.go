@@ -120,7 +120,7 @@ func TestURIToPath(t *testing.T) {
 		t.Run(label, func(t *testing.T) {
 			t.Parallel()
 
-			got := ToPath(clients.IdentifierGeneric, tc.uri)
+			got := ToPath(tc.uri)
 			if got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
@@ -174,7 +174,7 @@ func TestURIToPath_VSCode(t *testing.T) {
 		t.Run(label, func(t *testing.T) {
 			t.Parallel()
 
-			got := ToPath(clients.IdentifierVSCode, tc.uri)
+			got := ToPath(tc.uri)
 			if got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
@@ -216,7 +216,7 @@ func TestToRelativePath(t *testing.T) {
 		t.Run(label, func(t *testing.T) {
 			t.Parallel()
 
-			got := ToRelativePath(clients.IdentifierGeneric, tc.uri, tc.workspaceRootURI)
+			got := ToRelativePath(tc.uri, tc.workspaceRootURI)
 			if got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}

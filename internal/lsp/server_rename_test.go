@@ -1,7 +1,6 @@
 package lsp
 
 import (
-	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -22,7 +21,7 @@ func TestLanguageServerFixRenameParams(t *testing.T) {
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
 	ls.client.Identifier = clients.IdentifierVSCode
-	ls.workspaceRootURI = fmt.Sprintf("file://%s/workspace", tmpDir)
+	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
 	ls.loadedConfig = &config.Config{
 		Rules: map[string]config.Category{"idiomatic": {
 			"directory-package-mismatch": config.Rule{
@@ -51,8 +50,12 @@ func TestLanguageServerFixRenameParams(t *testing.T) {
 		t.Fatalf("expected old URI to be %s, got %s", fileURI, change.OldURI)
 	}
 
-	if change.NewURI != fmt.Sprintf("file://%s/workspace/authz/main/rules/policy.rego", tmpDir) {
-		t.Fatalf("expected new URI to be 'file://%s/workspace/authz/main/rules/policy.rego', got %s", tmpDir, change.NewURI)
+	expectedNewURI := uri.FromPath(
+		clients.IdentifierGeneric,
+		filepath.Join(tmpDir, "workspace", "authz", "main", "rules", "policy.rego"),
+	)
+	if change.NewURI != expectedNewURI {
+		t.Fatalf("expected new URI to be '%s', got %s", expectedNewURI, change.NewURI)
 	}
 }
 
@@ -65,7 +68,7 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
 	ls.client.Identifier = clients.IdentifierVSCode
-	ls.workspaceRootURI = fmt.Sprintf("file://%s/workspace", tmpDir)
+	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
 	ls.loadedConfig = &config.Config{
 		Rules: map[string]config.Category{"idiomatic": {
 			"directory-package-mismatch": config.Rule{
@@ -76,7 +79,10 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 	}
 
 	fileURI := uri.FromRelativePath(ls.client.Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
-	conflictingFileURI := fmt.Sprintf("file://%s/workspace/authz/main/rules/policy.rego", tmpDir)
+	conflictingFileURI := uri.FromPath(
+		clients.IdentifierGeneric,
+		filepath.Join(tmpDir, "workspace", "authz", "main", "rules", "policy.rego"),
+	)
 
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 	ls.cache.SetFileContents(conflictingFileURI, "package authz.main.rules") // existing content irrelevant here
@@ -102,7 +108,10 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 		t.Fatalf("expected old URI to be %s, got %s", fileURI, change.OldURI)
 	}
 
-	expectedNewURI := fmt.Sprintf("file://%s/workspace/authz/main/rules/policy_1.rego", tmpDir)
+	expectedNewURI := uri.FromPath(
+		clients.IdentifierGeneric,
+		filepath.Join(tmpDir, "workspace", "authz", "main", "rules", "policy_1.rego"),
+	)
 	if change.NewURI != expectedNewURI {
 		t.Fatalf("expected new URI to be %s, got %s", expectedNewURI, change.NewURI)
 	}
@@ -110,14 +119,14 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 	// check the deletes
 	deleteChange1 := testutil.MustBe[types.DeleteFile](t, params.Edit.DocumentChanges[1])
 
-	expectedDeletedURI1 := fmt.Sprintf("file://%s/workspace/foo/bar", tmpDir)
+	expectedDeletedURI1 := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace", "foo", "bar"))
 	if deleteChange1.URI != expectedDeletedURI1 {
 		t.Fatalf("expected delete URI to be %s, got %s", expectedDeletedURI1, deleteChange1.URI)
 	}
 
 	deleteChange2 := testutil.MustBe[types.DeleteFile](t, params.Edit.DocumentChanges[2])
 
-	expectedDeletedURI2 := fmt.Sprintf("file://%s/workspace/foo", tmpDir)
+	expectedDeletedURI2 := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace", "foo"))
 	if deleteChange2.URI != expectedDeletedURI2 {
 		t.Fatalf("expected delete URI to be %s, got %s", expectedDeletedURI2, deleteChange2.URI)
 	}

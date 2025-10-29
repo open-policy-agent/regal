@@ -640,7 +640,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 					break
 				}
 
-				inputPath := rio.FindInputPath(l.toPath(args.Target), l.workspacePath())
+				inputPath := rio.FindInputPath(uri.ToPath(args.Target), l.workspacePath())
 
 				responseParams := map[string]any{
 					"type":        "opa-debug",
@@ -691,7 +691,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 				var allRuleHeadLocations rego.RuleHeads
 
 				allRuleHeadLocations, err = rego.AllRuleHeadLocations(
-					ctx, pq, filepath.Base(l.toPath(fileURI)), contents, module,
+					ctx, pq, filepath.Base(uri.ToPath(fileURI)), contents, module,
 				)
 				if err != nil {
 					l.log.Message("failed to get rule head locations: %s", err)
@@ -718,7 +718,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 					// Normal mode — try to find the input.json/yaml file in the workspace and use as input
 					// NOTE that we don't break on missing input, as some rules don't depend on that, and should
 					// still be evaluable. We may consider returning some notice to the user though.
-					_, inputMap = rio.FindInput(l.toPath(fileURI), l.workspacePath())
+					_, inputMap = rio.FindInput(uri.ToPath(fileURI), l.workspacePath())
 				}
 
 				var result EvalResult
@@ -810,7 +810,7 @@ func (l *LanguageServer) StartWorkspaceStateWorker(ctx context.Context) {
 		case <-timer.C:
 			// first clear files that are missing from the workspaceDir
 			for fileURI := range l.cache.GetAllFiles() {
-				if _, err := os.Stat(l.toPath(fileURI)); os.IsNotExist(err) {
+				if _, err := os.Stat(uri.ToPath(fileURI)); os.IsNotExist(err) {
 					// clear the cache first,
 					l.cache.Delete(fileURI)
 
@@ -1032,7 +1032,7 @@ func (l *LanguageServer) processTemplateJob(ctx context.Context, job lintFileJob
 	defer l.templatingFiles.Delete(job.URI)
 
 	// disable the templating feature for files in the workspace root.
-	if filepath.Dir(l.toPath(job.URI)) == l.workspacePath() {
+	if filepath.Dir(uri.ToPath(job.URI)) == l.workspacePath() {
 		return
 	}
 
@@ -1079,7 +1079,7 @@ func (l *LanguageServer) processTemplateJob(ctx context.Context, job lintFileJob
 }
 
 func (l *LanguageServer) templateContentsForFile(fileURI string) (string, error) {
-	path := l.toPath(fileURI)
+	path := uri.ToPath(fileURI)
 
 	// this function should not be called with files in the root, but if it is,
 	// then it is an error to prevent unwanted behavior.
@@ -1188,7 +1188,7 @@ func (l *LanguageServer) fixEditParams(
 		}}
 	}
 
-	res, err := fix.Fix(&fixes.FixCandidate{Filename: filepath.Base(l.toPath(args.Target)), Contents: oldContent}, rto)
+	res, err := fix.Fix(&fixes.FixCandidate{Filename: filepath.Base(uri.ToPath(args.Target)), Contents: oldContent}, rto)
 	if err != nil {
 		return false, nil, fmt.Errorf("failed to fix: %w", err)
 	}
@@ -1237,7 +1237,7 @@ func (l *LanguageServer) fixRenameParams(label, fileURI string) (types.ApplyWork
 	// the default for the LSP is to rename on conflict
 	f := fixer.NewFixer().RegisterRoots(roots...).RegisterFixes(fix).SetOnConflictOperation(fixer.OnConflictRename)
 
-	violations := []report.Violation{{Title: fix.Name(), Location: report.Location{File: l.toPath(fileURI)}}}
+	violations := []report.Violation{{Title: fix.Name(), Location: report.Location{File: uri.ToPath(fileURI)}}}
 	cfprovider := fileprovider.NewCacheFileProvider(l.cache, l.client.Identifier)
 
 	fixReport, err := f.FixViolations(violations, cfprovider, l.getLoadedConfig())
@@ -1281,9 +1281,9 @@ func (l *LanguageServer) fixRenameParams(label, fileURI string) (types.ApplyWork
 	}
 
 	// are there old dirs?
-	dirs, err := rio.DirCleanUpPaths(l.toPath(oldURI), []string{
-		l.workspacePath(), // stop at the root
-		l.toPath(newURI),  // also preserve any dirs needed for the new file
+	dirs, err := rio.DirCleanUpPaths(uri.ToPath(oldURI), []string{
+		l.workspacePath(),  // stop at the root
+		uri.ToPath(newURI), // also preserve any dirs needed for the new file
 	})
 	if err != nil {
 		return types.ApplyWorkspaceAnyEditParams{}, fmt.Errorf("failed to determine empty directories post rename: %w", err)
@@ -1544,7 +1544,7 @@ func (l *LanguageServer) handleTextDocumentDidOpen(
 	if l.workspaceRootURI == "" {
 		err := l.updateRootURI(ctx,
 			// get the URI of the file's immediate parent
-			l.fromPath(filepath.Dir(l.toPath(params.TextDocument.URI))),
+			l.fromPath(filepath.Dir(uri.ToPath(params.TextDocument.URI))),
 		)
 		if err != nil {
 			l.log.Message("failed to update server root URI: %w", err)
@@ -1712,7 +1712,7 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 	// if the file is empty, then the formatters will fail, so we template instead
 	if oldContent == "" {
 		// disable the templating feature for files in the workspace root.
-		if filepath.Dir(l.toPath(params.TextDocument.URI)) == l.workspacePath() {
+		if filepath.Dir(uri.ToPath(params.TextDocument.URI)) == l.workspacePath() {
 			return []types.TextEdit{}, nil
 		}
 
@@ -1747,7 +1747,7 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 		f := &fixes.Fmt{OPAFmtOpts: opts}
 
 		fixResults, err := f.Fix(
-			&fixes.FixCandidate{Filename: filepath.Base(l.toPath(params.TextDocument.URI)), Contents: oldContent},
+			&fixes.FixCandidate{Filename: filepath.Base(uri.ToPath(params.TextDocument.URI)), Contents: oldContent},
 			&fixes.RuntimeOptions{BaseDir: l.workspacePath()},
 		)
 		if err != nil {
@@ -1770,7 +1770,7 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 			return nil, fmt.Errorf("failed to create fixer input: %w", err)
 		}
 
-		roots, err := config.GetPotentialRoots(l.workspacePath(), l.toPath(params.TextDocument.URI))
+		roots, err := config.GetPotentialRoots(l.workspacePath(), uri.ToPath(params.TextDocument.URI))
 		if err != nil {
 			return nil, fmt.Errorf("could not find potential roots: %w", err)
 		}
@@ -1807,7 +1807,7 @@ func (l *LanguageServer) handleWorkspaceDidCreateFiles(params types.CreateFilesP
 	}
 
 	for _, createOp := range params.Files {
-		if _, _, err := l.cache.UpdateForURIFromDisk(l.fromPath(createOp.URI), l.toPath(createOp.URI)); err != nil {
+		if _, _, err := l.cache.UpdateForURIFromDisk(l.fromPath(createOp.URI), uri.ToPath(createOp.URI)); err != nil {
 			return nil, fmt.Errorf("failed to update cache for uri %q: %w", createOp.URI, err)
 		}
 
@@ -1855,7 +1855,7 @@ func (l *LanguageServer) handleWorkspaceDidRenameFiles(
 		// if the content is not in the cache then we can attempt to load from
 		// the disk instead.
 		if !ok || content == "" {
-			_, content, err = l.cache.UpdateForURIFromDisk(l.fromPath(renameOp.NewURI), l.toPath(renameOp.NewURI))
+			_, content, err = l.cache.UpdateForURIFromDisk(l.fromPath(renameOp.NewURI), uri.ToPath(renameOp.NewURI))
 			if err != nil {
 				return nil, fmt.Errorf("failed to update cache for uri %q: %w", renameOp.NewURI, err)
 			}
@@ -2057,7 +2057,7 @@ func (l *LanguageServer) updateRootURI(ctx context.Context, rootURI string) erro
 	// consistency
 	normalizedRootURI := strings.TrimSuffix(rootURI, string(os.PathSeparator))
 
-	configRoots, err := lsconfig.FindConfigRoots(l.toPath(normalizedRootURI))
+	configRoots, err := lsconfig.FindConfigRoots(uri.ToPath(normalizedRootURI))
 	if err != nil {
 		return fmt.Errorf("failed to find config roots: %w", err)
 	}
@@ -2270,21 +2270,17 @@ func (l *LanguageServer) ignoreURI(fileURI string) bool {
 	}
 
 	cfg := l.getLoadedConfig()
-	paths, err := config.FilterIgnoredPaths([]string{l.toPath(fileURI)}, cfg.Ignore.Files, false, l.workspacePath())
+	paths, err := config.FilterIgnoredPaths([]string{uri.ToPath(fileURI)}, cfg.Ignore.Files, false, l.workspacePath())
 
 	return err != nil || len(paths) == 0
 }
 
 func (l *LanguageServer) workspacePath() string {
-	return uri.ToPath(l.client.Identifier, l.workspaceRootURI)
-}
-
-func (l *LanguageServer) toPath(fileURI string) string {
-	return uri.ToPath(l.client.Identifier, fileURI)
+	return uri.ToPath(l.workspaceRootURI)
 }
 
 func (l *LanguageServer) toRelativePath(fileURI string) string {
-	return uri.ToRelativePath(l.client.Identifier, fileURI, l.workspaceRootURI)
+	return uri.ToRelativePath(fileURI, l.workspaceRootURI)
 }
 
 func (l *LanguageServer) fromPath(filePath string) string {
@@ -2295,7 +2291,7 @@ func (l *LanguageServer) regoVersionForURI(fileURI string) ast.RegoVersion {
 	if l.loadedConfigAllRegoVersions != nil {
 		return rules.RegoVersionFromMap(
 			l.loadedConfigAllRegoVersions.Clone(),
-			strings.TrimPrefix(l.toPath(fileURI), l.workspacePath()),
+			strings.TrimPrefix(uri.ToPath(fileURI), l.workspacePath()),
 			ast.RegoUndefined,
 		)
 	}
@@ -2327,13 +2323,13 @@ func (l *LanguageServer) parseOpts(fileURI string, bis map[string]*ast.Builtin) 
 	}
 }
 
-func (l *LanguageServer) regalContext(uri string, req *rego.Requirements) rego.RegalContext {
+func (l *LanguageServer) regalContext(fileURI string, req *rego.Requirements) rego.RegalContext {
 	rctx := rego.RegalContext{
 		Client: l.client,
 		File: rego.File{
-			Name:        l.toRelativePath(uri),
-			RegoVersion: l.regoVersionForURI(uri).String(),
-			Abs:         l.toPath(uri),
+			Name:        l.toRelativePath(fileURI),
+			RegoVersion: l.regoVersionForURI(fileURI).String(),
+			Abs:         uri.ToPath(fileURI),
 		},
 		Environment: rego.Environment{
 			PathSeparator:     string(os.PathSeparator),
@@ -2348,10 +2344,10 @@ func (l *LanguageServer) regalContext(uri string, req *rego.Requirements) rego.R
 	}
 
 	if req.File.Lines {
-		if content, ok := l.cache.GetFileContents(uri); ok {
+		if content, ok := l.cache.GetFileContents(fileURI); ok {
 			rctx.File.Lines = strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
 		} else {
-			l.log.Message("failed to get file contents for uri %q", uri)
+			l.log.Message("failed to get file contents for uri %q", fileURI)
 		}
 	}
 

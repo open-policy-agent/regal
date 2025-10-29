@@ -226,6 +226,10 @@ func TestNewFileTemplating(t *testing.T) {
 	// Validate that the client received a workspace edit
 	timeout.Reset(determineTimeout())
 
+	// Construct proper URI for delete operation
+	deleteTargetPath := filepath.Join(tempDir, "foo", "bar")
+	deleteTargetURI := uri.FromPath(clients.IdentifierGeneric, deleteTargetPath)
+
 	expectedMessage := fmt.Sprintf(`{
   "edit": {
     "documentChanges": [
@@ -265,12 +269,12 @@ func TestNewFileTemplating(t *testing.T) {
           "ignoreIfNotExists": true,
           "recursive": true
         },
-        "uri": "file://%[3]s/foo/bar"
+        "uri": "%[3]s"
       }
     ]
   },
   "label": "Template new Rego file"
-}`, newFileURI, expectedNewFileURI, tempDir)
+}`, newFileURI, expectedNewFileURI, deleteTargetURI)
 
 	for success := false; !success; {
 		select {
