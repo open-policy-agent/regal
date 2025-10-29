@@ -10,7 +10,10 @@ import (
 func TestFromFS(t *testing.T) {
 	t.Parallel()
 
-	tempDir := testutil.TempDirectoryOf(t, map[string]string{filepath.FromSlash("foo/bar/baz"): "bar", filepath.FromSlash("bar/foo"): "baz"})
+	tempDir := testutil.TempDirectoryOf(t, map[string]string{
+		filepath.FromSlash("foo/bar/baz"): "bar",
+		filepath.FromSlash("bar/foo"):     "baz",
+	})
 	fp := testutil.Must(NewInMemoryFileProviderFromFS(
 		filepath.Join(tempDir, "foo", "bar", "baz"),
 		filepath.Join(tempDir, "bar", "foo"),
@@ -24,8 +27,12 @@ func TestFromFS(t *testing.T) {
 func TestRenameConflict(t *testing.T) {
 	t.Parallel()
 
-	fp := NewInMemoryFileProvider(map[string]string{filepath.FromSlash("/foo/bar/baz"): "bar", filepath.FromSlash("/bar/foo"): "baz"})
-	exp := `rename conflict: "` + filepath.FromSlash("/foo/bar/baz") + `" cannot be renamed as the target location "` + filepath.FromSlash("/bar/foo") + `" already exists`
+	fp := NewInMemoryFileProvider(map[string]string{
+		filepath.FromSlash("/foo/bar/baz"): "bar",
+		filepath.FromSlash("/bar/foo"):     "baz",
+	})
+	exp := `rename conflict: "` + filepath.FromSlash("/foo/bar/baz") +
+		`" cannot be renamed as the target location "` + filepath.FromSlash("/bar/foo") + `" already exists`
 
 	testutil.ErrMustContain(fp.Rename(filepath.FromSlash("/foo/bar/baz"), filepath.FromSlash("/bar/foo")), exp)(t)
 }

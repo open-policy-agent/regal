@@ -38,8 +38,8 @@ deny = true
 
 	l := linter.NewLinter().WithEnableAll(true).WithInputModules(&input)
 
-	f := NewFixer().RegisterFixes(fixes.NewDefaultFixes()...).RegisterRoots(filepath.FromSlash("/root")).SetRegoVersionsMap(
-		map[string]ast.RegoVersion{filepath.FromSlash("/root/main"): ast.RegoV1})
+	f := NewFixer().RegisterFixes(fixes.NewDefaultFixes()...).RegisterRoots(filepath.FromSlash("/root")).
+		SetRegoVersionsMap(map[string]ast.RegoVersion{filepath.FromSlash("/root/main"): ast.RegoV1})
 
 	fixReport, err := f.Fix(t.Context(), &l, memfp)
 	if err != nil {
