@@ -114,7 +114,7 @@ func fix(args []string, params *fixParams) (err error) {
 	)
 
 	if len(args) == 1 {
-		if configSearchPath = args[0]; !strings.HasPrefix(args[0], "/") {
+		if configSearchPath = args[0]; !filepath.IsAbs(args[0]) {
 			configSearchPath = filepath.Join(rio.Getwd(), args[0])
 		}
 	} else {
