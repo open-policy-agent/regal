@@ -50,7 +50,7 @@ func TestRenameCandidate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			actual := renameCandidate(tc.oldName)
+			actual := renameCandidate(filepath.FromSlash(tc.oldName))
 			if actual != filepath.FromSlash(tc.expected) {
 				t.Errorf("expected %s, got %s", tc.expected, actual)
 			}

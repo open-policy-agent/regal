@@ -48,9 +48,7 @@ func (rwc readWriteCloser) Close() error {
 
 // Getwd returns the current working directory, or an empty string if it cannot be determined.
 func Getwd() string {
-	wd, _ := os.Getwd()
-
-	return wd
+	return util.FirstValue(os.Getwd())
 }
 
 // LoadRegalBundleFS loads bundle embedded from policy and data directory.
@@ -253,11 +251,8 @@ func ModulesFromCustomRuleFS(customRuleFS fs.FS, rootPath string) (map[string]*a
 
 			return modules, nil
 		})
-	if err != nil {
-		return nil, fmt.Errorf("failed to walk custom rule FS: %w", err)
-	}
 
-	return modules, nil
+	return util.Wrap(modules, err)("failed to walk custom rules from FS")
 }
 
 // DirCleanUpPaths will, for a given target file, list all the dirs that would
@@ -270,8 +265,8 @@ func DirCleanUpPaths(target string, preserve []string) ([]string, error) {
 		for {
 			preserveDirs.Add(p)
 
-			p = filepath.Dir(p)
-			if p == "." || p == "/" || preserveDirs.Contains(p) {
+			p = filepath.Dir(p) // "The returned path does not end in a separator unless it is the root directory."
+			if p == "." || strings.HasSuffix(p, string(filepath.Separator)) || preserveDirs.Contains(p) {
 				break
 			}
 		}

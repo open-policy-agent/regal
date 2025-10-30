@@ -33,7 +33,7 @@ func NewCompilerWithRegalBuiltins() *ast.Compiler {
 // Currently only used by the test command. Should we want to expand the use of this later,
 // we'll probably want to only read the schemas relevant to the context.
 var RegalSchemaSet = sync.OnceValue(func() *ast.SchemaSet {
-	schemaSet, _ := files.DefaultWalkReducer("schemas", ast.NewSchemaSet()).
+	return util.FirstValue(files.DefaultWalkReducer("schemas", ast.NewSchemaSet()).
 		WithFilters(filter.Not(filter.Suffixes(".json"))).
 		ReduceFS(embeds.SchemasFS, func(path string, schemaSet *ast.SchemaSet) (*ast.SchemaSet, error) {
 			schemaAny := util.Must(encoding.JSONUnmarshalTo[any](util.Must(embeds.SchemasFS.ReadFile(path))))
@@ -48,7 +48,5 @@ var RegalSchemaSet = sync.OnceValue(func() *ast.SchemaSet {
 			schemaSet.Put(ref, schemaAny)
 
 			return schemaSet, nil
-		})
-
-	return schemaSet
+		}))
 })

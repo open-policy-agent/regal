@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	rio "github.com/open-policy-agent/regal/internal/io"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
 
@@ -39,18 +40,12 @@ func (f *repeatedStringFlag) Set(s string) error {
 // for a Regal directory, custom rules, and user config.
 func getSearchPath(args []string) (searchPath string) {
 	if len(args) > 0 {
-		searchPath = args[0]
-		if !filepath.IsAbs(searchPath) {
-			searchPath, _ = filepath.Abs(args[0])
-		}
-
-		if !rio.Exists(searchPath) {
-			searchPath = "" // This is handled elsewhere — we don't need to fail here
+		if abs, _ := filepath.Abs(args[0]); rio.Exists(abs) {
+			searchPath = abs
 		}
 	}
 
-	searchPath = cmp.Or(searchPath, rio.Getwd())
-	if searchPath == "" {
+	if searchPath = cmp.Or(searchPath, rio.Getwd()); searchPath == "" {
 		log.Println("could not determine config search directory - won't search for custom config or rules")
 	}
 
@@ -59,31 +54,21 @@ func getSearchPath(args []string) (searchPath string) {
 
 func readUserConfig(params lintAndFixParams, searchPath string) (userConfig *os.File, err error) {
 	if params.configFile != "" {
-		userConfig, err = os.Open(params.configFile)
-		if err != nil {
+		if userConfig, err = os.Open(params.configFile); err != nil {
 			return nil, fmt.Errorf("failed to open config file %w", err)
-		}
-
-		if params.debug {
+		} else if params.debug {
 			log.Printf("found user config file: %s", userConfig.Name())
 		}
 
 		return userConfig, nil
 	}
 
-	if params.debug {
-		log.Println("no user-provided config file found, will use the default config")
-	}
-
-	userConfig, err = config.Find(searchPath)
-	if err != nil {
+	if userConfig, err = config.Find(searchPath); err != nil {
 		// if no config was found, attempt to load the user's global config if it exists
-		if globalConfigDir := config.GlobalConfigDir(false); globalConfigDir != "" {
-			globalConfigFile := filepath.Join(globalConfigDir, "config.yaml")
-
-			if userConfig, err = os.Open(globalConfigFile); err != nil {
-				return nil, fmt.Errorf("failed to open global config file %w", err)
-			}
+		if global := config.GlobalDir(false); global != "" {
+			return util.Wrap(os.Open(filepath.Join(global, "config.yaml")))("failed to open global config file")
+		} else if params.debug {
+			log.Println("no user-provided config file found, will use the default config")
 		}
 	}
 

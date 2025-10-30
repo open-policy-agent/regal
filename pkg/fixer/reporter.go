@@ -66,10 +66,12 @@ func (r *PrettyReporter) ReportConflicts(fixReport *Report) error {
 				conflicts := fixReport.conflictsSourceFile[rootKey][file]
 				slices.Sort(conflicts)
 
-				fmt.Fprintln(r.outputWriter, "Cannot overwrite existing file:", strings.TrimPrefix(file, rootKey+"/"))
+				rootKeyPrefix := rootKey + string(filepath.Separator)
+
+				fmt.Fprintln(r.outputWriter, "Cannot overwrite existing file:", strings.TrimPrefix(file, rootKeyPrefix))
 
 				for _, oldPath := range conflicts {
-					fmt.Fprintln(r.outputWriter, "-", strings.TrimPrefix(oldPath, rootKey+"/"))
+					fmt.Fprintln(r.outputWriter, "-", strings.TrimPrefix(oldPath, rootKeyPrefix))
 				}
 			}
 		}
@@ -97,15 +99,17 @@ func (r *PrettyReporter) ReportConflicts(fixReport *Report) error {
 
 			fmt.Fprintln(r.outputWriter, "In project root:", rootKey)
 
+			rootKeyPrefix := rootKey + string(filepath.Separator)
+
 			for _, file := range conflictingFiles {
-				fmt.Fprintln(r.outputWriter, "Cannot move multiple files to:", strings.TrimPrefix(file, rootKey+"/"))
+				fmt.Fprintln(r.outputWriter, "Cannot move multiple files to:", strings.TrimPrefix(file, rootKeyPrefix))
 
 				// get the old paths from the movedFiles since that includes all the files moved, not just the conflicting ones
 				oldPaths := fixReport.movedFiles[file]
 				slices.Sort(oldPaths)
 
 				for _, oldPath := range oldPaths {
-					fmt.Fprintln(r.outputWriter, "-", strings.TrimPrefix(oldPath, rootKey+"/"))
+					fmt.Fprintln(r.outputWriter, "-", strings.TrimPrefix(oldPath, rootKeyPrefix))
 				}
 			}
 		}
@@ -192,5 +196,5 @@ func relOrDefault(root, path, defaultValue string) string {
 		return defaultValue
 	}
 
-	return filepath.ToSlash(rel)
+	return rel
 }

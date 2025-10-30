@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"net"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -124,8 +123,7 @@ func FindClosestMatchingRoot(path string, roots []string) string {
 			continue
 		}
 
-		suffix := strings.TrimPrefix(root, path)
-		if len(suffix) > currentLongestSuffix {
+		if suffix := strings.TrimPrefix(root, path); len(suffix) > currentLongestSuffix {
 			currentLongestSuffix = len(suffix)
 			longestSuffixIndex = i
 		}
@@ -145,28 +143,11 @@ func FilepathJoiner(base string) func(string) string {
 	}
 }
 
-// DeleteEmptyDirs will delete empty directories up to the root for a given
-// directory.
-func DeleteEmptyDirs(dir string) error {
-	for {
-		// os.Remove will only delete empty directories
-		if err := os.Remove(dir); err != nil {
-			if os.IsExist(err) {
-				break
-			} else if !os.IsPermission(err) {
-				return fmt.Errorf("failed to clean directory %s: %w", dir, err)
-			}
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-
-		dir = parent
+// FilepathsJoiner returns a function that joins provided paths with base path.
+func FilepathsJoiner(base string) func(...string) string {
+	return func(paths ...string) string {
+		return filepath.Join(append(append(make([]string, 0, len(paths)+1), base), paths...)...)
 	}
-
-	return nil
 }
 
 // SafeUintToInt will convert a uint to an int, clamping the result to
@@ -179,12 +160,21 @@ func SafeUintToInt(u uint) int {
 	return int(u)
 }
 
+// EnsurePrefix ensures that the given string starts with the specified prefix.
+// If s is empty or already starts with pre, it is returned unchanged.
+func EnsurePrefix(s, pre string) string {
+	if s != "" && !strings.HasPrefix(s, pre) {
+		return pre + s
+	}
+
+	return s
+}
+
 // EnsureSuffix ensures that the given string ends with the specified suffix.
-// If the string already ends with suf, it is returned unchanged.
-// Note that an empty string s is returned unchanged — *not* turned into "/".
+// If s is empty or already ends with suf, it is returned unchanged.
 func EnsureSuffix(s, suf string) string {
 	if s != "" && !strings.HasSuffix(s, suf) {
-		s += suf
+		return s + suf
 	}
 
 	return s
@@ -270,6 +260,11 @@ func Wrap[T any](v T, err error) func(string) (T, error) {
 	return func(string) (T, error) {
 		return v, nil
 	}
+}
+
+// FirstValue returns the first value of two provided values.
+func FirstValue[T, U any](v T, _ U) T {
+	return v
 }
 
 // WrapErr wraps an error with a message if the error is not nil.

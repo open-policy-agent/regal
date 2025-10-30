@@ -23,8 +23,7 @@ import (
 )
 
 const (
-	mainRegoFileName = "/main.rego"
-	fileURIScheme    = "file://"
+	mainRegoFileName = "main.rego"
 	// defaultTimeout is set based on the investigation done as part of
 	// https://github.com/open-policy-agent/regal/issues/931. 20 seconds is 10x the
 	// maximum time observed for an operation to complete.

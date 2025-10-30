@@ -17,6 +17,8 @@ import (
 func TestFixer(t *testing.T) {
 	t.Parallel()
 
+	mainDir := filepath.FromSlash("/root/main")
+
 	policies := map[string]string{
 		filepath.FromSlash("/root/main/main.rego"): `package test
 
@@ -29,9 +31,7 @@ deny = true
 
 	memfp := fileprovider.NewInMemoryFileProvider(policies)
 
-	input, err := memfp.ToInput(map[string]ast.RegoVersion{
-		filepath.FromSlash("/root/main"): ast.RegoV1,
-	})
+	input, err := memfp.ToInput(map[string]ast.RegoVersion{mainDir: ast.RegoV1})
 	if err != nil {
 		t.Fatalf("failed to create input: %v", err)
 	}
@@ -39,7 +39,7 @@ deny = true
 	l := linter.NewLinter().WithEnableAll(true).WithInputModules(&input)
 
 	f := NewFixer().RegisterFixes(fixes.NewDefaultFixes()...).RegisterRoots(filepath.FromSlash("/root")).
-		SetRegoVersionsMap(map[string]ast.RegoVersion{filepath.FromSlash("/root/main"): ast.RegoV1})
+		SetRegoVersionsMap(map[string]ast.RegoVersion{mainDir: ast.RegoV1})
 
 	fixReport, err := f.Fix(t.Context(), &l, memfp)
 	if err != nil {
@@ -73,8 +73,8 @@ deny := true
 	for _, file := range fpFiles {
 		// check that the content is correct
 		expectedContent, ok := expectedFileContents[file]
-		_, moved := fixReport.movedFiles[file]
 
+		_, moved := fixReport.movedFiles[file]
 		if !ok && !moved {
 			t.Fatalf("unexpected file found in resulting file provider %s", file)
 		}

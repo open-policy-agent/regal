@@ -385,15 +385,14 @@ func AllRegoVersions(root string, conf *Config) (map[string]ast.RegoVersion, err
 
 	if conf.Project != nil {
 		if conf.Project.RegoVersion != nil {
-			// empty string is used to denote the project root
-			// and all other paths are relative to that
+			// "" denotes the project root, and all other paths are relative to that
 			versionsMap[""] = regoVersionFromConfigValue(conf.Project.RegoVersion)
 		}
 
 		if conf.Project.Roots != nil {
 			for _, root := range *conf.Project.Roots {
 				if root.RegoVersion != nil {
-					versionsMap[root.Path] = regoVersionFromConfigValue(root.RegoVersion)
+					versionsMap[filepath.Clean(root.Path)] = regoVersionFromConfigValue(root.RegoVersion)
 				}
 			}
 		}
@@ -587,11 +586,7 @@ func (config *Config) UnmarshalYAML(value *yaml.Node) error {
 
 		// prepending a / is done here to ensure that windows drive letter paths
 		// are parsed as paths and not host:ports in URLs.
-		if !strings.HasPrefix(absfp, "/") {
-			absfp = "/" + absfp
-		}
-
-		capabilitiesURL = "file://" + absfp
+		capabilitiesURL = "file://" + util.EnsurePrefix(absfp, "/")
 	}
 
 	if capabilitiesEngine == "" && capabilitiesFile == "" && capabilitiesURL == "" {
@@ -831,30 +826,21 @@ func (rule *Rule) mapToConfig(result any) error {
 func GetPotentialRoots(paths ...string) ([]string, error) {
 	var err error
 
+	dirMap := util.NewSet[string]()
 	absDirPaths := make([]string, len(paths))
 
 	for i, path := range paths {
-		abs := path
-
-		if !filepath.IsAbs(abs) {
-			if abs, err = filepath.Abs(path); err != nil {
-				return nil, fmt.Errorf("failed to get absolute path for %s: %w", path, err)
-			}
+		if absDirPaths[i], err = filepath.Abs(path); err != nil {
+			return nil, fmt.Errorf("failed to get absolute path for %s: %w", path, err)
 		}
 
-		if rio.IsDir(abs) {
-			absDirPaths[i] = abs
-		} else {
-			absDirPaths[i] = filepath.Dir(abs)
+		if !rio.IsDir(absDirPaths[i]) {
+			absDirPaths[i] = filepath.Dir(absDirPaths[i])
 		}
-	}
 
-	dirMap := util.NewSet[string]()
-
-	for _, dir := range absDirPaths {
-		brds, err := FindBundleRootDirectories(dir)
+		brds, err := FindBundleRootDirectories(absDirPaths[i])
 		if err != nil {
-			return nil, fmt.Errorf("failed to find bundle root directories in %s: %w", dir, err)
+			return nil, fmt.Errorf("failed to find bundle root directories in %s: %w", absDirPaths[i], err)
 		}
 
 		dirMap.Add(brds...)

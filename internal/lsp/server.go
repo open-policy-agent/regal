@@ -194,12 +194,10 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		SuccessfulParseCountProvider: ls.cache.GetSuccessfulParseLineCount,
 	})
 
-	merged, _ := config.WithDefaultsFromBundle(bundle.Embedded(), cfg)
-
 	// Even though user configuration (if provided) will overwrite some of the default configuration,
 	// loading the default conf in the "constructor" ensures we can assume there's *some* configuration
 	// set everywhere in the language server code.
-	ls.loadConfig(ctx, merged)
+	ls.loadConfig(ctx, util.FirstValue(config.WithDefaultsFromBundle(bundle.Embedded(), cfg)))
 
 	return ls
 }
@@ -528,7 +526,7 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 						CurrentVersion: version.Version,
 						CurrentTime:    time.Now().UTC(),
 						Debug:          false,
-						StateDir:       config.GlobalConfigDir(true),
+						StateDir:       config.GlobalDir(true),
 					}, os.Stderr)
 				}
 			}()
@@ -2090,7 +2088,7 @@ func (l *LanguageServer) updateRootURI(ctx context.Context, rootURI string) erro
 	var configFilePath string
 	if configFile, err := config.Find(workspaceRootPath); err == nil {
 		configFilePath = configFile.Name()
-	} else if globalConfigDir := config.GlobalConfigDir(false); globalConfigDir != "" {
+	} else if globalConfigDir := config.GlobalDir(false); globalConfigDir != "" {
 		// the file might not exist and we only want to log we're using the global file if it does.
 		if globalConfigFile := filepath.Join(globalConfigDir, "config.yaml"); rio.IsFile(globalConfigFile) {
 			configFilePath = globalConfigFile

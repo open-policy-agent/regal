@@ -108,28 +108,26 @@ func fix(args []string, params *fixParams) (err error) {
 	}
 
 	var (
-		regalDir         *os.File
-		customRulesDir   string
-		configSearchPath string
+		regalDir       *os.File
+		customRulesDir string
+		userConfig     config.Config
 	)
 
+	configSearchPath := rio.Getwd()
 	if len(args) == 1 {
-		if configSearchPath = args[0]; !strings.HasPrefix(args[0], "/") {
-			configSearchPath = filepath.Join(rio.Getwd(), args[0])
+		if configSearchPath = args[0]; !filepath.IsAbs(configSearchPath) {
+			configSearchPath = filepath.Join(rio.Getwd(), configSearchPath)
 		}
-	} else {
-		configSearchPath = rio.Getwd()
 	}
 
 	if configSearchPath == "" {
-		log.Println("failed to determine relevant directory for config file search - won't search for custom config or rules")
-	} else {
-		if regalDir, err = config.FindRegalDirectory(configSearchPath); err == nil {
-			defer regalDir.Close()
+		log.Println(
+			"failed to determine relevant directory for config file search - won't search for custom config or rules")
+	} else if regalDir, err = config.FindRegalDirectory(configSearchPath); err == nil {
+		defer regalDir.Close()
 
-			if customRulesPath := filepath.Join(regalDir.Name(), "rules"); rio.IsDir(customRulesPath) {
-				customRulesDir = customRulesPath
-			}
+		if customRulesPath := filepath.Join(regalDir.Name(), "rules"); rio.IsDir(customRulesPath) {
+			customRulesDir = customRulesPath
 		}
 	}
 
@@ -157,8 +155,6 @@ func fix(args []string, params *fixParams) (err error) {
 	if regalDir != nil {
 		l = l.WithPathPrefix(filepath.Dir(regalDir.Name()))
 	}
-
-	var userConfig config.Config
 
 	userConfigFile, err := readUserConfig(params.lintAndFixParams, configSearchPath)
 	switch {

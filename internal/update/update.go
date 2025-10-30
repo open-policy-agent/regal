@@ -147,7 +147,7 @@ func saveLatestCachedVersion(opts Options, latestVersion string) error {
 			return fmt.Errorf("failed to marshal state file: %w", err)
 		}
 
-		if err = os.WriteFile(opts.StateDir+"/latest_version.json", bs, 0o600); err != nil {
+		if err = os.WriteFile(filepath.Join(opts.StateDir, "latest_version.json"), bs, 0o600); err != nil {
 			return fmt.Errorf("failed to write state file: %w", err)
 		}
 	}
