@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
+	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/fixer/fileprovider"
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
@@ -17,8 +18,12 @@ import (
 func TestFixer(t *testing.T) {
 	t.Parallel()
 
+	rootPath := testutil.Must(filepath.Abs(filepath.FromSlash("/root")))(t)
+	mainDir := filepath.Join(rootPath, "main")
+	mainRegoFile := filepath.Join(mainDir, "main.rego")
+
 	policies := map[string]string{
-		filepath.FromSlash("/root/main/main.rego"): `package test
+		mainRegoFile: `package test
 
 allow if {
 true #no space
@@ -30,7 +35,7 @@ deny = true
 	memfp := fileprovider.NewInMemoryFileProvider(policies)
 
 	input, err := memfp.ToInput(map[string]ast.RegoVersion{
-		filepath.FromSlash("/root/main"): ast.RegoV1,
+		mainDir: ast.RegoV1,
 	})
 	if err != nil {
 		t.Fatalf("failed to create input: %v", err)
@@ -38,8 +43,8 @@ deny = true
 
 	l := linter.NewLinter().WithEnableAll(true).WithInputModules(&input)
 
-	f := NewFixer().RegisterFixes(fixes.NewDefaultFixes()...).RegisterRoots(filepath.FromSlash("/root")).
-		SetRegoVersionsMap(map[string]ast.RegoVersion{filepath.FromSlash("/root/main"): ast.RegoV1})
+	f := NewFixer().RegisterFixes(fixes.NewDefaultFixes()...).RegisterRoots(rootPath).
+		SetRegoVersionsMap(map[string]ast.RegoVersion{mainDir: ast.RegoV1})
 
 	fixReport, err := f.Fix(t.Context(), &l, memfp)
 	if err != nil {
@@ -48,10 +53,10 @@ deny = true
 
 	expectedFileFixedViolations := map[string][]string{
 		// use-assigment-operator is correct in formatting so does not appear.
-		filepath.FromSlash("/root/test/main.rego"): {"directory-package-mismatch", "no-whitespace-comment", "opa-fmt"},
+		filepath.Join(rootPath, "test", "main.rego"): {"directory-package-mismatch", "no-whitespace-comment", "opa-fmt"},
 	}
 	expectedFileContents := map[string]string{
-		filepath.FromSlash("/root/test/main.rego"): `package test
+		filepath.Join(rootPath, "test", "main.rego"): `package test
 
 allow := true
 

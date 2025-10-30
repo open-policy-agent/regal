@@ -23,20 +23,20 @@ func TestFindConfigRoots(t *testing.T) {
 		},
 		"single config root at root": {
 			FS: map[string]string{
-				".regal/config.yaml": "",
+				filepath.FromSlash(".regal/config.yaml"): "",
 			},
-			Expected: []string{"/"},
+			Expected: []string{filepath.FromSlash("/")},
 		},
 		"single config root at root with .regal.yaml": {
 			FS: map[string]string{
-				".regal.yaml": "",
+				filepath.FromSlash(".regal.yaml"): "",
 			},
-			Expected: []string{"/"},
+			Expected: []string{filepath.FromSlash("/")},
 		},
 		"two config roots, one higher": {
 			FS: map[string]string{
-				".regal/config.yaml": "",
-				"foo/.regal.yaml":    "",
+				filepath.FromSlash(".regal/config.yaml"): "",
+				filepath.FromSlash("foo/.regal.yaml"):    "",
 			},
 			Expected: []string{
 				filepath.FromSlash("/"),
@@ -77,7 +77,7 @@ func TestFindConfigRoots(t *testing.T) {
 				gotTrimmed := make([]string, len(got))
 
 				for i, path := range got {
-					trimmed := cmp.Or(strings.TrimPrefix(path, root), "/")
+					trimmed := cmp.Or(strings.TrimPrefix(path, root), filepath.FromSlash("/"))
 					gotTrimmed[i] = trimmed
 				}
 
