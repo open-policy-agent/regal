@@ -19,11 +19,14 @@ func FindConfigRoots(path string) ([]string, error) {
 }
 
 func configRootsReducer(path string, foundRoots []string) ([]string, error) {
-	if strings.HasSuffix(path, ".regal.yaml") {
+	// Normalize path separators to forward slashes for consistent suffix matching
+	normalizedPath := filepath.ToSlash(path)
+
+	if strings.HasSuffix(normalizedPath, ".regal.yaml") {
 		foundRoots = append(foundRoots, filepath.Dir(path))
 	}
 
-	if strings.HasSuffix(path, ".regal/config.yaml") {
+	if strings.HasSuffix(normalizedPath, ".regal/config.yaml") {
 		foundRoots = append(foundRoots, filepath.Dir(filepath.Dir(path)))
 	}
 
