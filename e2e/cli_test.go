@@ -479,16 +479,16 @@ foo/main_test.rego -> wow/main_test.rego:
 - opa-fmt
 
 
-In project root: %[1]s/v0
+In project root: %[2]s
 main.rego:
 - use-rego-v1
 - no-whitespace-comment
 
-In project root: %[1]s/v1
+In project root: %[3]s
 main.rego:
 - no-whitespace-comment
 - opa-fmt
-`, td)
+`, td, filepath.Join(td, "v0"), filepath.Join(td, "v1"))
 
 	expectedState := map[string]string{
 		"foo/foo.rego": `package foo
