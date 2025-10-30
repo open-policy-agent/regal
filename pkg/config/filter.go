@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -32,10 +31,12 @@ func FilterIgnoredPaths(paths, ignore []string, checkExists bool, pathPrefix str
 			}
 		}
 
-		return filterPaths(filtered, ignore, util.EnsureSuffix(pathPrefix, string(os.PathSeparator)))
+		// Use forward slash since all paths are normalized to forward slashes for glob matching
+		return filterPaths(filtered, ignore, util.EnsureSuffix(pathPrefix, "/"))
 	}
 
-	return filterPaths(paths, ignore, util.EnsureSuffix(pathPrefix, string(os.PathSeparator)))
+	// Use forward slash since all paths are normalized to forward slashes for glob matching
+	return filterPaths(paths, ignore, util.EnsureSuffix(pathPrefix, "/"))
 }
 
 func filterPaths(policyPaths []string, ignore []string, pathPrefix string) ([]string, error) {
@@ -69,12 +70,15 @@ outer:
 func excludeFile(pattern, filename, pathPrefix string) (bool, error) {
 	n := len(pattern)
 
-	if pathPrefix != "" {
-		filename = strings.TrimPrefix(filename, pathPrefix)
-	}
-
 	// Normalize path separators to forward slashes for consistent glob matching
 	filename = filepath.ToSlash(filename)
+
+	if pathPrefix != "" {
+		pathPrefix = filepath.ToSlash(pathPrefix)
+		filename = strings.TrimPrefix(filename, pathPrefix)
+		// Remove leading slash if present after trimming prefix
+		filename = strings.TrimPrefix(filename, "/")
+	}
 
 	// Internal slashes means path is relative to root, otherwise it can
 	// appear anywhere in the directory (--> **/)
