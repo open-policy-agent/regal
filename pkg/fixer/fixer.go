@@ -70,6 +70,7 @@ func (f *Fixer) RegisterFixes(fixes ...fixes.Fix) *Fixer {
 // Certain fixes may require the nearest root of the file to be known,
 // as fix operations could involve things like moving files, which
 // will be moved relative to their nearest root.
+// All roots should be absolute paths.
 func (f *Fixer) RegisterRoots(roots ...string) *Fixer {
 	f.registeredRoots = append(f.registeredRoots, roots...)
 

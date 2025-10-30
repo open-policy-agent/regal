@@ -39,6 +39,50 @@ func TestFindClosestMatchingRoot(t *testing.T) {
 			path:     "/d",
 			expected: "",
 		},
+		// Windows-style path tests
+		{
+			name:     "windows different length roots",
+			roots:    []string{`C:\a\b\c`, `C:\a\b`, `C:\a`},
+			path:     `C:\a\b\c\d\e\f`,
+			expected: `C:\a\b\c`,
+		},
+		{
+			name:     "windows exact match",
+			roots:    []string{`C:\a\b\c`, `C:\a\b`, `C:\a`},
+			path:     `C:\a\b`,
+			expected: `C:\a\b`,
+		},
+		{
+			name:     "windows mixed roots",
+			roots:    []string{`C:\a\b\c\b\a`, `C:\c\b`, `C:\a\d\c\f`},
+			path:     `C:\c\b\a`,
+			expected: `C:\c\b`,
+		},
+		{
+			name:     "windows no matching root",
+			roots:    []string{`C:\a\b\c`},
+			path:     `C:\d`,
+			expected: "",
+		},
+		{
+			name:     "windows with drive letters",
+			roots:    []string{`D:\root\main`, `C:\root`, `C:\workspace`},
+			path:     `C:\root\main\test\file.rego`,
+			expected: `C:\root`,
+		},
+		// Mixed separator tests (shouldn't happen in practice)
+		{
+			name:     "unix path with windows roots (no match expected)",
+			roots:    []string{`C:\a\b`, `C:\a`},
+			path:     "/a/b/c",
+			expected: "",
+		},
+		{
+			name:     "windows path with unix roots (no match expected)",
+			roots:    []string{"/a/b", "/a"},
+			path:     `C:\a\b\c`,
+			expected: "",
+		},
 	}
 
 	for _, test := range tests {
