@@ -136,6 +136,5 @@ jobs:
       # TODO: windows tests are failing, but we should still run the build & tests for inspection
       - run: go build
       - run: go test ./...
-        continue-on-error: true
       - run: go test -tags e2e ./e2e
         continue-on-error: true
