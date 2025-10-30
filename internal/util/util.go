@@ -112,7 +112,7 @@ func Filter[T any](s []T, f func(T) bool) []T {
 // FindClosestMatchingRoot finds the closest matching root for a given path.
 // If no matching root is found, an empty string is returned.
 func FindClosestMatchingRoot(path string, roots []string) string {
-	currentLongestSuffix, longestSuffixIndex := 0, -1
+	currentLongestPrefix, longestPrefixIndex := 0, -1
 
 	for i, root := range roots {
 		if root == path {
@@ -123,17 +123,17 @@ func FindClosestMatchingRoot(path string, roots []string) string {
 			continue
 		}
 
-		if suffix := strings.TrimPrefix(root, path); len(suffix) > currentLongestSuffix {
-			currentLongestSuffix = len(suffix)
-			longestSuffixIndex = i
+		if len(root) > currentLongestPrefix {
+			currentLongestPrefix = len(root)
+			longestPrefixIndex = i
 		}
 	}
 
-	if longestSuffixIndex == -1 {
+	if longestPrefixIndex == -1 {
 		return ""
 	}
 
-	return roots[longestSuffixIndex]
+	return roots[longestPrefixIndex]
 }
 
 // FilepathJoiner returns a function that joins provided path with base path.

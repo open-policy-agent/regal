@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
+	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/fixer/fileprovider"
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
@@ -38,7 +39,8 @@ deny = true
 
 	l := linter.NewLinter().WithEnableAll(true).WithInputModules(&input)
 
-	f := NewFixer().RegisterFixes(fixes.NewDefaultFixes()...).RegisterRoots(filepath.FromSlash("/root")).
+	rootPath := testutil.Must(filepath.Abs(filepath.FromSlash("/root")))(t)
+	f := NewFixer().RegisterFixes(fixes.NewDefaultFixes()...).RegisterRoots(rootPath).
 		SetRegoVersionsMap(map[string]ast.RegoVersion{mainDir: ast.RegoV1})
 
 	fixReport, err := f.Fix(t.Context(), &l, memfp)
