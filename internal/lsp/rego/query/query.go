@@ -78,9 +78,7 @@ func (c *Cache) Store(ctx context.Context, query string, store storage.Store) er
 }
 
 func (c *Cache) Get(query string) *Prepared {
-	p, _ := c.prepared.Get(query)
-
-	return p
+	return util.FirstValue(c.prepared.Get(query))
 }
 
 func (c *Cache) GetOrSet(ctx context.Context, store storage.Store, query string) (*Prepared, error) {

@@ -140,16 +140,12 @@ func RegoVersionFromMap(
 	var longestMatch int
 
 	for versionedDir := range versionsMap {
-		matchingVersionedDir := filepath.Join(
-			string(os.PathSeparator), filepath.FromSlash(versionedDir), string(os.PathSeparator),
-		)
+		matchingVersionedDir := filepath.FromSlash(versionedDir)
 
-		if strings.HasPrefix(dir, matchingVersionedDir) {
+		if strings.HasPrefix(dir, matchingVersionedDir) && len(versionedDir) >= longestMatch {
 			// >= as the versioned dir might be "" for the project root
-			if len(versionedDir) >= longestMatch {
-				longestMatch = len(versionedDir)
-				selectedVersion = versionsMap[versionedDir]
-			}
+			longestMatch = len(versionedDir)
+			selectedVersion = versionsMap[versionedDir]
 		}
 	}
 

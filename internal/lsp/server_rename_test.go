@@ -31,7 +31,8 @@ func TestLanguageServerFixRenameParams(t *testing.T) {
 		}},
 	}
 
-	fileURI := uri.FromRelativePath(ls.client.Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
+	relative := filepath.Join("foo", "bar", "policy.rego")
+	fileURI := uri.FromRelativePath(ls.client.Identifier, relative, ls.workspaceRootURI)
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 
 	params := testutil.Must(ls.fixRenameParams("fix my file!", fileURI))(t)
@@ -78,7 +79,8 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 		}},
 	}
 
-	fileURI := uri.FromRelativePath(ls.client.Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
+	relative := filepath.Join("foo", "bar", "policy.rego")
+	fileURI := uri.FromRelativePath(ls.client.Identifier, relative, ls.workspaceRootURI)
 	conflictingFileURI := uri.FromPath(
 		clients.IdentifierGeneric,
 		filepath.Join(tmpDir, "workspace", "authz", "main", "rules", "policy.rego"),
@@ -157,7 +159,8 @@ func TestLanguageServerFixRenameParamsWhenTargetOutsideRoot(t *testing.T) {
 		}},
 	}
 
-	fileURI := uri.FromRelativePath(ls.client.Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
+	relative := filepath.Join("foo", "bar", "policy.rego")
+	fileURI := uri.FromRelativePath(ls.client.Identifier, relative, ls.workspaceRootURI)
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 
 	_, err := ls.fixRenameParams("fix my file!", fileURI)

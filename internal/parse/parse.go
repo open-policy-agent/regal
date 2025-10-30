@@ -100,13 +100,11 @@ func PrepareAST(name string, content string, module *ast.Module) (preparedAST ma
 		return nil, fmt.Errorf("JSON rountrip failed for module: %w", err)
 	}
 
-	abs, _ := filepath.Abs(name)
-
 	preparedAST["regal"] = map[string]any{
 		"file": map[string]any{
 			"name":         name,
 			"lines":        strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n"),
-			"abs":          abs,
+			"abs":          util.FirstValue(filepath.Abs(name)),
 			"rego_version": module.RegoVersion().String(),
 		},
 		"environment": map[string]any{

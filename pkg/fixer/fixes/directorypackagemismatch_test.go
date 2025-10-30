@@ -105,8 +105,11 @@ func TestFixDirectoryPackageMismatch(t *testing.T) {
 			t.Parallel()
 
 			dpm := DirectoryPackageMismatch{}
-			cnd := &FixCandidate{Filename: tc.name, Contents: tc.contents}
-			opt := &RuntimeOptions{BaseDir: tc.baseDir, Config: configWithExcludeTestSuffix(!tc.includeTestSuffix)}
+			cnd := &FixCandidate{Filename: filepath.FromSlash(tc.name), Contents: tc.contents}
+			opt := &RuntimeOptions{
+				BaseDir: filepath.FromSlash(tc.baseDir),
+				Config:  configWithExcludeTestSuffix(!tc.includeTestSuffix),
+			}
 
 			fr, err := dpm.Fix(cnd, opt)
 			if tc.wantErr != "" {

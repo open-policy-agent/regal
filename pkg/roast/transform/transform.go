@@ -12,6 +12,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/roast/transforms"
 	"github.com/open-policy-agent/regal/internal/roast/transforms/module"
+	rutil "github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 
@@ -79,19 +80,15 @@ func ToAST(name, content string, mod *ast.Module, collect bool) (ast.Value, erro
 // RegalContext creates a context object for a Regal input, containing the attributes
 // common to most / all Regal use cases.
 func RegalContext(name, content, regoVersion string) ast.Object {
-	abs, _ := filepath.Abs(name)
-
-	context := ast.NewObject(
+	return ast.NewObject(
 		ast.Item(ast.InternedTerm("file"), ast.ObjectTerm(
 			ast.Item(ast.InternedTerm("name"), ast.StringTerm(name)),
 			ast.Item(ast.InternedTerm("lines"), rast.LinesArrayTerm(content)),
-			ast.Item(ast.InternedTerm("abs"), ast.StringTerm(abs)),
+			ast.Item(ast.InternedTerm("abs"), ast.StringTerm(rutil.FirstValue(filepath.Abs(name)))),
 			ast.Item(ast.InternedTerm("rego_version"), ast.InternedTerm(regoVersion)),
 		)),
 		environment,
 	)
-
-	return context
 }
 
 // RegalContextWithOperations creates a Regal context object with operations
@@ -116,15 +113,13 @@ func RegalContextWithOperations(name, content, regoVersion string, collect bool)
 // Used for preparing Go types (including pointers to structs) into values to be
 // put through util.RoundTrip().
 func reference(x any) *any {
-	var y any
-
 	rv := reflect.ValueOf(x)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		return reference(rv.Elem().Interface())
 	}
 
 	if rv.Kind() != reflect.Invalid {
-		y = rv.Interface()
+		y := rv.Interface()
 
 		return &y
 	}

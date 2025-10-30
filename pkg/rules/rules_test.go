@@ -57,7 +57,7 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"bar":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename: "/baz/qux.rego",
+			Filename: "baz/qux.rego",
 			Expected: ast.RegoUndefined,
 		},
 		"use project value": {
@@ -66,7 +66,7 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"bar":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename: "/baz/qux.rego",
+			Filename: "baz/qux.rego",
 			Expected: ast.RegoV1,
 		},
 		"file has version from current dir": {
@@ -75,7 +75,7 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"bar":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename: "/foo/bar.rego",
+			Filename: "foo/bar.rego",
 			Expected: ast.RegoV1,
 		},
 		"file has version from current dir (no leading slash)": {
@@ -84,7 +84,7 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"bar":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename: "/foo/bar.rego",
+			Filename: "foo/bar.rego",
 			Expected: ast.RegoV1,
 		},
 		"file has version from parent dir": {
@@ -93,7 +93,7 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"bar":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename: "/foo/bar/baz.rego",
+			Filename: "foo/bar/baz.rego",
 			Expected: ast.RegoV1,
 		},
 		"file has version from grandparent dir": {
@@ -102,7 +102,7 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"bar":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename: "/foo/bar/baz/qux.rego",
+			Filename: "foo/bar/baz/qux.rego",
 			Expected: ast.RegoV1,
 		},
 		"project roots are subdirs and overlap": {
@@ -111,7 +111,7 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 				"foo":     ast.RegoV0,
 				"unknown": ast.RegoUndefined,
 			},
-			Filename: "/foo/bar/baz/qux.rego",
+			Filename: "foo/bar/baz/qux.rego",
 			Expected: ast.RegoV1,
 		},
 	}

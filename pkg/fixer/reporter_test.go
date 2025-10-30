@@ -2,83 +2,54 @@ package fixer
 
 import (
 	"bytes"
+	"fmt"
+	"path/filepath"
 	"testing"
 
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
 )
 
 func TestPrettyReporterOutput(t *testing.T) {
 	t.Parallel()
 
-	var buffer bytes.Buffer
-
-	reporter := NewPrettyReporter(&buffer)
 	report := NewReport()
+	root1, root2 := filepath.FromSlash("/workspace/bundle1"), filepath.FromSlash("/workspace/bundle2")
+	inRoot1, inRoot2 := util.FilepathsJoiner(root1), util.FilepathsJoiner(root2)
 
-	report.AddFileFix("/workspace/bundle1/policy1.rego", fixes.FixResult{
-		Title: "rego-v1",
-		Root:  "/workspace/bundle1",
-	})
-	report.AddFileFix("/workspace/bundle2/policy1.rego", fixes.FixResult{
-		Title: "rego-v1",
-		Root:  "/workspace/bundle2",
-	})
-	report.AddFileFix("/workspace/bundle1/policy1.rego", fixes.FixResult{
-		Title: "directory-package-mismatch",
-		Root:  "/workspace/bundle1",
-	})
-	report.AddFileFix("/workspace/bundle2/policy1.rego", fixes.FixResult{
-		Title: "directory-package-mismatch",
-		Root:  "/workspace/bundle2",
-	})
-	report.AddFileFix("/workspace/bundle1/policy3.rego", fixes.FixResult{
-		Title: "no-whitespace-comment",
-		Root:  "/workspace/bundle1",
-	})
-	report.AddFileFix("/workspace/bundle2/policy3.rego", fixes.FixResult{
-		Title: "use-assignment-operator",
-		Root:  "/workspace/bundle2",
-	})
+	report.AddFileFix(inRoot1("policy1.rego"), fixes.FixResult{Title: "rego-v1", Root: root1})
+	report.AddFileFix(inRoot2("policy1.rego"), fixes.FixResult{Title: "rego-v1", Root: root2})
+	report.AddFileFix(inRoot1("policy1.rego"), fixes.FixResult{Title: "directory-package-mismatch", Root: root1})
+	report.AddFileFix(inRoot2("policy1.rego"), fixes.FixResult{Title: "directory-package-mismatch", Root: root2})
+	report.AddFileFix(inRoot1("policy3.rego"), fixes.FixResult{Title: "no-whitespace-comment", Root: root1})
+	report.AddFileFix(inRoot2("policy3.rego"), fixes.FixResult{Title: "use-assignment-operator", Root: root2})
 
-	report.MergeFixes(
-		"/workspace/bundle1/main/policy1.rego",
-		"/workspace/bundle1/policy1.rego",
-	)
+	report.MergeFixes(inRoot1("main", "policy1.rego"), inRoot1("policy1.rego"))
+	report.RegisterOldPathForFile(inRoot1("main", "policy1.rego"), inRoot1("policy1.rego"))
 
-	report.RegisterOldPathForFile(
-		"/workspace/bundle1/main/policy1.rego",
-		"/workspace/bundle1/policy1.rego",
-	)
+	report.MergeFixes(inRoot2("lib", "policy2.rego"), inRoot2("policy1.rego"))
+	report.RegisterOldPathForFile(inRoot2("lib", "policy2.rego"), inRoot2("policy1.rego"))
 
-	report.MergeFixes(
-		"/workspace/bundle2/lib/policy2.rego",
-		"/workspace/bundle2/policy1.rego",
-	)
-
-	report.RegisterOldPathForFile(
-		"/workspace/bundle2/lib/policy2.rego",
-		"/workspace/bundle2/policy1.rego",
-	)
-
-	if err := reporter.Report(report); err != nil {
+	var buffer bytes.Buffer
+	if err := NewPrettyReporter(&buffer).Report(report); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expected := `6 fixes applied:
-In project root: /workspace/bundle1
-policy1.rego -> main/policy1.rego:
+	expected := fmt.Sprintf(`6 fixes applied:
+In project root: %s
+policy1.rego -> %s:
 - rego-v1
 - directory-package-mismatch
 policy3.rego:
 - no-whitespace-comment
 
-In project root: /workspace/bundle2
-policy1.rego -> lib/policy2.rego:
+In project root: %s
+policy1.rego -> %s:
 - rego-v1
 - directory-package-mismatch
 policy3.rego:
 - use-assignment-operator
-`
+`, root1, filepath.FromSlash("main/policy1.rego"), root2, filepath.FromSlash("lib/policy2.rego"))
 
 	if got := buffer.String(); got != expected {
 		t.Fatalf("unexpected output:\nexpected:\n%s\ngot:\n%s", expected, got)
@@ -88,65 +59,42 @@ policy3.rego:
 func TestPrettyReporterOutputWithConflicts(t *testing.T) {
 	t.Parallel()
 
-	var buffer bytes.Buffer
-
-	reporter := NewPrettyReporter(&buffer)
 	report := NewReport()
-	root := "/workspace/bundle1"
+	root := filepath.FromSlash("/workspace/bundle1")
+	inRoot := util.FilepathsJoiner(root)
 
 	// not conflicting rename
-	report.RegisterOldPathForFile(
-		"/workspace/bundle1/foo/policy1.rego",
-		"/workspace/bundle1/baz/policy1.rego",
-	)
+	report.RegisterOldPathForFile(inRoot("foo", "policy1.rego"), inRoot("baz", "policy1.rego"))
 	// conflicting renames
-	report.RegisterOldPathForFile(
-		"/workspace/bundle1/foo/policy1.rego",
-		"/workspace/bundle1/baz/policy2.rego",
-	)
-	report.RegisterOldPathForFile(
-		"/workspace/bundle1/foo/policy1.rego",
-		"/workspace/bundle1/baz.rego",
-	)
-	report.RegisterConflictManyToOne(
-		root,
-		"/workspace/bundle1/foo/policy1.rego",
-		"/workspace/bundle1/baz/policy2.rego",
-	)
-	report.RegisterConflictManyToOne(
-		root,
-		"/workspace/bundle1/foo/policy1.rego",
-		"/workspace/bundle1/baz.rego",
-	)
+	report.RegisterOldPathForFile(inRoot("foo", "policy1.rego"), inRoot("baz", "policy2.rego"))
+	report.RegisterOldPathForFile(inRoot("foo", "policy1.rego"), inRoot("baz.rego"))
 
-	// source file conflict
-	report.RegisterOldPathForFile(
-		// imagine that foo.rego existed already
-		"/workspace/bundle1/foo.rego",
-		"/workspace/bundle1/baz.rego",
-	)
-	report.RegisterConflictSourceFile(
-		root,
-		"/workspace/bundle1/foo.rego",
-		"/workspace/bundle1/baz.rego",
-	)
+	report.RegisterConflictManyToOne(root, inRoot("foo", "policy1.rego"), inRoot("baz", "policy2.rego"))
+	report.RegisterConflictManyToOne(root, inRoot("foo", "policy1.rego"), inRoot("baz.rego"))
 
-	if err := reporter.Report(report); err != nil {
+	// source file conflict, imagine that foo.rego existed already
+	report.RegisterOldPathForFile(inRoot("foo.rego"), inRoot("baz.rego"))
+	report.RegisterConflictSourceFile(root, inRoot("foo.rego"), inRoot("baz.rego"))
+
+	var buffer bytes.Buffer
+	if err := NewPrettyReporter(&buffer).Report(report); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expected := `Source file conflicts:
-In project root: /workspace/bundle1
+	expected := fmt.Sprintf(`Source file conflicts:
+In project root: %s
 Cannot overwrite existing file: foo.rego
 - baz.rego
 
 Many to one conflicts:
-In project root: /workspace/bundle1
-Cannot move multiple files to: foo/policy1.rego
+In project root: %s
+Cannot move multiple files to: %s
 - baz.rego
-- baz/policy1.rego
-- baz/policy2.rego
-`
+- %s
+- %s
+`, root, root, filepath.FromSlash("foo/policy1.rego"), filepath.FromSlash("baz/policy1.rego"),
+		filepath.FromSlash("baz/policy2.rego"),
+	)
 
 	if got := buffer.String(); got != expected {
 		t.Fatalf("unexpected output:\nexpected:\n%s\ngot:\n%s", expected, got)

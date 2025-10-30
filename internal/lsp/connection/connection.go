@@ -128,8 +128,7 @@ func logRequest(cfg LoggingConfig, req *jsonrpc2.Request) {
 		return
 	}
 
-	params, _ := encoding.JSON().Marshal(req.Params)
-	if req.Notif {
+	if params, _ := encoding.JSON().Marshal(req.Params); req.Notif {
 		cfg.Logger.Message("--> notif: %s: %s\n", req.Method, params)
 	} else {
 		cfg.Logger.Message("--> request #%s: %s: %s\n", req.ID, req.Method, params)

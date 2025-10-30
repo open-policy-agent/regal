@@ -31,8 +31,8 @@ allow := true
 	childDirName := "child"
 
 	files := map[string]string{
-		childDirName + mainRegoFileName: mainRegoContents,
-		".regal/config.yaml": `rules:
+		filepath.Join(childDirName, mainRegoFileName): mainRegoContents,
+		filepath.FromSlash(".regal/config.yaml"): `rules:
   idiomatic:
     directory-package-mismatch:
       level: ignore
@@ -48,10 +48,7 @@ allow := true
 
 	// mainRegoFileURI is used throughout the test to refer to the main.rego file
 	// and so it is defined here for convenience
-	mainRegoFileURI := uri.FromPath(
-		clients.IdentifierGoTest,
-		filepath.Join(childDir, filepath.FromSlash(mainRegoFileName)),
-	)
+	mainRegoFileURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(childDir, mainRegoFileName))
 
 	// set up the server and client connections
 	ctx, cancel := context.WithCancel(t.Context())

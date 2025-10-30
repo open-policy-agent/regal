@@ -5,17 +5,18 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
 func TestFilterIgnoredPaths(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]struct {
-		paths           []string
-		ignore          []string
-		checkFileExists bool
-		rootDir         string
-		expected        []string
+		paths    []string
+		ignore   []string
+		rootDir  string
+		expected []string
 	}{
 		"no paths": {
 			paths:    []string{},
@@ -91,15 +92,12 @@ func TestFilterIgnoredPaths(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			filtered, err := FilterIgnoredPaths(tc.paths, tc.ignore, tc.checkFileExists, tc.rootDir)
-			if err != nil {
-				t.Fatal(err)
-			}
+			filtered := testutil.Must(FilterIgnoredPaths(tc.paths, tc.ignore, false, tc.rootDir))(t)
 
 			slices.Sort(filtered)
 			slices.Sort(tc.expected)
 
-			if !cmp.Equal(filtered, tc.expected) {
+			if !slices.Equal(filtered, tc.expected) {
 				t.Errorf("filtered paths mismatch (-want +got):\n%s", cmp.Diff(tc.expected, filtered))
 			}
 		})

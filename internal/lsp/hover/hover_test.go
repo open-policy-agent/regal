@@ -16,41 +16,26 @@ func TestCreateHoverContent(t *testing.T) {
 		builtin  *ast.Builtin
 		testdata string
 	}{
-		{
-			ast.IndexOf,
-			"testdata/hover/indexof.md",
-		},
-		{
-			ast.ReachableBuiltin,
-			"testdata/hover/graphreachable.md",
-		},
-		{
-			ast.JSONFilter,
-			"testdata/hover/jsonfilter.md",
-		},
-		{
-			&ast.Builtin{
-				Name:        "foo.bar",
-				Description: "Description for Foo Bar",
-				Decl: types.NewFunction(
-					types.Args(
-						types.Named("arg1", types.S).Description("arg1 for foobar"),
-						types.Named("arg2", types.S).Description("arg2 for foobar"),
-					),
-					types.Named("output", types.N).Description("the output for foobar"),
+		{ast.IndexOf, "testdata/hover/indexof.md"},
+		{ast.ReachableBuiltin, "testdata/hover/graphreachable.md"},
+		{ast.JSONFilter, "testdata/hover/jsonfilter.md"},
+		{&ast.Builtin{
+			Name:        "foo.bar",
+			Description: "Description for Foo Bar",
+			Decl: types.NewFunction(
+				types.Args(
+					types.Named("arg1", types.S).Description("arg1 for foobar"),
+					types.Named("arg2", types.S).Description("arg2 for foobar"),
 				),
-				Categories: []string{"foo", "url=https://example.com"},
-			},
-			"testdata/hover/foobar.md",
-		},
+				types.Named("output", types.N).Description("the output for foobar"),
+			),
+			Categories: []string{"foo", "url=https://example.com"},
+		}, "testdata/hover/foobar.md"},
 	}
 
 	for _, c := range cases {
-		file := testutil.MustReadFile(t, c.testdata)
-		hoverContent := CreateHoverContent(c.builtin)
-
-		if file != hoverContent {
-			t.Errorf("Expected %s, got %s", file, hoverContent)
+		if file, content := testutil.MustReadFile(t, c.testdata), CreateHoverContent(c.builtin); file != content {
+			t.Errorf("Expected %s, got %s", file, content)
 		}
 	}
 }

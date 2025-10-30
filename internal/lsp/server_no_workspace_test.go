@@ -39,7 +39,7 @@ rules:
 
 	// set up the workspace content with some example rego and regal config
 	tempDir := testutil.TempDirectoryOf(t, files)
-	mainRegoURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tempDir, filepath.FromSlash(mainRegoFileName)))
+	mainRegoURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tempDir, mainRegoFileName))
 
 	receivedMessages := make(chan types.FileDiagnostics, defaultBufferedChannelSize)
 	clientHandler := test.HandlerFor(methodTdPublishDiagnostics, test.SendsToChannel(receivedMessages))

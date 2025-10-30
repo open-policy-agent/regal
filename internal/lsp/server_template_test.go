@@ -80,11 +80,9 @@ func TestTemplateContentsForFile(t *testing.T) {
 			ExpectedContents: "package foo.bar.baz\n\n",
 		},
 		"v0 templating using rego version setting": {
-			FileKey:           filepath.FromSlash("foo/bar/baz/bax.rego"),
-			CacheFileContents: "",
-			ServerAllRegoVersions: concurrent.MapOf(map[string]ast.RegoVersion{
-				"foo": ast.RegoV0,
-			}),
+			FileKey:               filepath.FromSlash("foo/bar/baz/bax.rego"),
+			CacheFileContents:     "",
+			ServerAllRegoVersions: concurrent.MapOf(map[string]ast.RegoVersion{"foo": ast.RegoV0}),
 			DiskContents: map[string]string{
 				filepath.FromSlash("foo/bar/baz/bax.rego"): "",
 				filepath.FromSlash(".regal/config.yaml"):   "", // we manually set the versions, config not loaded in these tests
