@@ -8,7 +8,7 @@
 <!-- markdownlint-disable MD041 -->
 
 [![Build Status](https://github.com/open-policy-agent/regal/workflows/Build/badge.svg)](https://github.com/open-policy-agent/regal/actions)
-![OPA v1.9.0](https://openpolicyagent.org/badge/v1.9.0)
+![OPA v1.10.0](https://openpolicyagent.org/badge/v1.10.0)
 [![codecov](https://codecov.io/github/StyraInc/regal/graph/badge.svg?token=EQK01YF3X3)](https://codecov.io/github/StyraInc/regal)
 [![Downloads](https://img.shields.io/github/downloads/styrainc/regal/total.svg)](https://github.com/open-policy-agent/regal/releases)
 
@@ -20,15 +20,6 @@ making your Rego magnificent, and you the ruler of rules!
 
 With its extensive set of linter rules, documentation and editor integrations, Regal is the perfect companion for policy
 development, whether you're an experienced Rego developer or just starting out.
-
-> [!IMPORTANT]
-> Regal is now an official OPA project!
-> ([More Info](https://blog.openpolicyagent.org/note-from-teemu-tim-and-torin-to-the-open-policy-agent-community-2dbbfe494371))
-> For those previously installing Regal from StyraInc/regal, please update your
-> scripts and documentation to refer to this Repo. We will be migrating the
-> Regal's documentation to openpolicyagent.org from the next release. Please
-> [file an issue](https://github.com/open-policy-agent/regal/issues/new)
-> for any problems you run into.
 
 
 <!-- markdownlint-disable MD033 -->

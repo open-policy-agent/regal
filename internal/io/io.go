@@ -25,6 +25,11 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
+var (
+	OPACapabilities = ast.CapabilitiesForThisVersion()
+	Capabilities    = sync.OnceValue(capabilities)
+)
+
 type readWriteCloser struct {
 	in  io.ReadCloser
 	out io.WriteCloser
@@ -324,12 +329,6 @@ func DirCleanUpPaths(target string, preserve []string) ([]string, error) {
 
 	return dirs, nil
 }
-
-// TODO: This is currently done in too many places
-
-var OPACapabilities = ast.CapabilitiesForThisVersion()
-
-var Capabilities = sync.OnceValue(capabilities)
 
 func capabilities() *ast.Capabilities {
 	cpy := *OPACapabilities
