@@ -34,8 +34,8 @@ github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de h1:FxWPpzIjnTlhP
 github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de/go.mod h1:DCaWoUhZrYW9p1lxo/cm8EmUOOzAPSEZNGF2DK1dJgw=
 github.com/arbovm/levenshtein v0.0.0-20160628152529-48b4e1c0c4d0 h1:jfIu9sQUG6Ig+0+Ap1h4unLjW6YQJpKZVmUzxsD4E/Q=
 github.com/arbovm/levenshtein v0.0.0-20160628152529-48b4e1c0c4d0/go.mod h1:t2tdKJDJF9BV14lnkjHmOQgcvEKgtqs5a1N3LNdJhGE=
-github.com/arl/statsviz v0.7.1 h1:W32VBGV/YBTMg3sBsr1Ix1bJzrykZHWNZS7quqtDqYc=
-github.com/arl/statsviz v0.7.1/go.mod h1:uFJZYUcGDeFpo/Mb9nLkq/83YUYaib2IccejOm+y1t0=
+github.com/arl/statsviz v0.7.2 h1:xnuIfRiXE4kvxEcfGL+IE3mKH1BXNHuE+eJELIh7oOA=
+github.com/arl/statsviz v0.7.2/go.mod h1:XlrbiT7xYT03xaW9JMMfD8KFUhBOESJwfyNJu83PbB0=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/bcicen/bfstree v1.0.0 h1:Fx9vcyXYspj2GIJqAvd1lwCNI+cQF/r2JJqxHHmsAO0=
@@ -44,8 +44,8 @@ github.com/bcicen/go-units v1.0.5 h1:gfeKGDc8JgKCFyqxNKPgHc735KH3VW8bnuL5X2y2up4
 github.com/bcicen/go-units v1.0.5/go.mod h1:c7/sSz9cc6XvnrjsyNwoKHqN6KDDf8LME5vSf+U5Y08=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
-github.com/bytecodealliance/wasmtime-go/v3 v3.0.2 h1:3uZCA/BLTIu+DqCfguByNMJa2HVHpXvjfy0Dy7g6fuA=
-github.com/bytecodealliance/wasmtime-go/v3 v3.0.2/go.mod h1:RnUjnIXxEJcL6BgCvNyzCCRzZcxCgsZCi+RNlvYor5Q=
+github.com/bytecodealliance/wasmtime-go/v37 v37.0.0 h1:DPjdn2V3JhXHMoZ2ymRqGK+y1bDyr9wgpyYCvhjMky8=
+github.com/bytecodealliance/wasmtime-go/v37 v37.0.0/go.mod h1:Pf1l2JCTUFMnOqDIwkjzx1qfVJ09xbaXETKgRVE4jZ0=
 github.com/cenkalti/backoff/v5 v5.0.3 h1:ZN+IMa753KfX5hd8vVaMixjnqRZ3y8CuJKRKj1xcsSM=
 github.com/cenkalti/backoff/v5 v5.0.3/go.mod h1:rkhZdG3JZukswDf7f0cwqPNk4K0sa+F97BxZthm/crw=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
@@ -265,8 +265,8 @@ github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+W
 github.com/onsi/gomega v1.4.3/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.34.1 h1:EUMJIKUjM8sKjYbtxQI9A4z2o+rruxnzNvpknOXie6k=
 github.com/onsi/gomega v1.34.1/go.mod h1:kU1QgUvBDLXBJq618Xvm2LUX6rSAfRaFRTcdOeDLwwY=
-github.com/open-policy-agent/opa v1.9.0 h1:QWFNwbcc29IRy0xwD3hRrMc/RtSersLY1Z6TaID3vgI=
-github.com/open-policy-agent/opa v1.9.0/go.mod h1:72+lKmTda0O48m1VKAxxYl7MjP/EWFZu9fxHQK2xihs=
+github.com/open-policy-agent/opa v1.10.0 h1:CzWR/2OhZ5yHrqiyyB1Z37mqLMowifAiFSasjLxBBpk=
+github.com/open-policy-agent/opa v1.10.0/go.mod h1:7uPI3iRpOalJ0BhK6s1JALWPU9HvaV1XeBSSMZnr/PM=
 github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde/go.mod h1:nZgzbfBr3hhjoZnS66nKrHmduYNpc34ny7RK4z5/HM0=
 github.com/owenrumney/go-sarif v1.1.1/go.mod h1:dNDiPlF04ESR/6fHlPyq7gHKmrM0sHUvAGjsoh8ZH0U=
 github.com/owenrumney/go-sarif/v2 v2.3.3 h1:ubWDJcF5i3L/EIOER+ZyQ03IfplbSU1BLOE26uKQIIU=

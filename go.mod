@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	dario.cat/mergo v1.0.2
-	github.com/arl/statsviz v0.7.1
+	github.com/arl/statsviz v0.7.2
 	github.com/coreos/go-semver v0.3.1
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
@@ -17,7 +17,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/jstemmer/go-junit-report/v2 v2.1.0
 	github.com/olekukonko/tablewriter v1.1.0
-	github.com/open-policy-agent/opa v1.9.0
+	github.com/open-policy-agent/opa v1.10.0
 	github.com/owenrumney/go-sarif/v2 v2.3.3
 	github.com/pdevine/go-asciisprite v0.1.6
 	github.com/pkg/profile v1.7.0
