@@ -11,6 +11,7 @@ import (
 	"github.com/open-policy-agent/regal/pkg/report"
 )
 
+// 745276520 ns/op	2612562272 B/op	53531222 allocs/op // OPA v1.10.0
 func BenchmarkRegalLintingItself(b *testing.B) {
 	conf := testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
 
@@ -28,6 +29,7 @@ func BenchmarkRegalLintingItself(b *testing.B) {
 	testutil.AssertNumViolations(b, 0, rep)
 }
 
+// 694275500 ns/op	2568604236 B/op	52506343 allocs/op // OPA v1.10.0
 func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
 	conf := testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
 
@@ -46,6 +48,7 @@ func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
 	testutil.AssertNumViolations(b, 0, rep)
 }
 
+// 65815866 ns/op	43852693 B/op	 1025467 allocs/op // OPA v1.10.0
 func BenchmarkOnlyPrepare(b *testing.B) {
 	conf := testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
 	linter := NewLinter().WithInputPaths([]string{"../../bundle"}).WithUserConfig(conf)
@@ -55,6 +58,7 @@ func BenchmarkOnlyPrepare(b *testing.B) {
 	}
 }
 
+// 127396828 ns/op	300739526 B/op	 5938689 allocs/op // OPA v1.10.0
 func BenchmarkRegalNoEnabledRules(b *testing.B) {
 	linter := NewLinter().
 		WithInputPaths([]string{"../../bundle"}).
@@ -70,6 +74,7 @@ func BenchmarkRegalNoEnabledRules(b *testing.B) {
 	testutil.AssertNumViolations(b, 0, rep)
 }
 
+// 53643340 ns/op	256599746 B/op	 4910862 allocs/op // OPA v1.10.0
 func BenchmarkRegalNoEnabledRulesPrepareOnce(b *testing.B) {
 	linter := NewLinter().
 		WithInputPaths([]string{"../../bundle"}).

@@ -3,8 +3,7 @@ package ast
 import (
 	"testing"
 
-	"github.com/open-policy-agent/opa/v1/ast"
-
+	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/parse"
 )
@@ -20,7 +19,7 @@ func TestGetRuleDetail(t *testing.T) {
 		{`func(x) := true`, `function(x)`},
 	}
 
-	bis := rego.BuiltinsForCapabilities(ast.CapabilitiesForThisVersion())
+	bis := rego.BuiltinsForCapabilities(io.Capabilities())
 
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {

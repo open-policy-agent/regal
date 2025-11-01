@@ -10,7 +10,8 @@ and without having to call Regal from the command line. The language server howe
 linting!
 
 :::tip
-Check support for your editor on the [editor support](./editor-support.md) page.
+Check support for your editor on the [editor support](https://www.openpolicyagent.org/projects/regal/editor-support)
+page.
 :::
 
 ## Features
@@ -96,9 +97,9 @@ but also via a [code action](#code-actions) when unformatted files are encounter
   alt="Screenshot of diagnostics as displayed in Zed"/>
 
 Two other formatters are also available — `opa fmt --rego-v1` and `regal fix`. See the docs on
-[Fixing Violations](fixing.md) for more information about the `fix` command. Which formatter to use
-can be set via the `formatter` configuration option, which can be passed to Regal via the client (see
-the documentation for your client for how to do that).
+[Fixing Violations](https://www.openpolicyagent.org/projects/regal/fixing) for more information about the `fix` command.
+Which formatter to use can be set via the `formatter` configuration option, which can be passed to Regal via the client
+(see the documentation for your client for how to do that).
 
 ### Code completions
 
@@ -192,7 +193,7 @@ The displaying of evaluation results in the current file or buffer is currently 
 
 Regal also implements the [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/). This allows
 users to trigger debugging sessions for their policies by invoking a code lens on a rule. For more information, see the
-[Debug Adapter](./debug-adapter.md) page.
+[Debug Adapter](https://www.openpolicyagent.org/projects/regal/debug-adapter) page.
 
 #### Editor support
 
@@ -271,4 +272,5 @@ with the `language server protocol` label for a list of features that are not ye
 server, but that are planned for the future. If you have suggestions for anything else, please create a new issue!
 
 Also note that not all clients (i.e. editors) may support all features of a language server! See the
-[editor support](./editor-support.md) page for information about Regal support in different editors.
+[editor support](https://www.openpolicyagent.org/projects/regal/editor-support) page for information about Regal support
+in different editors.

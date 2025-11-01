@@ -7,26 +7,15 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/embeds"
+	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/builtins/meta"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
-func Capabilities() *ast.Capabilities {
-	caps := ast.CapabilitiesForThisVersion()
-	caps.Builtins = append(caps.Builtins,
-		meta.RegalParseModuleBuiltin,
-		meta.RegalLastBuiltin,
-		meta.RegalIsFormattedBuiltin,
-	)
-
-	return caps
-}
-
 func NewCompilerWithRegalBuiltins() *ast.Compiler {
-	return ast.NewCompiler().WithCapabilities(Capabilities())
+	return ast.NewCompiler().WithCapabilities(io.Capabilities())
 }
 
 // RegalSchemaSet returns a SchemaSet containing the Regal schemas embedded in the binary.

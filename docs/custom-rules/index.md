@@ -66,8 +66,9 @@ in a policy, like the package declaration, imports and rules.
 Since OPA expects JSON as input, the module and all its child nodes are serialized, and then made available as `input`
 in Regal linter rule policies. The `opa parse --format json` command can be used to get an idea of what the structure
 of the serialized AST looks like. However, recent versions of Regal leverage an optimized AST JSON representation called
-[roast](roast.md), which is both more compact and performant to traverse as part of
-linting. See the roast docs for more information on how the format differs from the "normal" OPA AST.
+[roast](https://www.openpolicyagent.org/projects/regal/custom-rules/roast), which is both more compact and performant to
+traverse as part of linting. See the roast docs for more information on how the format differs from the "normal" OPA
+AST.
 
 In order to view the JSON AST representation of a policy, use the `regal parse` command. This works similarly to
 `opa parse`, but only outputs the roast JSON format, including additions made by Regal.

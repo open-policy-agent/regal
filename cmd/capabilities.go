@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/open-policy-agent/regal/internal/compile"
+	"github.com/open-policy-agent/regal/internal/io"
 )
 
 func init() {
@@ -17,7 +17,7 @@ func init() {
 		Short:  "Print the capabilities of Regal",
 		Long:   "Show capabilities for Regal",
 		RunE: func(*cobra.Command, []string) error {
-			bs, err := json.MarshalIndent(compile.Capabilities(), "", "  ")
+			bs, err := json.MarshalIndent(io.Capabilities(), "", "  ")
 			if err != nil {
 				return fmt.Errorf("failed marshalling capabilities: %w", err)
 			}
