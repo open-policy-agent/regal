@@ -37,7 +37,7 @@ The Regal language server currently supports the following LSP features:
       (click to evaluate any package or rule directly in the editor)
 
 See the
-[documentation page for the language server](https://github.com/open-policy-agent/regal/blob/main/docs/language-server.md)
+[documentation page for the language server](https://www.openpolicyagent.org/projects/regal/language-server)
 for an extensive overview of all features, and their meaning.
 
 See the [Editor Support](https://openpolicyagent.org/projects/regal/editor-support)
