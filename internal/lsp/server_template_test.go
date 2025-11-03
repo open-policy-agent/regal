@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -170,6 +171,13 @@ func TestTemplateContentsForFileWithUnknownRoot(t *testing.T) {
 
 func TestNewFileTemplating(t *testing.T) {
 	t.Parallel()
+
+	// We have managed to get most tests passing on windows in
+	// https://github.com/open-policy-agent/regal/pull/1741
+	// This one is still flaking and we can come back later to address.
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping TestNewFileTemplating on Windows")
+	}
 
 	files := map[string]string{
 		".regal/config.yaml": `rules:

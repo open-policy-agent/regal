@@ -276,7 +276,8 @@ func DirCleanUpPaths(target string, preserve []string) ([]string, error) {
 			preserveDirs.Add(p)
 
 			p = filepath.Dir(p)
-			if p == "." || p == "/" || preserveDirs.Contains(p) {
+			if p == "." || p == "/" || p == string(filepath.Separator) ||
+				p == filepath.VolumeName(p) || preserveDirs.Contains(p) {
 				break
 			}
 		}
