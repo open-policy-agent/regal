@@ -76,7 +76,7 @@ In order to view the JSON AST representation of a policy, use the `regal parse` 
 If we were to write the simplest policy possible, and parse it using `regal parse`, it would contain nothing but a
 package declaration:
 
-**policy.rego**
+`policy.rego`
 
 ```rego
 package policy
@@ -183,13 +183,13 @@ Starting from top to bottom, these are the components comprising our custom rule
 ### Rule Development Workflow
 
 In addition to making use of the `regal parse` command to inspect the AST of a policy, using Regal's
-[language server](https://openpolicyagent.org/projects/regal/language-server) for rule development provides the absolute best rule
+[language server](https://www.openpolicyagent.org/projects/regal/language-server) for rule development provides the absolute best rule
 development experience.
 
 #### Code Lens for Evaluation
 
 If you're using VS Code and the [OPA VS Code extension](https://github.com/open-policy-agent/vscode-opa), you may
-use the [Code Lens for Evaluation](https://openpolicyagent.org/projects/regal/language-server#code-lenses-evaluation) to directly
+use the [Code Lens for Evaluation](https://www.openpolicyagent.org/projects/regal/language-server#code-lenses-evaluation) to directly
 evaluate packages and rules using the `input.json` file as input, and see the result directly in your editor on the
 line you clicked to evaluate.
 

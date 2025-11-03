@@ -135,11 +135,11 @@ that appears on the line with a diagnostic message, or by pressing `ctrl/cmd + .
 
 Regal currently provides **quick fix actions** for the following linter rules:
 
-- [opa-fmt](https://openpolicyagent.org/projects/regal/rules/style/opa-fmt)
-- [use-rego-v1](https://openpolicyagent.org/projects/regal/rules/imports/use-rego-v1)
-- [use-assignment-operator](https://openpolicyagent.org/projects/regal/rules/style/use-assignment-operator)
-- [no-whitespace-comment](https://openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment)
-- [directory-package-mismatch](https://openpolicyagent.org/projects/regal/rules/idiomatic/directory-package-mismatch)
+- [opa-fmt](https://www.openpolicyagent.org/projects/regal/rules/style/opa-fmt)
+- [use-rego-v1](https://www.openpolicyagent.org/projects/regal/rules/imports/use-rego-v1)
+- [use-assignment-operator](https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator)
+- [no-whitespace-comment](https://www.openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment)
+- [directory-package-mismatch](https://www.openpolicyagent.org/projects/regal/rules/idiomatic/directory-package-mismatch)
 
 Regal also provides **source actions** — actions that apply to a whole file and aren't triggered by linter issues:
 
