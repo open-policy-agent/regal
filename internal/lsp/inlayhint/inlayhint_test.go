@@ -17,10 +17,7 @@ func TestGetInlayHintsAstCall(t *testing.T) {
 
 	r := json.filter({}, [])`
 
-	module := ast.MustParseModule(policy)
-
-	bis := rego.BuiltinsForCapabilities(ast.CapabilitiesForThisVersion())
-	inlayHints := inlayhint.FromModule(module, bis)
+	inlayHints := inlayhint.FromModule(ast.MustParseModule(policy), rego.BuiltinsForDefaultCapabilities())
 
 	if len(inlayHints) != 2 {
 		t.Fatalf("Expected 2 inlay hints, got %d", len(inlayHints))
@@ -65,11 +62,7 @@ func TestGetInlayHintsAstTerms(t *testing.T) {
 		is_string("yes")
 	}`
 
-	module := ast.MustParseModule(policy)
-
-	bis := rego.BuiltinsForCapabilities(ast.CapabilitiesForThisVersion())
-
-	inlayHints := inlayhint.FromModule(module, bis)
+	inlayHints := inlayhint.FromModule(ast.MustParseModule(policy), rego.BuiltinsForDefaultCapabilities())
 
 	if len(inlayHints) != 1 {
 		t.Fatalf("Expected 1 inlay hints, got %d", len(inlayHints))

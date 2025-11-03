@@ -221,9 +221,8 @@ func fix(args []string, params *fixParams) (err error) {
 		return fmt.Errorf("failed to filter ignored paths: %w", err)
 	}
 
-	slices.Sort(filtered)
 	// TODO: Figure out why filtered returns duplicates in the first place
-	filtered = slices.Compact(filtered)
+	filtered = slices.Compact(util.Sorted(filtered))
 
 	// convert the filtered paths to absolute paths before fixing to
 	// support accurate root matching.

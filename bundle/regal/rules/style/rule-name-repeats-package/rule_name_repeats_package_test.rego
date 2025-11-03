@@ -157,16 +157,14 @@ test_rule_violation_if_repetition_ref_head_rule if {
 	r := rule.report with input as regal.parse_module("example.rego", `
 	package policy
 
-	import rego.v1
-
 	policy.decision contains "nope"
 	`)
 
 	r == {object.union(base_result, {"location": {
 		"col": 2,
 		"file": "example.rego",
-		"row": 6,
-		"end": {"col": 8, "row": 6},
+		"row": 4,
+		"end": {"col": 8, "row": 4},
 		"text": "\tpolicy.decision contains \"nope\"",
 	}})}
 }

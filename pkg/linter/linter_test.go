@@ -483,7 +483,7 @@ func TestEnabledRules(t *testing.T) {
 
 	linter := NewLinter().WithDisableAll(true).WithEnabledRules("opa-fmt", "no-whitespace-comment")
 
-	enabledRules, err := linter.DetermineEnabledRules(t.Context())
+	enabledRules, _, err := linter.DetermineEnabledRules(t.Context())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -519,12 +519,7 @@ rules:
 
 	linter := NewLinter().WithUserConfig(config)
 
-	enabledRules, err := linter.DetermineEnabledRules(t.Context())
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	enabledAggRules, err := linter.DetermineEnabledAggregateRules(t.Context())
+	enabledRules, enabledAggRules, err := linter.DetermineEnabledRules(t.Context())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -553,7 +548,10 @@ func TestEnabledAggregateRules(t *testing.T) {
 		WithDisableAll(true).
 		WithEnabledRules("opa-fmt", "unresolved-import", "use-assignment-operator")
 
-	enabledRules := testutil.Must(linter.DetermineEnabledAggregateRules(t.Context()))(t)
+	_, enabledRules, err := linter.DetermineEnabledRules(t.Context())
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
 
 	if !slices.Equal(enabledRules, []string{"unresolved-import"}) {
 		t.Errorf("expected enabled aggregate rules to be 'unresolved-import', got %v", enabledRules)
@@ -616,7 +614,7 @@ import data.unresolved`,
 
 	testutil.AssertNumViolations(t, 3, result)
 
-	foundFiles := []string{}
+	foundFiles := make([]string, 0, 3)
 
 	for _, v := range result.Violations {
 		if v.Title != "unresolved-import" {
@@ -626,9 +624,7 @@ import data.unresolved`,
 		foundFiles = append(foundFiles, v.Location.File)
 	}
 
-	slices.Sort(foundFiles)
-
-	if exp, got := []string{"bar.rego", "baz.rego", "foo.rego"}, foundFiles; !slices.Equal(exp, got) {
+	if exp, got := []string{"bar.rego", "baz.rego", "foo.rego"}, util.Sorted(foundFiles); !slices.Equal(exp, got) {
 		t.Fatalf("unexpected files: %v", got)
 	}
 }

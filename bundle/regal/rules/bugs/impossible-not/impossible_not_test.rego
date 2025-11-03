@@ -7,14 +7,10 @@ import data.regal.rules.bugs["impossible-not"] as rule
 test_fail_multivalue_not_reference_same_package if {
 	agg1 := rule.aggregate with input as regal.parse_module("p1.rego", `package foo
 
-	import rego.v1
-
 	partial contains "foo"
 	`)
 
 	agg2 := rule.aggregate with input as regal.parse_module("p2.rego", `package foo
-
-	import rego.v1
 
 	test_foo if {
 		not partial
@@ -25,10 +21,10 @@ test_fail_multivalue_not_reference_same_package if {
 	r == expected_with_location({
 		"col": 7,
 		"file": "p2.rego",
-		"row": 6,
+		"row": 4,
 		"end": {
 			"col": 14,
-			"row": 6,
+			"row": 4,
 		},
 		"text": "not partial",
 	})
@@ -62,14 +58,10 @@ test_fail_multivalue_not_reference_same_package_nested_expression if {
 test_fail_multivalue_not_reference_different_package_using_direct_reference if {
 	agg1 := rule.aggregate with input as regal.parse_module("p1.rego", `package foo
 
-	import rego.v1
-
 	partial contains "foo"
 	`)
 
 	agg2 := rule.aggregate with input as regal.parse_module("p2.rego", `package bar
-
-	import rego.v1
 
 	test_foo if {
 		not data.foo.partial
@@ -80,10 +72,10 @@ test_fail_multivalue_not_reference_different_package_using_direct_reference if {
 	r == expected_with_location({
 		"col": 7,
 		"file": "p2.rego",
-		"row": 6,
+		"row": 4,
 		"end": {
 			"col": 11,
-			"row": 6,
+			"row": 4,
 		},
 		"text": "not data.foo.partial",
 	})
@@ -92,16 +84,12 @@ test_fail_multivalue_not_reference_different_package_using_direct_reference if {
 test_fail_multivalue_not_reference_different_package_using_import if {
 	agg1 := rule.aggregate with input as regal.parse_module("p1.rego", `package foo
 
-	import rego.v1
-
 	partial contains "foo"
 
 	another contains "bar"
 	`)
 
 	agg2 := rule.aggregate with input as regal.parse_module("p2.rego", `package bar
-
-	import rego.v1
 
 	import data.foo
 
@@ -114,10 +102,10 @@ test_fail_multivalue_not_reference_different_package_using_import if {
 	r == expected_with_location({
 		"col": 7,
 		"file": "p2.rego",
-		"row": 8,
+		"row": 6,
 		"end": {
 			"col": 10,
-			"row": 8,
+			"row": 6,
 		},
 		"text": "not foo.partial",
 	})
@@ -126,14 +114,10 @@ test_fail_multivalue_not_reference_different_package_using_import if {
 test_success_multivalue_not_reference_invalidated_by_local_var if {
 	agg1 := rule.aggregate with input as regal.parse_module("p1.rego", `package foo
 
-	import rego.v1
-
 	partial contains "foo"
 	`)
 
 	agg2 := rule.aggregate with input as regal.parse_module("p2.rego", `package bar
-
-	import rego.v1
 
 	import data.foo
 
@@ -150,14 +134,10 @@ test_success_multivalue_not_reference_invalidated_by_local_var if {
 test_success_multivalue_not_reference_invalidated_by_function_argument if {
 	agg1 := rule.aggregate with input as regal.parse_module("p1.rego", `package foo
 
-	import rego.v1
-
 	partial contains "foo"
 	`)
 
 	agg2 := rule.aggregate with input as regal.parse_module("p2.rego", `package bar
-
-	import rego.v1
 
 	import data.foo
 
@@ -173,8 +153,6 @@ test_success_multivalue_not_reference_invalidated_by_function_argument if {
 test_success_multivalue_not_reference_in_same_file_not_reported_in_aggregate_report if {
 	agg1 := rule.aggregate with input as regal.parse_module("p1.rego", `package foo
 
-	import rego.v1
-
 	partial contains "foo"
 
 	test_partial if {
@@ -189,8 +167,6 @@ test_success_multivalue_not_reference_in_same_file_not_reported_in_aggregate_rep
 test_fail_multivalue_not_reference_in_same_file_reported_in_normal_report if {
 	module := regal.parse_module("p1.rego", `package foo
 
-	import rego.v1
-
 	partial contains "foo"
 
 	test_partial if {
@@ -204,16 +180,15 @@ test_fail_multivalue_not_reference_in_same_file_reported_in_normal_report if {
 		"file": "p1.rego",
 		"end": {
 			"col": 14,
-			"row": 8,
+			"row": 6,
 		},
-		"row": 8, "text": "not partial",
+		"row": 6,
+		"text": "not partial",
 	})
 }
 
 test_success_multivalue_ref_head_rule_not_accounted_for if {
 	agg1 := rule.aggregate with input as regal.parse_module("p1.rego", `package foo
-
-	import rego.v1
 
 	my.partial[rule] contains "foo" if {
 		some rule in input

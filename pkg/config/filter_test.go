@@ -99,7 +99,7 @@ func TestFilterIgnoredPaths(t *testing.T) {
 			slices.Sort(filtered)
 			slices.Sort(tc.expected)
 
-			if !cmp.Equal(filtered, tc.expected) {
+			if !slices.Equal(filtered, tc.expected) {
 				t.Errorf("filtered paths mismatch (-want +got):\n%s", cmp.Diff(tc.expected, filtered))
 			}
 		})

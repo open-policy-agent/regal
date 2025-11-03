@@ -14,6 +14,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 func TestEvalWorkspacePath(t *testing.T) {
@@ -73,16 +74,9 @@ func TestEvalWorkspacePathInternalData(t *testing.T) {
 
 	res := testutil.Must(ls.EvalInWorkspace(t.Context(), "object.keys(data.internal)", map[string]any{}))(t)
 	val := testutil.MustBe[[]any](t, res.Value)
+	act := util.Sorted(testutil.Must(util.AnySliceTo[string](val))(t))
 
-	act := make([]string, 0, len(val))
-	for _, v := range val {
-		act = append(act, testutil.MustBe[string](t, v))
-	}
-
-	slices.Sort(act)
-
-	exp := []string{"capabilities", "combined_config"}
-	if !slices.Equal(exp, act) {
+	if exp := []string{"capabilities", "combined_config"}; !slices.Equal(exp, act) {
 		t.Fatalf("expected %v, got %v", exp, act)
 	}
 }

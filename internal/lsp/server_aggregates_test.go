@@ -15,6 +15,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/report"
 )
 
@@ -261,33 +262,29 @@ import data.quz
 			if aggregateData, ok := entry["aggregate_data"].(map[string]any); ok {
 				if importsList, ok := aggregateData["imports"].([]any); ok {
 					for _, imp := range importsList {
-						if item, ok := imp.([]any); ok {
-							if pathList, ok := item[0].([]any); ok {
-								pathParts := []string{}
+						item := testutil.MustBe[[]any](t, imp)
+						if pathList, ok := item[0].([]any); ok {
+							pathParts := []string{}
 
-								for _, p := range pathList {
-									if pathStr, ok := p.(string); ok {
-										pathParts = append(pathParts, pathStr)
-									}
+							for _, p := range pathList {
+								if pathStr, ok := p.(string); ok {
+									pathParts = append(pathParts, pathStr)
 								}
-
-								imports = append(imports, strings.Join(pathParts, "."))
 							}
+
+							imports = append(imports, strings.Join(pathParts, "."))
 						}
 					}
 				}
 			}
 		}
 
-		slices.Sort(imports)
-
-		return imports
+		return util.Sorted(imports)
 	}
 
 	imports := determineImports(ls.cache.GetFileAggregates())
-
-	if exp, got := []string{"baz", "quz"}, imports; !slices.Equal(exp, got) {
-		t.Fatalf("global state imports unexpected, got %v exp %v", got, exp)
+	if exp := []string{"baz", "quz"}; !slices.Equal(exp, imports) {
+		t.Fatalf("global state imports unexpected, got %v exp %v", imports, exp)
 	}
 
 	// 2. check the aggregates for a file are updated after an update

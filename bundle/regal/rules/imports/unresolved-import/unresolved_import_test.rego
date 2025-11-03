@@ -110,7 +110,6 @@ test_success_map_rule_resolves if {
 	`)
 
 	agg2 := rule.aggregate with input as regal.parse_module("p2.rego", `package bar
-	import rego.v1
 
 	x[y] := z if {
 		some y in input.ys
@@ -128,7 +127,6 @@ test_success_map_rule_may_resolve_so_allow if {
 	`)
 
 	agg2 := rule.aggregate with input as regal.parse_module("p2.rego", `package bar
-	import rego.v1
 
 	x[y] := z if {
 		some y in input.ys
@@ -146,7 +144,6 @@ test_success_general_ref_head_rule_may_resolve_so_allow if {
 	`)
 
 	agg2 := rule.aggregate with input as regal.parse_module("p2.rego", `package bar
-	import rego.v1
 
 	x[y].z[foo] := z if {
 		some y in input.ys

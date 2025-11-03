@@ -285,8 +285,6 @@ test_force_exclude_file_config if {
 test_lint_from_stdin_disables_rules_depending_on_filename_creates_notices if {
 	policy := `package p
 
-import rego.v1
-
 camelCase := "yes"
 
 test_camelcase if {

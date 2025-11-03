@@ -67,14 +67,16 @@ func TestSemverSort(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		// Note that this actually sorts the input in-place, which is
-		// fine since we won't re-visit the same test case twice.
-		semverSort(c.input)
+		t.Run(c.note, func(t *testing.T) {
+			t.Parallel()
 
-		for j, x := range c.expect {
-			if x != c.input[j] {
-				t.Errorf("index=%d actual='%s' expected='%s'", j, c.input[j], x)
+			semverSort(c.input)
+
+			for j, x := range c.expect {
+				if x != c.input[j] {
+					t.Errorf("index=%d actual='%s' expected='%s'", j, c.input[j], x)
+				}
 			}
-		}
+		})
 	}
 }

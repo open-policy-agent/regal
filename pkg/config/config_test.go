@@ -13,6 +13,7 @@ import (
 	outil "github.com/open-policy-agent/opa/v1/util"
 	"github.com/open-policy-agent/opa/v1/util/test"
 
+	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
 )
@@ -371,7 +372,7 @@ func TestUnmarshalConfigDefaultCapabilities(t *testing.T) {
 	t.Parallel()
 
 	conf := testutil.MustUnmarshalYAML[Config](t, []byte("rules: {}\n"))
-	caps := ast.CapabilitiesForThisVersion()
+	caps := io.Capabilities()
 
 	if exp, got := len(caps.Builtins), len(conf.Capabilities.Builtins); exp != got {
 		t.Errorf("expected %d builtins, got %d", exp, got)
