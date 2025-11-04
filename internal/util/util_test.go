@@ -1,6 +1,7 @@
 package util
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -131,4 +132,27 @@ func BenchmarkFilter(b *testing.B) {
 			_ = Filter(strings, pred)
 		}
 	})
+}
+
+// No allocations
+func BenchmarkSorted(b *testing.B) {
+	unsorted := []string{
+		"the", "quick", "brown", "fox", "jumped", "over", "the", "lazy", "dog",
+		"foo", "bar", "baz", "qux", "quux", "corge", "grault", "garply", "waldo", "fred", "plugh", "xyzzy", "thud",
+		"x", "y", "z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
+	}
+	sorted := []string{
+		"a", "b", "bar", "baz", "brown", "c", "corge", "d", "dog", "e", "f", "foo", "fox", "fred", "g", "garply",
+		"grault", "h", "i", "j", "jumped", "lazy", "over", "plugh", "quick", "quux", "qux", "the", "the", "thud",
+		"waldo", "x", "xyzzy", "y", "z",
+	}
+
+	var got []string
+	for b.Loop() {
+		got = Sorted(unsorted)
+	}
+
+	if !slices.Equal(got, sorted) {
+		b.Fatalf("expected %v, got %v", sorted, got)
+	}
 }

@@ -157,7 +157,7 @@ binary_present if {
 
 test if {
 	run("go test ./...")
-	run("go run main.go test bundle")
+	run("go run main.go test --timeout 1s bundle")
 }
 
 e2e if {

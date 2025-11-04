@@ -1,6 +1,7 @@
 package util
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"math"
@@ -297,4 +298,35 @@ func Zero[T any]() T {
 	var zero T
 
 	return zero
+}
+
+// AnySliceTo converts a slice of any to a slice of T, returning an error if any element cannot be casted.
+func AnySliceTo[T any](in []any) ([]T, error) {
+	out := make([]T, 0, len(in))
+
+	for _, item := range in {
+		casted, ok := item.(T)
+		if !ok {
+			return nil, fmt.Errorf("expected %T, got %T", casted, item)
+		}
+
+		out = append(out, casted)
+	}
+
+	return out, nil
+}
+
+// Sorted sorts s in place using slices.Sort and returns it
+// Can be convenient for use in return values, map definitions, chaining, etc.
+func Sorted[T cmp.Ordered](s []T) []T {
+	slices.Sort(s)
+
+	return s
+}
+
+// Reversed reverses s in place using slices.Reverse and returns it.
+func Reversed[T any](s []T) []T {
+	slices.Reverse(s)
+
+	return s
 }

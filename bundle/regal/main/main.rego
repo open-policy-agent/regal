@@ -35,6 +35,17 @@ lint.aggregate.violations := aggregate_report if "aggregate" in input.regal.oper
 _file_name_relative_to_root(filename, "/") := trim_prefix(filename, "/")
 _file_name_relative_to_root(filename, root) := trim_prefix(filename, concat("", [root, "/"])) if root != "/"
 
+# METADATA
+# description: |
+#   set of all rules not disabled by configuration
+#   note that this only accounts for rules disabled entirely, not for specific files, or via flags
+enabled_rules[category][title] if {
+	some category, title
+	config.rules[category][title]
+
+	not config.ignored_rule(category, title)
+}
+
 _rules_to_run[category] contains title if {
 	relative_filename := _file_name_relative_to_root(input.regal.file.name, config.path_prefix)
 	not config.ignored_globally(relative_filename)

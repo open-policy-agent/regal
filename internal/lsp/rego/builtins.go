@@ -2,9 +2,16 @@ package rego
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/io"
 )
+
+var BuiltinsForDefaultCapabilities = sync.OnceValue(func() map[string]*ast.Builtin {
+	return BuiltinsForCapabilities(io.Capabilities())
+})
 
 // BuiltinsForCapabilities returns a list of builtins from the provided capabilities.
 func BuiltinsForCapabilities(capabilities *ast.Capabilities) map[string]*ast.Builtin {
@@ -16,15 +23,14 @@ func BuiltinsForCapabilities(capabilities *ast.Capabilities) map[string]*ast.Bui
 	return m
 }
 
-func BuiltinCategory(builtin *ast.Builtin) (category string) {
+func BuiltinCategory(builtin *ast.Builtin) string {
 	if len(builtin.Categories) == 0 {
-		category = builtin.Name
 		if i := strings.Index(builtin.Name, "."); i > -1 {
-			category = builtin.Name[:i]
+			return builtin.Name[:i]
 		}
-	} else {
-		category = builtin.Categories[0]
+
+		return builtin.Name
 	}
 
-	return category
+	return builtin.Categories[0]
 }

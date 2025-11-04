@@ -24,7 +24,6 @@ import (
 
 const (
 	mainRegoFileName = "/main.rego"
-	fileURIScheme    = "file://"
 	// defaultTimeout is set based on the investigation done as part of
 	// https://github.com/open-policy-agent/regal/issues/931. 20 seconds is 10x the
 	// maximum time observed for an operation to complete.
@@ -116,13 +115,11 @@ func createPublishDiagnosticsHandler(t *testing.T, out io.Writer, messages messa
 				violations[i] = item.Code
 			}
 
-			slices.Sort(violations)
-
 			fileBase := filepath.Base(params.URI)
 			fmt.Fprintln(out, "createPublishDiagnosticsHandler: queue", fileBase, len(messages[fileBase]))
 
 			select {
-			case messages[fileBase] <- violations:
+			case messages[fileBase] <- util.Sorted(violations):
 			case <-time.After(1 * time.Second):
 				t.Fatalf("timeout writing to messages channel for %s", fileBase)
 			}

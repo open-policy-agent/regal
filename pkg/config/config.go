@@ -302,9 +302,7 @@ func FindBundleRootDirectories(path string) ([]string, error) {
 		return nil, fmt.Errorf("failed to walk path: %w", err)
 	}
 
-	slices.Sort(foundBundleRoots)
-
-	return slices.Compact(foundBundleRoots), nil
+	return slices.Compact(util.Sorted(foundBundleRoots)), nil
 }
 
 // TODO: this doesn't properly handle .regal.yaml??

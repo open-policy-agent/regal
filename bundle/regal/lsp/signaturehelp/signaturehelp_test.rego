@@ -1,7 +1,5 @@
 package regal.lsp.signaturehelp_test
 
-import rego.v1
-
 import data.regal.lsp.signaturehelp as sh
 
 test_result if {

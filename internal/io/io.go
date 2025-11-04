@@ -70,6 +70,7 @@ func LoadRegalBundleFS(fs fs.FS) (*bundle.Bundle, error) {
 		WithSkipBundleVerification(true).
 		WithProcessAnnotations(true).
 		WithLazyLoadingMode(false). // NB(sr): This is OPA's default, unless when using bundle plugins
+		WithRegoVersion(ast.RegoV1).
 		WithBundleName("regal").
 		Read()
 	if err != nil {

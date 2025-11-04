@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/fatih/color"
@@ -167,9 +166,7 @@ func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
 	}
 
 	if fixableViolations.Size() > 0 {
-		violationKeys := fixableViolations.Items()
-		slices.Sort(violationKeys)
-
+		violationKeys := util.Sorted(fixableViolations.Items())
 		_, err = fmt.Fprintf(
 			tr.out,
 			`
@@ -466,9 +463,7 @@ func (tr JUnitReporter) Publish(_ context.Context, r report.Report) error {
 		violationsPerFile[violation.Location.File] = append(violationsPerFile[violation.Location.File], violation)
 	}
 
-	slices.Sort(files)
-
-	for _, file := range files {
+	for _, file := range util.Sorted(files) {
 		testsuite := junit.Testsuite{Name: file}
 
 		for _, violation := range violationsPerFile[file] { //nolint:gocritic

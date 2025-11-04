@@ -60,9 +60,7 @@ func TestSendFileDiagnosticsEmptyArrays(t *testing.T) {
 				ls.cache.SetFileDiagnostics(fileURI, tc.lintErrors)
 			}
 
-			if err := ls.sendFileDiagnostics(t.Context(), fileURI); err != nil {
-				t.Fatalf("sendFileDiagnostics failed: %v", err)
-			}
+			ls.sendFileDiagnostics(t.Context(), fileURI)
 
 			select {
 			case diag := <-receivedDiagnostics:

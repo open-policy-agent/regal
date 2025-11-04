@@ -16,6 +16,8 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
+const ruleNameUseAssignmentOperator = "use-assignment-operator"
+
 func TestHandleTextDocumentCodeAction(t *testing.T) {
 	t.Parallel()
 

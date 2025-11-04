@@ -70,19 +70,9 @@ type Linter struct {
 
 var (
 	lintQueryStr         = "lint := data.regal.main.lint"
-	enabledRulesQueryStr = `[rule |
-		data.regal.rules[cat][rule]
-		object.get(data.regal.rules[cat][rule], "notices", set()) == set()
-		not data.regal.config.ignored_rule(cat, rule)
-	]`
-	enabledAggregateRulesQueryStr = `[rule |
-		data.regal.rules[cat][rule].aggregate
-		not data.regal.config.ignored_rule(cat, rule)
-	]`
-
-	lintQuery                  = ast.MustParseBody(lintQueryStr)
-	enabledRulesQuery          = ast.MustParseBody(enabledRulesQueryStr)
-	enabledAggregateRulesQuery = ast.MustParseBody(enabledAggregateRulesQueryStr)
+	enabledRulesQueryStr = "enabled := data.regal.main.enabled_rules"
+	lintQuery            = ast.MustParseBody(lintQueryStr)
+	enabledRulesQuery    = ast.MustParseBody(enabledRulesQueryStr)
 )
 
 func init() {
@@ -408,12 +398,11 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 		return report.Report{}, fmt.Errorf("failed to lint using Rego rules: %w", err)
 	}
 
-	rulesSkippedCounter := 0
-
 	slices.SortFunc(regoReport.Notices, func(a, b report.Notice) int {
 		return strings.Compare(a.Title, b.Title)
 	})
 	regoReport.Notices = slices.Compact(regoReport.Notices)
+	rulesSkippedCounter := 0
 
 	for _, notice := range regoReport.Notices {
 		if notice.Severity != "none" {
@@ -475,48 +464,31 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 // the supplied configuration. This makes use of the linter rule settings
 // to produce a single list of the rules that are to be run on this linter
 // instance.
-func (l Linter) DetermineEnabledRules(ctx context.Context) ([]string, error) {
+func (l Linter) DetermineEnabledRules(ctx context.Context) ([]string, []string, error) {
 	conf, err := l.GetConfig()
 	if err != nil {
-		return []string{}, fmt.Errorf("failed to merge config: %w", err)
+		return nil, nil, fmt.Errorf("failed to merge config: %w", err)
 	}
 
 	l.dataBundle = l.createDataBundle(*conf)
 
 	regoArgs, err := l.prepareRegoArgs(enabledRulesQuery)
 	if err != nil {
-		return nil, fmt.Errorf("failed preparing query %s: %w", enabledRulesQueryStr, err)
+		return nil, nil, fmt.Errorf("failed preparing query %s: %w", enabledRulesQueryStr, err)
 	}
+
+	var compiler *ast.Compiler
+
+	regoArgs = append(regoArgs, rego.CompilerHook(func(c *ast.Compiler) {
+		compiler = c
+	}))
 
 	rs, err := rego.New(regoArgs...).Eval(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed evaluating query %s: %w", enabledRulesQueryStr, err)
+		return nil, nil, fmt.Errorf("failed evaluating query %s: %w", enabledRulesQueryStr, err)
 	}
 
-	return getEnabledRules(rs)
-}
-
-// DetermineEnabledAggregateRules returns the list of aggregate rules that are
-// enabled based on the configuration.
-func (l Linter) DetermineEnabledAggregateRules(ctx context.Context) ([]string, error) {
-	conf, err := l.GetConfig()
-	if err != nil {
-		return []string{}, fmt.Errorf("failed to merge config: %w", err)
-	}
-
-	l.dataBundle = l.createDataBundle(*conf)
-
-	regoArgs, err := l.prepareRegoArgs(enabledAggregateRulesQuery)
-	if err != nil {
-		return nil, fmt.Errorf("failed preparing query %s: %w", enabledAggregateRulesQueryStr, err)
-	}
-
-	rs, err := rego.New(regoArgs...).Eval(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed evaluating query %s: %w", enabledAggregateRulesQueryStr, err)
-	}
-
-	return getEnabledRules(rs)
+	return getEnabledRules(rs, compiler)
 }
 
 // GetConfig returns the final configuration for the linter, i.e. Regal's default
@@ -630,30 +602,42 @@ func (l Linter) validate(conf *config.Config) error {
 	return nil
 }
 
-func getEnabledRules(rs rego.ResultSet) ([]string, error) {
-	if len(rs) != 1 || len(rs[0].Expressions) != 1 {
-		return nil, fmt.Errorf("expected exactly one expression, got %d", len(rs[0].Expressions))
+func getEnabledRules(rs rego.ResultSet, c *ast.Compiler) (regular, aggregate []string, err error) {
+	if len(rs) == 0 {
+		return nil, nil, errors.New("expected result set of at least one result, got none")
 	}
 
-	list, ok := rs[0].Expressions[0].Value.([]any)
+	enabled, ok := rs[0].Bindings["enabled"].(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("expected list, got %T", rs[0].Expressions[0].Value)
+		return nil, nil, errors.New("expected list of enabled rules, didn't get it")
 	}
 
-	enabledRules := make([]string, 0, len(list))
+	// Since we currently have no reliable way to determine whether a rule is an aggregate
+	// rule or not in Rego without actually evaluating it, we query the comiler for this
+	// information for each rule in the result. Long term, we should figure out the best way
+	// to do this in Rego only.
+	ref := ast.DefaultRootRef.Extend(ast.MustParseRef("regal.rules.category.title.aggregate"))
 
-	for _, item := range list {
-		rule, ok := item.(string)
+	for category, rules := range enabled {
+		categoryRules, ok := rules.(map[string]any)
 		if !ok {
-			return nil, fmt.Errorf("expected string, got %T", item)
+			return nil, nil, fmt.Errorf("expected list of enabled rules for category %s, didn't get it", category)
 		}
 
-		enabledRules = append(enabledRules, rule)
+		ref[3] = ast.InternedTerm(category)
+
+		for title := range categoryRules {
+			ref[4] = ast.InternedTerm(title)
+
+			if rules := c.GetRulesExact(ref); len(rules) == 0 {
+				regular = append(regular, title)
+			} else {
+				aggregate = append(aggregate, title)
+			}
+		}
 	}
 
-	slices.Sort(enabledRules)
-
-	return enabledRules, nil
+	return util.Sorted(regular), util.Sorted(aggregate), nil
 }
 
 func (l Linter) createDataBundle(conf config.Config) *bundle.Bundle {
@@ -734,17 +718,18 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	operationCollect := len(input.FileNames) > 1 || l.useCollectQuery
+	numFiles := len(input.FileNames)
+	operationCollect := numFiles > 1 || l.useCollectQuery
 
 	var wg sync.WaitGroup
 
 	// the error channel is buffered to prevent blocking
 	// caused by the context cancellation happening before
 	// errors are sent and the per-file goroutines can exit.
-	errCh := make(chan error, len(input.FileNames))
+	errCh := make(chan error, numFiles)
 	doneCh := make(chan bool)
 
-	results := make([]report.Report, len(input.FileNames))
+	results := make([]report.Report, numFiles)
 
 	for i, name := range input.FileNames {
 		wg.Add(1)
@@ -820,9 +805,10 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 		l.startTimer(regalmetrics.RegalMergeReport)
 		defer l.stopTimer(regalmetrics.RegalMergeReport)
 
-		regoReport := report.Report{}
-		regoReport.Aggregates = make(map[string][]report.Aggregate, len(input.FileNames))
-		regoReport.IgnoreDirectives = make(map[string]map[string][]string, len(input.FileNames))
+		regoReport := report.Report{
+			Aggregates:       make(map[string][]report.Aggregate, numFiles),
+			IgnoreDirectives: make(map[string]map[string][]string, numFiles),
+		}
 
 		for i := range results {
 			regoReport.Violations = append(regoReport.Violations, results[i].Violations...)

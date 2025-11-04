@@ -60,8 +60,7 @@ func TestDocumentSymbols(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			bis := rego.BuiltinsForCapabilities(ast.CapabilitiesForThisVersion())
-
+			bis := rego.BuiltinsForDefaultCapabilities()
 			syms := documentsymbol.All(tc.policy, module, bis)
 
 			pkg := syms[0]

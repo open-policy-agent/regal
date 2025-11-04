@@ -21,11 +21,10 @@ func AnyToValue(x any) (ast.Value, error) {
 	case nil:
 		return ast.NullValue, nil
 	case bool:
-		return ast.InternedTerm(x).Value, nil
+		return ast.InternedValue(x), nil
 	case float64:
-		ix := int(x)
-		if x == float64(ix) {
-			return ast.InternedTerm(ix).Value, nil
+		if ix := int(x); x == float64(ix) {
+			return ast.InternedValue(ix), nil
 		}
 
 		return ast.Number(strconv.FormatFloat(x, 'g', -1, 64)), nil
@@ -36,7 +35,7 @@ func AnyToValue(x any) (ast.Value, error) {
 
 		return ast.Number(x), nil
 	case string:
-		return ast.InternedTerm(x).Value, nil
+		return ast.InternedValue(x), nil
 	case []string:
 		if len(x) == 0 {
 			return ast.InternedEmptyArrayValue, nil
@@ -45,7 +44,7 @@ func AnyToValue(x any) (ast.Value, error) {
 		r := util.NewPtrSlice[ast.Term](len(x))
 
 		for i, s := range x {
-			r[i].Value = ast.InternedTerm(s).Value
+			r[i].Value = ast.InternedValue(s)
 		}
 
 		return ast.NewArray(r...), nil
@@ -75,7 +74,7 @@ func AnyToValue(x any) (ast.Value, error) {
 		idx := 0
 
 		for k, v := range x {
-			kvs[idx].Value = ast.InternedTerm(k).Value
+			kvs[idx].Value = ast.InternedValue(k)
 
 			v, err := AnyToValue(v)
 			if err != nil {

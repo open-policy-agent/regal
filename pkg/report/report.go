@@ -2,7 +2,7 @@ package report
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/open-policy-agent/opa/v1/rego"
 
@@ -168,13 +168,12 @@ func (r *Report) AddProfileEntries(prof map[string]ProfileEntry) {
 
 func (r *Report) AggregateProfileToSortedProfile(numResults int) {
 	r.Profile = make([]ProfileEntry, 0, len(r.AggregateProfile))
-
 	for loc := range r.AggregateProfile {
 		r.Profile = append(r.Profile, r.AggregateProfile[loc])
 	}
 
-	sort.Slice(r.Profile, func(i, j int) bool {
-		return r.Profile[i].TotalTimeNs > r.Profile[j].TotalTimeNs
+	slices.SortFunc(r.Profile, func(a, b ProfileEntry) int {
+		return int(b.TotalTimeNs - a.TotalTimeNs)
 	})
 
 	if numResults <= 0 || numResults > len(r.Profile) {

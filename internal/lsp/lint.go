@@ -24,6 +24,18 @@ import (
 	"github.com/open-policy-agent/regal/pkg/rules"
 )
 
+var (
+	emptyDiagnostics = []types.Diagnostic{}
+
+	errNoOverwriteUpdate = errors.New("OverwriteAggregates should not be set for updateFileDiagnostics")
+	errAggOnlyUpdate     = errors.New("AggregateReportOnly should not be set for updateFileDiagnostics")
+	errParseFailNoErrors = errors.New("failed to parse module, but no errors were set as diagnostics")
+
+	diagErrorLevel *uint = util.Pointer(uint(1))
+	diagWarnLevel  *uint = util.Pointer(uint(2))
+	diagInfoLevel  *uint = util.Pointer(uint(3))
+)
+
 // diagnosticsRunOpts contains options for file and workspace linting.
 type diagnosticsRunOpts struct {
 	Cache            *cache.Cache
@@ -61,6 +73,8 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 	}
 
 	lines := strings.Split(content, "\n")
+	numLines := len(lines)
+
 	options := rparse.ParserOptions()
 	options.RegoVersion = opts.RegoVersion
 
@@ -69,9 +83,9 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 	module, err := rparse.ModuleWithOpts(presentedFileName, content, options)
 	if err == nil {
 		// if the parse was ok, clear the parse errors
-		opts.Cache.SetParseErrors(opts.FileURI, []types.Diagnostic{})
+		opts.Cache.SetParseErrors(opts.FileURI, emptyDiagnostics)
 		opts.Cache.SetModule(opts.FileURI, module)
-		opts.Cache.SetSuccessfulParseLineCount(opts.FileURI, len(lines))
+		opts.Cache.SetSuccessfulParseLineCount(opts.FileURI, numLines)
 
 		if err := PutFileMod(ctx, opts.Store, opts.FileURI, module); err != nil {
 			return false, fmt.Errorf("failed to update rego store with parsed module: %w", err)
@@ -107,7 +121,6 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		if errors.As(err, &e) {
 			astErrors = append(astErrors, ast.Error{Code: e.Code, Message: e.Message, Location: e.Location})
 		} else {
-			// Unknown error type
 			return false, fmt.Errorf("unknown error type: %T", err)
 		}
 	}
@@ -118,7 +131,7 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		line := max(astError.Location.Row-1, 0)
 
 		lineLength := 1
-		if line < len(lines) {
+		if line < numLines {
 			lineLength = len(lines[line])
 		}
 
@@ -133,7 +146,7 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		}
 
 		diags = append(diags, types.Diagnostic{
-			Severity:        util.Pointer(uint(1)),                         // - only error Diagnostic the server sends
+			Severity:        diagErrorLevel,                                // - only error Diagnostic the server sends
 			Range:           types.RangeBetween(line, 0, line, lineLength), // - always highlights the whole line
 			Message:         astError.Message,
 			Source:          &key,
@@ -145,7 +158,7 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 	opts.Cache.SetParseErrors(opts.FileURI, diags)
 
 	if len(diags) == 0 {
-		return false, errors.New("failed to parse module, but no errors were set as diagnostics")
+		return false, errParseFailNoErrors
 	}
 
 	return false, nil
@@ -153,11 +166,11 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 
 func updateFileDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
 	if opts.OverwriteAggregates {
-		return errors.New("OverwriteAggregates should not be set for updateFileDiagnostics")
+		return errNoOverwriteUpdate
 	}
 
 	if opts.AggregateReportOnly {
-		return errors.New("AggregateReportOnly should not be set for updateFileDiagnostics")
+		return errAggOnlyUpdate
 	}
 
 	module, ok := opts.Cache.GetModule(opts.FileURI)
@@ -260,7 +273,7 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) er
 
 		fd, ok := fileDiags[uri]
 		if !ok {
-			fd = []types.Diagnostic{}
+			fd = emptyDiagnostics
 		}
 
 		// when only an aggregate report was run, then we must make sure to
@@ -289,15 +302,15 @@ func convertReportToDiagnostics(rpt *report.Report, workspaceRootURI string) map
 	for _, item := range rpt.Violations {
 		// here errors are presented as warnings, and warnings as info
 		// to differentiate from parse errors
-		severity := uint(2)
+		severity := diagWarnLevel
 		if item.Level == "warning" {
-			severity = 3
+			severity = diagInfoLevel
 		}
 
 		file := cmp.Or(item.Location.File, workspaceRootURI)
 
 		fileDiags[file] = append(fileDiags[file], types.Diagnostic{
-			Severity: &severity,
+			Severity: severity,
 			Range:    getRangeForViolation(item),
 			Message:  item.Description,
 			Source:   util.Pointer("regal/" + item.Category),

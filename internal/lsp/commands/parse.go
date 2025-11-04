@@ -23,27 +23,25 @@ type ParseResult struct {
 // Parse is responsible for extracting the target and location from the given params command params sent from the client
 // after acting on a Code Action.
 func Parse(params types.ExecuteCommandParams, opts ParseOptions) (*ParseResult, error) {
-	if len(params.Arguments) == 0 {
+	numArgs := len(params.Arguments)
+	if numArgs == 0 {
 		return nil, errors.New("no args supplied")
 	}
 
 	target := ""
-
-	if opts.TargetArgIndex < len(params.Arguments) {
+	if opts.TargetArgIndex < numArgs {
 		target = fmt.Sprintf("%s", params.Arguments[opts.TargetArgIndex])
 	}
 
 	// we can't extract a location from the same location as the target, so location arg positions
 	// must not have been set in the opts.
 	if opts.RowArgIndex == opts.TargetArgIndex {
-		return &ParseResult{
-			Target: target,
-		}, nil
+		return &ParseResult{Target: target}, nil
 	}
 
 	var loc *report.Location
 
-	if opts.RowArgIndex < len(params.Arguments) && opts.ColArgIndex < len(params.Arguments) {
+	if opts.RowArgIndex < numArgs && opts.ColArgIndex < numArgs {
 		var row, col int
 
 		switch v := params.Arguments[opts.RowArgIndex].(type) {
@@ -51,9 +49,7 @@ func Parse(params types.ExecuteCommandParams, opts ParseOptions) (*ParseResult, 
 			row = v
 		case string:
 			var err error
-
-			row, err = strconv.Atoi(v)
-			if err != nil {
+			if row, err = strconv.Atoi(v); err != nil {
 				return nil, fmt.Errorf("failed to parse row: %w", err)
 			}
 		default:
@@ -65,19 +61,14 @@ func Parse(params types.ExecuteCommandParams, opts ParseOptions) (*ParseResult, 
 			col = v
 		case string:
 			var err error
-
-			col, err = strconv.Atoi(v)
-			if err != nil {
+			if col, err = strconv.Atoi(v); err != nil {
 				return nil, fmt.Errorf("failed to parse col: %w", err)
 			}
 		default:
 			return nil, fmt.Errorf("unexpected type for col: %T", params.Arguments[opts.ColArgIndex])
 		}
 
-		loc = &report.Location{
-			Row:    row,
-			Column: col,
-		}
+		loc = &report.Location{Row: row, Column: col}
 	}
 
 	return &ParseResult{

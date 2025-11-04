@@ -5,7 +5,6 @@ go 1.25.0
 require (
 	dario.cat/mergo v1.0.2
 	github.com/arl/statsviz v0.7.2
-	github.com/coreos/go-semver v0.3.1
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-git/go-git/v5 v5.16.3
