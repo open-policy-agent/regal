@@ -2,7 +2,7 @@
 
 In addition to being a [language server](https://www.openpolicyagent.org/projects/regal/language-server),
 Regal can act as a
-[Debug Adapter](https://microsoft.github.io/debug-adapter-protocol/). 
+[Debug Adapter](https://microsoft.github.io/debug-adapter-protocol/).
 A Debug Adapter is a long running program that can communicate with a debugger
 client, such as Visual Studio Code's debugger, to provide live, step-by-step,
 debugging capabilities for a language.
