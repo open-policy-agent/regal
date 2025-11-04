@@ -59,9 +59,7 @@ page.
 
 First, author some Rego!
 
-`policy/authz.rego`
-
-```rego
+```rego title="policy/authz.rego"
 package authz
 
 default allow = false

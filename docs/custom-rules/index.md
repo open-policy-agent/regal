@@ -76,9 +76,7 @@ In order to view the JSON AST representation of a policy, use the `regal parse` 
 If we were to write the simplest policy possible, and parse it using `regal parse`, it would contain nothing but a
 package declaration:
 
-`policy.rego`
-
-```rego
+```rego title="policy.rego"
 package policy
 ```
 
