@@ -13,32 +13,32 @@ symbols helping you easily navigate the Rego code in your workspace.
 
 The Regal language server currently supports the following LSP features:
 
-- [x] [Diagnostics](https://openpolicyagent.org/projects/regal/language-server#diagnostics) (linting)
-- [x] [Hover](https://openpolicyagent.org/projects/regal/language-server#hover)
+- [x] [Diagnostics](https://www.openpolicyagent.org/projects/regal/language-server#diagnostics) (linting)
+- [x] [Hover](https://www.openpolicyagent.org/projects/regal/language-server#hover)
       (for inline docs on built-in functions)
-- [x] [Go to definition](https://openpolicyagent.org/projects/regal/language-server#go-to-definition)
+- [x] [Go to definition](https://www.openpolicyagent.org/projects/regal/language-server#go-to-definition)
       (ctrl/cmd + click on a reference to go to definition)
-- [x] [Folding ranges](https://openpolicyagent.org/projects/regal/language-server#folding-ranges)
+- [x] [Folding ranges](https://www.openpolicyagent.org/projects/regal/language-server#folding-ranges)
       (expand/collapse blocks, imports, comments)
-- [x] [Document and workspace symbols](https://openpolicyagent.org/projects/regal/language-server#document-and-workspace-symbols)
+- [x] [Document and workspace symbols](https://www.openpolicyagent.org/projects/regal/language-server#document-and-workspace-symbols)
       (navigate to rules, functions, packages)
-- [x] [Inlay hints](https://openpolicyagent.org/projects/regal/language-server#inlay-hints)
+- [x] [Inlay hints](https://www.openpolicyagent.org/projects/regal/language-server#inlay-hints)
       (show names of built-in function arguments next to their values)
-- [x] [Formatting](https://openpolicyagent.org/projects/regal/language-server#formatting)
-- [x] [Code completions](https://openpolicyagent.org/projects/regal/language-server#code-completions)
-- [x] [Code actions](https://openpolicyagent.org/projects/regal/language-server#code-actions)
+- [x] [Formatting](https://www.openpolicyagent.org/projects/regal/language-server#formatting)
+- [x] [Code completions](https://www.openpolicyagent.org/projects/regal/language-server#code-completions)
+- [x] [Code actions](https://www.openpolicyagent.org/projects/regal/language-server#code-actions)
       (quick fixes for linting issues)
-  - [x] [opa-fmt](https://openpolicyagent.org/projects/regal/rules/style/opa-fmt)
-  - [x] [use-rego-v1](https://openpolicyagent.org/projects/regal/rules/imports/use-rego-v1)
-  - [x] [use-assignment-operator](https://openpolicyagent.org/projects/regal/rules/style/use-assignment-operator)
-  - [x] [no-whitespace-comment](https://openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment)
-  - [x] [directory-package-mismatch](https://openpolicyagent.org/projects/regal/rules/idiomatic/directory-package-mismatch)
-- [x] [Code lenses](https://openpolicyagent.org/projects/regal/language-server#code-lenses-evaluation)
+  - [x] [opa-fmt](https://www.openpolicyagent.org/projects/regal/rules/style/opa-fmt)
+  - [x] [use-rego-v1](https://www.openpolicyagent.org/projects/regal/rules/imports/use-rego-v1)
+  - [x] [use-assignment-operator](https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator)
+  - [x] [no-whitespace-comment](https://www.openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment)
+  - [x] [directory-package-mismatch](https://www.openpolicyagent.org/projects/regal/rules/idiomatic/directory-package-mismatch)
+- [x] [Code lenses](https://www.openpolicyagent.org/projects/regal/language-server#code-lenses-evaluation)
       (click to evaluate any package or rule directly in the editor)
 
 See the
 [documentation page for the language server](https://www.openpolicyagent.org/projects/regal/language-server)
 for an extensive overview of all features, and their meaning.
 
-See the [Editor Support](https://openpolicyagent.org/projects/regal/editor-support)
+See the [Editor Support](https://www.openpolicyagent.org/projects/regal/editor-support)
 page for information about Regal support in different editors.

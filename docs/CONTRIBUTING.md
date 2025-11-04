@@ -55,7 +55,7 @@ file to inspect its AST in this format. It is often more convenient to direct th
 `input.json` to browse it in your favorite editor, e.g. `regal parse policy.rego > input.json`.
 
 If you're using VS Code and the [OPA VS Code extension](https://github.com/open-policy-agent/vscode-opa), you may
-use the [Code Lens for Evaluation](https://openpolicyagent.org/projects/regal/language-server#code-lenses-evaluation) to directly
+use the [Code Lens for Evaluation](https://www.openpolicyagent.org/projects/regal/language-server#code-lenses-evaluation) to directly
 evaluate packages and rules using the `input.json` file as input, and see the result directly in your editor on the
 line you clicked to evaluate.
 
@@ -174,7 +174,7 @@ anything you can't figure out, don't hesitate to ask for help in the `#regal` Sl
 
 ## Documentation
 
-The tables on the [rules pages](https://openpolicyagent.org/projects/regal/rules) are
+The tables on the [rules pages](https://www.openpolicyagent.org/projects/regal/rules) are
 generated from the individual
 [rule Markdown files](https://github.com/open-policy-agent/regal/tree/main/docs/rules)
 under `docs/rules`.

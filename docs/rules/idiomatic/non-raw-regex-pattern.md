@@ -4,7 +4,7 @@
 
 **Category**: Idiomatic
 
-**Automatically fixable**: [Yes](https://openpolicyagent.org/projects/regal/fixing)
+**Automatically fixable**: [Yes](https://www.openpolicyagent.org/projects/regal/fixing)
 
 **Avoid**
 ```rego
@@ -56,6 +56,6 @@ rules:
 
 ## Related Resources
 
-- Rego Style Guide: [Use raw strings for regex patterns](https://openpolicyagent.org/docs/style-guide#use-raw-strings-for-regex-patterns)
+- Rego Style Guide: [Use raw strings for regex patterns](https://www.openpolicyagent.org/docs/style-guide#use-raw-strings-for-regex-patterns)
 - OPA Docs: [Regex Functions Reference](https://www.openpolicyagent.org/docs/policy-reference/#regex)
 - GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/idiomatic/non-raw-regex-pattern/non_raw_regex_pattern.rego)

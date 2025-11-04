@@ -15,7 +15,7 @@ When running Regal against a directory, like `regal lint my-policies/`, Regal do
 - Each linter rule (and there are almost 40 of them at the time of writing this) uses the **input**, which contains
   information such as the package name, what imports are used, and all the rules and the expressions they contain, to
   determine whether the Rego policy linted contains any violations against the rule. An example could be a rule that
-  [forbids shadowing](https://openpolicyagent.org/projects/regal/rules/bugs/rule-shadows-builtin)
+  [forbids shadowing](https://www.openpolicyagent.org/projects/regal/rules/bugs/rule-shadows-builtin)
   (i.e. using the same name as) built-in functions and operators.
 - Since rule bodies aren’t necessarily flat, but may contain nested bodies of constructs such as
   [comprehensions](https://www.openpolicyagent.org/docs/policy-language/#comprehensions) or
@@ -27,7 +27,7 @@ When running Regal against a directory, like `regal lint my-policies/`, Regal do
   policy files and tests, the cost may be prohibitive. To alleviate this, Regal is implemented to process files
   concurrently to minimize the impact of IO bound tasks, and to make use of multiple cores when available.
 - The result of linting each file is eventually collected and compiled into a linter report, which is presented to the
-  user in one of the available [output formats](https://openpolicyagent.org/projects/regal#output-formats).
+  user in one of the available [output formats](https://www.openpolicyagent.org/projects/regal#output-formats).
 
 ## Rego Rules Evaluation
 
