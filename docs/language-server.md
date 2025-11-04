@@ -10,7 +10,8 @@ and without having to call Regal from the command line. The language server howe
 linting!
 
 :::tip
-Check support for your editor on the [editor support](https://www.openpolicyagent.org/projects/regal/editor-support)
+Check Regal's support for your editor on the
+[editor support](https://www.openpolicyagent.org/projects/regal/editor-support)
 page.
 :::
 
@@ -129,8 +130,8 @@ that may appear when a linter rule has been violated. Code actions can be trigge
 that appears on the line with a diagnostic message, or by pressing `ctrl/cmd + .` when the cursor is on the line.
 
 <img
-src={require('./assets/lsp/codeaction.png').default}
-alt="Screenshot of code action displayed in Zed"/>
+  src={require('./assets/lsp/codeaction.png').default}
+  alt="Screenshot of code action displayed in Zed"/>
 
 Regal currently provides **quick fix actions** for the following linter rules:
 
@@ -263,6 +264,35 @@ in your editor.
 
 If you have any suggestions for how linked editing ranges could be useful in Rego, please
 [open an issue](https://github.com/open-policy-agent/regal/issues/new) to let us know!
+
+### Signature Help
+
+Signature help is a feature that shows the names and types of variables as the
+user types a call to a function.
+
+<img
+  src={require('./assets/lsp/signaturehelp.gif').default}
+  alt="Animation showing suggestions for function arguments"/>
+
+### Document Highlights
+
+Document highlights are regions of the current file that deserve additional
+attention. We use document highlights in Regal to show usages of a variable
+within a function - more use cases coming soon!
+
+<img
+  src={require('./assets/lsp/documenthighlights.gif').default}
+  alt="Animation showing highlighting of values in a function"/>
+
+### Document Links
+
+Document links are used to make regular text ranges within a file appear as a
+clickable link in clients. We use these links to make ignore directives
+clickable.
+
+<img
+  src={require('./assets/lsp/documentlinks.gif').default}
+  alt="Animation showing a document link in action"/>
 
 ## Unsupported features
 
