@@ -18,7 +18,8 @@ const (
 // DetermineIdentifier is used to determine the Regal client identifier
 // based on the client name.
 // Clients with identifiers here should be featured on the 'Editor Support'
-// page in the documentation (https://docs.styra.com/regal/editor-support).
+// page in the documentation (https://www.openpolicyagent.org/projects/regal/editor-support),
+// `docs/editor-support.md`.
 func DetermineIdentifier(clientName string) Identifier {
 	switch clientName {
 	case "go test":

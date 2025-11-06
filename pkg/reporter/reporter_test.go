@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/report"
@@ -234,7 +236,7 @@ func TestSarifReporterViolationWithoutRegion(t *testing.T) {
 		Location:    report.Location{File: "policy.rego"},
 		RelatedResources: []report.RelatedResource{{
 			Description: "documentation",
-			Reference:   "https://docs.styra.com/regal/rules/style/opa-fmt",
+			Reference:   "https://www.openpolicyagent.org/projects/regal/rules/style/opa-fmt",
 		}},
 		Level: "error",
 	}}}
@@ -242,8 +244,8 @@ func TestSarifReporterViolationWithoutRegion(t *testing.T) {
 	var buf bytes.Buffer
 	testutil.NoErr(NewSarifReporter(&buf).Publish(t.Context(), rep))(t)
 
-	if expect := testutil.MustReadFile(t, "testdata/sarif/reporter-no-region.json"); buf.String() != expect {
-		t.Errorf("expected %s, got %s", expect, buf.String())
+	if diff := cmp.Diff(testutil.MustReadFile(t, "testdata/sarif/reporter-no-region.json"), buf.String()); diff != "" {
+		t.Errorf("unexpected output (-want, +got):\n%s", diff)
 	}
 }
 
@@ -253,8 +255,8 @@ func TestSarifReporterPublishNoViolations(t *testing.T) {
 	var buf bytes.Buffer
 	testutil.NoErr(NewSarifReporter(&buf).Publish(t.Context(), report.Report{}))(t)
 
-	if expect := testutil.MustReadFile(t, "testdata/sarif/reporter-no-violation.json"); buf.String() != expect {
-		t.Errorf("expected %s, got %s", expect, buf.String())
+	if diff := cmp.Diff(testutil.MustReadFile(t, "testdata/sarif/reporter-no-violation.json"), buf.String()); diff != "" {
+		t.Errorf("unexpected output (-want, +got):\n%s", diff)
 	}
 }
 
@@ -264,8 +266,8 @@ func TestJUnitReporterPublish(t *testing.T) {
 	var buf bytes.Buffer
 	testutil.NoErr(NewJUnitReporter(&buf).Publish(t.Context(), rep))(t)
 
-	if expect := testutil.MustReadFile(t, "testdata/junit/reporter.xml"); buf.String() != expect {
-		t.Errorf("expected %s, got %s", expect, buf.String())
+	if diff := cmp.Diff(testutil.MustReadFile(t, "testdata/junit/reporter.xml"), buf.String()); diff != "" {
+		t.Errorf("unexpected output (-want, +got):\n%s", diff)
 	}
 }
 

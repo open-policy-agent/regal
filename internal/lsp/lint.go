@@ -136,13 +136,13 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		}
 
 		key := "regal/parse"
-		link := "https://docs.styra.com/opa/category/rego-parse-error"
+		link := "https://www.openpolicyagent.org/docs/errors/" // overview page
 
 		hints, _ := hints.GetForError(err)
 		if len(hints) > 0 {
 			// there should only be one hint, so take the first
 			key = hints[0]
-			link = "https://docs.styra.com/opa/errors/" + hints[0]
+			link += hints[0]
 		}
 
 		diags = append(diags, types.Diagnostic{
@@ -316,7 +316,7 @@ func convertReportToDiagnostics(rpt *report.Report, workspaceRootURI string) map
 			Source:   util.Pointer("regal/" + item.Category),
 			Code:     item.Title,
 			CodeDescription: &types.CodeDescription{
-				Href: fmt.Sprintf("https://docs.styra.com/regal/rules/%s/%s", item.Category, item.Title),
+				Href: fmt.Sprintf("https://www.openpolicyagent.org/projects/regal/rules/%s/%s", item.Category, item.Title),
 			},
 		})
 	}

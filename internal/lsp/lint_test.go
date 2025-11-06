@@ -174,7 +174,7 @@ func TestConvertReportToDiagnostics(t *testing.T) {
 				Source:   util.Pointer("regal/mock_category"),
 				Code:     "mock_title",
 				CodeDescription: &types.CodeDescription{
-					Href: "https://docs.styra.com/regal/rules/mock_category/mock_title",
+					Href: "https://www.openpolicyagent.org/projects/regal/rules/mock_category/mock_title",
 				},
 			},
 		},
@@ -186,7 +186,7 @@ func TestConvertReportToDiagnostics(t *testing.T) {
 				Source:   util.Pointer("regal/mock_category"),
 				Code:     "mock_title",
 				CodeDescription: &types.CodeDescription{
-					Href: "https://docs.styra.com/regal/rules/mock_category/mock_title",
+					Href: "https://www.openpolicyagent.org/projects/regal/rules/mock_category/mock_title",
 				},
 			},
 		},
