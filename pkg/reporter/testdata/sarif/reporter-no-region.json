@@ -5,7 +5,7 @@
     {
       "tool": {
         "driver": {
-          "informationUri": "https://docs.styra.com/regal",
+          "informationUri": "https://www.openpolicyagent.org/projects/regal",
           "name": "Regal",
           "rules": [
             {
@@ -13,7 +13,7 @@
               "shortDescription": {
                 "text": "File should be formatted with `opa fmt`"
               },
-              "helpUri": "https://docs.styra.com/regal/rules/style/opa-fmt",
+              "helpUri": "https://www.openpolicyagent.org/projects/regal/rules/style/opa-fmt",
               "properties": {
                 "category": "style"
               }

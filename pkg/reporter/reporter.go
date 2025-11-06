@@ -371,7 +371,7 @@ func (tr SarifReporter) Publish(_ context.Context, r report.Report) error {
 		return err
 	}
 
-	run := sarif.NewRunWithInformationURI("Regal", "https://docs.styra.com/regal")
+	run := sarif.NewRunWithInformationURI("Regal", "https://www.openpolicyagent.org/projects/regal")
 
 	for _, violation := range r.Violations { //nolint:gocritic
 		pb := sarif.NewPropertyBag()
