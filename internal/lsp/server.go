@@ -1681,7 +1681,7 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 
 	// opa-fmt is the default formatter if not set in the client options
 	formatter := "opa-fmt"
-	if l.client.InitOptions != nil && l.client.InitOptions.Formatter != nil {
+	if l.client.InitOptions.Formatter != nil {
 		formatter = *l.client.InitOptions.Formatter
 	}
 
@@ -1869,7 +1869,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 
 	l.client = types.Client{
 		Identifier:   clients.DetermineIdentifier(params.ClientInfo.Name),
-		InitOptions:  params.InitializationOptions,
+		InitOptions:  cmp.Or(params.InitializationOptions, &types.InitializationOptions{}),
 		Capabilities: capsValue,
 	}
 
