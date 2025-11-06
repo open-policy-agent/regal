@@ -154,3 +154,30 @@ config = { provideFormatter = true }
 
 [See the languages docs](https://docs.helix-editor.com/languages.html#language-configuration)
 for details.
+
+## Kakoune
+
+The [Kakoune](https://kakoune.org) editor has a plugin for LSP support,
+[kakoune-lsp](https://github.com/kakoune-lsp/kakoune-lsp). You can use Regal
+with this plugin using this config:
+
+```kak
+hook global BufCreate .+\.rego %{
+    set-option buffer filetype rego
+}
+hook global BufSetOption filetype=rego %{
+    set-option buffer lsp_language_id rego
+    set-option buffer lsp_servers %{
+        [regal]
+        root_globs = [".git", ".hg", ".regal"]
+        command = "regal"
+        args = ["language-server"]
+
+        # these three lines are optional, to configure initializationOptions
+        settings_section = "regal"
+        [regal.settings.regal]
+        formatter = "opa fmt --rego-v1"
+
+    }
+}
+```
