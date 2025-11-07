@@ -72,12 +72,10 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		return false, fmt.Errorf("failed to get file contents for uri %q", opts.FileURI)
 	}
 
-	lines := strings.Split(content, "\n")
-	numLines := len(lines)
-
 	options := rparse.ParserOptions()
 	options.RegoVersion = opts.RegoVersion
 
+	numLines := strings.Count(content, "\n") + 1
 	presentedFileName := uri.ToRelativePath(opts.FileURI, opts.WorkspaceRootURI)
 
 	module, err := rparse.ModuleWithOpts(presentedFileName, content, options)
@@ -125,6 +123,7 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		}
 	}
 
+	lines := strings.Split(content, "\n")
 	diags := make([]types.Diagnostic, 0, len(astErrors))
 
 	for _, astError := range astErrors {

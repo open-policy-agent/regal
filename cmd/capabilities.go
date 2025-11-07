@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -18,13 +17,11 @@ func init() {
 		Long:   "Show capabilities for Regal",
 		RunE: func(*cobra.Command, []string) error {
 			bs, err := json.MarshalIndent(io.Capabilities(), "", "  ")
-			if err != nil {
-				return fmt.Errorf("failed marshalling capabilities: %w", err)
+			if err == nil {
+				_, err = os.Stdout.Write(append(bs, '\n'))
 			}
 
-			fmt.Fprintln(os.Stdout, string(bs))
-
-			return nil
+			return err
 		},
 	}
 

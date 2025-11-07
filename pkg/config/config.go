@@ -366,12 +366,12 @@ func AllRegoVersions(root string, conf *Config) (map[string]ast.RegoVersion, err
 	}
 
 	for _, dir := range manifestLocations {
-		f, err := os.ReadFile(filepath.Join(root, dir, ".manifest"))
+		b, err := os.ReadFile(filepath.Join(root, dir, ".manifest"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to read manifest file: %w", err)
 		}
 
-		manifest, err := encoding.JSONUnmarshalTo[bundle.Manifest](f)
+		manifest, err := encoding.JSONUnmarshalTo[bundle.Manifest](b)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal manifest file: %w", err)
 		}

@@ -19,17 +19,13 @@ func (*arrayCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 
 	stream.WriteArrayStart()
 
-	i := 0
-
-	arr.Foreach(func(term *ast.Term) {
+	for i := range arr.Len() {
 		if i > 0 {
 			stream.WriteMore()
 		}
 
-		stream.WriteVal(term)
-
-		i++
-	})
+		stream.WriteVal(arr.Elem(i))
+	}
 
 	stream.WriteArrayEnd()
 }

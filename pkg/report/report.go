@@ -144,7 +144,7 @@ func (a Aggregate) IndexKey() string {
 		return ""
 	}
 
-	return fmt.Sprintf("%s/%s", cat, title)
+	return cat + "/" + title
 }
 
 func (r *Report) AddProfileEntries(prof map[string]ProfileEntry) {

@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
 func TestFilterIgnoredPaths(t *testing.T) {
@@ -103,5 +105,42 @@ func TestFilterIgnoredPaths(t *testing.T) {
 				t.Errorf("filtered paths mismatch (-want +got):\n%s", cmp.Diff(tc.expected, filtered))
 			}
 		})
+	}
+}
+
+// 8680 ns/op	   13816 B/op	     373 allocs/op // original
+// 1241 ns/op	    2040 B/op	      54 allocs/op // optimized
+func BenchmarkFilterIgnoredPaths(b *testing.B) {
+	paths := []string{
+		"foo/bar/baz/bax.rego",
+		"foo/baz/bar/bax.rego",
+		"bar/foo/regopkg/config/filter.go",
+		"bar/foo/regopkg/config/filter_test.go",
+		"bar/foo/main.rego",
+	}
+	ignore := []string{"foo/bar/**", "bar/*.rego"}
+
+	for b.Loop() {
+		if _, err := FilterIgnoredPaths(paths, ignore, false, ""); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// 472	   2292632 ns/op	 1251673 B/op	   28348 allocs/op
+// 704	   1688877 ns/op	  312571 B/op	    2969 allocs/op
+func BenchmarkFilterIgnoredPathsBundleDir(b *testing.B) {
+	ignore := []string{"foo/bar/**", "bar/*.rego"}
+
+	for b.Loop() {
+		testutil.Must(FilterIgnoredPaths([]string{"../../bundle"}, ignore, true, ""))(b)
+	}
+}
+
+func BenchmarkFilterIgnoredPathsWorkspace(b *testing.B) {
+	ignore := []string{"foo/bar/**", "bar/*.rego"}
+
+	for b.Loop() {
+		testutil.Must(FilterIgnoredPaths([]string{"../.."}, ignore, true, ""))(b)
 	}
 }

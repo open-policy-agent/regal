@@ -346,7 +346,7 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 				l.sendFileDiagnostics(ctx, job.URI)
 
 				l.lintWorkspaceJobs <- lintWorkspaceJob{
-					Reason: fmt.Sprintf("file %s %s", job.URI, job.Reason),
+					Reason: "file " + job.URI + " " + job.Reason,
 					// this run is expected to used the cached aggregate state
 					// for other files.
 					// The aggregate state for this file will still be updated.
@@ -724,18 +724,13 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 					output := filepath.Join(l.workspacePath(), "output.json")
 
 					var f *os.File
-
-					f, err = os.OpenFile(output, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)
-					if err == nil {
+					if f, err = os.OpenFile(output, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755); err == nil {
 						value := result.Value
 						if result.IsUndefined {
 							value = emptyStringAnyMap // undefined displays as an empty object
 						}
 
-						var jsonVal []byte
-						if jsonVal, err = encoding.JSON().MarshalIndent(value, "", "  "); err == nil {
-							_, err = f.Write(jsonVal)
-						}
+						err = encoding.NewIndentEncoder(f, "", "  ").Encode(value)
 
 						rio.CloseIgnore(f)
 					}

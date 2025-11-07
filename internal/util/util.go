@@ -1,9 +1,11 @@
 package util
 
 import (
+	"bytes"
 	"cmp"
 	"errors"
 	"fmt"
+	"iter"
 	"math"
 	"net"
 	"os"
@@ -329,4 +331,30 @@ func Reversed[T any](s []T) []T {
 	slices.Reverse(s)
 
 	return s
+}
+
+// LineContents returns the contents on line lineNum (0-indexed) from document.
+// This function assumes the lineNum is known to be contained within the document,.
+func LineContents(document []byte, lineNum uint) []byte {
+	for i, line := range Lines(document) {
+		if i == lineNum {
+			return bytes.TrimSuffix(line, []byte{'\n'})
+		}
+	}
+
+	return nil
+}
+
+// Lines works like [bytes.Lines] but yields both the line number (0-indexed) and the line contents.
+func Lines(s []byte) iter.Seq2[uint, []byte] {
+	return func(yield func(uint, []byte) bool) {
+		var lineNum uint
+		for line := range bytes.Lines(s) {
+			if !yield(lineNum, line) {
+				return
+			}
+
+			lineNum++
+		}
+	}
 }

@@ -2,6 +2,7 @@ package util
 
 import (
 	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -155,4 +156,46 @@ func BenchmarkSorted(b *testing.B) {
 	if !slices.Equal(got, sorted) {
 		b.Fatalf("expected %v, got %v", sorted, got)
 	}
+}
+
+func TestLineContents(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		line     uint
+		expected string
+	}{
+		{name: "first line", line: 0, expected: "line1"},
+		{name: "middle line", line: 1, expected: "line2"},
+		{name: "last line", line: 3, expected: "line4"},
+		{name: "out of bounds (too high)", line: 5, expected: ""},
+	}
+
+	src := []byte("line1\nline2\nline3\nline4")
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := LineContents(src, test.line); string(got) != test.expected {
+				t.Fatalf("expected %q, got %q", test.expected, string(got))
+			}
+		})
+	}
+}
+
+// 9090 ns/op    24576 B/op    1 allocs/op // return bytes.Split(document, []byte{'\n'})[lineNum]
+// 4726 ns/op        0 B/op    0 allocs/op // current implementation
+func BenchmarkLineContents(b *testing.B) {
+	src := []byte{}
+	for i := range uint64(1000) {
+		src = append(strconv.AppendUint(append(src, "This is line number "...), i, 10), '\n')
+	}
+
+	b.Run("LineContents", func(b *testing.B) {
+		for b.Loop() {
+			_ = LineContents(src, 500)
+		}
+	})
 }

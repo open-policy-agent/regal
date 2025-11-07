@@ -228,8 +228,7 @@ func TestSerializedModuleSize(t *testing.T) {
 	}
 }
 
-// BenchmarkSerializeModule-16    	    3361	    354640 ns/op	  216756 B/op	    9773 allocs/op
-
+// 285329 ns/op	  125555 B/op	    3094 allocs/op
 func BenchmarkSerializeModule(b *testing.B) {
 	policy := mustReadTestFile(b, "testdata/policy.rego")
 	module := ast.MustParseModuleWithOpts(string(policy), ast.ParserOptions{ProcessAnnotation: true})

@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 
@@ -50,13 +49,6 @@ func InputFromPaths(paths []string, prefix string, versionsMap map[string]ast.Re
 	numPaths := len(paths)
 	if numPaths == 1 && paths[0] == "-" {
 		return inputFromStdin()
-	}
-
-	var versionedDirs []string
-	if len(versionsMap) > 0 {
-		// Sort directories by length, so that the most specific path is found first
-		versionedDirs = util.KeysSorted(versionsMap)
-		slices.Reverse(versionedDirs)
 	}
 
 	var wg sync.WaitGroup

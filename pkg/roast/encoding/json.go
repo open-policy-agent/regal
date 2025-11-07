@@ -1,6 +1,7 @@
 package encoding
 
 import (
+	"io"
 	"log"
 
 	jsoniter "github.com/json-iterator/go"
@@ -71,4 +72,12 @@ func MustJSONRoundTripTo[T any](from any) T {
 	}
 
 	return to
+}
+
+// NewIndentEncoder creates a new JSON encoder with the specified prefix and indent, encoding to w.
+func NewIndentEncoder(w io.Writer, prefix, indent string) *jsoniter.Encoder {
+	enc := JSON().NewEncoder(w)
+	enc.SetIndent(prefix, indent)
+
+	return enc
 }

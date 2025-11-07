@@ -1,10 +1,7 @@
 package module
 
 import (
-	"bytes"
 	"encoding/base64"
-	"strconv"
-	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	outil "github.com/open-policy-agent/opa/v1/util"
@@ -12,8 +9,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
-
-var newLine = []byte("\n")
 
 // ToValue converts an AST module to RoAST value representation.
 // This is much more efficient than using a JSON encode/decode round trip.
@@ -97,41 +92,7 @@ func pathArray(terms []*ast.Term) *ast.Term {
 }
 
 func locationItem(location *ast.Location) [2]*ast.Term {
-	var endRow, endCol int
-	if location.Text == nil {
-		endRow = location.Row
-		endCol = location.Col
-	} else {
-		numLines := bytes.Count(location.Text, newLine) + 1
-
-		endRow = location.Row + numLines - 1
-
-		if numLines < 2 {
-			endCol = location.Col + len(location.Text)
-		} else {
-			endCol = len(location.Text) - bytes.LastIndexByte(location.Text, '\n')
-		}
-	}
-
-	var sb strings.Builder
-
-	sb.Grow(
-		outil.NumDigitsInt(location.Row) +
-			outil.NumDigitsInt(location.Col) +
-			outil.NumDigitsInt(endRow) +
-			outil.NumDigitsInt(endCol) +
-			3, // 3 colons
-	)
-
-	sb.WriteString(strconv.Itoa(location.Row))
-	sb.WriteByte(':')
-	sb.WriteString(strconv.Itoa(location.Col))
-	sb.WriteByte(':')
-	sb.WriteString(strconv.Itoa(endRow))
-	sb.WriteByte(':')
-	sb.WriteString(strconv.Itoa(endCol))
-
-	return item("location", ast.InternedTerm(sb.String()))
+	return item("location", ast.InternedTerm(outil.ByteSliceToString(rast.AppendLocation(nil, location))))
 }
 
 func termToObjectLoc(term *ast.Term, includeLocation bool) *ast.Term {

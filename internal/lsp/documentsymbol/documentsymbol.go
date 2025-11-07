@@ -92,16 +92,17 @@ func All(contents string, module *ast.Module, builtins map[string]*ast.Builtin) 
 }
 
 func locationToRange(location *ast.Location) types.Range {
-	lines := bytes.Split(location.Text, []byte("\n"))
-	numLines := len(lines)
 	startLine := util.SafeIntToUint(location.Row - 1)
+	numLines := bytes.Count(location.Text, []byte{'\n'}) + 1
 
 	endLine := startLine
-	if numLines != 1 {
+	if numLines > 1 {
 		endLine += util.SafeIntToUint(numLines - 1)
 	}
 
-	return types.RangeBetween(startLine, location.Col-1, endLine, len(lines[numLines-1]))
+	endLineContent := util.LineContents(location.Text, endLine-startLine)
+
+	return types.RangeBetween(startLine, location.Col-1, endLine, len(endLineContent))
 }
 
 func toWorkspaceSymbol(docSym types.DocumentSymbol, docURL string) types.WorkspaceSymbol {
