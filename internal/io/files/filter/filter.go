@@ -23,7 +23,7 @@ func Directories(_ string, info os.DirEntry) bool {
 	return info.IsDir()
 }
 
-// Filenames filters files by their exact name, not counting the path.
+// Filenames filters files by their exact name, not including the path.
 func Filenames(names ...string) Func {
 	return func(_ string, info os.DirEntry) bool {
 		return slices.ContainsFunc(names, func(name string) bool {
@@ -34,9 +34,9 @@ func Filenames(names ...string) Func {
 
 // Suffixes filters any path that has a suffix matching any of the provided suffixes.
 func Suffixes(suffixes ...string) Func {
-	return func(_ string, info os.DirEntry) bool {
+	return func(path string, _ os.DirEntry) bool {
 		return slices.ContainsFunc(suffixes, func(suffix string) bool {
-			return strings.HasSuffix(info.Name(), suffix)
+			return strings.HasSuffix(path, suffix)
 		})
 	}
 }
@@ -49,6 +49,10 @@ func Not(filter Func) Func {
 	}
 }
 
-func RegoTests(_ string, info os.DirEntry) bool {
-	return strings.HasSuffix(info.Name(), "_test.rego") && info.Name() != "todo_test.rego"
+func RegoTests(path string, info os.DirEntry) bool {
+	return strings.HasSuffix(path, "_test.rego") && info.Name() != "todo_test.rego"
+}
+
+func NotRego(path string, _ os.DirEntry) bool {
+	return !strings.HasSuffix(path, ".rego")
 }

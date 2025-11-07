@@ -16,41 +16,28 @@ func TestLocation(t *testing.T) {
 		name     string
 		location ast.Location
 		expected string
-	}{
-		{
-			name: "multiple lines",
-			location: ast.Location{
-				Row:  5,
-				Col:  2,
-				Text: []byte("allow if {\n	input.foo == true\n}"),
-			},
-			expected: "5:2:7:2",
-		},
-		{
-			name: "single line",
-			location: ast.Location{
-				Row:  1,
-				Col:  1,
-				Text: []byte("package example"),
-			},
-			expected: "1:1:1:16",
-		},
-	}
-
-	json := jsoniter.ConfigFastest
+	}{{
+		name:     "multiple lines",
+		location: ast.Location{Row: 5, Col: 2, Text: []byte("allow if {\n	input.foo == true\n}")},
+		expected: "5:2:7:2",
+	}, {
+		name:     "single line",
+		location: ast.Location{Row: 1, Col: 1, Text: []byte("package example")},
+		expected: "1:1:1:16",
+	}}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			stream := json.BorrowStream(nil)
-			defer json.ReturnStream(stream)
-
+			stream := jsoniter.ConfigFastest.BorrowStream(nil)
 			stream.WriteVal(tc.location)
 
 			if string(stream.Buffer()) != fmt.Sprintf("\"%s\"", tc.expected) {
 				t.Fatalf("expected %s but got %s", tc.expected, string(stream.Buffer()))
 			}
+
+			jsoniter.ConfigFastest.ReturnStream(stream)
 		})
 	}
 }
@@ -60,10 +47,7 @@ func TestLocationHeadValue(t *testing.T) {
 	// e.g. the end column would be presented as before the start column.
 	t.Parallel()
 
-	module := ast.MustParseModule("package foo.bar\n\nrule := true")
-	json := jsoniter.ConfigFastest
-
-	out, err := json.MarshalIndent(module, "", "  ")
+	out, err := jsoniter.ConfigFastest.MarshalIndent(ast.MustParseModule("package foo.bar\n\nrule := true"), "", "  ")
 	if err != nil {
 		t.Fatalf("failed to marshal module: %v", err)
 	}

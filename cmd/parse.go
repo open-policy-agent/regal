@@ -62,12 +62,5 @@ func parse(args []string) error {
 		return err
 	}
 
-	output, err := encoding.JSON().MarshalIndent(enhancedAST, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Stdout.Write(output)
-
-	return err
+	return encoding.NewIndentEncoder(os.Stdout, "", "  ").Encode(enhancedAST)
 }

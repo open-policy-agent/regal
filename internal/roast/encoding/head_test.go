@@ -14,37 +14,12 @@ func TestRuleHeadEncoding(t *testing.T) {
 	head := ast.Head{
 		Name: "omitted",
 		Reference: ast.Ref{
-			{
-				Value: ast.Var("foo"),
-				Location: &ast.Location{
-					Row:  1,
-					Col:  1,
-					Text: []byte("foo"),
-				},
-			},
-			{
-				Value: ast.String("bar"),
-				Location: &ast.Location{
-					Row:  1,
-					Col:  5, // following "foo."
-					Text: []byte("bar"),
-				},
-			},
+			{Value: ast.Var("foo"), Location: &ast.Location{Row: 1, Col: 1, Text: []byte("foo")}},
+			{Value: ast.String("bar"), Location: &ast.Location{Row: 1, Col: 5, Text: []byte("bar")}},
 		},
-		Value: &ast.Term{
-			Value: ast.Boolean(true),
-			Location: &ast.Location{
-				Row:  1,
-				Col:  12, // following "foo.bar := "
-				Text: []byte("true"),
-			},
-		},
-		Assign: true,
-		Location: &ast.Location{
-			Row:  1,
-			Col:  1,
-			Text: []byte("foo.bar := true"),
-		},
+		Value:    &ast.Term{Value: ast.Boolean(true), Location: &ast.Location{Row: 1, Col: 12, Text: []byte("true")}},
+		Assign:   true,
+		Location: &ast.Location{Row: 1, Col: 1, Text: []byte("foo.bar := true")},
 	}
 
 	bs, err := jsoniter.ConfigFastest.MarshalIndent(head, "", "  ")

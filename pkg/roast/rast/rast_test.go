@@ -141,3 +141,37 @@ func TestRefStringToBody(t *testing.T) {
 		}
 	}
 }
+
+// BenchmarkAppendLocation/single_line_no_prealloc-16         34704147        34.05 ns/op       8 B/op       1 allocs/op
+// BenchmarkAppendLocation/multi_line_no_prealloc-16          29631702        39.94 ns/op      16 B/op       1 allocs/op
+// BenchmarkAppendLocation/single_line_with_prealloc-16       41071040        27.80 ns/op       0 B/op       0 allocs/op
+// BenchmarkAppendLocation/multi_line_with_prealloc-16        30247112        40.32 ns/op       0 B/op       0 allocs/op
+func BenchmarkAppendLocation(b *testing.B) {
+	cases := []struct {
+		name     string
+		location *ast.Location
+		prealloc []byte
+	}{{
+		name:     "single line no prealloc",
+		location: &ast.Location{Row: 3, Col: 5, Text: []byte("example text")},
+	}, {
+		name:     "multi line no prealloc",
+		location: &ast.Location{Row: 2, Col: 10, Text: []byte("line one\nline two\nline three")},
+	}, {
+		name:     "single line with prealloc",
+		location: &ast.Location{Row: 1, Col: 1, Text: []byte("single line")},
+		prealloc: make([]byte, 0, 10),
+	}, {
+		name:     "multi line with prealloc",
+		location: &ast.Location{Row: 4, Col: 3, Text: []byte("first line\nsecond line\nthird line\nfourth line")},
+		prealloc: make([]byte, 0, 20),
+	}}
+
+	for _, tc := range cases {
+		b.Run(tc.name, func(b *testing.B) {
+			for b.Loop() {
+				_ = rast.AppendLocation(tc.prealloc, tc.location)
+			}
+		})
+	}
+}

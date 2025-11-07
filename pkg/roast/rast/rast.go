@@ -2,6 +2,7 @@
 package rast
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
 	"slices"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/util"
 )
@@ -80,6 +82,36 @@ func ArrayTerm(a []string) *ast.Term {
 	}
 
 	return ast.ArrayTerm(util.Map(a, ast.InternedTerm)...)
+}
+
+func AppendLocation(buf []byte, location *ast.Location) []byte {
+	endRow, endCol := location.Row, location.Col
+	if textLen := len(location.Text); textLen > 0 {
+		numNewLines := util.SafeIntToUint(bytes.Count(location.Text, []byte("\n")))
+
+		endRow += util.SafeUintToInt(numNewLines)
+		if numNewLines == 0 {
+			endCol += textLen
+		} else {
+			endCol = textLen - bytes.LastIndexByte(location.Text, '\n')
+		}
+	}
+
+	n := 3 + // 3 colons
+		outil.NumDigitsInt(location.Row) + outil.NumDigitsInt(location.Col) +
+		outil.NumDigitsInt(endRow) + outil.NumDigitsInt(endCol)
+
+	if buf == nil {
+		buf = make([]byte, 0, n)
+	} else {
+		buf = slices.Grow(buf, n)
+	}
+
+	buf = append(strconv.AppendInt(buf, int64(location.Row), 10), ':')
+	buf = append(strconv.AppendInt(buf, int64(location.Col), 10), ':')
+	buf = append(strconv.AppendInt(buf, int64(endRow), 10), ':')
+
+	return strconv.AppendInt(buf, int64(endCol), 10)
 }
 
 func refHeadTerm(name string) *ast.Term {

@@ -221,9 +221,7 @@ func semverSort(stringVersions []string) {
 	}
 
 	if len(invalid) > 0 {
-		slices.Sort(invalid)
-		slices.Reverse(invalid)
-		copy(stringVersions[len(versions):], invalid)
+		copy(stringVersions[len(versions):], util.Reversed(util.Sorted(invalid)))
 	}
 }
 

@@ -374,12 +374,7 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 	if l.inputModules != nil {
 		l.startTimer(regalmetrics.RegalFilterIgnoredModules)
 
-		filteredPaths, err := config.FilterIgnoredPaths(
-			l.inputModules.FileNames,
-			ignore,
-			false,
-			l.pathPrefix,
-		)
+		filteredPaths, err := config.FilterIgnoredPaths(l.inputModules.FileNames, ignore, false, l.pathPrefix)
 		if err != nil {
 			return report.Report{}, fmt.Errorf("failed to filter paths: %w", err)
 		}

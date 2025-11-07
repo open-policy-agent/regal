@@ -63,8 +63,8 @@ setcomp := {x | some x in input}
 	}
 }
 
-// BenchmarkModuleToValue/ToValue-12            26172     45026 ns/op   65514 B/op    1804 allocs/op
-// BenchmarkModuleToValue/RoundTrip-12           9379    120571 ns/op  168927 B/op    4148 allocs/op
+// BenchmarkModuleToValue/ToValue-16         	   25171	     46355 ns/op	   65489 B/op	    1802 allocs/op
+// BenchmarkModuleToValue/RoundTrip-16       	   10000	    119018 ns/op	  166038 B/op	    3924 allocs/op
 func BenchmarkModuleToValue(b *testing.B) {
 	policy := `# METADATA
 # title: p p p
