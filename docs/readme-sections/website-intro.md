@@ -4,6 +4,12 @@ sidebar_position: 1
 title: Introduction
 ---
 
+<!-- markdownlint-disable MD033 -->
+<head>
+<!-- markdownlint-disable MD033 -->
+  <title>Introduction | Regal</head>
+</head>
+
 <!-- markdownlint-disable MD041 -->
 
 import Intro from '@site/src/components/projects/regal/Intro';
