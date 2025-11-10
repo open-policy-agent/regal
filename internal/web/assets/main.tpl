@@ -7,21 +7,25 @@
 </head>
 <body>
 <main class="crowded">
+  <details class="info">
+    <summary>Policy</summary>
+      <pre><code>{{ .Code }}</code></pre>
+  </details>
   <form>
     <div class="f-row">
-					<textarea name="code"
-                    style="height: 300px"
-                    hx-post="/?tmpl=output"
-                    hx-target="#output"
-                    hx-trigger="keyup changed delay:200ms"
-                    class="flex-grow:1 monospace"
-          >{{ .Code }}</textarea>
+      <input hx-get="?tmpl=output"
+        hx-target="#output"
+        hx-trigger="change"
+        type="checkbox"
+        name="hide_identical"
+        id="hide_identical">
+      <label for="hide_identical">Hide stages without effect on code</label>
     </div>
   </form>
   <section id="output">
     {{ block "output" . }}
     {{ range .Result }}
-    <details class={{ .Class }} {{ if .Show }}open{{ end }}>
+    <details class="{{ .Class }}" {{ if .Show }}open{{ end }}>
       <summary>{{ .Stage }}</summary>
       <pre><code>{{ .Output }}</code></pre>
     </details>

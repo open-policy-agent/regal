@@ -1,6 +1,7 @@
 package web
 
 import (
+	"cmp"
 	"context"
 	"embed"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/arl/statsviz"
@@ -73,7 +75,7 @@ func (s *Server) SetBaseURL(baseURL string) {
 	s.baseURL = baseURL
 }
 
-func (s *Server) Start(_ context.Context) {
+func (s *Server) Start(context.Context) {
 	mux := http.NewServeMux()
 	if err := statsviz.Register(mux); err != nil {
 		s.log.Message("failed to register statsviz handler: %v", err)
@@ -89,19 +91,29 @@ func (s *Server) Start(_ context.Context) {
 			return
 		}
 
-		var enableStrict, enableAnnotationProcessing, enablePrint bool
+		var (
+			enableStrict, enableAnnotationProcessing, enablePrint bool // TODO(sr): expose
+			hideIdentical                                         bool
+			tmpl                                                  string
+		)
 
 		if err := r.ParseForm(); err == nil {
 			enableStrict = r.Form.Get("strict") == "on"
 			enableAnnotationProcessing = r.Form.Get("annotations") == "on"
 			enablePrint = r.Form.Get("print") == "on"
+			hideIdentical = r.Form.Get("hide_identical") == "on"
+			tmpl = cmp.Or(r.Form.Get("tmpl"), mainTemplate)
 		}
 
 		cs := explorer.CompilerStages(path, policy, enableStrict, enableAnnotationProcessing, enablePrint)
-		st := state{Code: policy, Result: make([]stringResult, len(cs)+1)}
+		n := len(cs)
+		st := state{Code: policy, Result: make([]stringResult, n+1)}
 
 		for i := range cs {
-			st.Result[i].Stage = cs[i].Stage
+			show := i == 0 || st.Result[i-1].Output != cs[i].Result.String()
+
+			st.Result[i] = stringResult{Stage: cs[i].Stage, Show: show}
+
 			if cs[i].Error != "" {
 				st.Result[i].Output = cs[i].Error
 				st.Result[i].Class = "bad"
@@ -109,9 +121,8 @@ func (s *Server) Start(_ context.Context) {
 				st.Result[i].Output = cs[i].Result.String()
 			}
 
-			st.Result[i].Show = i == 0 || st.Result[i-1].Output != st.Result[i].Output
 			if st.Result[i].Class == "" {
-				if st.Result[i].Show {
+				if show {
 					st.Result[i].Class = "ok"
 				} else {
 					st.Result[i].Class = "plain"
@@ -119,11 +130,7 @@ func (s *Server) Start(_ context.Context) {
 			}
 		}
 
-		n := len(cs)
-
-		st.Result[n].Stage = "Plan"
-		st.Result[n].Show = true
-
+		st.Result[n] = stringResult{Stage: "Plan", Show: true}
 		if p, err := explorer.Plan(r.Context(), path, policy, enablePrint); err != nil {
 			st.Result[n].Class = "bad"
 			st.Result[n].Output = err.Error()
@@ -132,7 +139,13 @@ func (s *Server) Start(_ context.Context) {
 			st.Result[n].Output = p
 		}
 
-		if err := tpl.ExecuteTemplate(w, mainTemplate, st); err != nil {
+		if hideIdentical {
+			st.Result = slices.CompactFunc(st.Result, func(a, b stringResult) bool {
+				return a.Output == b.Output
+			})
+		}
+
+		if err := tpl.ExecuteTemplate(w, tmpl, st); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
