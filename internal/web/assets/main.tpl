@@ -19,7 +19,7 @@
         type="checkbox"
         name="hide_identical"
         id="hide_identical">
-      <label for="hide_identical">hide stages without effect on code</label>
+      <label for="hide_identical">Hide stages without effect on code</label>
     </div>
   </form>
   <section id="output">
