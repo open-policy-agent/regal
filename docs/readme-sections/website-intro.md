@@ -7,7 +7,7 @@ title: Introduction
 <!-- markdownlint-disable MD033 -->
 <head>
 <!-- markdownlint-disable MD033 -->
-  <title>Introduction | Regal</head>
+  <title>Introduction | Regal</title>
 </head>
 
 <!-- markdownlint-disable MD041 -->
