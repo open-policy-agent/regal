@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
 
@@ -20,27 +20,27 @@ func (*ruleCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*ruleCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	rule := *((*ast.Rule)(ptr))
 
-	util.ObjectStart(stream, rule.Location)
+	write.ObjectStart(stream, rule.Location)
 
 	if len(rule.Annotations) > 0 {
-		util.WriteValsArrayAttr(stream, strAnnotations, rule.Annotations)
+		write.ValsArrayAttr(stream, strAnnotations, rule.Annotations)
 	}
 
 	if rule.Default {
-		util.WriteBool(stream, strDefault, rule.Default)
+		write.Bool(stream, strDefault, rule.Default)
 	}
 
 	if rule.Head != nil {
-		util.WriteVal(stream, strHead, rule.Head)
+		write.Val(stream, strHead, rule.Head)
 	}
 
 	if !rast.IsBodyGenerated(&rule) {
-		util.WriteVal(stream, strBody, rule.Body)
+		write.Val(stream, strBody, rule.Body)
 	}
 
 	if rule.Else != nil {
-		util.WriteVal(stream, strElse, rule.Else)
+		write.Val(stream, strElse, rule.Else)
 	}
 
-	util.ObjectEnd(stream)
+	write.ObjectEnd(stream)
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type packageCodec struct{}
@@ -19,7 +19,7 @@ func (*packageCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*packageCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	pkg := *((*ast.Package)(ptr))
 
-	util.ObjectStart(stream, pkg.Location)
+	write.ObjectStart(stream, pkg.Location)
 
 	if pkg.Path != nil {
 		// Make a copy to avoid data race
@@ -29,12 +29,12 @@ func (*packageCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 		// Omit location of "data" part of path, at it isn't present in code
 		pathCopy[0].Location = nil
 
-		util.WriteVal(stream, strPath, pathCopy)
+		write.Val(stream, strPath, pathCopy)
 	}
 
 	if stream.Attachment != nil {
-		util.WriteVal(stream, strAnnotations, stream.Attachment)
+		write.Val(stream, strAnnotations, stream.Attachment)
 	}
 
-	util.ObjectEnd(stream)
+	write.ObjectEnd(stream)
 }

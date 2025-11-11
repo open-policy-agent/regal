@@ -90,6 +90,7 @@ func RegalIsFormatted(_ rego.BuiltinContext, input *ast.Term, options *ast.Term)
 	}
 
 	regoVersion := ast.RegoV1
+
 	if versionTerm := optionsObj.Get(regoVersionTerm); versionTerm != nil {
 		if v, ok := versionTerm.Value.(ast.String); ok && v == "v0" {
 			regoVersion = ast.RegoV0

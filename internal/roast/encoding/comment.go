@@ -8,7 +8,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type commentCodec struct{}
@@ -20,7 +20,7 @@ func (*commentCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*commentCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	comment := *((*ast.Comment)(ptr))
 
-	util.ObjectStart(stream, comment.Location)
+	write.ObjectStart(stream, comment.Location)
 
 	stream.WriteObjectField(strText)
 	stream.WriteString(base64.StdEncoding.EncodeToString(comment.Text))

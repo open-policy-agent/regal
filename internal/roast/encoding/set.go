@@ -8,7 +8,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type setCodec struct{}
@@ -28,5 +28,5 @@ type set struct {
 func (*setCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	s := *((*set)(ptr))
 
-	util.WriteValsArray(stream, s.keys)
+	write.ValsArray(stream, s.keys)
 }

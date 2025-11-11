@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type objectComprehensionCodec struct{}
@@ -19,9 +19,9 @@ func (*objectComprehensionCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*objectComprehensionCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	oc := *((*ast.ObjectComprehension)(ptr))
 
-	util.ObjectStart(stream, nil)
-	util.WriteVal(stream, strKey, oc.Key)
-	util.WriteVal(stream, strValue, oc.Value)
-	util.WriteVal(stream, strBody, oc.Body)
-	util.ObjectEnd(stream)
+	write.ObjectStart(stream, nil)
+	write.Val(stream, strKey, oc.Key)
+	write.Val(stream, strValue, oc.Value)
+	write.Val(stream, strBody, oc.Body)
+	write.ObjectEnd(stream)
 }

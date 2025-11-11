@@ -93,6 +93,7 @@ func Module(filename, policy string) (*ast.Module, error) {
 }
 
 // PrepareAST prepares the AST to be used as linter input.
+//
 // Deprecated: New code should use the `transform` package from roast, as this avoids an
 // expensive intermediate step in module -> ast.Value conversions.
 func PrepareAST(name string, content string, module *ast.Module) (preparedAST map[string]any, err error) {

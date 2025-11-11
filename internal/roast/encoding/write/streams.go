@@ -1,4 +1,4 @@
-package util
+package write
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 )
 
-func WriteValsArray[T any](stream *jsoniter.Stream, vals []T) {
+func ValsArray[T any](stream *jsoniter.Stream, vals []T) {
 	stream.WriteArrayStart()
 
 	for i, val := range vals {
@@ -22,13 +22,13 @@ func WriteValsArray[T any](stream *jsoniter.Stream, vals []T) {
 	stream.WriteArrayEnd()
 }
 
-func WriteValsArrayAttr[T any](stream *jsoniter.Stream, name string, vals []T) {
+func ValsArrayAttr[T any](stream *jsoniter.Stream, name string, vals []T) {
 	stream.WriteObjectField(name)
-	WriteValsArray(stream, vals)
+	ValsArray(stream, vals)
 	stream.WriteMore()
 }
 
-func WriteObject[V any](stream *jsoniter.Stream, name string, obj map[string]V) {
+func Object[V any](stream *jsoniter.Stream, name string, obj map[string]V) {
 	stream.WriteObjectField(name)
 	stream.WriteObjectStart()
 
@@ -49,19 +49,19 @@ func WriteObject[V any](stream *jsoniter.Stream, name string, obj map[string]V) 
 	stream.WriteMore()
 }
 
-func WriteVal(stream *jsoniter.Stream, field string, val any) {
+func Val(stream *jsoniter.Stream, field string, val any) {
 	stream.WriteObjectField(field)
 	stream.WriteVal(val)
 	stream.WriteMore()
 }
 
-func WriteString(stream *jsoniter.Stream, field string, val string) {
+func String(stream *jsoniter.Stream, field string, val string) {
 	stream.WriteObjectField(field)
 	stream.WriteString(val)
 	stream.WriteMore()
 }
 
-func WriteBool(stream *jsoniter.Stream, field string, val bool) {
+func Bool(stream *jsoniter.Stream, field string, val bool) {
 	stream.WriteObjectField(field)
 	stream.WriteBool(val)
 	stream.WriteMore()
@@ -71,7 +71,7 @@ func ObjectStart(stream *jsoniter.Stream, loc *ast.Location) {
 	stream.WriteObjectStart()
 
 	if loc != nil {
-		WriteVal(stream, "location", loc)
+		Val(stream, "location", loc)
 	}
 }
 

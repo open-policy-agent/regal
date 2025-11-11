@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type refCodec struct{}
@@ -21,5 +21,5 @@ func (*refCodec) IsEmpty(ptr unsafe.Pointer) bool {
 func (*refCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	ref := *((*ast.Ref)(ptr))
 
-	util.WriteValsArray(stream, ref)
+	write.ValsArray(stream, ref)
 }

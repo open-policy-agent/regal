@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type bodyCodec struct{}
@@ -19,5 +19,5 @@ func (*bodyCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*bodyCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	body := *((*ast.Body)(ptr))
 
-	util.WriteValsArray(stream, body)
+	write.ValsArray(stream, body)
 }

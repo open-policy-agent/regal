@@ -677,6 +677,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 				// used as the input rather than the contents of input.json/yaml. This is a development feature for
 				// working on rules (built-in or custom), allowing querying the AST of the module directly.
 				if len(module.Comments) > 0 && regalEvalUseAsInputComment.Match(module.Comments[0].Text) {
+					//nolint:staticcheck
 					inputMap, err = rparse.PrepareAST(l.toRelativePath(args.Target), contents, module)
 					if err != nil {
 						l.log.Message("failed to prepare module: %s", err)

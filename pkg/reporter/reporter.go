@@ -139,11 +139,15 @@ func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
 
 	if r.Summary.RulesSkipped > 0 {
 		footer += fmt.Sprintf(" %d %s skipped:\n", r.Summary.RulesSkipped, pluralize("rule", r.Summary.RulesSkipped))
+		sb := &strings.Builder{}
+
 		for _, notice := range r.Notices {
 			if notice.Severity != "none" {
-				footer += fmt.Sprintf("- %s: %s\n", notice.Title, notice.Description)
+				fmt.Fprintf(sb, "- %s: %s\n", notice.Title, notice.Description)
 			}
 		}
+
+		footer += sb.String()
 	}
 
 	_, err := fmt.Fprintln(tr.out, table+footer)

@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	encutil "github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	encutil "github.com/open-policy-agent/regal/internal/roast/encoding/write"
 	"github.com/open-policy-agent/regal/internal/util"
 )
 
@@ -27,20 +27,20 @@ func (*moduleCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 			stream.Attachment = util.Filter(mod.Annotations, notDocumentOrRuleScope)
 		}
 
-		encutil.WriteVal(stream, strPackage, mod.Package)
+		encutil.Val(stream, strPackage, mod.Package)
 		stream.Attachment = nil
 	}
 
 	if len(mod.Imports) > 0 {
-		encutil.WriteValsArrayAttr(stream, strImports, mod.Imports)
+		encutil.ValsArrayAttr(stream, strImports, mod.Imports)
 	}
 
 	if len(mod.Rules) > 0 {
-		encutil.WriteValsArrayAttr(stream, strRules, mod.Rules)
+		encutil.ValsArrayAttr(stream, strRules, mod.Rules)
 	}
 
 	if len(mod.Comments) > 0 {
-		encutil.WriteValsArrayAttr(stream, strComments, mod.Comments)
+		encutil.ValsArrayAttr(stream, strComments, mod.Comments)
 	}
 
 	encutil.ObjectEnd(stream)
