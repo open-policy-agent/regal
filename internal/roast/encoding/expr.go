@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type exprCodec struct{}
@@ -19,18 +19,18 @@ func (*exprCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*exprCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	expr := *((*ast.Expr)(ptr))
 
-	util.ObjectStart(stream, expr.Location)
+	write.ObjectStart(stream, expr.Location)
 
 	if expr.Negated {
-		util.WriteBool(stream, strNegated, expr.Negated)
+		write.Bool(stream, strNegated, expr.Negated)
 	}
 
 	if expr.Generated {
-		util.WriteBool(stream, strGenerated, expr.Generated)
+		write.Bool(stream, strGenerated, expr.Generated)
 	}
 
 	if len(expr.With) > 0 {
-		util.WriteValsArrayAttr(stream, strWith, expr.With)
+		write.ValsArrayAttr(stream, strWith, expr.With)
 	}
 
 	if expr.Terms != nil {
@@ -40,7 +40,7 @@ func (*exprCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 		case *ast.Term:
 			stream.WriteVal(t)
 		case []*ast.Term:
-			util.WriteValsArray(stream, t)
+			write.ValsArray(stream, t)
 		case *ast.SomeDecl:
 			stream.WriteVal(t)
 		case *ast.Every:
@@ -48,5 +48,5 @@ func (*exprCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 		}
 	}
 
-	util.ObjectEnd(stream)
+	write.ObjectEnd(stream)
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type everyCodec struct{}
@@ -19,10 +19,10 @@ func (*everyCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*everyCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	every := *((*ast.Every)(ptr))
 
-	util.ObjectStart(stream, every.Location)
-	util.WriteVal(stream, strKey, every.Key)
-	util.WriteVal(stream, strValue, every.Value)
-	util.WriteVal(stream, strDomain, every.Domain)
-	util.WriteVal(stream, strBody, every.Body)
-	util.ObjectEnd(stream)
+	write.ObjectStart(stream, every.Location)
+	write.Val(stream, strKey, every.Key)
+	write.Val(stream, strValue, every.Value)
+	write.Val(stream, strDomain, every.Domain)
+	write.Val(stream, strBody, every.Body)
+	write.ObjectEnd(stream)
 }

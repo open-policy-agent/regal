@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type someDeclCodec struct{}
@@ -19,7 +19,7 @@ func (*someDeclCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*someDeclCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	some := *((*ast.SomeDecl)(ptr))
 
-	util.ObjectStart(stream, some.Location)
-	util.WriteValsArrayAttr(stream, strSymbols, some.Symbols)
-	util.ObjectEnd(stream)
+	write.ObjectStart(stream, some.Location)
+	write.ValsArrayAttr(stream, strSymbols, some.Symbols)
+	write.ObjectEnd(stream)
 }

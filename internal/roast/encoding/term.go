@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type termCodec struct{}
@@ -19,12 +19,12 @@ func (*termCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*termCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	term := *((*ast.Term)(ptr))
 
-	util.ObjectStart(stream, term.Location)
+	write.ObjectStart(stream, term.Location)
 
 	if term.Value != nil {
-		util.WriteString(stream, strType, ast.ValueName(term.Value))
-		util.WriteVal(stream, strValue, term.Value)
+		write.String(stream, strType, ast.ValueName(term.Value))
+		write.Val(stream, strValue, term.Value)
 	}
 
-	util.ObjectEnd(stream)
+	write.ObjectEnd(stream)
 }

@@ -57,6 +57,7 @@ func parse(args []string) error {
 		return err
 	}
 
+	//nolint:staticcheck
 	enhancedAST, err := rp.PrepareAST(filename, content, module)
 	if err != nil {
 		return err

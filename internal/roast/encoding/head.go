@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type headCodec struct{}
@@ -19,22 +19,22 @@ func (*headCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*headCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	head := *((*ast.Head)(ptr))
 
-	util.ObjectStart(stream, head.Location)
+	write.ObjectStart(stream, head.Location)
 
 	if head.Reference != nil {
-		util.WriteVal(stream, strRef, head.Reference)
+		write.Val(stream, strRef, head.Reference)
 	}
 
 	if len(head.Args) > 0 {
-		util.WriteValsArrayAttr(stream, strArgs, head.Args)
+		write.ValsArrayAttr(stream, strArgs, head.Args)
 	}
 
 	if head.Assign {
-		util.WriteBool(stream, strAssign, head.Assign)
+		write.Bool(stream, strAssign, head.Assign)
 	}
 
 	if head.Key != nil {
-		util.WriteVal(stream, strKey, head.Key)
+		write.Val(stream, strKey, head.Key)
 	}
 
 	if head.Value != nil {
@@ -45,8 +45,8 @@ func (*headCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 			}
 		}
 
-		util.WriteVal(stream, strValue, head.Value)
+		write.Val(stream, strValue, head.Value)
 	}
 
-	util.ObjectEnd(stream)
+	write.ObjectEnd(stream)
 }

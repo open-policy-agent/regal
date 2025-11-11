@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/util"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type annotationsCodec struct{}
@@ -19,40 +19,40 @@ func (*annotationsCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*annotationsCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	a := *((*ast.Annotations)(ptr))
 
-	util.ObjectStart(stream, a.Location)
-	util.WriteString(stream, strScope, a.Scope)
+	write.ObjectStart(stream, a.Location)
+	write.String(stream, strScope, a.Scope)
 
 	if a.Title != "" {
-		util.WriteString(stream, strTitle, a.Title)
+		write.String(stream, strTitle, a.Title)
 	}
 
 	if a.Description != "" {
-		util.WriteString(stream, strDescription, a.Description)
+		write.String(stream, strDescription, a.Description)
 	}
 
 	if a.Entrypoint {
-		util.WriteBool(stream, strEntrypoint, a.Entrypoint)
+		write.Bool(stream, strEntrypoint, a.Entrypoint)
 	}
 
 	if len(a.Organizations) > 0 {
-		util.WriteValsArrayAttr(stream, strOrganizations, a.Organizations)
+		write.ValsArrayAttr(stream, strOrganizations, a.Organizations)
 	}
 
 	if len(a.RelatedResources) > 0 {
-		util.WriteValsArrayAttr(stream, strRelatedResources, a.RelatedResources)
+		write.ValsArrayAttr(stream, strRelatedResources, a.RelatedResources)
 	}
 
 	if len(a.Authors) > 0 {
-		util.WriteValsArrayAttr(stream, strAuthors, a.Authors)
+		write.ValsArrayAttr(stream, strAuthors, a.Authors)
 	}
 
 	if len(a.Schemas) > 0 {
-		util.WriteValsArrayAttr(stream, strSchemas, a.Schemas)
+		write.ValsArrayAttr(stream, strSchemas, a.Schemas)
 	}
 
 	if len(a.Custom) > 0 {
-		util.WriteObject(stream, strCustom, a.Custom)
+		write.Object(stream, strCustom, a.Custom)
 	}
 
-	util.ObjectEnd(stream)
+	write.ObjectEnd(stream)
 }
