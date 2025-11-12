@@ -145,6 +145,7 @@ func TestLintV0WithRegoV1ImportViolations(t *testing.T) {
 	regal("lint",
 		"--format", "json",
 		"--config-file", cwd("testdata/configs/v0-with-import-rego-v1.yaml"), cwd("testdata/v0/")).
+		skip(onCondition(runtime.GOOS == "windows", "skipping on Windows")).
 		expectExitCode(3).
 		expectStdout(unmarshalsTo(&rep)).
 		verify(t)

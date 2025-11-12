@@ -30,6 +30,9 @@ jobs:
           - runner: macos-14
             name: macos-arm64
             static: true
+          - runner: windows-latest
+            name: windows
+            static: true
     runs-on: ${{ matrix.os.runner }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -122,19 +125,3 @@ jobs:
           files: ./coverage.json
           name: regal
           token: ${{ secrets.CODECOV_TOKEN }} # required
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
-        with:
-          go-version-file: go.mod
-      - uses: open-policy-agent/setup-opa@950f159a49aa91f9323f36f1de81c7f6b5de9576 # v2.3.0
-        with:
-          version: latest
-          static: ${{ matrix.os.static }}
-      # TODO: windows tests are failing, but we should still run the build & tests for inspection
-      - run: go build
-      - run: go test ./...
-      - run: go test -tags e2e ./e2e
-        continue-on-error: true
