@@ -8,12 +8,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/rego"
 
+	"github.com/open-policy-agent/regal/internal/semver"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 
@@ -49,19 +49,16 @@ type decision struct {
 var query = ast.MustParseBody("result := data.update.check")
 
 func CheckAndWarn(opts Options, w io.Writer) {
-	// this is a shortcut heuristic to avoid version checking when in dev/test etc.
-	if !strings.HasPrefix(opts.CurrentVersion, "v") {
-		return
-	}
-
-	latestVersion, err := getLatestCachedVersion(opts)
-	if err != nil {
+	// only perform the version check on binaries with production semvers set
+	if _, err := semver.Parse(opts.CurrentVersion); err != nil {
 		if opts.Debug {
-			w.Write([]byte(err.Error()))
+			fmt.Fprintf(w, "Skipping version check: invalid semver %s: %v\n", opts.CurrentVersion, err)
 		}
 
 		return
 	}
+
+	latestVersion, cacheIsStale := getLatestCachedVersionAndCheckStale(opts)
 
 	regoArgs := []func(*rego.Rego){
 		rego.Module("update.rego", updateModule),
@@ -93,11 +90,15 @@ func CheckAndWarn(opts Options, w io.Writer) {
 		return
 	}
 
-	if result.NeedsUpdate {
-		if err = saveLatestCachedVersion(opts, result.LatestVersion); err != nil && opts.Debug {
-			w.Write([]byte(err.Error()))
+	// update cache if it was stale and we made a remote fetch
+	if cacheIsStale && opts.StateDir != "" && result.LatestVersion != "" {
+		content := latestVersionFileContents{LatestVersion: result.LatestVersion, CheckedAt: opts.CurrentTime}
+		if bs, err := encoding.JSON().MarshalIndent(content, "", "  "); err == nil {
+			os.WriteFile(opts.StateDir+"/latest_version.json", bs, 0o600)
 		}
+	}
 
+	if result.NeedsUpdate {
 		w.Write([]byte(result.CTA))
 
 		return
@@ -116,41 +117,29 @@ func resultSetToDecision(rs rego.ResultSet) (decision, error) {
 	return util.Wrap(encoding.JSONRoundTripTo[decision](rs[0].Bindings["result"]))("failed to decode result set")
 }
 
-func getLatestCachedVersion(opts Options) (string, error) {
-	if opts.StateDir != "" {
-		// first, attempt to get the file from previous invocations to save on remote calls
-		latestVersionFilePath := filepath.Join(opts.StateDir, "latest_version.json")
-
-		if file, err := os.Open(latestVersionFilePath); err == nil {
-			defer file.Close()
-
-			var preExistingState latestVersionFileContents
-			if err := encoding.JSON().NewDecoder(file).Decode(&preExistingState); err != nil {
-				return "", fmt.Errorf("failed to decode existing version state file: %w", err)
-			}
-
-			if opts.CurrentTime.Sub(preExistingState.CheckedAt) < 3*24*time.Hour {
-				return preExistingState.LatestVersion, nil
-			}
-		}
+func getLatestCachedVersionAndCheckStale(opts Options) (string, bool) {
+	if opts.StateDir == "" {
+		return "", true // when missing it's 'stale', but we will also not update later.
 	}
 
-	return "", nil
-}
+	latestVersionFilePath := filepath.Join(opts.StateDir, "latest_version.json")
 
-func saveLatestCachedVersion(opts Options, latestVersion string) error {
-	if opts.StateDir != "" {
-		content := latestVersionFileContents{LatestVersion: latestVersion, CheckedAt: opts.CurrentTime}
+	file, err := os.Open(latestVersionFilePath)
+	if err != nil {
+		return "", true // no file means stale
+	}
+	defer file.Close()
 
-		bs, err := encoding.JSON().MarshalIndent(content, "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to marshal state file: %w", err)
-		}
-
-		if err = os.WriteFile(opts.StateDir+"/latest_version.json", bs, 0o600); err != nil {
-			return fmt.Errorf("failed to write state file: %w", err)
-		}
+	var preExistingState latestVersionFileContents
+	if err := encoding.JSON().NewDecoder(file).Decode(&preExistingState); err != nil {
+		return "", true // can't decode means stale
 	}
 
-	return nil
+	isStale := opts.CurrentTime.Sub(preExistingState.CheckedAt) >= 3*24*time.Hour
+
+	if isStale {
+		return "", true // if stale, return empty to force remote fetch
+	}
+
+	return preExistingState.LatestVersion, false
 }

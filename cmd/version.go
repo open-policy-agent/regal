@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/open-policy-agent/regal/internal/update"
+	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/version"
 )
@@ -48,6 +51,15 @@ func init() {
 				}
 			case formatPretty:
 				os.Stdout.WriteString(vi.String())
+
+				// run version check for pretty format only
+				if os.Getenv(update.CheckVersionDisableEnvVar) == "" {
+					update.CheckAndWarn(update.Options{
+						CurrentVersion: version.Version,
+						CurrentTime:    time.Now().UTC(),
+						StateDir:       config.GlobalConfigDir(true),
+					}, os.Stderr)
+				}
 			default:
 				log.SetOutput(os.Stderr)
 				log.Printf("invalid format: %s\n", params.format)

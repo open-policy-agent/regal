@@ -73,11 +73,26 @@ See https://github.com/open-policy-agent/regal/releases/tag/v0.2.0 for the lates
 		t.Fatalf("expected output to contain\n%s,\ngot\n%s", expectedOutput, output)
 	}
 
-	// if the version is not a semver, then there should be no output
+	// if the version is not a semver, then there should be no update warning
 	opts.CurrentVersion = "not-semver"
-	if output = checkAndWarn(t, opts, w); output != "" {
-		t.Fatalf("expected no output, got\n%s", output)
+	output = checkAndWarn(t, opts, w)
+
+	if strings.Contains(output, "A new version of Regal is available") {
+		t.Fatalf("expected no update warning for invalid semver, got\n%s", output)
 	}
+
+	// contains debug message when debug is enabled
+	if !strings.Contains(output, "Skipping version check: invalid semver") {
+		t.Fatalf("expected debug message for invalid semver when debug=true, got\n%s", output)
+	}
+
+	// debug disabled, no output at all
+	opts.Debug = false
+	if output = checkAndWarn(t, opts, w); output != "" {
+		t.Fatalf("expected no output when debug=false and invalid semver, got\n%s", output)
+	}
+
+	opts.Debug = true
 
 	// if the version is greater than the latest version, then there should be no output
 	opts.CurrentVersion = "v0.3.0"
