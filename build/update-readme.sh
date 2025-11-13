@@ -2,6 +2,7 @@
 
 README_SECTIONS_DIR="./docs/readme-sections"
 README_PATH="./README.md"
+BADGES_PATH="$README_SECTIONS_DIR/badges.md"
 MANIFEST="$README_SECTIONS_DIR/github-manifest"
 
 if [[ $# -ne 1 ]]; then
@@ -10,6 +11,46 @@ if [[ $# -ne 1 ]]; then
 fi
 
 MODE="$1"
+
+# Function to update badges with current OPA version
+update_badges() {
+  # Extract OPA version using go command and jq
+  OPA_VERSION=$(go list -m -json github.com/open-policy-agent/opa | jq -r '.Version')
+
+  if [[ -z "$OPA_VERSION" ]]; then
+    echo "Error: Could not find OPA version using go list command" >&2
+    exit 1
+  fi
+
+  # Create a temporary file for badges
+  badges_tmpfile=$(mktemp)
+
+  # Read the badges file and update the OPA badge line
+  while IFS= read -r line; do
+    if [[ $line =~ ^\!\[OPA\ v[0-9]+\.[0-9]+\.[0-9]+\] ]]; then
+      echo "![OPA $OPA_VERSION](https://www.openpolicyagent.org/badge/$OPA_VERSION)" >> "$badges_tmpfile"
+    else
+      echo "$line" >> "$badges_tmpfile"
+    fi
+  done < "$BADGES_PATH"
+
+  # Check if badges need updating
+  if ! cmp -s "$badges_tmpfile" "$BADGES_PATH"; then
+    if [[ "$MODE" == "write" ]]; then
+      mv "$badges_tmpfile" "$BADGES_PATH"
+      echo "Updated badges.md with OPA version $OPA_VERSION."
+    else
+      rm "$badges_tmpfile"
+      echo "README.md is out of date (badges need OPA version update to $OPA_VERSION). Please run '$0 write' to update it."
+      exit 1
+    fi
+  else
+    rm "$badges_tmpfile"
+  fi
+}
+
+# Update badges first
+update_badges
 
 # Create a temporary file to hold the new content
 tmpfile=$(mktemp)
