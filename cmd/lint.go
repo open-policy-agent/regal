@@ -279,7 +279,7 @@ func updateCheckAndWarn(params *lintParams, regalRules *bundle.Bundle, userConfi
 	}
 
 	if mergedConfig.Features.Remote.CheckVersion &&
-		os.Getenv(update.CheckVersionDisableEnvVar) != "" {
+		os.Getenv(update.CheckVersionDisableEnvVar) == "" {
 		update.CheckAndWarn(update.Options{
 			CurrentVersion: version.Version,
 			CurrentTime:    time.Now().UTC(),

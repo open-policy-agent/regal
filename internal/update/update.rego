@@ -41,7 +41,7 @@ default _release_server_host := "https://api.github.com"
 
 _release_server_host := _ensure_http(trim_suffix(input.release_server_host, "/")) if input.release_server_host != ""
 
-default _release_server_path := "/repos/styrainc/regal/releases/latest"
+default _release_server_path := "/repos/open-policy-agent/regal/releases/latest"
 
 _release_server_path := input.release_server_path if input.release_server_path != ""
 
