@@ -175,7 +175,7 @@ const messageCostume = `
           AA   AAAAAAA     A    AAAAAAAA   A
            AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
-               Happy Holidays from Styra!
+               Happy Holidays from the Regal Authors!
 `
 
 type spriteInstance struct {
