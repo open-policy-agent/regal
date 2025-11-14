@@ -9,8 +9,9 @@ want to read that before diving into the code!
 
 The following tools are required to build, test and lint Regal:
 
+- [OPA](https://www.openpolicyagent.org/docs#1-download-opa) installed
 - The latest version of [Go](https://go.dev/doc/install)
-- The [golangci-lint](https://golangci-lint.run/usage/install/#local-installation) linter
+- The [golangci-lint](https://golangci-lint.run/docs/welcome/install/#local-installation) linter
 - [Node](https://nodejs.org/en) in order to run the following tools:
   - The [markdownlint](https://github.com/DavidAnson/markdownlint) linter
   - [dprint](https://github.com/dprint/dprint) for checking JSON, YAML, etc
