@@ -96,7 +96,7 @@ func Module(filename, policy string) (*ast.Module, error) {
 //
 // Deprecated: New code should use the `transform` package from roast, as this avoids an
 // expensive intermediate step in module -> ast.Value conversions.
-func PrepareAST(name string, content string, module *ast.Module) (preparedAST map[string]any, err error) {
+func PrepareAST(name, content string, module *ast.Module) (preparedAST map[string]any, err error) {
 	if err = encoding.JSONRoundTrip(module, &preparedAST); err != nil {
 		return nil, fmt.Errorf("JSON rountrip failed for module: %w", err)
 	}

@@ -30,7 +30,6 @@ type Location struct {
 	File   string    `json:"file"`
 	Column int       `json:"col"`
 	Row    int       `json:"row"`
-	Offset int       `json:"offset,omitempty"`
 }
 
 // Violation describes any violation found by Regal.

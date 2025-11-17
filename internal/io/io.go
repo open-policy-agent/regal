@@ -177,7 +177,7 @@ func WithCreateRecursive(path string, fn func(f *os.File) error) error {
 
 // FindInputPath consults the filesystem and returns the location of the input.json
 // or input.yaml closest to the file provided.
-func FindInputPath(file string, workspacePath string) string {
+func FindInputPath(file, workspacePath string) string {
 	relative := strings.TrimPrefix(file, workspacePath)
 	components := strings.Split(filepath.Dir(relative), string(os.PathSeparator))
 	supported := []string{"input.json", "input.yaml"}
@@ -202,7 +202,7 @@ func FindInputPath(file string, workspacePath string) string {
 // Note that:
 // - This function doesn't do error handling. If the file can't be read, nothing is returned.
 // - While the input data theoretically could be anything JSON/YAML value, we only support an object.
-func FindInput(file string, workspacePath string) (inputPath string, input map[string]any) {
+func FindInput(file, workspacePath string) (inputPath string, input map[string]any) {
 	inputPath = FindInputPath(file, workspacePath)
 	if content, err := os.ReadFile(inputPath); err == nil {
 		if err = unmarshallerFor(filepath.Base(inputPath))(content, &input); err == nil {

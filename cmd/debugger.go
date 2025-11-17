@@ -215,7 +215,7 @@ func (s *state) initialize(r *godap.InitializeRequest) *godap.InitializeResponse
 
 type launchProperties struct {
 	Command  string `json:"command"`
-	LogLevel string `json:"logLevel"`
+	LogLevel string `json:"logLevel"` //nolint:tagliatelle
 }
 
 func (s *state) launch(ctx context.Context, r *godap.LaunchRequest) (*godap.LaunchResponse, error) {
@@ -254,7 +254,6 @@ func (s *state) launch(ctx context.Context, r *godap.LaunchRequest) (*godap.Laun
 	}
 
 	if err == nil {
-		//	err = s.session.ResumeAll()
 		s.protocolManager.SendEvent(dap.NewInitializedEvent())
 	}
 

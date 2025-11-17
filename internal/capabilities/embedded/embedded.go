@@ -40,19 +40,21 @@ func LoadCapabilitiesVersion(engine, version string) (*ast.Capabilities, error) 
 	}
 
 	for _, cv := range cvs {
-		if cv == version {
-			cont, err := FS.ReadFile("eopa/" + cv + ".json")
-			if err != nil {
-				return nil, fmt.Errorf("failed to open capabilities version '%s' for engine '%s': %w", cv, engine, err)
-			}
-
-			caps, err := ast.LoadCapabilitiesJSON(bytes.NewReader(cont))
-			if err != nil {
-				return nil, fmt.Errorf("failed to load capabilities version '%s' for engine '%s': %w", cv, engine, err)
-			}
-
-			return caps, nil
+		if cv != version {
+			continue
 		}
+
+		cont, err := FS.ReadFile("eopa/" + cv + ".json")
+		if err != nil {
+			return nil, fmt.Errorf("failed to open capabilities version '%s' for engine '%s': %w", cv, engine, err)
+		}
+
+		caps, err := ast.LoadCapabilitiesJSON(bytes.NewReader(cont))
+		if err != nil {
+			return nil, fmt.Errorf("failed to load capabilities version '%s' for engine '%s': %w", cv, engine, err)
+		}
+
+		return caps, nil
 	}
 
 	return nil, fmt.Errorf("(Regal embedded %s capabilities library) no capabilities version found %v", engine, version)

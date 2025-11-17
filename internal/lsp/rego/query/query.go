@@ -28,7 +28,7 @@ const (
 	MainEval          = "data.regal.lsp.main.eval"
 )
 
-var simpleRefPattern = regexp.MustCompile(`^[a-zA-Z\.]$`)
+var simpleRefPattern = regexp.MustCompile(`^[a-zA-Z.]$`)
 
 type (
 	Cache struct {
@@ -133,7 +133,7 @@ func prepareQuery(ctx context.Context, query ast.Body, store storage.Store) (*re
 			args, txn = prepareQueryArgs(ctx, query, store, rbundle.Embedded())
 			if pq, err = rego.New(args...).PrepareForEval(ctx); err == nil {
 				if store != nil && txn != nil {
-					if err = store.Commit(ctx, txn); err != nil {
+					if err := store.Commit(ctx, txn); err != nil {
 						return nil, err
 					}
 				}
@@ -150,7 +150,7 @@ func prepareQuery(ctx context.Context, query ast.Body, store storage.Store) (*re
 	}
 
 	if store != nil && txn != nil {
-		if err = store.Commit(ctx, txn); err != nil {
+		if err := store.Commit(ctx, txn); err != nil {
 			return nil, err
 		}
 	}

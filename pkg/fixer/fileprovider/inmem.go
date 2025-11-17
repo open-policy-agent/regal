@@ -49,7 +49,7 @@ func (p *InMemoryFileProvider) Get(file string) (string, error) {
 	return content, nil
 }
 
-func (p *InMemoryFileProvider) Put(file string, content string) error {
+func (p *InMemoryFileProvider) Put(file, content string) error {
 	p.files[file] = content
 	p.modified.Add(file)
 

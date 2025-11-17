@@ -29,7 +29,7 @@ const (
 
 var (
 	client             = &http.Client{}
-	driveLetterPattern = regexp.MustCompile(`^\/[a-zA-Z]:`)
+	driveLetterPattern = regexp.MustCompile(`^/[a-zA-Z]:`)
 )
 
 // Lookup attempts to retrieve capabilities from the requested RFC3986
@@ -186,7 +186,7 @@ func lookupFileURL(parsedURL *url.URL) (*ast.Capabilities, error) {
 }
 
 func lookupWebURL(ctx context.Context, parsedURL *url.URL) (*ast.Capabilities, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, parsedURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, parsedURL.String(), http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request for URL '%s': %w", parsedURL.String(), err)
 	}
@@ -214,7 +214,7 @@ func semverSort(stringVersions []string) {
 		}
 	}
 
-	slices.SortStableFunc(versions, (semver.Version).Compare)
+	slices.SortStableFunc(versions, semver.Version.Compare)
 
 	for i, v := range util.Reversed(versions) {
 		stringVersions[i] = v.String()

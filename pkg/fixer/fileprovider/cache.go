@@ -45,7 +45,7 @@ func (c *CacheFileProvider) Get(file string) (string, error) {
 	return contents, nil
 }
 
-func (c *CacheFileProvider) Put(file string, content string) error {
+func (c *CacheFileProvider) Put(file, content string) error {
 	c.Cache.SetFileContents(file, content)
 
 	return nil

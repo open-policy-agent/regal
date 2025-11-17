@@ -381,7 +381,7 @@ func NewInitializedEvent() *godap.InitializedEvent {
 	}
 }
 
-func NewOutputEvent(category string, output string) *godap.OutputEvent {
+func NewOutputEvent(category, output string) *godap.OutputEvent {
 	return &godap.OutputEvent{
 		Event: godap.Event{
 			ProtocolMessage: godap.ProtocolMessage{

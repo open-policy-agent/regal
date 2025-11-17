@@ -97,7 +97,7 @@ The linter rules with automatic fixes available are currently:
 
 // TODO: This function is too long and should be broken down
 //
-//nolint:maintidx
+//nolint:cyclop,maintidx
 func fix(args []string, params *fixParams) (err error) {
 	ctx, cancel := getLinterContext(params.lintAndFixParams)
 	defer cancel()
