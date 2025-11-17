@@ -4,10 +4,8 @@ linters:
   disable:
     # these linters are disabled either because they
     # are annoying or because they are deprecated
-    - cyclop
     - dupword
     - err113
-    - exhaustive
     - exhaustruct
     - funlen
     - gochecknoglobals
@@ -16,19 +14,25 @@ linters:
     - goconst
     - gocyclo
     - godox
-    - gomoddirectives # need replacements for wasip1
     - inamedparam
     - ireturn
     - mnd
     - nestif
     - noinlineerr
     - nonamedreturns
-    - tagliatelle
+    - promlinter # we don't use Prometheus
+    - protogetter # we don't have protobuf types
+    - rowserrcheck # we don't use SQL
+    - sqlclosecheck # we don't use SQL
+    - testifylint # not used here
     - testpackage
+    - unqueryvet # no SQL here
     - varnamelen
     - wrapcheck
     - wsl # replaced by wsl_v5
   settings:
+    cyclop:
+      max-complexity: 40 # default is 10
     depguard:
       rules:
         main:
@@ -40,20 +44,16 @@ linters:
         - (*github.com/olekukonko/tablewriter.Table).Append
         - (*github.com/olekukonko/tablewriter.Table).Render
     gocritic:
+      enable-all: true
       disabled-checks:
-        - hugeParam
-      enabled-checks:
-        - filepathJoin
-        - dupImport
-        - redundantSprint
-        - stringConcatSimplify
-      enabled-tags:
-        - performance
+        - importShadow
+        - initClause
+        - whyNoLint # not all nolint comments need explanations
+        - hugeParam # investigate later, but some of these breaks API signatures
+        - unnamedResult
     govet:
       disable:
         - shadow
-        # this is nice, but it doesn't seem possible to disable
-        # this for tests? definitely don't want this in tests
         - fieldalignment
       enable-all: true
     perfsprint:
@@ -92,6 +92,12 @@ linters:
         linters:
           - forcetypeassert
           - godot
+      - path: internal/lsp
+        linters:
+          - tagliatelle
+      - path: pkg/config
+        linters:
+          - tagliatelle
     generated: lax
     presets:
       - comments
@@ -101,7 +107,7 @@ linters:
     paths:
       - scanner.go
       - tokens.go
-      - internal/lsp/opa
+    warn-unused: true
 formatters:
   enable:
     - gci
@@ -117,14 +123,3 @@ formatters:
         - prefix(github.com/open-policy-agent/regal)
         - blank
         - dot
-  exclusions:
-    generated: lax
-    paths:
-      - internal/lsp/opa
-      # For whatever reason, the exclude-dirs setting isn't honored when
-      # golangci-lint is targeting one of these files *specifically* rather
-      # than whole whole workspace / directory. This happens when opening up
-      # one of these files in VS Code, which will have the linter complain
-      # loudly. Hopefully this workaround can be removed in the future.
-      - scanner.go
-      - tokens.go

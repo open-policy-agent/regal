@@ -13,7 +13,7 @@ import (
 // uris always use / as the uriSeparator, regardless of system.
 const uriSeparator = "/"
 
-var drivePattern = regexp.MustCompile(`^\/?([A-Za-z]):`)
+var drivePattern = regexp.MustCompile(`^/?([A-Za-z]):`)
 
 // FromPath converts a file path to a URI for a given client.
 // Since clients expect URIs to be in a specific format, this function

@@ -201,6 +201,7 @@ func findUpwards(path, name string, expectDir bool) (string, error) {
 			return searchPath, nil
 		}
 
+		//nolint:gocritic
 		if searchPath == volume+string(os.PathSeparator)+name {
 			return "", errors.New("can't traverse past root directory")
 		}

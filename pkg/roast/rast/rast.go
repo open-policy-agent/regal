@@ -174,6 +174,7 @@ func toAstValue(v any) ast.Value {
 		rv = rv.Elem()
 	}
 
+	//nolint:exhaustive
 	switch rv.Kind() {
 	case reflect.Struct:
 		return StructToValue(rv.Interface())

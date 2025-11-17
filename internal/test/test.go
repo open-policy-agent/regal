@@ -7,7 +7,7 @@ import (
 	"github.com/open-policy-agent/regal/pkg/rules"
 )
 
-func InputPolicy(filename string, policy string) *rules.Input {
+func InputPolicy(filename, policy string) *rules.Input {
 	content := map[string]string{filename: policy}
 	modules := map[string]*ast.Module{filename: parse.MustParseModule(policy)}
 	input := rules.NewInput(content, modules)

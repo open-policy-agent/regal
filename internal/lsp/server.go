@@ -1092,7 +1092,7 @@ func (l *LanguageServer) templateContentsForFile(fileURI string) (string, error)
 
 		switch {
 		case strings.Contains(part, "-"):
-			pkg += fmt.Sprintf(`["%s"]`, part)
+			pkg += fmt.Sprintf("[%q]", part)
 		case pkg == "":
 			pkg += part
 		default:

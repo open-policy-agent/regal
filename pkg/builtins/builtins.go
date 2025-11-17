@@ -28,7 +28,7 @@ var (
 )
 
 // RegalParseModule regal.parse_module, like rego.parse_module but with location data included in AST.
-func RegalParseModule(_ rego.BuiltinContext, filename *ast.Term, policy *ast.Term) (*ast.Term, error) {
+func RegalParseModule(_ rego.BuiltinContext, filename, policy *ast.Term) (*ast.Term, error) {
 	filenameValue, err := builtins.StringOperand(filename.Value, 1)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func RegalLast(_ rego.BuiltinContext, arr *ast.Term) (*ast.Term, error) {
 	return nil, nil //nolint:nilnil
 }
 
-func RegalIsFormatted(_ rego.BuiltinContext, input *ast.Term, options *ast.Term) (*ast.Term, error) {
+func RegalIsFormatted(_ rego.BuiltinContext, input, options *ast.Term) (*ast.Term, error) {
 	inputStr, err := builtins.StringOperand(input.Value, 1)
 	if err != nil {
 		return nil, err

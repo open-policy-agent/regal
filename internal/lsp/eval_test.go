@@ -168,7 +168,7 @@ func TestFindInput(t *testing.T) {
 	}
 }
 
-func createWithContent(t *testing.T, path string, content string) {
+func createWithContent(t *testing.T, path, content string) {
 	t.Helper()
 
 	testutil.NoErr(rio.WithCreateRecursive(path, func(f *os.File) error {

@@ -73,7 +73,7 @@ func (c *Cache) GetFileContents(fileURI string) (string, bool) {
 	return c.fileContents.Get(fileURI)
 }
 
-func (c *Cache) SetFileContents(fileURI string, content string) {
+func (c *Cache) SetFileContents(fileURI, content string) {
 	c.fileContents.Set(fileURI, content)
 }
 
@@ -81,7 +81,7 @@ func (c *Cache) GetIgnoredFileContents(fileURI string) (string, bool) {
 	return c.ignoredFileContents.Get(fileURI)
 }
 
-func (c *Cache) SetIgnoredFileContents(fileURI string, content string) {
+func (c *Cache) SetIgnoredFileContents(fileURI, content string) {
 	c.ignoredFileContents.Set(fileURI, content)
 }
 

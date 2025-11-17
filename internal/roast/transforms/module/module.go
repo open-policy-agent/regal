@@ -195,11 +195,11 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 
 	obj := objectWithLocation(a.Location)
 
-	if len(a.Scope) > 0 {
+	if a.Scope != "" {
 		obj.Insert(ast.InternedTerm("scope"), ast.InternedTerm(a.Scope))
 	}
 
-	if len(a.Title) > 0 {
+	if a.Title != "" {
 		obj.Insert(ast.InternedTerm("title"), ast.InternedTerm(a.Title))
 	}
 
@@ -207,7 +207,7 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 		obj.Insert(ast.InternedTerm("entrypoint"), ast.InternedTerm(true))
 	}
 
-	if len(a.Description) > 0 {
+	if a.Description != "" {
 		obj.Insert(ast.InternedTerm("description"), ast.StringTerm(a.Description))
 	}
 
@@ -221,7 +221,7 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 
 		for _, rr := range a.RelatedResources {
 			rrObj := ast.NewObject(item("ref", ast.StringTerm(rr.Ref.String())))
-			if len(rr.Description) > 0 {
+			if rr.Description != "" {
 				rrObj.Insert(ast.InternedTerm("description"), ast.StringTerm(rr.Description))
 			}
 
@@ -236,11 +236,11 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 
 		for _, author := range a.Authors {
 			aObj := ast.NewObject()
-			if len(author.Name) > 0 {
+			if author.Name != "" {
 				aObj.Insert(ast.InternedTerm("name"), ast.InternedTerm(author.Name))
 			}
 
-			if len(author.Email) > 0 {
+			if author.Email != "" {
 				aObj.Insert(ast.InternedTerm("email"), ast.InternedTerm(author.Email))
 			}
 

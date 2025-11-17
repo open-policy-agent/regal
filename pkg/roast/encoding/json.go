@@ -37,7 +37,7 @@ func JSONUnmarshalTo[T any](bs []byte) (to T, err error) {
 }
 
 // JSONRoundTrip convert any value to JSON and back again.
-func JSONRoundTrip(from any, to any) error {
+func JSONRoundTrip(from, to any) error {
 	bs, err := jsoniter.ConfigFastest.Marshal(from)
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func JSONRoundTripTo[T any](from any) (to T, err error) {
 }
 
 // MustJSONRoundTrip convert any value to JSON and back again, exit on failure.
-func MustJSONRoundTrip(from any, to any) {
+func MustJSONRoundTrip(from, to any) {
 	if err := JSONRoundTrip(from, to); err != nil {
 		log.Fatal(err)
 	}

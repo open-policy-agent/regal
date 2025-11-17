@@ -12,6 +12,8 @@ import (
 var reMetaIdentifier = regexp.MustCompile(`^[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$`)
 
 // Version represents a parsed SemVer.
+//
+//nolint:tagliatelle
 type Version struct {
 	Major      int64
 	Minor      int64

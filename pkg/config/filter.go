@@ -36,7 +36,7 @@ func FilterIgnoredPaths(paths, ignore []string, checkExists bool, pathPrefix str
 	return filterPaths(paths, ignore, util.EnsureSuffix(pathPrefix, "/"))
 }
 
-func filterPaths(policyPaths []string, ignore []string, pathPrefix string) ([]string, error) {
+func filterPaths(policyPaths, ignore []string, pathPrefix string) ([]string, error) {
 	patterns, err := compilePatterns(ignore)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile ignore patterns: %w", err)

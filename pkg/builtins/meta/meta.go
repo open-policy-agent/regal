@@ -45,7 +45,7 @@ var (
 		),
 	}
 
-	RegalParseModuleBuiltin = &ast.Builtin{Name: RegalParseModule.Name, Decl: RegalParseModule.Decl}
-	RegalLastBuiltin        = &ast.Builtin{Name: RegalLast.Name, Decl: RegalLast.Decl}
-	RegalIsFormattedBuiltin = &ast.Builtin{Name: RegalIsFormatted.Name, Decl: RegalIsFormatted.Decl}
+	RegalParseModuleBuiltin = &ast.Builtin{Name: RegalParseModule.Name, Decl: RegalParseModule.Decl, CanSkipBctx: true}
+	RegalLastBuiltin        = &ast.Builtin{Name: RegalLast.Name, Decl: RegalLast.Decl, CanSkipBctx: true}
+	RegalIsFormattedBuiltin = &ast.Builtin{Name: RegalIsFormatted.Name, Decl: RegalIsFormatted.Decl, CanSkipBctx: true}
 )

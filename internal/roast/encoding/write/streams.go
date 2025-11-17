@@ -55,7 +55,7 @@ func Val(stream *jsoniter.Stream, field string, val any) {
 	stream.WriteMore()
 }
 
-func String(stream *jsoniter.Stream, field string, val string) {
+func String(stream *jsoniter.Stream, field, val string) {
 	stream.WriteObjectField(field)
 	stream.WriteString(val)
 	stream.WriteMore()

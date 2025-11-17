@@ -48,7 +48,7 @@ func WithDefaultsFromBundle(regalBundle *bundle.Bundle, userConfig *Config) (Con
 
 // extractUserRuleLevels uses defaulting config and per-rule levels from user configuration to set the level for each
 // rule.
-func extractUserRuleLevels(userConfig *Config, mergedConf *Config, providedRuleLevels map[string]string) {
+func extractUserRuleLevels(userConfig, mergedConf *Config, providedRuleLevels map[string]string) {
 	for categoryName, rulesByCategory := range mergedConf.Rules {
 		for ruleName, rule := range rulesByCategory {
 			var (

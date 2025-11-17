@@ -33,7 +33,7 @@ func TestLocation(t *testing.T) {
 			stream := jsoniter.ConfigFastest.BorrowStream(nil)
 			stream.WriteVal(tc.location)
 
-			if string(stream.Buffer()) != fmt.Sprintf("\"%s\"", tc.expected) {
+			if string(stream.Buffer()) != fmt.Sprintf("%q", tc.expected) {
 				t.Fatalf("expected %s but got %s", tc.expected, string(stream.Buffer()))
 			}
 
