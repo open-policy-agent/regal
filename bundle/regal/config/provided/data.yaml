@@ -116,6 +116,8 @@ rules:
       level: error
     confusing-alias:
       level: error
+    disallow-rego-v1:
+      level: error
     ignored-import:
       level: error
     implicit-future-keywords:
