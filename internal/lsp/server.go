@@ -49,6 +49,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/internal/web"
 	"github.com/open-policy-agent/regal/pkg/config"
+	"github.com/open-policy-agent/regal/pkg/config/modify"
 	"github.com/open-policy-agent/regal/pkg/fixer"
 	"github.com/open-policy-agent/regal/pkg/fixer/fileprovider"
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
@@ -610,6 +611,14 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 				}
 
 				// handle this ourselves as it's a rename and not a content edit
+				fixed = false
+			case "regal.config.disable-rule":
+				err = l.handleIgnoreRuleCommand(ctx, args)
+				if err != nil {
+					l.log.Message("failed to ignore rule: %s", err)
+				}
+
+				// handle this ourselves as it's a config edit
 				fixed = false
 			case "regal.debug":
 				if args.Target == "" || args.Query == "" {
@@ -1250,6 +1259,63 @@ func (l *LanguageServer) fixRenameParams(label, fileURI string) (types.ApplyWork
 	l.cache.Delete(oldURI)
 
 	return types.ApplyWorkspaceAnyEditParams{Label: label, Edit: types.WorkspaceAnyEdit{DocumentChanges: changes}}, nil
+}
+
+func (l *LanguageServer) handleIgnoreRuleCommand(_ context.Context, args types.CommandArgs) error {
+	if args.Diagnostic == nil {
+		return errors.New("diagnostic is required to ignore rule")
+	}
+
+	ruleCode := args.Diagnostic.Code
+	category := strings.TrimPrefix(*args.Diagnostic.Source, "regal/")
+
+	// find or create config file
+	var configPath string
+
+	if configFile, err := config.Find(l.workspacePath()); err == nil {
+		defer configFile.Close()
+
+		configPath = configFile.Name()
+	} else {
+		regalDir := filepath.Join(l.workspacePath(), ".regal")
+		if err := os.MkdirAll(regalDir, 0o755); err != nil {
+			return fmt.Errorf("failed to create .regal directory: %w", err)
+		}
+
+		configPath = filepath.Join(regalDir, "config.yaml")
+	}
+
+	var currentContent string
+
+	if _, err := os.Stat(configPath); err == nil {
+		content, err := os.ReadFile(configPath)
+		if err != nil {
+			return fmt.Errorf("failed to read config file: %w", err)
+		}
+
+		currentContent = string(content)
+	}
+
+	// default to empty set of rules
+	if strings.TrimSpace(currentContent) == "" {
+		currentContent = "rules: {}\n"
+	}
+
+	path := []string{"rules", category, ruleCode, "level"}
+
+	newContent, err := modify.SetKey(currentContent, path, "ignore")
+	if err != nil {
+		return fmt.Errorf("failed to modify config: %w", err)
+	}
+
+	// TODO: we need to trigger a config reload so that the server starts using
+	// the new config immediately. Currently, the server will pick up the config
+	// change through file system watchers only.
+	if err := os.WriteFile(configPath, []byte(newContent), 0o600); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
 }
 
 // processHoverContentUpdate updates information about built in, and keyword
@@ -1928,6 +1994,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 					"regal.fix.no-whitespace-comment",
 					"regal.fix.directory-package-mismatch",
 					"regal.fix.non-raw-regex-pattern",
+					"regal.config.disable-rule",
 				},
 			},
 			DocumentFormattingProvider: true,

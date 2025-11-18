@@ -47,6 +47,27 @@ actions contains action if {
 }
 
 # METADATA
+# description: Generic code action to ignore any rule in config from diag
+actions contains action if {
+	"quickfix" in only
+
+	some diag in input.params.context.diagnostics
+
+	action := {
+		"title": "Ignore this rule in config",
+		"kind": "quickfix",
+		"diagnostics": [diag],
+		"isPreferred": false,
+		"command": {
+			"title": "Ignore this rule in config",
+			"command": "regal.config.disable-rule",
+			"tooltip": "Ignore this rule in config",
+			"arguments": [json.marshal({"diagnostic": diag})],
+		},
+	}
+}
+
+# METADATA
 # description: |
 #  Code actions to show documentation for a linter rule. Note that this currently
 #  only works for VSCode clients, via their `vscode.open` command. If we learn about
