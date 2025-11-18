@@ -109,6 +109,7 @@ func TestLintV1Violations(t *testing.T) {
 		"file-length",
 		"rule-named-if",
 		"use-rego-v1",
+		"disallow-rego-v1",
 		"deprecated-builtin",
 		"import-shadows-import",
 	)
@@ -378,8 +379,9 @@ func TestLintWithCustomCapabilitiesAndUnmetRequirement(t *testing.T) {
 	regal("lint", "--config-file", cwd("testdata/configs/opa_v46_capabilities.yaml"),
 		cwd("testdata/capabilities/custom_has_key.rego")).
 		expectStdout(equals(
-			"1 file linted. No violations found. 3 rules skipped:\n" +
+			"1 file linted. No violations found. 4 rules skipped:\n" +
 				"- custom-has-key-construct: Missing capability for built-in function `object.keys`\n" +
+				"- disallow-rego-v1: Missing capability for `import rego.v1`\n" +
 				"- use-rego-v1: Missing capability for `import rego.v1`\n" +
 				"- use-strings-count: Missing capability for built-in function `strings.count`\n\n",
 		)).
@@ -389,8 +391,9 @@ func TestLintWithCustomCapabilitiesAndUnmetRequirement(t *testing.T) {
 func TestLintWithCustomCapabilitiesAndUnmetRequirementMultipleFiles(t *testing.T) {
 	regal("lint", "--config-file", cwd("testdata/configs/opa_v46_capabilities.yaml"), cwd("testdata/capabilities/")).
 		expectStdout(equals(
-			"2 files linted. No violations found. 3 rules skipped:\n" +
+			"2 files linted. No violations found. 4 rules skipped:\n" +
 				"- custom-has-key-construct: Missing capability for built-in function `object.keys`\n" +
+				"- disallow-rego-v1: Missing capability for `import rego.v1`\n" +
 				"- use-rego-v1: Missing capability for `import rego.v1`\n" +
 				"- use-strings-count: Missing capability for built-in function `strings.count`\n\n",
 		)).
