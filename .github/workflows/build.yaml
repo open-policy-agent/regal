@@ -24,10 +24,10 @@ jobs:
           - runner: ubuntu-latest
             name: linux
             static: true
-          - runner: macos-13
+          - runner: macos-15-intel
             name: macos-intel
             static: false
-          - runner: macos-14
+          - runner: macos-26
             name: macos-arm64
             static: true
           - runner: windows-latest
