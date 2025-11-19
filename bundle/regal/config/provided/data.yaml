@@ -57,6 +57,8 @@ rules:
     zero-arity-function:
       level: error
   custom:
+    disallow-rego-v1:
+      level: ignore
     forbidden-function-call:
       forbidden-functions: []
       level: ignore
@@ -115,8 +117,6 @@ rules:
     circular-import:
       level: error
     confusing-alias:
-      level: error
-    disallow-rego-v1:
       level: error
     ignored-import:
       level: error
