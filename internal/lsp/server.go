@@ -1287,12 +1287,8 @@ func (l *LanguageServer) handleIgnoreRuleCommand(_ context.Context, args types.C
 
 	var currentContent string
 
-	if _, err := os.Stat(configPath); err == nil {
-		content, err := os.ReadFile(configPath)
-		if err != nil {
-			return fmt.Errorf("failed to read config file: %w", err)
-		}
-
+	content, err := os.ReadFile(configPath)
+	if err == nil {
 		currentContent = string(content)
 	}
 
