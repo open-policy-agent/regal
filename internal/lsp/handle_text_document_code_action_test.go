@@ -35,6 +35,7 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 		Code:    ruleNameUseAssignmentOperator,
 		Message: "foobar",
 		Range:   types.RangeBetween(2, 4, 2, 10),
+		Source:  util.Pointer("regal/style"),
 	}
 
 	params := types.CodeActionParams{
@@ -59,7 +60,7 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 		},
 	}
 
-	actualAction := invokeCodeActionHandler(t, l, params)
+	actualAction := invokeCodeActionHandler(t, l, params, 2)
 
 	assertExpectedCodeAction(t, expectedAction, actualAction)
 
@@ -106,7 +107,7 @@ func TestHandleTextDocumentCodeActionSourceExplorer(t *testing.T) {
 		},
 	}
 
-	actualAction := invokeCodeActionHandler(t, l, params)
+	actualAction := invokeCodeActionHandler(t, l, params, 1)
 
 	assertExpectedCodeAction(t, expectedAction, actualAction)
 
@@ -159,7 +160,12 @@ func assertExpectedCodeAction(t *testing.T, expected, actual types.CodeAction) {
 	}
 }
 
-func invokeCodeActionHandler(t *testing.T, l *LanguageServer, params types.CodeActionParams) types.CodeAction {
+func invokeCodeActionHandler(
+	t *testing.T,
+	l *LanguageServer,
+	params types.CodeActionParams,
+	expectedCount int,
+) types.CodeAction {
 	t.Helper()
 
 	req := &jsonrpc2.Request{Method: "textDocument/codeAction", Params: testutil.ToJSONRawMessage(t, params)}
@@ -174,8 +180,8 @@ func invokeCodeActionHandler(t *testing.T, l *LanguageServer, params types.CodeA
 		t.Errorf("Expected result to be of type []types.CodeAction, got %T", result)
 	}
 
-	if exp, got := 1, len(actions); exp != got {
-		t.Fatalf("Expected %d action, got %d", exp, got)
+	if exp, got := expectedCount, len(actions); exp != got {
+		t.Fatalf("Expected %d action(s), got %d", exp, got)
 	}
 
 	return actions[0]
@@ -203,6 +209,7 @@ func BenchmarkHandleTextDocumentCodeAction(b *testing.B) {
 				Code:    ruleNameUseAssignmentOperator,
 				Message: "foobar",
 				Range:   types.RangeBetween(2, 4, 2, 10),
+				Source:  util.Pointer("regal/style"),
 			}},
 		},
 	}
@@ -216,8 +223,8 @@ func BenchmarkHandleTextDocumentCodeAction(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		if len(res.([]types.CodeAction)) != 1 {
-			b.Fatalf("expected 1 code action, got %d", len(res.([]types.CodeAction)))
+		if len(res.([]types.CodeAction)) != 2 {
+			b.Fatalf("expected 2 code actions, got %d", len(res.([]types.CodeAction)))
 		}
 	}
 }

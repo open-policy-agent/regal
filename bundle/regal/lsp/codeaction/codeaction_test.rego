@@ -44,6 +44,8 @@ test_actions_reported_in_expected_format if {
 			"kind": "quickfix",
 			"title": "Format using opa-fmt",
 		},
+		_ignore_rule(_diagnostics["use-assignment-operator"]),
+		_ignore_rule(_diagnostics["opa-fmt"]),
 	}
 }
 
@@ -66,7 +68,7 @@ test_code_action_returned_for_every_linter[rule] if {
 			}]},
 		},
 	}
-	count(r) == 1
+	count(r) == 2
 }
 
 test_code_actions_specific_to_vscode_reported_on_client_match if {
@@ -108,6 +110,7 @@ test_code_actions_specific_to_vscode_reported_on_client_match if {
 			},
 			"diagnostics": [diagnostic],
 		},
+		_ignore_rule(diagnostic),
 		{
 			"title": "Explore compiler stages for this policy",
 			"kind": "source.explore",
@@ -165,6 +168,7 @@ test_code_actions_only_quickfix if {
 			},
 			"diagnostics": [diagnostic],
 		},
+		_ignore_rule(diagnostic),
 	}
 }
 
@@ -219,7 +223,7 @@ test_code_actions_empty_only_means_all if {
 		},
 	}
 
-	count(r) == 3
+	count(r) == 4
 }
 
 _diagnostics["opa-fmt"] := {
@@ -241,3 +245,16 @@ _diagnostics["use-assignment-operator"] := object.union(
 	},
 	{},
 )
+
+_ignore_rule(diagnostic) := {
+	"title": "Ignore this rule in config",
+	"kind": "quickfix",
+	"isPreferred": false,
+	"command": {
+		"arguments": [json.marshal({"diagnostic": diagnostic})],
+		"command": "regal.config.disable-rule",
+		"title": "Ignore this rule in config",
+		"tooltip": "Ignore this rule in config",
+	},
+	"diagnostics": [diagnostic],
+}
