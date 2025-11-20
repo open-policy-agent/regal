@@ -37,20 +37,22 @@ func SetKey(yamlContent string, path []string, value any) (string, error) {
 
 		// YAML mappings store key-value pairs as alternating nodes: [key1, value1, key2, value2, ...]
 		for j := 0; j < len(current.Content); j += 2 {
-			if current.Content[j].Value == key {
-				// ensure the value node is a mapping - error if it's a scalar
-				if current.Content[j+1].Kind != yaml.MappingNode {
-					return "", fmt.Errorf("cannot navigate into key %q: expected mapping but found %T", key, current.Content[j+1].Kind)
-				}
-
-				current = current.Content[j+1]
-				// force the use of the default style, rather than compact style
-				current.Style = 0
-
-				found = true
-
-				break
+			if current.Content[j].Value != key {
+				continue
 			}
+
+			// ensure the value node is a mapping - error if it's a scalar
+			if current.Content[j+1].Kind != yaml.MappingNode {
+				return "", fmt.Errorf("cannot navigate into key %q: expected mapping but found %T", key, current.Content[j+1].Kind)
+			}
+
+			current = current.Content[j+1]
+			// force the use of the default style, rather than compact style
+			current.Style = 0
+
+			found = true
+
+			break
 		}
 
 		if !found {
@@ -72,28 +74,30 @@ func SetKey(yamlContent string, path []string, value any) (string, error) {
 
 	// check if the final key already exists and update it
 	for i := 0; i < len(current.Content); i += 2 {
-		if current.Content[i].Value == finalKey {
-			// update the existing value
-			valueNode, err := createNodeFromValue(value)
-			if err != nil {
-				return "", fmt.Errorf("failed to set key: %w", err)
-			}
-
-			current.Content[i+1] = valueNode
-
-			var buf strings.Builder
-
-			encoder := yaml.NewEncoder(&buf)
-			encoder.SetIndent(2)
-
-			if err := encoder.Encode(&root); err != nil {
-				return "", fmt.Errorf("failed to encode YAML: %w", err)
-			}
-
-			encoder.Close()
-
-			return buf.String(), nil
+		if current.Content[i].Value != finalKey {
+			continue
 		}
+
+		// update the existing value
+		valueNode, err := createNodeFromValue(value)
+		if err != nil {
+			return "", fmt.Errorf("failed to set key: %w", err)
+		}
+
+		current.Content[i+1] = valueNode
+
+		var buf strings.Builder
+
+		encoder := yaml.NewEncoder(&buf)
+		encoder.SetIndent(2)
+
+		if err := encoder.Encode(&root); err != nil {
+			return "", fmt.Errorf("failed to encode YAML: %w", err)
+		}
+
+		encoder.Close()
+
+		return buf.String(), nil
 	}
 
 	// create the new key if it doesn't exist
