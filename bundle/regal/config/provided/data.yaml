@@ -57,6 +57,8 @@ rules:
     zero-arity-function:
       level: error
   custom:
+    disallow-rego-v1:
+      level: ignore
     forbidden-function-call:
       forbidden-functions: []
       level: ignore
