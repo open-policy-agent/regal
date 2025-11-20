@@ -551,7 +551,7 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 	}
 }
 
-func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:maintidx
+func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 	// note, in this function conn.Call is used as the workspace/applyEdit message is a request, not a notification
 	// as per the spec. In order to be 'routed' to the correct handler on the client it must have an ID
 	// receive responses too.
@@ -612,14 +612,8 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 
 				// handle this ourselves as it's a rename and not a content edit
 				fixed = false
-			case "regal.config.disable-rule":
-				err = l.handleIgnoreRuleCommand(ctx, args)
-				if err != nil {
-					l.log.Message("failed to ignore rule: %s", err)
-				}
-
-				// handle this ourselves as it's a config edit
-				fixed = false
+			case "regal.eval":
+				err = l.handleEvalCommand(ctx, args)
 			case "regal.debug":
 				if args.Target == "" || args.Query == "" {
 					l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
@@ -643,108 +637,14 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) { //nolint:main
 				if err = l.conn.Call(ctx, "regal/startDebugging", responseParams, &responseResult); err != nil {
 					l.log.Message("regal/startDebugging failed: %s", err.Error())
 				}
-			case "regal.eval":
-				if args.Target == "" || args.Query == "" {
-					l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
-
-					break
-				}
-
-				contents, module, ok := l.cache.GetContentAndModule(args.Target)
-				if !ok {
-					l.log.Message("failed to get content or module for file %q", args.Target)
-
-					break
-				}
-
-				var pq *query.Prepared
-
-				pq, err = l.queryCache.GetOrSet(ctx, l.regoStore, query.RuleHeadLocations)
+			case "regal.config.disable-rule":
+				err = l.handleIgnoreRuleCommand(ctx, args)
 				if err != nil {
-					l.log.Message("failed to prepare query %s", query.RuleHeadLocations, err)
-
-					break
+					l.log.Message("failed to ignore rule: %s", err)
 				}
 
-				var allRuleHeadLocations rego.RuleHeads
-
-				allRuleHeadLocations, err = rego.AllRuleHeadLocations(
-					ctx, pq, filepath.Base(uri.ToPath(args.Target)), contents, module,
-				)
-				if err != nil {
-					l.log.Message("failed to get rule head locations: %s", err)
-
-					break
-				}
-
-				// if there are none, then it's a package evaluation
-				ruleHeadLocations := allRuleHeadLocations[args.Query]
-
-				var inputMap map[string]any
-
-				// When the first comment in the file is `regal eval: use-as-input`, the AST of that module is
-				// used as the input rather than the contents of input.json/yaml. This is a development feature for
-				// working on rules (built-in or custom), allowing querying the AST of the module directly.
-				if len(module.Comments) > 0 && regalEvalUseAsInputComment.Match(module.Comments[0].Text) {
-					//nolint:staticcheck
-					inputMap, err = rparse.PrepareAST(l.toRelativePath(args.Target), contents, module)
-					if err != nil {
-						l.log.Message("failed to prepare module: %s", err)
-
-						break
-					}
-				} else {
-					// Normal mode — try to find the input.json/yaml file in the workspace and use as input
-					// NOTE that we don't break on missing input, as some rules don't depend on that, and should
-					// still be evaluable. We may consider returning some notice to the user though.
-					_, inputMap = rio.FindInput(uri.ToPath(args.Target), l.workspacePath())
-				}
-
-				var result EvalResult
-
-				if result, err = l.EvalInWorkspace(ctx, args.Query, inputMap); err != nil {
-					fmt.Fprintf(os.Stderr, "failed to evaluate workspace path: %v\n", err)
-
-					break
-				}
-
-				target := "package"
-				if len(ruleHeadLocations) > 0 {
-					target = strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
-				}
-
-				if l.client.InitOptions.EvalCodelensDisplayInline != nil &&
-					*l.client.InitOptions.EvalCodelensDisplayInline {
-					responseParams := map[string]any{
-						"result": result,
-						"line":   args.Row,
-						"target": target,
-						// only used when the target is 'package'
-						"package": strings.TrimPrefix(module.Package.Path.String(), "data."),
-						// only used when the target is a rule
-						"rule_head_locations": ruleHeadLocations,
-					}
-
-					responseResult := map[string]any{}
-
-					if err = l.conn.Call(ctx, "regal/showEvalResult", responseParams, &responseResult); err != nil {
-						l.log.Message("regal/showEvalResult failed: %v", err.Error())
-					}
-				} else {
-					output := filepath.Join(l.workspacePath(), "output.json")
-
-					var f *os.File
-					if f, err = os.OpenFile(output, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755); err == nil {
-						value := result.Value
-						if result.IsUndefined {
-							value = emptyStringAnyMap // undefined displays as an empty object
-						}
-
-						err = encoding.NewIndentEncoder(f, "", "  ").Encode(value)
-
-						rio.CloseIgnore(f)
-					}
-				}
+				// handle this ourselves as it's a config edit
+				fixed = false
 			}
 
 			if err != nil {
@@ -2344,6 +2244,110 @@ func (l *LanguageServer) regalContext(fileURI string, req *rego.Requirements) re
 	}
 
 	return rctx
+}
+
+func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.CommandArgs) error {
+	if args.Target == "" || args.Query == "" {
+		l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
+
+		return nil
+	}
+
+	contents, module, ok := l.cache.GetContentAndModule(args.Target)
+	if !ok {
+		l.log.Message("failed to get content or module for file %q", args.Target)
+
+		return nil
+	}
+
+	var pq *query.Prepared
+
+	pq, err := l.queryCache.GetOrSet(ctx, l.regoStore, query.RuleHeadLocations)
+	if err != nil {
+		l.log.Message("failed to prepare query %s", query.RuleHeadLocations, err)
+
+		return nil
+	}
+
+	var allRuleHeadLocations rego.RuleHeads
+
+	allRuleHeadLocations, err = rego.AllRuleHeadLocations(
+		ctx, pq, filepath.Base(uri.ToPath(args.Target)), contents, module,
+	)
+	if err != nil {
+		l.log.Message("failed to get rule head locations: %s", err)
+
+		return nil
+	}
+
+	// if there are none, then it's a package evaluation
+	ruleHeadLocations := allRuleHeadLocations[args.Query]
+
+	var inputMap map[string]any
+
+	// When the first comment in the file is `regal eval: use-as-input`, the AST of that module is
+	// used as the input rather than the contents of input.json/yaml. This is a development feature for
+	// working on rules (built-in or custom), allowing querying the AST of the module directly.
+	if len(module.Comments) > 0 && regalEvalUseAsInputComment.Match(module.Comments[0].Text) {
+		//nolint:staticcheck
+		inputMap, err = rparse.PrepareAST(l.toRelativePath(args.Target), contents, module)
+		if err != nil {
+			l.log.Message("failed to prepare module: %s", err)
+
+			return nil
+		}
+	} else {
+		// Normal mode — try to find the input.json/yaml file in the workspace and use as input
+		// NOTE that we don't break on missing input, as some rules don't depend on that, and should
+		// still be evaluable. We may consider returning some notice to the user though.
+		_, inputMap = rio.FindInput(uri.ToPath(args.Target), l.workspacePath())
+	}
+
+	var result EvalResult
+
+	if result, err = l.EvalInWorkspace(ctx, args.Query, inputMap); err != nil {
+		return fmt.Errorf("failed to evaluate workspace path: %w", err)
+	}
+
+	target := "package"
+	if len(ruleHeadLocations) > 0 {
+		target = strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
+	}
+
+	if l.client.InitOptions.EvalCodelensDisplayInline != nil &&
+		*l.client.InitOptions.EvalCodelensDisplayInline {
+		responseParams := map[string]any{
+			"result": result,
+			"line":   args.Row,
+			"target": target,
+			// only used when the target is 'package'
+			"package": strings.TrimPrefix(module.Package.Path.String(), "data."),
+			// only used when the target is a rule
+			"rule_head_locations": ruleHeadLocations,
+		}
+
+		responseResult := map[string]any{}
+
+		if err = l.conn.Call(ctx, "regal/showEvalResult", responseParams, &responseResult); err != nil {
+			l.log.Message("regal/showEvalResult failed: %v", err.Error())
+		}
+	} else {
+		output := filepath.Join(l.workspacePath(), "output.json")
+
+		var f *os.File
+		if f, err = os.OpenFile(output, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755); err == nil {
+			value := result.Value
+			if result.IsUndefined {
+				value = emptyStringAnyMap // undefined displays as an empty object
+			}
+
+			err = encoding.NewIndentEncoder(f, "", "  ").Encode(value)
+
+			rio.CloseIgnore(f)
+		}
+	}
+
+	return err
 }
 
 func positionToOffset(text string, p types.Position) int {
