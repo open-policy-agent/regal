@@ -20,7 +20,7 @@ func (n *NoWhitespaceComment) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]Fix
 	fixed := false
 
 	for _, loc := range opts.Locations {
-		if loc.Row > len(lines) || loc.Column > len(lines[loc.Row-1]) || loc.Column < 1 {
+		if loc.Row < 1 || loc.Column < 1 || loc.Row > len(lines) || loc.Column > len(lines[loc.Row-1]) {
 			continue
 		}
 

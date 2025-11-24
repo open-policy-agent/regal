@@ -34,9 +34,7 @@ deny = true
 
 	memfp := fileprovider.NewInMemoryFileProvider(policies)
 
-	input, err := memfp.ToInput(map[string]ast.RegoVersion{
-		mainDir: ast.RegoV1,
-	})
+	input, err := memfp.ToInput(map[string]ast.RegoVersion{mainDir: ast.RegoV1})
 	if err != nil {
 		t.Fatalf("failed to create input: %v", err)
 	}
@@ -193,6 +191,42 @@ func TestFixViolations(t *testing.T) {
 
 		if !slices.Equal(expectedFixes, fixes) {
 			t.Fatalf("unexpected fixes for %s:\ngot: %v\nexpected: %v", file, fixes, expectedFixes)
+		}
+	}
+}
+
+// 150116720 ns/op  101567417 B/op   2359322 allocs/op
+// 132816578 ns/op   89093239 B/op   2068892 allocs/op // Linter.Prepare()
+func BenchmarkFixViolations(b *testing.B) {
+	rootPath := testutil.Must(filepath.Abs(filepath.FromSlash("/root")))(b)
+	mainDir := filepath.Join(rootPath, "main")
+	mainRegoFile := filepath.Join(mainDir, "main.rego")
+
+	policies := map[string]string{
+		mainRegoFile: `package test
+
+allow if {
+true #no space
+}
+deny = true
+`,
+	}
+
+	memfp := fileprovider.NewInMemoryFileProvider(policies)
+
+	input, err := memfp.ToInput(map[string]ast.RegoVersion{mainDir: ast.RegoV1})
+	if err != nil {
+		b.Fatalf("failed to create input: %v", err)
+	}
+
+	l := linter.NewLinter().WithEnableAll(true).WithInputModules(&input)
+	f := NewFixer().RegisterFixes(fixes.NewDefaultFixes()...).RegisterRoots(rootPath).
+		SetRegoVersionsMap(map[string]ast.RegoVersion{mainDir: ast.RegoV1})
+
+	for b.Loop() {
+		_, err := f.Fix(b.Context(), &l, memfp)
+		if err != nil {
+			b.Fatalf("failed to fix: %v", err)
 		}
 	}
 }

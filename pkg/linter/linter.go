@@ -388,6 +388,10 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 		l.stopTimer(regalmetrics.RegalFilterIgnoredModules)
 	}
 
+	if len(l.inputPaths) == 0 && l.inputModules == nil && len(l.overriddenAggregates) == 0 {
+		return report.Report{}, errors.New("nothing provided to lint")
+	}
+
 	regoReport, err := l.lint(ctx, input)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("failed to lint using Rego rules: %w", err)
@@ -531,10 +535,6 @@ func (l Linter) notPrepared() Linter {
 }
 
 func (l Linter) validate(conf *config.Config) error {
-	if len(l.inputPaths) == 0 && l.inputModules == nil && len(l.overriddenAggregates) == 0 {
-		return errors.New("nothing provided to lint")
-	}
-
 	if l.customRuleError != nil {
 		return fmt.Errorf("failed to load custom rules: %w", l.customRuleError)
 	}
