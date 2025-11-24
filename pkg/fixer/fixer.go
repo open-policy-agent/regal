@@ -26,7 +26,7 @@ const (
 
 // Fixer must be instantiated via NewFixer.
 type Fixer struct {
-	registeredFixes     map[string]any
+	registeredFixes     map[string]fixes.Fix
 	onConflictOperation OnConflictOperation
 	registeredRoots     []string
 	versionsMap         map[string]ast.RegoVersion
@@ -35,7 +35,7 @@ type Fixer struct {
 // NewFixer instantiates a Fixer.
 func NewFixer() *Fixer {
 	return &Fixer{
-		registeredFixes:     make(map[string]any),
+		registeredFixes:     make(map[string]fixes.Fix),
 		registeredRoots:     make([]string, 0),
 		onConflictOperation: OnConflictError,
 	}
@@ -78,17 +78,11 @@ func (f *Fixer) RegisterRoots(roots ...string) *Fixer {
 }
 
 func (f *Fixer) GetFixForName(name string) (fixes.Fix, bool) {
-	fix, ok := f.registeredFixes[name]
-	if !ok {
-		return nil, false
+	if fix, ok := f.registeredFixes[name]; ok {
+		return fix, true
 	}
 
-	fixInstance, ok := fix.(fixes.Fix)
-	if !ok {
-		return nil, false
-	}
-
-	return fixInstance, true
+	return nil, false
 }
 
 func (f *Fixer) Fix(ctx context.Context, l *linter.Linter, fp fileprovider.FileProvider) (*Report, error) {
@@ -119,16 +113,13 @@ func (f *Fixer) FixViolations(
 		return nil, fmt.Errorf("failed to list files: %w", err)
 	}
 
-	// rangeValCopy may be expensive, but this is not critical enough
-	// to motivate cluttering the code
-	//nolint:gocritic
-	for _, violation := range violations {
-		fixInstance, ok := f.GetFixForName(violation.Title)
+	for i := range violations {
+		fixInstance, ok := f.GetFixForName(violations[i].Title)
 		if !ok {
-			return nil, fmt.Errorf("no fix for violation %s", violation.Title)
+			return nil, fmt.Errorf("no fix for violation %s", violations[i].Title)
 		}
 
-		file := violation.Location.File
+		file := violations[i].Location.File
 
 		fc, err := fp.Get(file)
 		if err != nil {
@@ -143,7 +134,7 @@ func (f *Fixer) FixViolations(
 		fixResults, err := fixInstance.Fix(&fixes.FixCandidate{Filename: file, Contents: fc}, &fixes.RuntimeOptions{
 			BaseDir:   util.FindClosestMatchingRoot(abs, f.registeredRoots),
 			Config:    config,
-			Locations: []report.Location{violation.Location},
+			Locations: []report.Location{violations[i].Location},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to fix %s: %w", file, err)
@@ -200,6 +191,11 @@ func (f *Fixer) applyLinterFixes(
 		versionsMap = f.versionsMap
 	}
 
+	li, err := l.WithDisableAll(true).WithEnabledRules(fixableEnabledRules...).Prepare(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to prepare linter for fixing: %w", err)
+	}
+
 	for {
 		fixMadeInIteration := false
 
@@ -208,7 +204,7 @@ func (f *Fixer) applyLinterFixes(
 			return fmt.Errorf("failed to create linter input: %w", err)
 		}
 
-		rep, err := l.WithDisableAll(true).WithEnabledRules(fixableEnabledRules...).WithInputModules(&in).Lint(ctx)
+		rep, err := li.WithInputModules(&in).Lint(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to lint before fixing: %w", err)
 		}
@@ -217,11 +213,10 @@ func (f *Fixer) applyLinterFixes(
 			break
 		}
 
-		//nolint:gocritic
-		for _, violation := range rep.Violations {
-			fixInstance, ok := f.GetFixForName(violation.Title)
+		for i := range rep.Violations {
+			fixInstance, ok := f.GetFixForName(rep.Violations[i].Title)
 			if !ok {
-				return fmt.Errorf("no fix for violation %s", violation.Title)
+				return fmt.Errorf("no fix for violation %s", rep.Violations[i].Title)
 			}
 
 			config, err := l.GetConfig()
@@ -229,7 +224,7 @@ func (f *Fixer) applyLinterFixes(
 				return fmt.Errorf("failed to get config: %w", err)
 			}
 
-			file := violation.Location.File
+			file := rep.Violations[i].Location.File
 
 			abs, err := filepath.Abs(file)
 			if err != nil {
@@ -246,7 +241,7 @@ func (f *Fixer) applyLinterFixes(
 			fixResults, err := fixInstance.Fix(&fixCandidate, &fixes.RuntimeOptions{
 				BaseDir:   util.FindClosestMatchingRoot(abs, f.registeredRoots),
 				Config:    config,
-				Locations: []report.Location{violation.Location},
+				Locations: []report.Location{rep.Violations[i].Location},
 			})
 			if err != nil {
 				return fmt.Errorf("failed to fix %s: %w", file, err)
@@ -259,7 +254,7 @@ func (f *Fixer) applyLinterFixes(
 			fixResult := fixResults[0]
 
 			if fixResult.Rename != nil {
-				if err = f.handleRename(fp, fixReport, startingFiles, fixResult); err != nil {
+				if err := f.handleRename(fp, fixReport, startingFiles, fixResult); err != nil {
 					return err
 				}
 
