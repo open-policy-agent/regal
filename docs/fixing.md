@@ -100,6 +100,6 @@ Compared to `regal fix`, automatically fixing violations in editors has some lim
   changes made.
 
 :::tip
-If you're curious about using Regal to fix problems directly in your editor, see the docs on editor support
-[here](https://www.openpolicyagent.org/projects/regal/editor-support) to learn more!
+If you're curious about using Regal to fix problems directly in your editor, see the docs on
+[Regal's editor support](https://www.openpolicyagent.org/projects/regal/editor-support) to learn more!
 :::
