@@ -1,0 +1,5 @@
+title: Regal Benchmarks
+description: Continuous benchmarks generated using 'gobenchdata'
+repository: https://github.com/open-policy-agent/regal
+benchmarksFile: benchmarks.json
+chartGroups: []
