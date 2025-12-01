@@ -1,6 +1,5 @@
 package regal.rules.custom["disallow-rego-v1_test"]
 
-import data.regal.capabilities
 import data.regal.config
 
 import data.regal.rules.custom["disallow-rego-v1"] as rule
@@ -11,7 +10,6 @@ test_fail_contains_rego_v1_import if {
 
 	foo if not bar
 	`)
-		with capabilities.is_opa_v1 as true
 	r == {{
 		"category": "custom",
 		"description": "Use of disallowed `import rego.v1`",
@@ -39,6 +37,5 @@ test_success_no_rego_v1_import if {
 
 	foo if not bar
 	`)
-		with capabilities.is_opa_v1 as true
 	r == set()
 }

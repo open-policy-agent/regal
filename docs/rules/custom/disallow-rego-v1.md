@@ -1,6 +1,6 @@
 # disallow-rego-v1
 
-**Summary**: Disallow `import rego v1`
+**Summary**: Use of disallowed `import rego v1`
 
 **Category**: Custom
 
@@ -14,8 +14,8 @@ OPA (any prior to v1.0) are not being used.
 ## Note
 
 This rule is intended to be enabled for projects that have been configured to target versions of OPA from 1.0
- onwards, but Regal does not explicitly check which version of OPA is being targeted for this rule. If working
- with older versions of OPA and Rego, ensure that this rule is disabled.
+onwards, but Regal does not explicitly check which version of OPA is being targeted for this rule. If working
+with older versions of OPA and Rego, you probably don't want to enable this rule.
 
 ## Related Resources
 
