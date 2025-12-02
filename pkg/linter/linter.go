@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 	"testing/fstest"
 
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -718,27 +718,17 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 	numFiles := len(input.FileNames)
 	operationCollect := numFiles > 1 || l.useCollectQuery
 
-	var wg sync.WaitGroup
-
-	// the error channel is buffered to prevent blocking
-	// caused by the context cancellation happening before
-	// errors are sent and the per-file goroutines can exit.
-	errCh := make(chan error, numFiles)
-	doneCh := make(chan bool)
+	// NB(sr): We benchmarked using `wg.SetLimit(runtime.GOMAXPROCS(-1))` here, but performance
+	// got a little worse. So let's not bother.
+	wg, ctx := errgroup.WithContext(ctx)
 
 	results := make([]report.Report, numFiles)
 
 	for i, name := range input.FileNames {
-		wg.Add(1)
-
-		go func(name string) {
-			defer wg.Done()
-
+		wg.Go(func() error {
 			inputValue, err := transform.ToAST(name, input.FileContent[name], input.Modules[name], operationCollect)
 			if err != nil {
-				errCh <- fmt.Errorf("failed to transform input value: %w", err)
-
-				return
+				return fmt.Errorf("failed to transform input value: %w", err)
 			}
 
 			evalArgs := []rego.EvalOption{
@@ -763,16 +753,12 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 
 			resultSet, err := l.preparedQuery.Eval(ctx, evalArgs...)
 			if err != nil {
-				errCh <- fmt.Errorf("error encountered in query evaluation %w", err)
-
-				return
+				return fmt.Errorf("error encountered in query evaluation %w", err)
 			}
 
 			result, err := report.FromResultSet(resultSet, false)
 			if err != nil {
-				errCh <- fmt.Errorf("failed to convert result set to report: %w", err)
-
-				return
+				return fmt.Errorf("failed to convert result set to report: %w", err)
 			}
 
 			if l.profiling {
@@ -788,61 +774,58 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 			}
 
 			results[i] = result
-		}(name)
+
+			return nil
+		})
 	}
 
-	go func() {
-		wg.Wait()
-
-		doneCh <- true
-	}()
-
-	select {
-	case <-ctx.Done():
-		return report.Report{}, fmt.Errorf("context cancelled: %w", ctx.Err())
-	case err := <-errCh:
-		return report.Report{}, fmt.Errorf("error encountered in rule evaluation %w", err)
-	case <-doneCh:
-		l.startTimer(regalmetrics.RegalMergeReport)
-		defer l.stopTimer(regalmetrics.RegalMergeReport)
-
-		regoReport := report.Report{
-			Aggregates:       make(map[string][]report.Aggregate, numFiles),
-			IgnoreDirectives: make(map[string]map[string][]string, numFiles),
+	if err := wg.Wait(); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return report.Report{}, fmt.Errorf("context cancelled: %w", err)
 		}
 
-		for i := range results {
-			regoReport.Violations = append(regoReport.Violations, results[i].Violations...)
-			regoReport.Notices = append(regoReport.Notices, results[i].Notices...)
+		return report.Report{}, fmt.Errorf("error encountered in rule evaluation %w", err)
+	}
 
-			for k := range results[i].Aggregates {
-				// Custom aggregate rules that have been invoked but not returned any data
-				// will return an empty map to signal that they have been called, and that
-				// the aggregate report for this rule should be invoked even when no data
-				// was aggregated. This because the absence of data is exactly what some rules
-				// will want to report on.
-				for _, agg := range results[i].Aggregates[k] {
-					if len(agg) == 0 {
-						if _, ok := regoReport.Aggregates[k]; !ok {
-							regoReport.Aggregates[k] = make([]report.Aggregate, 0)
-						}
-					} else {
-						regoReport.Aggregates[k] = append(regoReport.Aggregates[k], agg)
+	l.startTimer(regalmetrics.RegalMergeReport)
+	defer l.stopTimer(regalmetrics.RegalMergeReport)
+
+	regoReport := report.Report{
+		Aggregates:       make(map[string][]report.Aggregate, numFiles),
+		IgnoreDirectives: make(map[string]map[string][]string, numFiles),
+	}
+
+	for i := range results {
+		regoReport.Violations = append(regoReport.Violations, results[i].Violations...)
+		regoReport.Notices = append(regoReport.Notices, results[i].Notices...)
+
+		for k := range results[i].Aggregates {
+			// Custom aggregate rules that have been invoked but not returned any data
+			// will return an empty map to signal that they have been called, and that
+			// the aggregate report for this rule should be invoked even when no data
+			// was aggregated. This because the absence of data is exactly what some rules
+			// will want to report on.
+			for _, agg := range results[i].Aggregates[k] {
+				if len(agg) == 0 {
+					if _, ok := regoReport.Aggregates[k]; !ok {
+						regoReport.Aggregates[k] = make([]report.Aggregate, 0)
 					}
+				} else {
+					regoReport.Aggregates[k] = append(regoReport.Aggregates[k], agg)
 				}
 			}
-
-			for k := range results[i].IgnoreDirectives {
-				regoReport.IgnoreDirectives[k] = results[i].IgnoreDirectives[k]
-			}
-
-			if l.profiling {
-				regoReport.AddProfileEntries(results[i].AggregateProfile)
-			}
 		}
 
-		return regoReport, nil
+		for k := range results[i].IgnoreDirectives {
+			regoReport.IgnoreDirectives[k] = results[i].IgnoreDirectives[k]
+		}
+
+		if l.profiling {
+			regoReport.AddProfileEntries(results[i].AggregateProfile)
+		}
 	}
+
+	return regoReport, nil
 }
 
 func (l Linter) lintWithAggregateRules(
