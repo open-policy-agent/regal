@@ -100,7 +100,6 @@ func TestLintWithUserConfigTable(t *testing.T) {
 
 	policy := `package p
 
-import rego.v1
 
 boo := input.hoo[_]
 
@@ -270,7 +269,9 @@ or := 1
 
 			result := testutil.Must(linter.Lint(t.Context()))(t)
 
-			testutil.AssertNumViolations(t, len(tc.expViolations), result)
+			if exp, got := len(tc.expViolations), len(result.Violations); exp != got {
+				t.Fatalf("expected # of violations: '%d', got '%d'", exp, got)
+			}
 
 			for idx, violation := range result.Violations {
 				if violation.Title != tc.expViolations[idx] {
@@ -279,6 +280,10 @@ or := 1
 			}
 
 			if len(tc.expLevels) > 0 {
+				if exp, got := len(tc.expLevels), len(result.Violations); exp != got {
+					t.Fatalf("expected # of levels:'%d', got '%d'", exp, got)
+				}
+
 				for idx, violation := range result.Violations {
 					if violation.Level != tc.expLevels[idx] {
 						t.Errorf("expected first violation to be '%s', got %s", tc.expLevels[idx], result.Violations[0].Level)

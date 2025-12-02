@@ -6,6 +6,8 @@ ignore:
 
 rules:
   custom:
+    disallow-rego-v1:
+      level: error
     missing-metadata:
       level: error
       except-rule-path-pattern: \.report$
