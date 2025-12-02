@@ -21,7 +21,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/builtins/meta"
+	"github.com/open-policy-agent/regal/pkg/builtins/regal"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
@@ -334,9 +334,7 @@ func DirCleanUpPaths(target string, preserve []string) ([]string, error) {
 
 func capabilities() *ast.Capabilities {
 	cpy := *OPACapabilities
-	cpy.Builtins = append(cpy.Builtins,
-		meta.RegalParseModuleBuiltin, meta.RegalLastBuiltin, meta.RegalIsFormattedBuiltin,
-	)
+	cpy.Builtins = append(cpy.Builtins, regal.ParseModule, regal.Last, regal.IsFormatted)
 
 	return &cpy
 }

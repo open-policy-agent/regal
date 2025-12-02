@@ -26,14 +26,16 @@ import (
 	outil "github.com/open-policy-agent/opa/v1/util"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
+	"github.com/open-policy-agent/regal/internal/exp"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	regalmetrics "github.com/open-policy-agent/regal/internal/metrics"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/builtins"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/report"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 	"github.com/open-policy-agent/regal/pkg/rules"
+
+	_ "github.com/open-policy-agent/regal/pkg/builtins"
 )
 
 // Linter stores data to use for linting.
@@ -669,12 +671,12 @@ func (l Linter) prepareRegoArgs(query ast.Body) ([]func(*rego.Rego), error) {
 		return nil, fmt.Errorf("failed to load custom rules: %w", l.customRuleError)
 	}
 
-	regoArgs := append([]func(*rego.Rego){
+	regoArgs := []func(*rego.Rego){
 		rego.StoreReadAST(true),
 		rego.Metrics(l.metrics),
 		rego.ParsedQuery(query),
 		rego.Instrument(l.instrumentation),
-	}, builtins.RegalBuiltinRegoFuncs...)
+	}
 
 	if l.debugMode && l.printHook == nil {
 		l.printHook = topdown.NewPrintHook(os.Stderr)
@@ -739,7 +741,11 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 				return
 			}
 
-			evalArgs := []rego.EvalOption{rego.EvalParsedInput(inputValue), rego.EvalInstrument(l.instrumentation)}
+			evalArgs := []rego.EvalOption{
+				rego.EvalParsedInput(inputValue),
+				rego.EvalInstrument(l.instrumentation),
+				exp.ExternalCancelNoOp,
+			}
 
 			if l.baseCache != nil {
 				evalArgs = append(evalArgs, rego.EvalBaseCache(l.baseCache))
@@ -870,6 +876,7 @@ func (l Linter) lintWithAggregateRules(
 	evalArgs := []rego.EvalOption{
 		rego.EvalParsedInput(inputValue),
 		rego.EvalInstrument(l.instrumentation),
+		exp.ExternalCancelNoOp,
 	}
 
 	if l.metrics != nil {

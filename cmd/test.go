@@ -31,7 +31,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/compile"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/builtins"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
 
@@ -215,7 +214,6 @@ func opaTest(args []string) int {
 		SetModules(modules).
 		SetBundles(bundles).
 		SetTimeout(getTimeout()).
-		AddCustomBuiltins(builtins.TestContextBuiltins()).
 		Filter(testParams.runRegex)
 
 	for range testParams.count {

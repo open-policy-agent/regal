@@ -11,7 +11,9 @@ import (
 	"github.com/open-policy-agent/regal/pkg/report"
 )
 
-// 745276520 ns/op	2612562272 B/op	53531222 allocs/op // OPA v1.10.0
+// 756176916 ns/op	2614292780 B/op	53440051 allocs/op
+// 730942916 ns/op	2464477440 B/op	51673366 allocs/op
+// 728470104 ns/op	2352869984 B/op	51152483 allocs/op
 func BenchmarkRegalLintingItself(b *testing.B) {
 	conf := testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
 
@@ -48,7 +50,8 @@ func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
 	testutil.AssertNumViolations(b, 0, rep)
 }
 
-// 65815866 ns/op	43852693 B/op	 1025467 allocs/op // OPA v1.10.0
+// 65815866 ns/op   43852693 B/op   1025467 allocs/op // OPA v1.10.0
+// 59223982 ns/op	37109532 B/op	  921483 allocs/op
 func BenchmarkOnlyPrepare(b *testing.B) {
 	conf := testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
 	linter := NewLinter().WithInputPaths([]string{"../../bundle"}).WithUserConfig(conf)

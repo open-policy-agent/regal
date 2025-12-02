@@ -8,6 +8,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/rego"
 
+	"github.com/open-policy-agent/regal/internal/exp"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/util"
@@ -213,7 +214,7 @@ func QueryEval[P any, R any](ctx context.Context, pq *query.Prepared, input Inpu
 }
 
 func CachedQueryEval[T any](ctx context.Context, pq *query.Prepared, input ast.Value, toValue *T) error {
-	result, err := toValidResult(pq.EvalQuery().Eval(ctx, rego.EvalParsedInput(input)))
+	result, err := toValidResult(pq.EvalQuery().Eval(ctx, rego.EvalParsedInput(input), exp.ExternalCancelNoOp))
 	if err != nil {
 		return err
 	}
