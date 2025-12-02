@@ -30,7 +30,7 @@ func (p *PreferEqualsComparison) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]
 			continue
 		}
 
-		lines[loc.Row-1] = line[0:loc.Column-1] + "=" + line[loc.Column-1:]
+		lines[loc.Row-1] = line[0:loc.Column] + "=" + line[loc.Column:]
 		fixed = true
 	}
 
