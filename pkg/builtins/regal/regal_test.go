@@ -1,4 +1,4 @@
-package builtins_test
+package regal_test
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/rego"
 
-	"github.com/open-policy-agent/regal/pkg/builtins"
+	"github.com/open-policy-agent/regal/pkg/builtins/regal"
 )
 
 // Can't be much faster than this..
@@ -16,18 +16,20 @@ func BenchmarkRegalLast(b *testing.B) {
 	bctx := rego.BuiltinContext{}
 	ta, tb, tc := ast.StringTerm("a"), ast.StringTerm("b"), ast.StringTerm("c")
 	arr := ast.ArrayTerm(ta, tb, tc)
+	ops := []*ast.Term{arr}
 
-	var res *ast.Term
-
-	for b.Loop() {
-		var err error
-		if res, err = builtins.RegalLast(bctx, arr); err != nil {
-			b.Fatal(err)
+	eqIter := func(t *ast.Term) error {
+		if t != tc {
+			b.Fatalf("expected %v, got %v", tc, t)
 		}
+
+		return nil
 	}
 
-	if res.Value.Compare(tc.Value) != 0 {
-		b.Fatalf("expected c, got %v", res)
+	for b.Loop() {
+		if err := regal.RegalLast(bctx, ops, eqIter); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -36,15 +38,19 @@ func BenchmarkRegalLast(b *testing.B) {
 // ...
 func BenchmarkRegalLastEmptyArr(b *testing.B) {
 	bctx := rego.BuiltinContext{}
-	arr := ast.ArrayTerm()
+	iter := func(t *ast.Term) error {
+		if t != nil {
+			b.Fatalf("expected nil, got %v", t)
+		}
 
-	var err error
+		return nil
+	}
+	arr := ast.ArrayTerm()
+	ops := []*ast.Term{arr}
 
 	for b.Loop() {
-		_, err = builtins.RegalLast(bctx, arr)
-	}
-
-	if err == nil {
-		b.Fatal("expected error, got nil")
+		if err := regal.RegalLast(bctx, ops, iter); err != nil {
+			b.Fatal(err)
+		}
 	}
 }

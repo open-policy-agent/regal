@@ -19,7 +19,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/dap"
 	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/builtins"
 )
 
 func init() {
@@ -241,10 +240,8 @@ func (s *state) launch(ctx context.Context, r *godap.LaunchRequest) (*godap.Laun
 			return dap.NewLaunchResponse(), fmt.Errorf("invalid launch eval properties: %w", err)
 		}
 
-		funcs := util.Map(builtins.RegalBuiltinRegoFuncs, debug.RegoOption)
-
 		// FIXME: Should we protect this with a mutex?
-		s.session, err = s.debugger.LaunchEval(ctx, evalProps, funcs...)
+		s.session, err = s.debugger.LaunchEval(ctx, evalProps)
 	case "test":
 		err = errors.New("test not supported")
 	case "":

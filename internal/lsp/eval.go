@@ -12,12 +12,14 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
+	"github.com/open-policy-agent/regal/internal/exp"
 	rquery "github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/builtins"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
+
+	_ "github.com/open-policy-agent/regal/pkg/builtins"
 )
 
 var (
@@ -59,11 +61,11 @@ func (l *LanguageServer) Eval(
 		if inputValue, err := transform.ToOPAInputValue(input); err != nil {
 			return nil, fmt.Errorf("failed converting input to value: %w", err)
 		} else {
-			return pq.Eval(ctx, rego.EvalParsedInput(inputValue))
+			return pq.Eval(ctx, rego.EvalParsedInput(inputValue), exp.ExternalCancelNoOp)
 		}
 	}
 
-	return pq.Eval(ctx)
+	return pq.Eval(ctx, exp.ExternalCancelNoOp)
 }
 
 func (l *LanguageServer) EvalInWorkspace(ctx context.Context, query string, input map[string]any) (EvalResult, error) {
@@ -102,7 +104,6 @@ func prepareRegoArgs(
 	}
 
 	args := []func(*rego.Rego){rego.ParsedQuery(query), rego.EnablePrintStatements(true), rego.PrintHook(printHook)}
-	args = append(args, builtins.RegalBuiltinRegoFuncs...)
 	args = append(args, bundleArgs...)
 	args = append(args, rquery.SchemaResolvers()...)
 

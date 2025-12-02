@@ -17,9 +17,10 @@ import (
 	rbundle "github.com/open-policy-agent/regal/bundle"
 	"github.com/open-policy-agent/regal/internal/compile"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/builtins"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
+
+	_ "github.com/open-policy-agent/regal/pkg/builtins"
 )
 
 const (
@@ -164,12 +165,11 @@ func prepareQueryArgs(
 	store storage.Store,
 	rb *bundle.Bundle,
 ) (regoOptions, storage.Transaction) {
-	args := make([]func(*rego.Rego), 0, 5+len(builtins.RegalBuiltinRegoFuncs))
-	args = append(args, rego.ParsedQuery(query), rego.ParsedBundle("regal", rb))
-	args = append(args, builtins.RegalBuiltinRegoFuncs...)
-
-	// For debugging
-	args = append(args, rego.EnablePrintStatements(true), rego.PrintHook(topdown.NewPrintHook(os.Stderr)))
+	args := []func(*rego.Rego){
+		rego.ParsedQuery(query), rego.ParsedBundle("regal", rb),
+		// For debugging, but we should probably make this conditional
+		rego.EnablePrintStatements(true), rego.PrintHook(topdown.NewPrintHook(os.Stderr)),
+	}
 	args = append(args, SchemaResolvers()...)
 
 	var txn storage.Transaction
