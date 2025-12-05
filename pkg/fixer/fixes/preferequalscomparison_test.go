@@ -3,6 +3,8 @@ package fixes
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/open-policy-agent/regal/pkg/report"
 )
 
@@ -22,40 +24,105 @@ func TestPreferEqualsComparison(t *testing.T) {
 			runtimeOptions:  &RuntimeOptions{},
 		},
 		"no change because no location": {
-			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\nallow = true\n"},
-			contentAfterFix: "package test\n\nallow = true\n",
-			fixExpected:     false,
-			runtimeOptions:  &RuntimeOptions{},
+			fc: &FixCandidate{
+				Filename: "test.rego",
+				Contents: `package test
+allow := true
+
+test_rule {
+	allow = true
+}`,
+			},
+			contentAfterFix: `package test
+allow := true
+
+test_rule {
+	allow = true
+}`,
+			fixExpected:    false,
+			runtimeOptions: &RuntimeOptions{},
 		},
 		"single change": {
-			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\nallow := true\nallow = true\n"},
-			contentAfterFix: "package test\n\nallow := true\nallow == true\n",
-			fixExpected:     true,
-			runtimeOptions:  &RuntimeOptions{Locations: []report.Location{{Row: 4, Column: 7}}},
+			fc: &FixCandidate{
+				Filename: "test.rego",
+				Contents: `package test
+allow := true
+
+test_rule {
+	allow = true
+}`,
+			},
+			contentAfterFix: `package test
+allow := true
+
+test_rule {
+	allow == true
+}`,
+			fixExpected:    true,
+			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 5, Column: 2}}},
 		},
 		"bad change": {
-			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\nallow := true\nallow = true\n"},
-			contentAfterFix: "package test\n\nallow := true\nallow = true\n",
-			fixExpected:     false,
-			runtimeOptions:  &RuntimeOptions{Locations: []report.Location{{Row: 1, Column: 1}}},
+			fc: &FixCandidate{
+				Filename: "test.rego",
+				Contents: `package test
+allow := true
+allow = true
+
+test_rule {
+	allow = false
+}`,
+			},
+			contentAfterFix: `package test
+allow := true
+allow = true
+
+test_rule {
+	allow = false
+}`,
+			fixExpected:    false,
+			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 1, Column: 1}}},
 		},
 		"many changes": {
 			fc: &FixCandidate{
 				Filename: "test.rego",
-				Contents: "package test\n\nallow := true\n\nallow = true\nallow = false\n",
+				Contents: `package test
+allow := true
+
+test_rule {
+	allow = true
+	allow = false
+}`,
 			},
-			contentAfterFix: "package test\n\nallow := true\n\nallow == true\nallow == false\n",
-			fixExpected:     true,
-			runtimeOptions:  &RuntimeOptions{Locations: []report.Location{{Row: 5, Column: 7}, {Row: 6, Column: 7}}},
+			contentAfterFix: `package test
+allow := true
+
+test_rule {
+	allow == true
+	allow == false
+}`,
+			fixExpected:    true,
+			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 5, Column: 2}, {Row: 6, Column: 2}}},
 		},
 		"different columns": {
 			fc: &FixCandidate{
 				Filename: "test.rego",
-				Contents: "package test\n\nlong := true\n\nlonger = true\nlongest = false\n",
+				Contents: `package test
+allow := true
+
+test_rule {
+	allow = true
+		allow = false
+}`,
 			},
-			contentAfterFix: "package test\n\nlong := true\n\nlonger == true\nlongest == false\n",
-			fixExpected:     true,
-			runtimeOptions:  &RuntimeOptions{Locations: []report.Location{{Row: 5, Column: 8}, {Row: 6, Column: 9}}},
+			contentAfterFix: `package test
+allow := true
+
+test_rule {
+	allow == true
+		allow == false
+}`,
+			fixExpected:    true,
+			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 5, Column: 2}, {Row: 6, Column: 2}}},
 		},
 	}
 	for testName, tc := range testCases {
@@ -77,7 +144,7 @@ func TestPreferEqualsComparison(t *testing.T) {
 				return
 			}
 
-			if tc.fixExpected && fixResults[0].Contents != tc.contentAfterFix {
+			if diff := cmp.Diff(fixResults[0].Contents, tc.contentAfterFix); tc.fixExpected && diff != "" {
 				t.Fatalf(
 					"unexpected content, got:\n%s---\nexpected:\n%s---",
 					fixResults[0].Contents,

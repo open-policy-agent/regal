@@ -25,12 +25,14 @@ func (p *PreferEqualsComparison) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]
 			continue
 		}
 
-		// unexpected character at location column, skipping
-		if line[loc.Column-1] != '=' {
+		eqIndex := strings.Index(line, "=")
+
+		// unification operator not found, skipping
+		if eqIndex == -1 {
 			continue
 		}
 
-		lines[loc.Row-1] = line[0:loc.Column] + "=" + line[loc.Column:]
+		lines[loc.Row-1] = line[0:eqIndex] + "=" + line[eqIndex:]
 		fixed = true
 	}
 
