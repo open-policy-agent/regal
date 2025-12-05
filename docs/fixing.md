@@ -22,6 +22,7 @@ Currently, the following rules are automatically fixable:
 - [use-assignment-operator](https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator)
 - [no-whitespace-comment](https://www.openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment)
 - [directory-package-mismatch](https://www.openpolicyagent.org/projects/regal/rules/idiomatic/directory-package-mismatch)
+- [prefer-equals-comparison](https://www.openpolicyagent.org/projects/regal/rules/idiomatic/prefer-equals-comparison)
 - [use-rego-v1](https://www.openpolicyagent.org/projects/regal/rules/imports/use-rego-v1) (v0 Rego only)
 
 So, how do you go on about automatically fixing reported violations?
