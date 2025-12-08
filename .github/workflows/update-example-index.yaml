@@ -22,7 +22,7 @@ jobs:
       pull-requests: write # this is also needed to open a pull request
     steps:
       - name: Check out code
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: Set up go for rq
         uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
@@ -63,7 +63,7 @@ jobs:
             tee internal/lsp/examples/index.json
 
       - name: Open a pull request
-        uses: peter-evans/create-pull-request@84ae59a2cdc2258d6fa0732dd66352dddae2a412 # v7.0.9
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
           title: "lsp: Update rego-by-examples index"
           commit-message: "lsp: Update rego-by-examples index"
