@@ -1,4 +1,4 @@
-//nolint:dupl // Very similar to constant-condition fixer test. Could consider refactoring later.
+//nolint:dupl // Very similar to redundant-existence-check fixer test. Could consider refactoring later.
 package fixes
 
 import (
@@ -9,7 +9,7 @@ import (
 	"github.com/open-policy-agent/regal/pkg/report"
 )
 
-func TestRedundantExistenceCheck(t *testing.T) {
+func TestConstantCondition(t *testing.T) {
 	t.Parallel()
 
 	testCases := map[string]struct {
@@ -29,15 +29,15 @@ func TestRedundantExistenceCheck(t *testing.T) {
 				Filename: "test.rego",
 				Contents: `package test
 
-employee if {
-    input.user.email
+allow if {
+    true
     endswith(input.user.email, "@acmecorp.com")
 }`,
 			},
 			contentAfterFix: `package test
 
-employee if {
-    input.user.email
+allow if {
+    true
     endswith(input.user.email, "@acmecorp.com")
 }`,
 			fixExpected:    false,
@@ -48,14 +48,14 @@ employee if {
 				Filename: "test.rego",
 				Contents: `package test
 
-employee if {
-    input.user.email
+allow if {
+    true
     endswith(input.user.email, "@acmecorp.com")
 }`,
 			},
 			contentAfterFix: `package test
 
-employee if {
+allow if {
     endswith(input.user.email, "@acmecorp.com")
 }`,
 			fixExpected:    true,
@@ -66,55 +66,47 @@ employee if {
 				Filename: "test.rego",
 				Contents: `package test
 
-employee if {
-    input.user.email
+allow if {
+    true
     endswith(input.user.email, "@acmecorp.com")
 }`,
 			},
 			contentAfterFix: `package test
 
-employee if {
-    input.user.email
+allow if {
+    true
     endswith(input.user.email, "@acmecorp.com")
 }`,
 			fixExpected:    false,
-			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 4, Column: 100}}},
+			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 4, Column: 1000}}},
 		},
 		"many changes": {
 			fc: &FixCandidate{
 				Filename: "test.rego",
 				Contents: `package test
 
-employee if {
-    input.user.email
+allow if {
+    true
     endswith(input.user.email, "@acmecorp.com")
-}
-
-is_admin(user) if {
-    user
-    "admin" in user.roles
+	1 == 1
 }`,
 			},
 			contentAfterFix: `package test
 
-employee if {
+allow if {
     endswith(input.user.email, "@acmecorp.com")
-}
-
-is_admin(user) if {
-    "admin" in user.roles
 }`,
 			fixExpected:    true,
-			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 4, Column: 2}, {Row: 9, Column: 2}}},
+			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 4, Column: 2}, {Row: 6, Column: 2}}},
 		},
 	}
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
-			rec := RedundantExistenceCheck{}
+			cc := ConstantCondition{}
 
-			fixResults, err := rec.Fix(tc.fc, tc.runtimeOptions)
+			fixResults, err := cc.Fix(tc.fc, tc.runtimeOptions)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}

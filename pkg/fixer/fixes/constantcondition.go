@@ -1,4 +1,4 @@
-//nolint:dupl // Very similar to constant-condition fixer. Could consider refactoring later.
+//nolint:dupl // Very similar to redundant-existence-check fixer. Could consider refactoring later.
 package fixes
 
 import (
@@ -7,13 +7,13 @@ import (
 	"strings"
 )
 
-type RedundantExistenceCheck struct{}
+type ConstantCondition struct{}
 
-func (*RedundantExistenceCheck) Name() string {
-	return "redundant-existence-check"
+func (*ConstantCondition) Name() string {
+	return "constant-condition"
 }
 
-func (p *RedundantExistenceCheck) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]FixResult, error) {
+func (p *ConstantCondition) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]FixResult, error) {
 	if opts == nil {
 		return nil, errors.New("missing runtime options")
 	}

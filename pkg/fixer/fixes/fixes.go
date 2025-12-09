@@ -24,6 +24,7 @@ func NewDefaultFixes() []Fix {
 		&NonRawRegexPattern{},
 		&PreferEqualsComparison{},
 		&RedundantExistenceCheck{},
+		&ConstantCondition{},
 	}
 }
 
@@ -37,6 +38,7 @@ func NewDefaultFormatterFixes() []Fix {
 		&NonRawRegexPattern{},
 		&PreferEqualsComparison{},
 		&RedundantExistenceCheck{},
+		&ConstantCondition{},
 	}
 }
 
