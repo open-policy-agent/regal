@@ -23,6 +23,8 @@ Currently, the following rules are automatically fixable:
 - [no-whitespace-comment](https://www.openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment)
 - [directory-package-mismatch](https://www.openpolicyagent.org/projects/regal/rules/idiomatic/directory-package-mismatch)
 - [prefer-equals-comparison](https://www.openpolicyagent.org/projects/regal/rules/idiomatic/prefer-equals-comparison)
+- [redundant-existence-check](https://www.openpolicyagent.org/projects/regal/rules/bugs/redundant-existence-check)
+- [constant-condition](https://www.openpolicyagent.org/projects/regal/rules/bugs/constant-condition)
 - [use-rego-v1](https://www.openpolicyagent.org/projects/regal/rules/imports/use-rego-v1) (v0 Rego only)
 
 So, how do you go on about automatically fixing reported violations?

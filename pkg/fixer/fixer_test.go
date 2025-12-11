@@ -26,8 +26,10 @@ func TestFixer(t *testing.T) {
 		mainRegoFile: `package test
 
 allow if {
-true #no space
+true 
 }
+#no space
+
 deny = true
 `,
 	}
@@ -51,12 +53,17 @@ deny = true
 
 	expectedFileFixedViolations := map[string][]string{
 		// use-assigment-operator is correct in formatting so does not appear.
-		filepath.Join(rootPath, "test", "main.rego"): {"directory-package-mismatch", "no-whitespace-comment", "opa-fmt"},
+		filepath.Join(rootPath, "test", "main.rego"): {
+			"directory-package-mismatch",
+			"no-whitespace-comment",
+			"opa-fmt",
+			"constant-condition",
+		},
 	}
 	expectedFileContents := map[string]string{
 		filepath.Join(rootPath, "test", "main.rego"): `package test
 
-allow := true
+allow if {}
 
 # no space
 
@@ -64,7 +71,7 @@ deny := true
 `,
 	}
 
-	if got, exp := fixReport.TotalFixes(), uint(3); got != exp {
+	if got, exp := fixReport.TotalFixes(), uint(4); got != exp {
 		t.Fatalf("expected a total of %d fixes, got %d", exp, got)
 	}
 

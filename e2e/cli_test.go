@@ -450,33 +450,36 @@ test_allow if {
 		"v0/main.rego": `package v0
 
 #comment
-allow { true }
+allow { input == 1 }
 `,
 		"v1/main.rego": `package v1
 
 #comment
-allow if { true }
+allow if { input == 1 }
 `,
 		"unrelated.txt": `foobar`,
 	}
 
 	td := testutil.TempDirectoryOf(t, initialState)
-	exp := fmt.Sprintf(`12 fixes applied:
+	exp := fmt.Sprintf(`15 fixes applied:
 In project root: %[1]s
 bar/main.rego -> wow/foo-bar/baz/main.rego:
 - directory-package-mismatch
 
 bar/main_test.rego -> wow/foo-bar/baz/main_test.rego:
 - directory-package-mismatch
+- constant-condition
 - opa-fmt
 
 foo/main.rego -> wow/main.rego:
 - directory-package-mismatch
+- constant-condition
 - no-whitespace-comment
 - opa-fmt
 
 foo/main_test.rego -> wow/main_test.rego:
 - directory-package-mismatch
+- constant-condition
 - opa-fmt
 
 
@@ -504,29 +507,29 @@ allow if {
 `,
 		filepath.FromSlash("wow/foo-bar/baz/main_test.rego"): `package wow["foo-bar"].baz_test
 
-test_allow := true
+test_allow if {}
 `,
 		"wow/main.rego": `package wow
 
 # comment
 
-allow := true
+allow if {}
 `,
 		"wow/main_test.rego": `package wow_test
 
-test_allow := true
+test_allow if {}
 `,
 		"v0/main.rego": `package v0
 
 import rego.v1
 
 # comment
-allow := true
+allow if input == 1
 `,
 		"v1/main.rego": `package v1
 
 # comment
-allow := true
+allow if input == 1
 `,
 		"unrelated.txt": `foobar`,
 	}
