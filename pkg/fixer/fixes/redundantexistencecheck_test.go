@@ -1,4 +1,3 @@
-//nolint:dupl // Very similar to constant-condition fixer test. Could consider refactoring later.
 package fixes
 
 import (
@@ -56,10 +55,19 @@ employee if {
 			contentAfterFix: `package test
 
 employee if {
+    
     endswith(input.user.email, "@acmecorp.com")
 }`,
-			fixExpected:    true,
-			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 4, Column: 2}}},
+			fixExpected: true,
+			runtimeOptions: &RuntimeOptions{
+				Locations: []report.Location{
+					{
+						Row: 4, Column: 5, End: &report.Position{
+							Row: 4, Column: 21,
+						},
+					},
+				},
+			},
 		},
 		"bad change": {
 			fc: &FixCandidate{
@@ -77,8 +85,16 @@ employee if {
     input.user.email
     endswith(input.user.email, "@acmecorp.com")
 }`,
-			fixExpected:    false,
-			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 4, Column: 100}}},
+			fixExpected: false,
+			runtimeOptions: &RuntimeOptions{
+				Locations: []report.Location{
+					{
+						Row: 4, Column: 1000, End: &report.Position{
+							Row: 4, Column: 1000,
+						},
+					},
+				},
+			},
 		},
 		"many changes": {
 			fc: &FixCandidate{
@@ -98,14 +114,29 @@ is_admin(user) if {
 			contentAfterFix: `package test
 
 employee if {
+    
     endswith(input.user.email, "@acmecorp.com")
 }
 
 is_admin(user) if {
+    
     "admin" in user.roles
 }`,
-			fixExpected:    true,
-			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 4, Column: 2}, {Row: 9, Column: 2}}},
+			fixExpected: true,
+			runtimeOptions: &RuntimeOptions{
+				Locations: []report.Location{
+					{
+						Row: 4, Column: 5, End: &report.Position{
+							Row: 4, Column: 21,
+						},
+					},
+					{
+						Row: 9, Column: 5, End: &report.Position{
+							Row: 4, Column: 9,
+						},
+					},
+				},
+			},
 		},
 	}
 	for testName, tc := range testCases {

@@ -1,9 +1,8 @@
-//nolint:dupl // Very similar to redundant-existence-check fixer. Could consider refactoring later.
+//nolint:dupl // Same implementation as redundant-existence-check fixer. Could consider refactoring later.
 package fixes
 
 import (
 	"errors"
-	"slices"
 	"strings"
 )
 
@@ -21,35 +20,24 @@ func (p *ConstantCondition) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]FixRe
 	lines := strings.Split(fc.Contents, "\n")
 	fixed := false
 
-	var newLines []string
-
-	removedLines := make([]int, 0, 100)
-
 	for _, loc := range opts.Locations {
-		index := loc.Row - 1
-		line := lines[index]
+		line := lines[loc.Row-1]
 
 		if loc.Row > len(lines) || loc.Column-1 < 0 || loc.Column-1 >= len(line) {
 			continue
 		}
 
-		removedLines = append(removedLines, index)
-	}
+		startIndex := loc.Column - 1
+		endIndex := loc.End.Column - 1
 
-	if len(removedLines) == 0 {
-		newLines = lines
-	} else {
-		for line := range lines {
-			if !slices.Contains(removedLines, line) {
-				newLines = append(newLines, lines[line])
-				fixed = true
-			}
-		}
+		lines[loc.Row-1] = line[0:startIndex] + line[endIndex:]
+
+		fixed = true
 	}
 
 	if !fixed {
 		return nil, nil
 	}
 
-	return []FixResult{{Title: p.Name(), Root: opts.BaseDir, Contents: strings.Join(newLines, "\n")}}, nil
+	return []FixResult{{Title: p.Name(), Root: opts.BaseDir, Contents: strings.Join(lines, "\n")}}, nil
 }

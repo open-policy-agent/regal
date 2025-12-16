@@ -1,4 +1,3 @@
-//nolint:dupl // Very similar to redundant-existence-check fixer test. Could consider refactoring later.
 package fixes
 
 import (
@@ -19,8 +18,8 @@ func TestConstantCondition(t *testing.T) {
 		runtimeOptions  *RuntimeOptions
 	}{
 		"no change": {
-			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\nallow = true\n"},
-			contentAfterFix: "package test\n\nallow = true\n",
+			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\nallow := true\n"},
+			contentAfterFix: "package test\n\nallow := true\n",
 			fixExpected:     false,
 			runtimeOptions:  &RuntimeOptions{},
 		},
@@ -56,10 +55,19 @@ allow if {
 			contentAfterFix: `package test
 
 allow if {
+    
     endswith(input.user.email, "@acmecorp.com")
 }`,
-			fixExpected:    true,
-			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 4, Column: 2}}},
+			fixExpected: true,
+			runtimeOptions: &RuntimeOptions{
+				Locations: []report.Location{
+					{
+						Row: 4, Column: 5, End: &report.Position{
+							Row: 4, Column: 9,
+						},
+					},
+				},
+			},
 		},
 		"bad change": {
 			fc: &FixCandidate{
@@ -77,8 +85,37 @@ allow if {
     true
     endswith(input.user.email, "@acmecorp.com")
 }`,
-			fixExpected:    false,
-			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 4, Column: 1000}}},
+			fixExpected: false,
+			runtimeOptions: &RuntimeOptions{
+				Locations: []report.Location{
+					{
+						Row: 4, Column: 1000, End: &report.Position{
+							Row: 4, Column: 1004,
+						},
+					},
+				},
+			},
+		},
+		"single line": {
+			fc: &FixCandidate{
+				Filename: "test.rego",
+				Contents: `package test
+
+allow if { true }`,
+			},
+			contentAfterFix: `package test
+
+allow if {  }`,
+			fixExpected: true,
+			runtimeOptions: &RuntimeOptions{
+				Locations: []report.Location{
+					{
+						Row: 3, Column: 12, End: &report.Position{
+							Row: 4, Column: 16,
+						},
+					},
+				},
+			},
 		},
 		"many changes": {
 			fc: &FixCandidate{
@@ -88,16 +125,31 @@ allow if {
 allow if {
     true
     endswith(input.user.email, "@acmecorp.com")
-	1 == 1
+    1 == 1
 }`,
 			},
 			contentAfterFix: `package test
 
 allow if {
+    
     endswith(input.user.email, "@acmecorp.com")
+    
 }`,
-			fixExpected:    true,
-			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 4, Column: 2}, {Row: 6, Column: 2}}},
+			fixExpected: true,
+			runtimeOptions: &RuntimeOptions{
+				Locations: []report.Location{
+					{
+						Row: 4, Column: 5, End: &report.Position{
+							Row: 4, Column: 9,
+						},
+					},
+					{
+						Row: 6, Column: 5, End: &report.Position{
+							Row: 4, Column: 11,
+						},
+					},
+				},
+			},
 		},
 	}
 	for testName, tc := range testCases {
