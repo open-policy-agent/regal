@@ -455,13 +455,13 @@ allow { input == 1 }
 		"v1/main.rego": `package v1
 
 #comment
-allow if { input == 1 }
+allow if { true }
 `,
 		"unrelated.txt": `foobar`,
 	}
 
 	td := testutil.TempDirectoryOf(t, initialState)
-	exp := fmt.Sprintf(`15 fixes applied:
+	exp := fmt.Sprintf(`16 fixes applied:
 In project root: %[1]s
 bar/main.rego -> wow/foo-bar/baz/main.rego:
 - directory-package-mismatch
@@ -490,6 +490,7 @@ main.rego:
 
 In project root: %[3]s
 main.rego:
+- constant-condition
 - no-whitespace-comment
 - opa-fmt
 `, td, filepath.Join(td, "v0"), filepath.Join(td, "v1"))
@@ -529,7 +530,7 @@ allow if input == 1
 		"v1/main.rego": `package v1
 
 # comment
-allow if input == 1
+allow if {}
 `,
 		"unrelated.txt": `foobar`,
 	}

@@ -19,9 +19,9 @@ func TestRedundantExistenceCheck(t *testing.T) {
 	}{
 		"no change": {
 			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\nallow = true\n"},
-			contentAfterFix: "package test\n\nallow = true\n",
-			fixExpected:     false,
 			runtimeOptions:  &RuntimeOptions{},
+			fixExpected:     false,
+			contentAfterFix: "package test\n\nallow = true\n",
 		},
 		"no change because no location": {
 			fc: &FixCandidate{
@@ -33,14 +33,14 @@ employee if {
     endswith(input.user.email, "@acmecorp.com")
 }`,
 			},
+			runtimeOptions: &RuntimeOptions{},
+			fixExpected:    false,
 			contentAfterFix: `package test
 
 employee if {
     input.user.email
     endswith(input.user.email, "@acmecorp.com")
 }`,
-			fixExpected:    false,
-			runtimeOptions: &RuntimeOptions{},
 		},
 		"single change": {
 			fc: &FixCandidate{
@@ -52,13 +52,6 @@ employee if {
     endswith(input.user.email, "@acmecorp.com")
 }`,
 			},
-			contentAfterFix: `package test
-
-employee if {
-    
-    endswith(input.user.email, "@acmecorp.com")
-}`,
-			fixExpected: true,
 			runtimeOptions: &RuntimeOptions{
 				Locations: []report.Location{
 					{
@@ -68,8 +61,15 @@ employee if {
 					},
 				},
 			},
+			fixExpected: true,
+			contentAfterFix: `package test
+
+employee if {
+    
+    endswith(input.user.email, "@acmecorp.com")
+}`,
 		},
-		"bad change": {
+		"no change because bad location": {
 			fc: &FixCandidate{
 				Filename: "test.rego",
 				Contents: `package test
@@ -79,13 +79,6 @@ employee if {
     endswith(input.user.email, "@acmecorp.com")
 }`,
 			},
-			contentAfterFix: `package test
-
-employee if {
-    input.user.email
-    endswith(input.user.email, "@acmecorp.com")
-}`,
-			fixExpected: false,
 			runtimeOptions: &RuntimeOptions{
 				Locations: []report.Location{
 					{
@@ -95,6 +88,13 @@ employee if {
 					},
 				},
 			},
+			fixExpected: false,
+			contentAfterFix: `package test
+
+employee if {
+    input.user.email
+    endswith(input.user.email, "@acmecorp.com")
+}`,
 		},
 		"many changes": {
 			fc: &FixCandidate{
@@ -111,18 +111,6 @@ is_admin(user) if {
     "admin" in user.roles
 }`,
 			},
-			contentAfterFix: `package test
-
-employee if {
-    
-    endswith(input.user.email, "@acmecorp.com")
-}
-
-is_admin(user) if {
-    
-    "admin" in user.roles
-}`,
-			fixExpected: true,
 			runtimeOptions: &RuntimeOptions{
 				Locations: []report.Location{
 					{
@@ -137,6 +125,18 @@ is_admin(user) if {
 					},
 				},
 			},
+			fixExpected: true,
+			contentAfterFix: `package test
+
+employee if {
+    
+    endswith(input.user.email, "@acmecorp.com")
+}
+
+is_admin(user) if {
+    
+    "admin" in user.roles
+}`,
 		},
 	}
 	for testName, tc := range testCases {
@@ -159,11 +159,7 @@ is_admin(user) if {
 			}
 
 			if diff := cmp.Diff(fixResults[0].Contents, tc.contentAfterFix); tc.fixExpected && diff != "" {
-				t.Fatalf(
-					"unexpected content, got:\n%s---\nexpected:\n%s---",
-					fixResults[0].Contents,
-					tc.contentAfterFix,
-				)
+				t.Fatalf("unexpected content:\n%s", diff)
 			}
 		})
 	}
