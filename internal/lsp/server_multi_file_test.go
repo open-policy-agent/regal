@@ -77,7 +77,7 @@ ignore:
 			uri := "file://" + filepath.Join(tempDir, "admins.rego")
 
 			aggs := ls.cache.GetFileAggregates(uri)
-			if len(aggs) > 0 {
+			if aggs != nil && aggs.Len() > 0 {
 				success = true
 
 				break // don't sleep

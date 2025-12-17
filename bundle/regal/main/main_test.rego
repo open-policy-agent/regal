@@ -19,6 +19,10 @@ test_multiple_failures if {
 		"prefer-snake-case": {"level": "error"},
 		"use-assignment-operator": {"level": "error"},
 	}}
+		with data.internal.prepared.rules_to_run as {"style": {
+			"prefer-snake-case",
+			"use-assignment-operator",
+		}}
 
 	count(report) == 2
 }
@@ -30,6 +34,7 @@ test_expect_failure if {
 	`
 	report := main.report with input as regal.parse_module("p.rego", policy)
 		with config.rules as {"style": {"prefer-snake-case": {"level": "error"}}}
+		with data.internal.prepared.rules_to_run as {"style": {"prefer-snake-case"}}
 
 	count(report) == 1
 }
@@ -41,6 +46,7 @@ test_ignore_rule_config if {
 	`
 	report := main.report with input as regal.parse_module("p.rego", policy)
 		with config.rules as {"style": {"prefer-snake-case": {"level": "ignore"}}}
+		with data.internal.prepared.rules_to_run as {}
 
 	count(report) == 0
 }
@@ -53,6 +59,7 @@ test_ignore_directive_failure if {
 	`
 	report := main.report with input as regal.parse_module("p.rego", policy)
 		with config.rules as {"style": {"prefer-snake-case": {"level": "error"}}}
+		with data.internal.prepared.rules_to_run as {"style": {"prefer-snake-case"}}
 
 	count(report) == 1
 }
@@ -65,6 +72,7 @@ test_ignore_directive_success if {
 	`
 	report := main.report with input as regal.parse_module("p.rego", policy)
 		with config.rules as {"style": {"prefer-snake-case": {"level": "error"}}}
+		with data.internal.prepared.rules_to_run as {"style": {"prefer-snake-case"}}
 
 	count(report) == 0
 }
@@ -76,6 +84,7 @@ test_ignore_directive_success_same_line if {
 	`
 	report := main.report with input as regal.parse_module("p.rego", policy)
 		with config.rules as {"style": {"prefer-snake-case": {"level": "error"}}}
+		with data.internal.prepared.rules_to_run as {"style": {"prefer-snake-case"}}
 
 	count(report) == 0
 }
@@ -87,6 +96,7 @@ test_ignore_directive_success_same_line_trailing_directive if {
 	`
 	report := main.report with input as regal.parse_module("p.rego", policy)
 		with config.rules as {"style": {"prefer-snake-case": {"level": "error"}}}
+		with data.internal.prepared.rules_to_run as {"style": {"prefer-snake-case"}}
 
 	count(report) == 0
 }
@@ -98,6 +108,7 @@ test_ignore_directive_success_same_line_todo_comment if {
 	`
 	report := main.report with input as regal.parse_module("p.rego", policy)
 		with config.rules as {"style": {"todo-comment": {"level": "error"}}}
+		with data.internal.prepared.rules_to_run as {"style": {"todo-comment"}}
 
 	count(report) == 0
 }
@@ -112,6 +123,10 @@ test_ignore_directive_multiple_success if {
 		"prefer-snake-case": {"level": "error"},
 		"use-assignment-operator": {"level": "error"},
 	}}
+		with data.internal.prepared.rules_to_run as {"style": {
+			"prefer-snake-case",
+			"use-assignment-operator",
+		}}
 
 	count(report) == 0
 }
@@ -126,6 +141,10 @@ test_ignore_directive_multiple_mixed_success if {
 		"prefer-snake-case": {"level": "error"},
 		"use-assignment-operator": {"level": "error"},
 	}}
+		with data.internal.prepared.rules_to_run as {"style": {
+			"prefer-snake-case",
+			"use-assignment-operator",
+		}}
 
 	count(report) == 1
 }
@@ -144,11 +163,12 @@ test_ignore_directive_collected_in_aggregate_rule if {
 
 test_ignore_directive_enforced_in_aggregate_rule if {
 	report_without_ignore_directives := main.aggregate_report with input as {
-		"aggregates_internal": {"imports/unresolved-import": []},
+		"aggregates_internal": {"p.rego": {"imports/unresolved-import": [{}]}},
 		"regal": {"file": {"name": "p.rego"}},
 		"ignore_directives": {},
 	}
 		with config.rules as {"imports": {"unresolved-import": {"level": "error"}}}
+		with data.internal.prepared.rules_to_run as {"imports": {"unresolved-import"}}
 		with data.regal.rules.imports["unresolved-import"].aggregate_report as {{
 			"category": "imports",
 			"level": "error",
@@ -159,7 +179,7 @@ test_ignore_directive_enforced_in_aggregate_rule if {
 	count(report_without_ignore_directives) == 1
 
 	report_with_ignore_directives := main.aggregate_report with input as {
-		"aggregates_internal": {"imports/unresolved-import": []},
+		"aggregates_internal": {"p.rego": {"imports/unresolved-import": [{}]}},
 		"regal": {"file": {"name": "p.rego"}},
 		"ignore_directives": {"p.rego": {"6": ["unresolved-import"]}},
 	}
@@ -180,7 +200,9 @@ test_exclude_files_rule_config if {
 	camelCase := "yes"
 	`
 	cfg := {"style": {"prefer-snake-case": {"level": "error", "ignore": {"files": ["p.rego"]}}}}
-	report := main.report with input as regal.parse_module("p.rego", policy) with config.rules as cfg
+	report := main.report with input as regal.parse_module("p.rego", policy)
+		with config.rules as cfg
+		with data.internal.prepared.rules_to_run as {"style": {"prefer-snake-case"}}
 
 	count(report) == 0
 }
@@ -190,6 +212,7 @@ test_exclude_files_rule_config_with_path_prefix_relative_name if {
 		"level": "error",
 		"ignore": {"files": ["bar/*"]},
 	}}}
+		with data.internal.prepared.rules_to_run as {"testing": {"test"}}
 		with input.regal.file.name as "bar/p.rego"
 		with config.path_prefix as "/foo" # ignored as not prefix of input file
 
@@ -200,6 +223,7 @@ test_not_exclude_files_rule_config_with_path_prefix_relative_name if {
 	cfg := {"testing": {"test": {"level": "error", "ignore": {"files": ["notmatching/*"]}}}}
 
 	rules_to_run := main._rules_to_run with config.rules as cfg
+		with data.internal.prepared.rules_to_run as {"testing": {"test"}}
 		with input.regal.file.name as "bar/p.rego"
 		with config.path_prefix as "/foo" # ignored as not prefix of input file
 
@@ -210,6 +234,7 @@ test_exclude_files_rule_config_with_path_prefix if {
 	cfg := {"testing": {"test": {"level": "error", "ignore": {"files": ["bar/*"]}}}}
 
 	rules_to_run := main._rules_to_run with config.rules as cfg
+		with data.internal.prepared.rules_to_run as {"testing": {"test"}}
 		with input.regal.file.name as "/foo/bar/p.rego"
 		with config.path_prefix as "/foo"
 
@@ -220,6 +245,7 @@ test_exclude_files_rule_config_with_root_path_prefix if {
 	cfg := {"testing": {"test": {"level": "error", "ignore": {"files": ["foo/*"]}}}}
 
 	rules_to_run := main._rules_to_run with config.rules as cfg
+		with data.internal.prepared.rules_to_run as {"testing": {"test"}}
 		with input.regal.file.name as "/foo/bar/p.rego"
 		with config.path_prefix as "/"
 
@@ -230,6 +256,7 @@ test_not_exclude_files_rule_config_with_path_prefix if {
 	cfg := {"testing": {"test": {"level": "error", "ignore": {"files": ["notmatching/*"]}}}}
 
 	rules_to_run := main._rules_to_run with config.rules as cfg
+		with data.internal.prepared.rules_to_run as {"testing": {"test"}}
 		with input.regal.file.name as "/foo/bar/p.rego"
 		with config.path_prefix as "/foo"
 
@@ -240,6 +267,7 @@ test_exclude_files_rule_config_with_uri_and_path_prefix if {
 	cfg := {"testing": {"test": {"level": "error", "ignore": {"files": ["bar/*"]}}}}
 
 	rules_to_run := main._rules_to_run with config.rules as cfg
+		with data.internal.prepared.rules_to_run as {"testing": {"test"}}
 		with input.regal.file.name as "file:///foo/bar/p.rego"
 		with config.path_prefix as "file:///foo"
 
@@ -250,6 +278,7 @@ test_not_exclude_files_rule_config_with_uri_and_path_prefix if {
 	cfg := {"testing": {"test": {"level": "error", "ignore": {"files": ["notmatching/*"]}}}}
 
 	rules_to_run := main._rules_to_run with config.rules as cfg
+		with data.internal.prepared.rules_to_run as {"testing": {"test"}}
 		with input.regal.file.name as "file:///foo/bar/p.rego"
 		with config.path_prefix as "file:///foo"
 
@@ -263,6 +292,7 @@ test_force_exclude_file_eval_param if {
 	`
 	report := main.report with input as regal.parse_module("p.rego", policy)
 		with config.rules as {"style": {"prefer-snake-case": {"level": "error"}}}
+		with data.internal.prepared.rules_to_run as {"style": {"prefer-snake-case"}}
 		with data.eval.params.ignore_files as ["p.rego"]
 
 	count(report) == 0
@@ -278,6 +308,7 @@ test_force_exclude_file_config if {
 			"rules": {"style": {"prefer-snake-case": {"level": "error"}}},
 			"ignore": {"files": ["p.rego"]},
 		}
+		with data.internal.prepared.rules_to_run as {"style": {"prefer-snake-case"}}
 
 	count(report) == 0
 }
@@ -305,6 +336,11 @@ test_camelcase if {
 				"idiomatic": {"directory-package-mismatch": {"level": "error"}},
 			},
 		}
+		with data.internal.prepared.rules_to_run as {
+			"style": {"prefer-snake-case"},
+			"testing": {"file-missing-test-suffix"},
+			"idiomatic": {"directory-package-mismatch"},
+		}
 
 	violation := util.single_set_item(result.report)
 	violation.title == "prefer-snake-case"
@@ -322,7 +358,9 @@ test_main_lint if {
 
 	cfg := {"style": {"use-assignment-operator": {"level": "error"}}}
 
-	result := main.lint with input as mock_input with config.rules as cfg
+	result := main.lint with input as mock_input
+		with config.rules as cfg
+		with data.internal.prepared.rules_to_run as {"style": {"use-assignment-operator"}}
 
 	result.violations == {{
 		"category": "style",
@@ -353,6 +391,7 @@ test_rules_to_run_not_excluded if {
 
 	rules_to_run := main._rules_to_run with config.merged_config as cfg
 		with input.regal.file.name as "p.rego"
+		with data.internal.prepared.rules_to_run as {"testing": {"test"}}
 		with config.excluded_file as false
 
 	rules_to_run == {"testing": {"test"}}
@@ -380,25 +419,27 @@ test_report_custom_rule_failure if {
 test_aggregate_bundled_rule if {
 	agg := main.aggregate with main._rules_to_run as {"foo": {"bar"}}
 		with data.regal.rules as {"foo": {"bar": {"aggregate": {"baz"}}}}
+		with input.regal.file.name as "p.rego"
 
-	agg == {"foo/bar": {"baz"}}
+	agg == {"p.rego": {"foo/bar": {"baz"}}}
 }
 
 test_aggregate_custom_rule if {
 	agg := main.aggregate with data.custom.regal.rules as {"foo": {"bar": {"aggregate": {"baz"}}}}
 		with config.excluded_file as false
-		with input.regal.file.name as "p.rego"
+		with input.regal.file.name as "custom.rego"
 
-	agg == {"foo/bar": {"baz"}}
+	agg["custom.rego"]["foo/bar"] == {"baz"}
 }
 
 test_aggregate_report_custom_rule if {
 	mock_input := {
-		"aggregates_internal": {"custom/test": {}},
+		"aggregates_internal": {"p.rego": {"custom/test": [{}]}},
 		"regal": {
 			"file": {"name": "p.rego"},
 			"operations": ["aggregate"],
 		},
+		"ignore_directives": {},
 	}
 
 	mock_rules := {"custom": {"test": {"aggregate_report": {{

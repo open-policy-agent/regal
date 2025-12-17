@@ -33,29 +33,31 @@ aggregate contains entry if {
 		some ref in _to_paths(ast.package_path, rule.head.ref)
 	}
 
-	entry := result.aggregate(rego.metadata.chain(), {
+	entry := {
 		"imports": imports_with_location,
 		"exported_refs": exported_refs,
-	})
+	}
 }
 
 # METADATA
 # schemas:
 #   - input: schema.regal.aggregate
 aggregate_report contains violation if {
-	all_known_refs := {path | path := input.aggregate[_].aggregate_data.exported_refs[_]}
+	all_known_refs := {path | path := input.aggregates_internal[_]["imports/unresolved-import"][_].exported_refs[_]}
 
-	some entry in input.aggregate
-	some [path, location] in entry.aggregate_data.imports
+	some file
+	entry := input.aggregates_internal[file]["imports/unresolved-import"][_]
 
-	not path in (all_known_refs | _except_imports)
+	some [path, location] in entry.imports
+	not path in _except_imports
+	not path in all_known_refs
 
 	# cheap operation failed — need to check wildcards here to account
 	# for map generating / general ref head rules
 	not _wildcard_match(path, (all_known_refs | _except_imports))
 
 	violation := result.fail(rego.metadata.chain(), {"location": object.union(util.to_location_no_text(location), {
-		"file": entry.aggregate_source.file,
+		"file": file,
 		"text": sprintf("import %s", [concat(".", array.concat(["data"], path))]),
 	})})
 }
@@ -104,4 +106,14 @@ _wildcard_match(imp_path, refs_and_except_imports) if {
 	# this and then decide if we want to be more strict later, and
 	# perhaps offer that as a "strict" option
 	glob.match(path, [], concat(".", imp_path))
+}
+
+# METADATA
+# schemas:
+#   - input: schema.regal.aggregate
+_aggregates[file] := agg if {
+	# we know that there is only one aggregate of this type per file,
+	# so we can simplify things some for our callers
+	some file
+	agg := input.aggregates_internal[file]["imports/unresolved-import"][_]
 }

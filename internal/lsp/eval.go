@@ -12,7 +12,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
-	"github.com/open-policy-agent/regal/internal/exp"
 	rquery "github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/util"
@@ -61,11 +60,11 @@ func (l *LanguageServer) Eval(
 		if inputValue, err := transform.ToOPAInputValue(input); err != nil {
 			return nil, fmt.Errorf("failed converting input to value: %w", err)
 		} else {
-			return pq.Eval(ctx, rego.EvalParsedInput(inputValue), exp.ExternalCancelNoOp)
+			return pq.Eval(ctx, rego.EvalParsedInput(inputValue))
 		}
 	}
 
-	return pq.Eval(ctx, exp.ExternalCancelNoOp)
+	return pq.Eval(ctx)
 }
 
 func (l *LanguageServer) EvalInWorkspace(ctx context.Context, query string, input map[string]any) (EvalResult, error) {

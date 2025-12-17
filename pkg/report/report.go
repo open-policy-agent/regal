@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/open-policy-agent/opa/v1/rego"
+	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
+
+var emptyObject = ast.NewObject()
 
 // RelatedResource provides documentation on a violation.
 type RelatedResource struct {
@@ -63,14 +65,14 @@ type Summary struct {
 type Report struct {
 	// We don't have aggregates when publishing the final report (see JSONReporter), so omitempty is needed here
 	// to avoid surfacing a null/empty field.
-	Aggregates       map[string][]Aggregate         `json:"aggregates,omitempty"`
-	Metrics          map[string]any                 `json:"metrics,omitempty"`
-	AggregateProfile map[string]ProfileEntry        `json:"-"`
-	IgnoreDirectives map[string]map[string][]string `json:"ignore_directives,omitempty"`
-	Violations       []Violation                    `json:"violations"`
-	Notices          []Notice                       `json:"notices,omitempty"`
-	Profile          []ProfileEntry                 `json:"profile,omitempty"`
-	Summary          Summary                        `json:"summary"`
+	Aggregates       ast.Object              `json:"aggregates,omitempty"`
+	Metrics          map[string]any          `json:"metrics,omitempty"`
+	AggregateProfile map[string]ProfileEntry `json:"-"`
+	IgnoreDirectives ast.Object              `json:"-"`
+	Violations       []Violation             `json:"violations"`
+	Notices          []Notice                `json:"notices,omitempty"`
+	Profile          []ProfileEntry          `json:"profile,omitempty"`
+	Summary          Summary                 `json:"summary"`
 }
 
 // ProfileEntry is a single entry of profiling information, keyed by location.
@@ -83,67 +85,48 @@ type ProfileEntry struct {
 	NumGenExpr  int    `json:"num_gen_expr"`
 }
 
-// An Aggregate is data collected by some rule while processing a file AST, to be used later by other rules needing a
-// global context (i.e. broader than per-file)
-// Rule authors are expected to collect the minimum needed data, to avoid performance problems
-// while working with large Rego code repositories.
-type Aggregate map[string]any
-
-func FromResultSet(resultSet rego.ResultSet, aggregate bool) (r Report, err error) {
-	if len(resultSet) != 1 {
-		return r, fmt.Errorf("expected 1 item in resultset, got %d", len(resultSet))
+func FromQueryResult(result ast.Value, aggregate bool) (r Report, err error) {
+	obj, ok := result.(ast.Object)
+	if !ok {
+		return r, fmt.Errorf("expected result to be an object, got %T", result)
 	}
 
-	var binding any
-
-	if lb, ok := resultSet[0].Bindings["lint"].(map[string]any); ok {
-		binding = lb
-		if aggregateBinding, ok := lb["aggregate"]; ok && aggregate {
-			binding = aggregateBinding
+	if aggregate {
+		if aggObj, ok := rast.GetValue[ast.Object](obj, "aggregate"); ok {
+			obj = aggObj
 		}
+	}
 
-		if err = encoding.JSONRoundTrip(binding, &r); err != nil {
-			err = fmt.Errorf("JSON rountrip failed for bindings: %v %w", binding, err)
+	r = Report{}
+
+	if val, ok := rast.GetValue[ast.Set](obj, "violations"); ok {
+		r.Violations = make([]Violation, 0, val.Len())
+		val.Foreach(func(v *ast.Term) {
+			if vObj, ok := v.Value.(ast.Object); ok {
+				r.Violations = append(r.Violations, violationFromObject(vObj))
+			}
+		})
+	}
+
+	if notices, ok := rast.GetValue[ast.Set](obj, "notices"); ok {
+		for notice := range rast.ValuesOfType[ast.Object](notices.Slice()) {
+			r.Notices = append(r.Notices, NoticeFromObject(notice))
 		}
+	}
+
+	// Both aggregates and ignore_directives are internal transport fields passed
+	// from the linter to the aggregate report phase. As such, they are best kept
+	// as ast.Objects without conversion.
+	r.Aggregates = emptyObject
+	if val, ok := rast.GetValue[ast.Object](obj, "aggregates"); ok {
+		r.Aggregates = val
+	}
+
+	if val, ok := rast.GetValue[ast.Object](obj, "ignore_directives"); ok {
+		r.IgnoreDirectives = val
 	}
 
 	return r, err
-}
-
-func (a Aggregate) SourceFile() string {
-	source, ok := a["aggregate_source"].(map[string]any)
-	if !ok {
-		return ""
-	}
-
-	file, ok := source["file"].(string)
-	if !ok {
-		return ""
-	}
-
-	return file
-}
-
-// IndexKey is the category/title of the rule that generated the aggregate.
-// This key is generated in Rego during linting, this function replicates the
-// functionality in Go for use in the cache when indexing aggregates.
-func (a Aggregate) IndexKey() string {
-	rule, ok := a["rule"].(map[string]any)
-	if !ok {
-		return ""
-	}
-
-	cat, ok := rule["category"].(string)
-	if !ok {
-		return ""
-	}
-
-	title, ok := rule["title"].(string)
-	if !ok {
-		return ""
-	}
-
-	return cat + "/" + title
 }
 
 func (r *Report) AddProfileEntries(prof map[string]ProfileEntry) {
@@ -199,4 +182,73 @@ func (l Location) String() string {
 	}
 
 	return fmt.Sprintf("%s:%d:%d", l.File, l.Row, l.Column)
+}
+
+func violationFromObject(obj ast.Object) Violation {
+	return Violation{
+		Title:            rast.GetString(obj, "title"),
+		Description:      rast.GetString(obj, "description"),
+		Category:         rast.GetString(obj, "category"),
+		Level:            rast.GetString(obj, "level"),
+		RelatedResources: relatedResourcesValue(obj, "related_resources"),
+		Location:         locationValue(obj, "location"),
+	}
+}
+
+func NoticeFromObject(obj ast.Object) Notice {
+	return Notice{
+		Title:       rast.GetString(obj, "title"),
+		Description: rast.GetString(obj, "description"),
+		Category:    rast.GetString(obj, "category"),
+		Level:       rast.GetString(obj, "level"),
+		Severity:    rast.GetString(obj, "severity"),
+	}
+}
+
+func LocationFromObject(obj ast.Object) Location {
+	l := Location{
+		File:   rast.GetString(obj, "file"),
+		Row:    rast.GetInt(obj, "row"),
+		Column: rast.GetInt(obj, "col"),
+	}
+
+	if endObj, ok := rast.GetValue[ast.Object](obj, "end"); ok {
+		l.End = &Position{
+			Row:    rast.GetInt(endObj, "row"),
+			Column: rast.GetInt(endObj, "col"),
+		}
+	}
+
+	if text := rast.GetString(obj, "text"); text != "" {
+		l.Text = &text
+	}
+
+	return l
+}
+
+func relatedResourcesValue(obj ast.Object, key string) []RelatedResource {
+	if arr, ok := rast.GetValue[*ast.Array](obj, key); ok {
+		resources := make([]RelatedResource, 0, arr.Len())
+		for i := range arr.Len() {
+			term := arr.Elem(i)
+			if resObj, ok := term.Value.(ast.Object); ok {
+				resources = append(resources, RelatedResource{
+					Description: rast.GetString(resObj, "description"),
+					Reference:   rast.GetString(resObj, "ref"),
+				})
+			}
+		}
+
+		return resources
+	}
+
+	return nil
+}
+
+func locationValue(obj ast.Object, key string) Location {
+	if val, ok := rast.GetValue[ast.Object](obj, key); ok {
+		return LocationFromObject(val)
+	}
+
+	return Location{}
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/rego"
 
-	"github.com/open-policy-agent/regal/internal/exp"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/util"
@@ -24,7 +23,6 @@ var (
 	errExcpectedOneExpr   = errors.New("expected exactly one expression in result")
 )
 
-// init [storage.Store] initializes the storage store with the built-in queries.
 func init() {
 	ast.InternStringTerm(
 		// All keys from Code Actions
@@ -131,11 +129,6 @@ func PositionFromLocation(loc *ast.Location) types.Position {
 	return types.Position{Line: util.SafeIntToUint(loc.Row - 1), Character: util.SafeIntToUint(loc.Col - 1)}
 }
 
-func LocationFromPosition(pos types.Position) *ast.Location {
-	//nolint: gosec
-	return &ast.Location{Row: int(pos.Line + 1), Col: int(pos.Character + 1)}
-}
-
 // AllBuiltinCalls returns all built-in calls in the module, excluding operators
 // and any other function identified by an infix.
 func AllBuiltinCalls(module *ast.Module, builtins map[string]*ast.Builtin) []BuiltInCall {
@@ -214,7 +207,7 @@ func QueryEval[P any, R any](ctx context.Context, pq *query.Prepared, input Inpu
 }
 
 func CachedQueryEval[T any](ctx context.Context, pq *query.Prepared, input ast.Value, toValue *T) error {
-	result, err := toValidResult(pq.EvalQuery().Eval(ctx, rego.EvalParsedInput(input), exp.ExternalCancelNoOp))
+	result, err := toValidResult(pq.EvalQuery().Eval(ctx, rego.EvalParsedInput(input)))
 	if err != nil {
 		return err
 	}

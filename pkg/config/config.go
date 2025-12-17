@@ -32,81 +32,88 @@ const (
 	standaloneConfigFileName = ".regal.yaml"
 )
 
-type Config struct {
-	// Defaults state is loaded from configuration under rules and so is not (un)marshalled
-	// in the same way.
-	Defaults        Defaults            `json:"-"                          yaml:"-"`
-	Rules           map[string]Category `json:"rules"                      yaml:"rules"`
-	Capabilities    *Capabilities       `json:"capabilities,omitempty"     yaml:"capabilities,omitempty"`
-	Features        *Features           `json:"features,omitempty"         yaml:"features,omitempty"`
-	Project         *Project            `json:"project,omitempty"          yaml:"project,omitempty"`
-	CapabilitiesURL string              `json:"capabilities_url,omitempty" yaml:"capabilities_url,omitempty"`
-	Ignore          Ignore              `json:"ignore"                     yaml:"ignore"`
-}
+type (
+	// The receiver types is a bit of a mess, but we can probably not change
+	// these without breaking some integration. So this should be a 1.0 change.
 
-type Root struct {
-	Path string
-	// Note that contrary to ast.RegoVersion, we'll only accept 0 or 1 here currently.
-	// This aligns with the Rego versioning scheme used in .manifest files, which is
-	// the alternative way to provide this for a specific directory.
-	RegoVersion *int `json:"rego-version,omitempty" yaml:"rego-version,omitempty"`
-}
+	//nolint:recvcheck
+	Config struct {
+		// Defaults state is loaded from configuration under rules and so is not (un)marshalled
+		// in the same way.
+		Defaults        Defaults            `json:"-"                          yaml:"-"`
+		Rules           map[string]Category `json:"rules"                      yaml:"rules"`
+		Capabilities    *Capabilities       `json:"capabilities,omitempty"     yaml:"capabilities,omitempty"`
+		Features        *Features           `json:"features,omitempty"         yaml:"features,omitempty"`
+		Project         *Project            `json:"project,omitempty"          yaml:"project,omitempty"`
+		CapabilitiesURL string              `json:"capabilities_url,omitempty" yaml:"capabilities_url,omitempty"`
+		Ignore          Ignore              `json:"ignore"                     yaml:"ignore"`
+	}
 
-type Project struct {
-	Roots *[]Root `json:"roots,omitempty" yaml:"roots,omitempty"`
-	// Set the Rego version for the whole project or workspace. Individual roots may override this.
-	RegoVersion *int `json:"rego-version,omitempty" yaml:"rego-version,omitempty"`
-}
+	Root struct {
+		Path string
+		// Note that contrary to ast.RegoVersion, we'll only accept 0 or 1 here currently.
+		// This aligns with the Rego versioning scheme used in .manifest files, which is
+		// the alternative way to provide this for a specific directory.
+		RegoVersion *int `json:"rego-version,omitempty" yaml:"rego-version,omitempty"`
+	}
 
-type Category map[string]Rule
+	Project struct {
+		Roots *[]Root `json:"roots,omitempty" yaml:"roots,omitempty"`
+		// Set the Rego version for the whole project or workspace. Individual roots may override this.
+		RegoVersion *int `json:"rego-version,omitempty" yaml:"rego-version,omitempty"`
+	}
 
-// Defaults is used to store information about global and category
-// defaults for rules.
-type Defaults struct {
-	Categories map[string]Default
-	Global     Default
-}
+	Category map[string]Rule
 
-// Default represents global or category settings for rules,
-// currently only the level is supported.
-type Default struct {
-	Level string `json:"level" yaml:"level"`
-}
+	// Defaults is used to store information about global and category
+	// defaults for rules.
+	Defaults struct {
+		Categories map[string]Default
+		Global     Default
+	}
 
-type Features struct {
-	Remote *RemoteFeatures `json:"remote,omitempty" yaml:"remote,omitempty"`
-}
+	// Default represents global or category settings for rules,
+	// currently only the level is supported.
+	Default struct {
+		Level string `json:"level" yaml:"level"`
+	}
 
-type RemoteFeatures struct {
-	CheckVersion bool `json:"check-version,omitempty" yaml:"check-version,omitempty"`
-}
+	Features struct {
+		Remote *RemoteFeatures `json:"remote,omitempty" yaml:"remote,omitempty"`
+	}
 
-type Ignore struct {
-	Files []string `json:"files,omitempty" yaml:"files,omitempty"`
-}
+	RemoteFeatures struct {
+		CheckVersion bool `json:"check-version,omitempty" yaml:"check-version,omitempty"`
+	}
 
-type ExtraAttributes map[string]any
+	Ignore struct {
+		Files []string `json:"files,omitempty" yaml:"files,omitempty"`
+	}
 
-type Rule struct {
-	Ignore *Ignore `json:"ignore,omitempty" yaml:"ignore,omitempty"`
-	Extra  ExtraAttributes
-	Level  string
-}
+	ExtraAttributes map[string]any
 
-type Capabilities struct {
-	Builtins       map[string]*Builtin `json:"builtins"        yaml:"builtins"`
-	FutureKeywords []string            `json:"future_keywords" yaml:"future_keywords"`
-	Features       []string            `json:"features"        yaml:"features"`
-}
+	//nolint:recvcheck
+	Rule struct {
+		Ignore *Ignore `json:"ignore,omitempty" yaml:"ignore,omitempty"`
+		Extra  ExtraAttributes
+		Level  string
+	}
 
-type Decl struct {
-	Result string   `json:"result" yaml:"result"`
-	Args   []string `json:"args"   yaml:"args"`
-}
+	Capabilities struct {
+		Builtins       map[string]*Builtin `json:"builtins"        yaml:"builtins"`
+		FutureKeywords []string            `json:"future_keywords" yaml:"future_keywords"`
+		Features       []string            `json:"features"        yaml:"features"`
+	}
 
-type Builtin struct {
-	Decl Decl `json:"decl" yaml:"decl"`
-}
+	Decl struct {
+		Result string   `json:"result" yaml:"result"`
+		Args   []string `json:"args"   yaml:"args"`
+	}
+
+	Builtin struct {
+		Decl Decl `json:"decl" yaml:"decl"`
+	}
+)
 
 func (d *Default) mapToConfig(result any) error {
 	resultMap, ok := result.(map[string]any)
@@ -417,24 +424,24 @@ func regoVersionFromConfigValue(version *int) ast.RegoVersion {
 	}
 }
 
-func (config Config) MarshalYAML() (any, error) {
-	unstructuredConfig, err := encoding.JSONRoundTripTo[map[string]any](config)
+func (c Config) MarshalYAML() (any, error) {
+	unstructuredConfig, err := encoding.JSONRoundTripTo[map[string]any](c)
 	if err != nil {
 		return nil, fmt.Errorf("failed to created unstructured config: %w", err)
 	}
 
 	// place the global defaults at the top level under rules
-	if config.Defaults.Global.Level != "" {
+	if c.Defaults.Global.Level != "" {
 		r, ok := unstructuredConfig["rules"].(map[string]any)
 		if !ok {
 			return nil, errors.New("rules in config were not a map")
 		}
 
-		r["default"] = config.Defaults.Global
+		r["default"] = c.Defaults.Global
 	}
 
 	// place the category defaults under the respective category
-	for categoryName, categoryDefault := range config.Defaults.Categories {
+	for categoryName, categoryDefault := range c.Defaults.Categories {
 		rawRuleMap, ok := unstructuredConfig["rules"].(map[string]any)
 		if !ok {
 			return nil, errors.New("rules in config were not a map")
@@ -448,11 +455,11 @@ func (config Config) MarshalYAML() (any, error) {
 		rawCategoryMap["default"] = categoryDefault
 	}
 
-	if len(config.Ignore.Files) == 0 {
+	if len(c.Ignore.Files) == 0 {
 		delete(unstructuredConfig, keyIgnore)
 	}
 
-	if config.CapabilitiesURL == "" || config.CapabilitiesURL == capabilities.DefaultURL {
+	if c.CapabilitiesURL == "" || c.CapabilitiesURL == capabilities.DefaultURL {
 		delete(unstructuredConfig, "capabilities_url")
 	}
 
@@ -512,7 +519,7 @@ func (p *Project) UnmarshalYAML(value *yaml.Node) error {
 	return encoding.JSONRoundTrip(result, p)
 }
 
-func (config *Config) UnmarshalYAML(value *yaml.Node) error {
+func (c *Config) UnmarshalYAML(value *yaml.Node) error {
 	var result marshallingIntermediary
 
 	if err := value.Decode(&result); err != nil {
@@ -520,15 +527,15 @@ func (config *Config) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	// this call will walk the rule config and load defaults into the config
-	if err := extractDefaults(config, &result); err != nil {
+	if err := extractDefaults(c, &result); err != nil {
 		return fmt.Errorf("extracting defaults failed: %w", err)
 	}
 
-	if err := extractRules(config, &result); err != nil {
+	if err := extractRules(c, &result); err != nil {
 		return fmt.Errorf("extracting rules failed: %w", err)
 	}
 
-	config.Ignore = result.Ignore
+	c.Ignore = result.Ignore
 
 	capabilitiesFile := result.Capabilities.From.File
 	capabilitiesEngine := result.Capabilities.From.Engine
@@ -605,23 +612,23 @@ func (config *Config) UnmarshalYAML(value *yaml.Node) error {
 	// This is used in the LSP to load the OPA capabilities, since the
 	// capabilities version in the user-facing config does not contain all
 	// of the information that the LSP needs.
-	config.CapabilitiesURL = capabilitiesURL
-	config.Capabilities = fromOPACapabilities(opaCaps)
-	config.Project = result.Project
+	c.CapabilitiesURL = capabilitiesURL
+	c.Capabilities = fromOPACapabilities(opaCaps)
+	c.Project = result.Project
 
 	// remove any builtins referenced in the minus config
 	for _, minusBuiltin := range result.Capabilities.Minus.Builtins {
-		delete(config.Capabilities.Builtins, minusBuiltin.Name)
+		delete(c.Capabilities.Builtins, minusBuiltin.Name)
 	}
 
 	// add any builtins referenced in the plus config
 	for _, plusBuiltin := range result.Capabilities.Plus.Builtins {
-		config.Capabilities.Builtins[plusBuiltin.Name] = fromOPABuiltin(*plusBuiltin)
+		c.Capabilities.Builtins[plusBuiltin.Name] = fromOPABuiltin(*plusBuiltin)
 	}
 
 	// feature defaults
 	if result.Features.RemoteFeatures.CheckVersion {
-		config.Features = &Features{Remote: &RemoteFeatures{CheckVersion: true}}
+		c.Features = &Features{Remote: &RemoteFeatures{CheckVersion: true}}
 	}
 
 	return nil
@@ -825,6 +832,10 @@ func (rule *Rule) mapToConfig(result any) error {
 	delete(rule.Extra, keyIgnore)
 
 	return nil
+}
+
+func (f *Features) IsZero() bool {
+	return f == nil || (f.Remote == nil)
 }
 
 func GetPotentialRoots(paths ...string) ([]string, error) {

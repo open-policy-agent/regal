@@ -1,6 +1,7 @@
 package linter
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -19,19 +20,20 @@ import (
 	"github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/metrics"
 	"github.com/open-policy-agent/opa/v1/profiler"
-	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 	outil "github.com/open-policy-agent/opa/v1/util"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
-	"github.com/open-policy-agent/regal/internal/exp"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	regalmetrics "github.com/open-policy-agent/regal/internal/metrics"
+	"github.com/open-policy-agent/regal/internal/ogre"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/report"
+	"github.com/open-policy-agent/regal/pkg/roast/intern"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 	"github.com/open-policy-agent/regal/pkg/rules"
 
@@ -42,11 +44,9 @@ import (
 type Linter struct {
 	printHook            print.Hook
 	metrics              metrics.Metrics
-	baseCache            topdown.BaseCache
 	inputModules         *rules.Input
 	userConfig           *config.Config
 	combinedCfg          *config.Config
-	dataBundle           *bundle.Bundle
 	pathPrefix           string
 	customRuleError      error
 	inputPaths           []string
@@ -57,7 +57,7 @@ type Linter struct {
 	enableCategory       []string
 	ignoreFiles          []string
 	customRuleModules    []*ast.Module
-	overriddenAggregates map[string][]report.Aggregate
+	overriddenAggregates ast.Object
 	useCollectQuery      bool
 	debugMode            bool
 	exportAggregates     bool
@@ -67,14 +67,37 @@ type Linter struct {
 	instrumentation      bool
 	isPrepared           bool
 
-	preparedQuery *rego.PreparedEvalQuery
+	preparedQuery *ogre.Query
 }
 
 var (
-	lintQueryStr         = "lint := data.regal.main.lint"
-	enabledRulesQueryStr = "enabled := data.regal.main.enabled_rules"
-	lintQuery            = ast.MustParseBody(lintQueryStr)
-	enabledRulesQuery    = ast.MustParseBody(enabledRulesQueryStr)
+	eqRef     = ast.RefTerm(ast.VarTerm(ast.Equality.Name))
+	lintQuery = []*ast.Expr{{ // lint = data.regal.main.lint.
+		Terms: []*ast.Term{eqRef, ast.VarTerm("lint"), ast.RefTerm(
+			ast.DefaultRootDocument,
+			ast.InternedTerm("regal"),
+			ast.InternedTerm("main"),
+			ast.InternedTerm("lint"),
+		)},
+	}}
+	enabledRulesQuery = []*ast.Expr{{ // enabled = data.regal.main.enabled_rules.
+		Terms: []*ast.Term{eqRef, ast.VarTerm("enabled"), ast.RefTerm(
+			ast.DefaultRootDocument,
+			ast.InternedTerm("regal"),
+			ast.InternedTerm("main"),
+			ast.InternedTerm("enabled_rules"),
+		)},
+	}}
+
+	aggregateRegalObject = ast.ObjectTerm(
+		ast.Item(ast.InternedTerm("operations"), ast.ArrayTerm(ast.InternedTerm("aggregate"))),
+		ast.Item(ast.InternedTerm("file"), ast.ObjectTerm(
+			ast.Item(ast.InternedTerm("name"), ast.InternedTerm("__aggregate_report__")),
+			ast.Item(ast.InternedTerm("lines"), ast.InternedEmptyArray),
+		)),
+	)
+
+	preparedPath = storage.Path{"internal", "prepared"}
 )
 
 func init() {
@@ -272,17 +295,8 @@ func (l Linter) WithCollectQuery(enabled bool) Linter {
 // WithAggregates supplies aggregate data to a linter instance.
 // Likely generated in a previous run, and used to provide a global context to
 // a subsequent run of a single file lint.
-func (l Linter) WithAggregates(aggregates map[string][]report.Aggregate) Linter {
-	l.overriddenAggregates = aggregates
-
-	return l
-}
-
-// WithBaseCache sets the base cache (cache for "JSON" documents) to use for evaluation.
-// This feature is **experimental** and should not be relied on by external clients for
-// the time being.
-func (l Linter) WithBaseCache(baseCache topdown.BaseCache) Linter {
-	l.baseCache = baseCache
+func (l Linter) WithAggregates(aggs ast.Object) Linter {
+	l.overriddenAggregates = aggs
 
 	return l
 }
@@ -306,10 +320,26 @@ func (l Linter) Prepare(ctx context.Context) (Linter, error) {
 	}
 
 	l.combinedCfg = conf
-	l.dataBundle = l.createDataBundle(*conf)
 
-	if l.preparedQuery, err = l.prepareQuery(ctx); err != nil {
-		return l, fmt.Errorf("failed to prepare query: %w", err)
+	if l.debugMode && l.printHook == nil {
+		l.printHook = topdown.NewPrintHook(os.Stderr)
+	}
+
+	l.preparedQuery, err = ogre.New(lintQuery).
+		WithModules(l.customModulesMap()).
+		WithStore(ogre.NewStoreFromObject(ctx, l.prepareData(conf))).
+		WithMetrics(l.metrics).
+		WithPrintHook(l.printHook).
+		WithInstrumentation(l.instrumentation).
+		Prepare(ctx)
+	if err != nil {
+		return l, fmt.Errorf("failed preparing query for linting: %w", err)
+	}
+
+	// TODO: this offers a tremendous perf boost in projects, but may slow down
+	// linting a single file. investigate further, and if we can skip this in that case.
+	if err := l.regoPrepare(ctx); err != nil {
+		return l, fmt.Errorf("failed to prepare Rego: %w", err)
 	}
 
 	l.isPrepared = true
@@ -390,7 +420,8 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 		l.stopTimer(regalmetrics.RegalFilterIgnoredModules)
 	}
 
-	if len(l.inputPaths) == 0 && l.inputModules == nil && len(l.overriddenAggregates) == 0 {
+	hasAggregatesOverride := l.overriddenAggregates != nil && l.overriddenAggregates.Len() > 0
+	if len(l.inputPaths) == 0 && l.inputModules == nil && !hasAggregatesOverride {
 		return report.Report{}, errors.New("nothing provided to lint")
 	}
 
@@ -399,31 +430,14 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 		return report.Report{}, fmt.Errorf("failed to lint using Rego rules: %w", err)
 	}
 
-	slices.SortFunc(regoReport.Notices, func(a, b report.Notice) int {
-		return strings.Compare(a.Title, b.Title)
-	})
-	regoReport.Notices = slices.Compact(regoReport.Notices)
-	rulesSkippedCounter := 0
-
-	for _, notice := range regoReport.Notices {
-		if notice.Severity != "none" {
-			rulesSkippedCounter++
-		}
-	}
-
-	allAggregates := make(map[string][]report.Aggregate, len(l.overriddenAggregates)+len(regoReport.Aggregates))
-
-	if len(l.overriddenAggregates) > 0 {
-		for k, aggregates := range l.overriddenAggregates {
-			allAggregates[k] = append(allAggregates[k], aggregates...)
-		}
+	var allAggregates ast.Object
+	if hasAggregatesOverride {
+		allAggregates = l.overriddenAggregates
 	} else if len(input.FileNames) > 1 {
-		for k, aggregates := range regoReport.Aggregates {
-			allAggregates[k] = append(allAggregates[k], aggregates...)
-		}
+		allAggregates = regoReport.Aggregates
 	}
 
-	if len(allAggregates) > 0 {
+	if allAggregates != nil && allAggregates.Len() > 0 {
 		aggregateReport, err := l.lintWithAggregateRules(ctx, allAggregates, regoReport.IgnoreDirectives)
 		if err != nil {
 			return report.Report{}, fmt.Errorf("failed to lint using Rego aggregate rules: %w", err)
@@ -436,10 +450,12 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 		}
 	}
 
+	regoReport, skippedCount := l.countSkippedFromNotices(ctx, regoReport)
+
 	regoReport.Summary = report.Summary{
 		FilesScanned:  len(input.FileNames),
 		FilesFailed:   len(regoReport.ViolationsFileCount()),
-		RulesSkipped:  rulesSkippedCounter,
+		RulesSkipped:  skippedCount,
 		NumViolations: len(regoReport.Violations),
 	}
 
@@ -471,25 +487,57 @@ func (l Linter) DetermineEnabledRules(ctx context.Context) ([]string, []string, 
 		return nil, nil, fmt.Errorf("failed to merge config: %w", err)
 	}
 
-	l.dataBundle = l.createDataBundle(*conf)
-
-	regoArgs, err := l.prepareRegoArgs(enabledRulesQuery)
+	pq, err := ogre.New(enabledRulesQuery).
+		WithStore(ogre.NewStoreFromObject(ctx, l.prepareData(conf))).
+		Prepare(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed preparing query %s: %w", enabledRulesQueryStr, err)
+		return nil, nil, fmt.Errorf("failed preparing query: %w", err)
 	}
 
-	var compiler *ast.Compiler
+	var regular, aggregate []string
 
-	regoArgs = append(regoArgs, rego.CompilerHook(func(c *ast.Compiler) {
-		compiler = c
-	}))
+	input := ast.InternedEmptyObject.Value
 
-	rs, err := rego.New(regoArgs...).Eval(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed evaluating query %s: %w", enabledRulesQueryStr, err)
+	ex := pq.Evaluator().WithInput(input).WithResultHandler(func(result ast.Value) error {
+		enabled, ok := result.(ast.Object)
+		if !ok {
+			return errors.New("expected enabled rules object, didn't get it")
+		}
+
+		// Since we currently have no reliable way to determine whether a rule is an aggregate
+		// rule or not in Rego without actually evaluating it, we query the comiler for this
+		// information for each rule in the result. Long term, we should figure out the best way
+		// to do this in Rego only.
+		ref := ast.DefaultRootRef.Extend(ast.MustParseRef("regal.rules.category.title.aggregate"))
+
+		return enabled.Iter(func(category, rules *ast.Term) error {
+			categoryRules, ok := rules.Value.(ast.Object)
+			if !ok {
+				return fmt.Errorf("expected list of enabled rules for category %s, didn't get it", category)
+			}
+
+			ref[3] = category
+
+			for _, title := range categoryRules.Keys() {
+				ref[4] = title
+				titleStr, _ := title.Value.(ast.String)
+
+				if rules := pq.Compiler().GetRulesExact(ref); len(rules) == 0 {
+					regular = append(regular, string(titleStr))
+				} else {
+					aggregate = append(aggregate, string(titleStr))
+				}
+			}
+
+			return nil
+		})
+	})
+
+	if err = ex.Eval(ctx); err != nil {
+		return nil, nil, fmt.Errorf("failed to evaluate enabled rules query: %w", err)
 	}
 
-	return getEnabledRules(rs, compiler)
+	return util.Sorted(regular), util.Sorted(aggregate), nil
 }
 
 // GetConfig returns the final configuration for the linter, i.e. Regal's default
@@ -516,24 +564,141 @@ func (l Linter) GetConfig() (*config.Config, error) {
 	return &mergedConf, nil
 }
 
-func (l Linter) prepareQuery(ctx context.Context) (*rego.PreparedEvalQuery, error) {
-	regoArgs, err := l.prepareRegoArgs(lintQuery)
-	if err != nil {
-		return nil, fmt.Errorf("failed preparing query for linting: %w", err)
+func (l Linter) countSkippedFromNotices(ctx context.Context, r report.Report) (report.Report, int) {
+	s := l.preparedQuery.Store()
+	p := storage.Path{"internal", "prepared", "notices"}
+
+	// Nesting galore. Any better way? A Rego transform would be nice.
+	if noticesAny, err := storage.ReadOne(ctx, s.Storage(), p); err == nil {
+		if categoriesObj, ok := noticesAny.(ast.Object); ok {
+			categoriesObj.Foreach(func(_, v *ast.Term) {
+				if noticesObj, ok := v.Value.(ast.Object); ok {
+					noticesObj.Foreach(func(_, vv *ast.Term) {
+						if notices, ok := vv.Value.(ast.Set); ok {
+							for v := range rast.ValuesOfType[ast.Object](notices.Slice()) {
+								r.Notices = append(r.Notices, report.NoticeFromObject(v))
+							}
+						}
+					})
+				}
+			})
+		}
 	}
 
-	pq, err := rego.New(regoArgs...).PrepareForEval(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed preparing query for linting: %w", err)
+	slices.SortFunc(r.Notices, func(a, b report.Notice) int {
+		return strings.Compare(a.Title, b.Title)
+	})
+	r.Notices = slices.Compact(r.Notices)
+	rulesSkippedCounter := 0
+
+	for _, notice := range r.Notices {
+		if notice.Severity != "none" {
+			rulesSkippedCounter++
+		}
 	}
 
-	return &pq, nil
+	return r, rulesSkippedCounter
+}
+
+func (l Linter) regoPrepare(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	inputValue := ast.NewObject(
+		rast.Item("regal", ast.ObjectTerm(
+			rast.Item("operations", ast.ArrayTerm(ast.InternedTerm("prepare"))),
+			rast.Item("file", ast.ObjectTerm(
+				rast.Item("name", ast.InternedTerm("__prepare__")),
+				rast.Item("rego_version", ast.InternedTerm("v1")),
+			)),
+		)),
+	)
+
+	stg := l.preparedQuery.Store().Storage()
+	txn := storage.NewTransactionOrDie(ctx, stg, storage.WriteParams)
+
+	// TODO: profiling, instrumentation, metrics
+	ev := l.preparedQuery.Evaluator().
+		WithTransaction(txn).
+		WithInput(inputValue).
+		WithResultHandler(func(result ast.Value) error {
+			obj, ok := result.(ast.Object)
+			if !ok {
+				return fmt.Errorf("expected prepared result object, got: %T", result)
+			}
+
+			prep, ok := rast.GetValue[ast.Object](obj, "prepared")
+			if !ok {
+				return errors.New("expected 'prepared' field in result object")
+			}
+
+			return util.WrapErr(
+				stg.Write(ctx, txn, storage.ReplaceOp, preparedPath, prep),
+				"failed to write prepared data to store",
+			)
+		})
+
+	if err := ev.Eval(ctx); err != nil {
+		stg.Abort(ctx, txn)
+
+		return fmt.Errorf("failed to evaluate prepare query: %w", err)
+	}
+
+	return stg.Commit(ctx, txn)
 }
 
 func (l Linter) notPrepared() Linter {
 	l.isPrepared = false
 
 	return l
+}
+
+// Same logic as from rego.ParsedModule.
+func (l Linter) customModulesMap() map[string]*ast.Module {
+	numModules := len(l.customRuleModules)
+	if numModules == 0 {
+		return nil
+	}
+
+	m := make(map[string]*ast.Module, numModules)
+
+	for _, module := range l.customRuleModules {
+		if module.Package.Location != nil {
+			m[module.Package.Location.File] = module
+		} else {
+			m[fmt.Sprintf("module_%p.rego", module)] = module
+		}
+	}
+
+	return m
+}
+
+func (l Linter) prepareData(conf *config.Config) ast.Object {
+	userConf := ast.InternedEmptyObject.Value
+	if l.userConfig != nil {
+		userConf = l.userConfig.ToValue()
+	}
+
+	return ast.NewObject(
+		rast.Item("eval", ast.ObjectTerm(
+			rast.Item("params", ast.ObjectTerm(
+				rast.Item("disable_all", ast.InternedTerm(l.disableAll)),
+				rast.Item("disable_category", rast.ArrayTerm(l.disableCategory)),
+				rast.Item("disable", rast.ArrayTerm(l.disable)),
+				rast.Item("enable_all", ast.InternedTerm(l.enableAll)),
+				rast.Item("enable_category", rast.ArrayTerm(l.enableCategory)),
+				rast.Item("enable", rast.ArrayTerm(l.enable)),
+				rast.Item("ignore_files", rast.ArrayTerm(l.ignoreFiles)),
+			)),
+		)),
+		rast.Item("internal", ast.ObjectTerm(
+			rast.Item("combined_config", ast.NewTerm(conf.ToValue())),
+			rast.Item("user_config", ast.NewTerm(userConf)),
+			rast.Item("capabilities", ast.NewTerm(rast.StructToValue(config.CapabilitiesForThisVersion()))),
+			rast.Item("path_prefix", ast.InternedTerm(l.pathPrefix)),
+			rast.Item("prepared", ast.InternedNullTerm),
+		)),
+	)
 }
 
 func (l Linter) validate(conf *config.Config) error {
@@ -599,121 +764,6 @@ func (l Linter) validate(conf *config.Config) error {
 	return nil
 }
 
-func getEnabledRules(rs rego.ResultSet, c *ast.Compiler) (regular, aggregate []string, err error) {
-	if len(rs) == 0 {
-		return nil, nil, errors.New("expected result set of at least one result, got none")
-	}
-
-	enabled, ok := rs[0].Bindings["enabled"].(map[string]any)
-	if !ok {
-		return nil, nil, errors.New("expected list of enabled rules, didn't get it")
-	}
-
-	// Since we currently have no reliable way to determine whether a rule is an aggregate
-	// rule or not in Rego without actually evaluating it, we query the comiler for this
-	// information for each rule in the result. Long term, we should figure out the best way
-	// to do this in Rego only.
-	ref := ast.DefaultRootRef.Extend(ast.MustParseRef("regal.rules.category.title.aggregate"))
-
-	for category, rules := range enabled {
-		categoryRules, ok := rules.(map[string]any)
-		if !ok {
-			return nil, nil, fmt.Errorf("expected list of enabled rules for category %s, didn't get it", category)
-		}
-
-		ref[3] = ast.InternedTerm(category)
-
-		for title := range categoryRules {
-			ref[4] = ast.InternedTerm(title)
-
-			if rules := c.GetRulesExact(ref); len(rules) == 0 {
-				regular = append(regular, title)
-			} else {
-				aggregate = append(aggregate, title)
-			}
-		}
-	}
-
-	return util.Sorted(regular), util.Sorted(aggregate), nil
-}
-
-func (l Linter) createDataBundle(conf config.Config) *bundle.Bundle {
-	params := map[string]any{
-		"disable_all":      l.disableAll,
-		"disable_category": util.NilSliceToEmpty(l.disableCategory),
-		"disable":          util.NilSliceToEmpty(l.disable),
-		"enable_all":       l.enableAll,
-		"enable_category":  util.NilSliceToEmpty(l.enableCategory),
-		"enable":           util.NilSliceToEmpty(l.enable),
-		"ignore_files":     util.NilSliceToEmpty(l.ignoreFiles),
-	}
-
-	userConfigMap := map[string]any{}
-	if l.userConfig != nil {
-		userConfigMap = config.ToMap(*l.userConfig)
-	}
-
-	return &bundle.Bundle{
-		Manifest: bundle.Manifest{
-			Roots:    &[]string{"internal", "eval"},
-			Metadata: map[string]any{"name": "internal"},
-		},
-		Data: map[string]any{
-			"eval": map[string]any{
-				"params": params,
-			},
-			"internal": map[string]any{
-				"combined_config": config.ToMap(conf),
-				"user_config":     userConfigMap,
-				"capabilities":    rio.ToMap(config.CapabilitiesForThisVersion()),
-				"path_prefix":     l.pathPrefix,
-			},
-		},
-	}
-}
-
-func (l Linter) prepareRegoArgs(query ast.Body) ([]func(*rego.Rego), error) {
-	if l.customRuleError != nil {
-		return nil, fmt.Errorf("failed to load custom rules: %w", l.customRuleError)
-	}
-
-	regoArgs := []func(*rego.Rego){
-		rego.StoreReadAST(true),
-		rego.Metrics(l.metrics),
-		rego.ParsedQuery(query),
-		rego.Instrument(l.instrumentation),
-	}
-
-	if l.debugMode && l.printHook == nil {
-		l.printHook = topdown.NewPrintHook(os.Stderr)
-	}
-
-	if l.printHook != nil {
-		regoArgs = append(regoArgs, rego.EnablePrintStatements(true), rego.PrintHook(l.printHook))
-	}
-
-	if l.dataBundle != nil {
-		regoArgs = append(regoArgs, rego.ParsedBundle("internal", l.dataBundle))
-	}
-
-	for _, m := range l.customRuleModules {
-		regoArgs = append(regoArgs, rego.ParsedModule(m))
-	}
-
-	if l.ruleBundles != nil {
-		for _, ruleBundle := range l.ruleBundles {
-			var bundleName string
-			if metadataName, ok := ruleBundle.Manifest.Metadata["name"].(string); ok {
-				bundleName = metadataName
-			}
-
-			regoArgs = append(regoArgs, rego.ParsedBundle(bundleName, ruleBundle))
-		}
-	}
-
-	return regoArgs, nil
-}
-
 func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, error) {
 	l.startTimer(regalmetrics.RegalLintRego)
 	defer l.stopTimer(regalmetrics.RegalLintRego)
@@ -727,59 +777,49 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 	// NB(sr): We benchmarked using `wg.SetLimit(runtime.GOMAXPROCS(-1))` here, but performance
 	// got a little worse. So let's not bother.
 	wg, ctx := errgroup.WithContext(ctx)
-
 	results := make([]report.Report, numFiles)
+
+	l.preparedQuery.StartReadTransaction(ctx)
+	defer l.preparedQuery.EndReadTransaction(ctx)
 
 	for i, name := range input.FileNames {
 		wg.Go(func() error {
 			inputValue, err := transform.ToAST(name, input.FileContent[name], input.Modules[name], operationCollect)
 			if err != nil {
 				return fmt.Errorf("failed to transform input value: %w", err)
-			}
+			} else {
+				ex := l.preparedQuery.Evaluator().WithInput(inputValue)
 
-			evalArgs := []rego.EvalOption{
-				rego.EvalParsedInput(inputValue),
-				rego.EvalInstrument(l.instrumentation),
-				exp.ExternalCancelNoOp,
-			}
+				if l.profiling {
+					ex = ex.WithProfiler(profiler.New())
+				}
 
-			if l.baseCache != nil {
-				evalArgs = append(evalArgs, rego.EvalBaseCache(l.baseCache))
-			}
+				ex = ex.WithResultHandler(func(result ast.Value) error {
+					r, err := report.FromQueryResult(result, false)
+					if err != nil {
+						return fmt.Errorf("failed to convert query result to report: %w", err)
+					}
 
-			if l.metrics != nil {
-				evalArgs = append(evalArgs, rego.EvalMetrics(l.metrics))
-			}
+					if l.profiling {
+						// Perhaps we'll want to make this number configurable later, but do note that
+						// this is only the top 10 locations for a *single* file, not the final report.
+						profRep := ex.Profiler().ReportTopNResults(10, []string{"total_time_ns"})
 
-			var prof *profiler.Profiler
-			if l.profiling {
-				prof = profiler.New()
-				evalArgs = append(evalArgs, rego.EvalQueryTracer(prof))
-			}
+						r.AggregateProfile = make(map[string]report.ProfileEntry, len(profRep))
+						for _, rs := range profRep {
+							r.AggregateProfile[rs.Location.String()] = regalmetrics.FromExprStats(rs)
+						}
+					}
 
-			resultSet, err := l.preparedQuery.Eval(ctx, evalArgs...)
-			if err != nil {
-				return fmt.Errorf("error encountered in query evaluation %w", err)
-			}
+					results[i] = r
 
-			result, err := report.FromResultSet(resultSet, false)
-			if err != nil {
-				return fmt.Errorf("failed to convert result set to report: %w", err)
-			}
+					return nil
+				})
 
-			if l.profiling {
-				// Perhaps we'll want to make this number configurable later, but do note that
-				// this is only the top 10 locations for a *single* file, not the final report.
-				profRep := prof.ReportTopNResults(10, []string{"total_time_ns"})
-
-				result.AggregateProfile = make(map[string]report.ProfileEntry, len(profRep))
-
-				for _, rs := range profRep {
-					result.AggregateProfile[rs.Location.String()] = regalmetrics.FromExprStats(rs)
+				if err := ex.Eval(ctx); err != nil {
+					return fmt.Errorf("error evaluating file %s: %w", name, err)
 				}
 			}
-
-			results[i] = result
 
 			return nil
 		})
@@ -793,37 +833,27 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 		return report.Report{}, fmt.Errorf("error encountered in rule evaluation %w", err)
 	}
 
+	var regoReport report.Report
+
+	if len(results) == 0 {
+		return regoReport, nil
+	}
+
 	l.startTimer(regalmetrics.RegalMergeReport)
 	defer l.stopTimer(regalmetrics.RegalMergeReport)
 
-	regoReport := report.Report{
-		Aggregates:       make(map[string][]report.Aggregate, numFiles),
-		IgnoreDirectives: make(map[string]map[string][]string, numFiles),
-	}
+	regoReport = results[0]
 
-	for i := range results {
+	for i := range results[1:] {
+		i++
 		regoReport.Violations = append(regoReport.Violations, results[i].Violations...)
 		regoReport.Notices = append(regoReport.Notices, results[i].Notices...)
 
-		for k := range results[i].Aggregates {
-			// Custom aggregate rules that have been invoked but not returned any data
-			// will return an empty map to signal that they have been called, and that
-			// the aggregate report for this rule should be invoked even when no data
-			// was aggregated. This because the absence of data is exactly what some rules
-			// will want to report on.
-			for _, agg := range results[i].Aggregates[k] {
-				if len(agg) == 0 {
-					if _, ok := regoReport.Aggregates[k]; !ok {
-						regoReport.Aggregates[k] = make([]report.Aggregate, 0)
-					}
-				} else {
-					regoReport.Aggregates[k] = append(regoReport.Aggregates[k], agg)
-				}
-			}
-		}
+		// Since the "primary key" is the file name, there is no need to handle collisions here.
+		results[i].Aggregates.Foreach(regoReport.Aggregates.Insert)
 
-		for k := range results[i].IgnoreDirectives {
-			regoReport.IgnoreDirectives[k] = results[i].IgnoreDirectives[k]
+		if results[i].IgnoreDirectives != nil {
+			regoReport.IgnoreDirectives, _ = regoReport.IgnoreDirectives.Merge(results[i].IgnoreDirectives)
 		}
 
 		if l.profiling {
@@ -836,8 +866,8 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (report.Report, err
 
 func (l Linter) lintWithAggregateRules(
 	ctx context.Context,
-	aggregates map[string][]report.Aggregate,
-	ignoreDirectives map[string]map[string][]string,
+	aggregates ast.Object,
+	ignoreDirectives ast.Object,
 ) (report.Report, error) {
 	l.startTimer(regalmetrics.RegalLintRegoAggregate)
 	defer l.stopTimer(regalmetrics.RegalLintRegoAggregate)
@@ -845,64 +875,46 @@ func (l Linter) lintWithAggregateRules(
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	regal := ast.ObjectTerm(
-		ast.Item(ast.InternedTerm("operations"), ast.ArrayTerm(ast.InternedTerm("aggregate"))),
-		ast.Item(ast.InternedTerm("file"), ast.ObjectTerm(
-			ast.Item(ast.InternedTerm("name"), ast.InternedTerm("__aggregate_report__")),
-			ast.Item(ast.InternedTerm("lines"), ast.InternedEmptyArray),
-		)),
-	)
-
-	aggParsed, _ := transform.ToOPAInputValue(aggregates)
-	dirParsed, _ := transform.ToOPAInputValue(ignoreDirectives)
-
 	inputValue := ast.NewObject(
-		ast.Item(ast.InternedTerm("aggregates_internal"), ast.NewTerm(aggParsed)),
-		ast.Item(ast.InternedTerm("ignore_directives"), ast.NewTerm(dirParsed)),
-		ast.Item(ast.InternedTerm("regal"), regal),
+		rast.Item("aggregates_internal", ast.NewTerm(cmp.Or(aggregates, intern.EmptyObject))),
+		rast.Item("ignore_directives", ast.NewTerm(cmp.Or(ignoreDirectives, intern.EmptyObject))),
+		rast.Item("regal", aggregateRegalObject),
 	)
 
-	evalArgs := []rego.EvalOption{
-		rego.EvalParsedInput(inputValue),
-		rego.EvalInstrument(l.instrumentation),
-		exp.ExternalCancelNoOp,
-	}
+	var rep report.Report
 
-	if l.metrics != nil {
-		evalArgs = append(evalArgs, rego.EvalMetrics(l.metrics))
-	}
-
-	var prof *profiler.Profiler
+	ex := l.preparedQuery.Evaluator().WithInput(inputValue)
 	if l.profiling {
-		prof = profiler.New()
-		evalArgs = append(evalArgs, rego.EvalQueryTracer(prof))
+		ex = ex.WithProfiler(profiler.New())
 	}
 
-	resultSet, err := l.preparedQuery.Eval(ctx, evalArgs...)
-	if err != nil {
-		return report.Report{}, fmt.Errorf("error encountered in query evaluation %w", err)
-	}
-
-	result, err := report.FromResultSet(resultSet, true)
-	if err != nil {
-		return report.Report{}, fmt.Errorf("failed to convert result set to report: %w", err)
-	}
-
-	for i := range result.Violations {
-		result.Violations[i].IsAggregate = true
-	}
-
-	if l.profiling {
-		profRep := prof.ReportTopNResults(10, []string{"total_time_ns"})
-
-		result.AggregateProfile = make(map[string]report.ProfileEntry, len(profRep))
-
-		for _, rs := range profRep {
-			result.AggregateProfile[rs.Location.String()] = regalmetrics.FromExprStats(rs)
+	ex = ex.WithResultHandler(func(result ast.Value) (err error) {
+		rep, err = report.FromQueryResult(result, true)
+		if err != nil {
+			return fmt.Errorf("failed to convert query result to report: %w", err)
 		}
+
+		for i := range rep.Violations {
+			rep.Violations[i].IsAggregate = true
+		}
+
+		if l.profiling {
+			profRep := ex.Profiler().ReportTopNResults(10, []string{"total_time_ns"})
+
+			rep.AggregateProfile = make(map[string]report.ProfileEntry, len(profRep))
+			for _, rs := range profRep {
+				rep.AggregateProfile[rs.Location.String()] = regalmetrics.FromExprStats(rs)
+			}
+		}
+
+		return nil
+	})
+
+	if err := ex.Eval(ctx); err != nil {
+		return report.Report{}, fmt.Errorf("error evaluating aggregate rules: %w", err)
 	}
 
-	return result, nil
+	return rep, nil
 }
 
 func (l Linter) startTimer(name string) {

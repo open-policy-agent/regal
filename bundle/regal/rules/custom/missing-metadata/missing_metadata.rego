@@ -9,12 +9,14 @@ import data.regal.util
 
 # METADATA
 # description: aggregates annotations on package declarations and rules
-aggregate contains result.aggregate(rego.metadata.chain(), {
+aggregate contains {
 	"package_annotated": _package_annotated,
 	"package_location": util.to_location_object(input.package.location),
 	"rule_annotations": _rule_annotations,
 	"rule_locations": _rule_locations,
-})
+	"package_name": ast.package_name,
+	"file": input.regal.file.name,
+}
 
 default _package_annotated := false
 
@@ -55,24 +57,21 @@ aggregate_report contains violation if {
 
 	some pkg_path, aggs in _package_path_aggs
 	every item in aggs {
-		item.aggregate_data.package_annotated == false
+		item[1].package_annotated == false
 	}
 
 	not _excepted_package_pattern(cfg, pkg_path)
 
-	first_item := [item | some item in aggs][0]
+	first_item := [item[1] | some item in aggs][0]
 
-	violation := result.fail(rego.metadata.chain(), {"location": object.union(
-		first_item.aggregate_data.package_location,
-		{
-			"file": first_item.aggregate_source.file,
-			"text": split(first_item.aggregate_data.package_location.text, "\n")[0],
-		},
-	)})
+	violation := result.fail(rego.metadata.chain(), {"location": object.union(first_item.package_location, {
+		"file": first_item.file,
+		"text": first_item.package_location.text,
+	})})
 }
 
 # METADATA
-# description: report rules without metadata annotations
+# description: report rules without metadata annotationsfile
 # schemas:
 #   - input: schema.regal.aggregate
 aggregate_report contains violation if {
@@ -97,22 +96,22 @@ aggregate_report contains violation if {
 # METADATA
 # schemas:
 #   - input: schema.regal.aggregate
-_package_path_aggs[pkg_path] contains item if {
-	some item in input.aggregate
-
-	pkg_path := concat(".", item.aggregate_source.package_path)
+_package_path_aggs[item.package_name] contains [file, item] if {
+	some file
+	item := input.aggregates_internal[file]["custom/missing-metadata"][_]
 }
 
 # METADATA
 # schemas:
 #   - input: schema.regal.aggregate
 _rule_path_aggs[rule_path] contains agg if {
-	some item in input.aggregate
-	some rule_path, annotations in item.aggregate_data.rule_annotations
+	some file
+	item := input.aggregates_internal[file]["custom/missing-metadata"][_]
+	some rule_path, annotations in item.rule_annotations
 
 	agg := {
-		"file": item.aggregate_source.file,
-		"location": item.aggregate_data.rule_locations[rule_path],
+		"file": file,
+		"location": item.rule_locations[rule_path],
 		"annotated": true in annotations,
 	}
 }

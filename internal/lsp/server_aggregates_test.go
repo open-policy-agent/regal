@@ -10,35 +10,25 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
+	"github.com/open-policy-agent/opa/v1/ast"
+
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/report"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
 
 func TestLanguageServerLintsUsingAggregateState(t *testing.T) {
 	t.Parallel()
 
 	files := map[string]string{
-		"foo.rego": `package foo
-
-import rego.v1
-
-import data.bar
-import data.baz
-`,
-		"bar.rego": `package bar
-
-import rego.v1
-`,
-		"baz.rego": `package baz
-
-import rego.v1
-`,
-		".regal/config.yaml": ``,
+		"foo.rego":           "package foo\nimport data.bar\nimport data.baz",
+		"bar.rego":           "package bar",
+		"baz.rego":           "package baz",
+		".regal/config.yaml": "",
 	}
 
 	tempDir := testutil.TempDirectoryOf(t, files)
@@ -54,93 +44,50 @@ import rego.v1
 	defer timeout.Stop()
 
 	// no unresolved-imports at this stage
-	for success := false; !success; {
-		select {
-		case violations := <-messages["foo.rego"]:
-			if slices.Contains(violations, "unresolved-import") {
-				t.Logf("waiting for violations to not contain unresolved-import")
+	waitForViolationStatus(t, "foo.rego", "unresolved-import", false, timeout, messages)
 
-				continue
-			}
-
-			success = true
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for expected foo.rego diagnostics")
-		}
-	}
-
-	barURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego"))
-
-	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.VersionedTextDocumentIdentifier{
-			URI: barURI,
-		},
-		ContentChanges: []types.TextDocumentContentChangeEvent{
-			{
-				Text: `package qux
-
-import rego.v1
-`,
-			},
-		},
-	}, nil); err != nil {
-		t.Fatalf("failed to send didChange notification: %s", err)
-	}
+	notifyDocumentChange(t, connClient, filepath.Join(tempDir, "bar.rego"), "package qux")
 
 	// unresolved-imports is now expected
 	timeout.Reset(determineTimeout())
+	waitForViolationStatus(t, "foo.rego", "unresolved-import", true, timeout, messages)
 
-	for success := false; !success; {
-		select {
-		case violations := <-messages["foo.rego"]:
-			if !slices.Contains(violations, "unresolved-import") {
-				t.Log("waiting for violations to contain unresolved-import")
-
-				continue
-			}
-
-			success = true
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for expected foo.rego diagnostics")
-		}
-	}
-
-	fooURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "foo.rego"))
-
-	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.VersionedTextDocumentIdentifier{
-			URI: fooURI,
-		},
-		ContentChanges: []types.TextDocumentContentChangeEvent{
-			{
-				Text: `package foo
-
-import rego.v1
+	notifyDocumentChange(t, connClient, filepath.Join(tempDir, "foo.rego"), `package foo
 
 import data.baz
 import data.qux # new name for bar.rego package
-`,
-			},
-		},
-	}, nil); err != nil {
-		t.Fatalf("failed to send didChange notification: %s", err)
-	}
+`)
 
 	// unresolved-imports is again not expected
 	timeout.Reset(determineTimeout())
+	waitForViolationStatus(t, "foo.rego", "unresolved-import", false, timeout, messages)
+}
+
+func waitForViolationStatus(t *testing.T, key, rule string, want bool, timeout *time.Timer, messages messages) {
+	t.Helper()
 
 	for success := false; !success; {
 		select {
-		case violations := <-messages["foo.rego"]:
-			if slices.Contains(violations, "unresolved-import") {
-				t.Log("waiting for violations to not contain unresolved-import")
+		case violations := <-messages[key]:
+			if want && !slices.Contains(violations, rule) {
+				t.Log("waiting for violations to contain ", rule)
+
+				continue
+			}
+
+			if !want && slices.Contains(violations, rule) {
+				t.Log("waiting for violations to not contain ", rule)
 
 				continue
 			}
 
 			success = true
 		case <-timeout.C:
-			t.Fatalf("timed out waiting for expected foo.rego diagnostics")
+			if want {
+				t.Fatalf("timed out waiting for violations to contain %s", rule)
+			}
+
+			t.Fatalf("timed out waiting for violations to not contain %s", rule)
 		}
 	}
 }
@@ -200,26 +147,14 @@ package bar
 func TestLanguageServerUpdatesAggregateState(t *testing.T) {
 	t.Parallel()
 
-	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
-		t.Logf("message %s", req.Method)
-
+	clientHandler := func(context.Context, *jsonrpc2.Conn, *jsonrpc2.Request) (result any, err error) {
 		return struct{}{}, nil
 	}
 
 	files := map[string]string{
-		"foo.rego": `package foo
-
-import rego.v1
-
-import data.baz
-`,
-		"bar.rego": `package bar
-
-import rego.v1
-
-import data.quz
-`,
-		".regal/config.yaml": ``,
+		"foo.rego":           "package foo\n\nimport data.baz\n",
+		"bar.rego":           "package bar\n\nimport data.quz\n",
+		".regal/config.yaml": "",
 	}
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -237,82 +172,41 @@ import data.quz
 	for success := false; !success; {
 		select {
 		case <-ticker.C:
-			aggs := ls.cache.GetFileAggregates()
-			if len(aggs) == 0 {
-				t.Logf("server aggregates %d", len(aggs))
+			aggregates := ls.cache.GetFileAggregates()
+			if aggregates == nil || aggregates.Len() == 0 {
+				t.Log("no server aggregates")
 
 				continue
 			}
 
 			success = true
 		case <-timeout.C:
-			t.Fatalf("timed out waiting for file aggregates to be set")
+			t.Fatal("timed out waiting for file aggregates to be set")
 		}
 	}
 
-	determineImports := func(aggs map[string][]report.Aggregate) []string {
-		imports := []string{}
+	aggregates := ls.cache.GetFileAggregates()
 
-		unresolvedImportAggs, ok := aggs["imports/unresolved-import"]
-		if !ok {
-			t.Fatalf("expected imports/unresolved-import aggregate data")
-		}
-
-		for _, entry := range unresolvedImportAggs {
-			if aggregateData, ok := entry["aggregate_data"].(map[string]any); ok {
-				if importsList, ok := aggregateData["imports"].([]any); ok {
-					for _, imp := range importsList {
-						item := testutil.MustBe[[]any](t, imp)
-						if pathList, ok := item[0].([]any); ok {
-							pathParts := []string{}
-
-							for _, p := range pathList {
-								if pathStr, ok := p.(string); ok {
-									pathParts = append(pathParts, pathStr)
-								}
-							}
-
-							imports = append(imports, strings.Join(pathParts, "."))
-						}
-					}
-				}
-			}
-		}
-
-		return util.Sorted(imports)
-	}
-
-	imports := determineImports(ls.cache.GetFileAggregates())
+	imports := determineImports(t, aggregates)
 	if exp := []string{"baz", "quz"}; !slices.Equal(exp, imports) {
 		t.Fatalf("global state imports unexpected, got %v exp %v", imports, exp)
 	}
 
 	// 2. check the aggregates for a file are updated after an update
-	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.VersionedTextDocumentIdentifier{
-			URI: uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego")),
-		},
-		ContentChanges: []types.TextDocumentContentChangeEvent{
-			{
-				Text: `package bar
-
-import rego.v1
+	notifyDocumentChange(t, connClient, filepath.Join(tempDir, "bar.rego"), `package bar
 
 import data.qux # changed
 import data.wow # new
-`,
-			},
-		},
-	}, nil); err != nil {
-		t.Fatalf("failed to send didChange notification: %s", err)
-	}
+`)
 
 	timeout.Reset(determineTimeout())
 
 	for success := false; !success; {
 		select {
 		case <-ticker.C:
-			imports = determineImports(ls.cache.GetFileAggregates())
+			aggregates := ls.cache.GetFileAggregates()
+
+			imports = determineImports(t, aggregates)
 
 			if exp, got := []string{"baz", "qux", "wow"}, imports; !slices.Equal(exp, got) {
 				t.Logf("global state imports unexpected, got %v exp %v", got, exp)
@@ -329,8 +223,6 @@ import data.wow # new
 
 func TestLanguageServerAggregateViolationFixedAndReintroducedInUnviolatingFileChange(t *testing.T) {
 	t.Parallel()
-
-	var err error
 
 	files := map[string]string{
 		"foo.rego": `package foo
@@ -385,24 +277,10 @@ import rego.v1
 	}
 
 	// update the contents of the bar.rego file to address the unresolved-import
-	barURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego"))
-
-	err = connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.VersionedTextDocumentIdentifier{
-			URI: barURI,
-		},
-		ContentChanges: []types.TextDocumentContentChangeEvent{
-			{
-				Text: `package bax # package imported in foo.rego
+	notifyDocumentChange(t, connClient, filepath.Join(tempDir, "bar.rego"), `package bax # package imported in foo.rego
 
 import rego.v1
-`,
-			},
-		},
-	}, nil)
-	if err != nil {
-		t.Fatalf("failed to send didChange notification: %s", err)
-	}
+`)
 
 	// wait for foo.rego to have the correct violations
 	timeout.Reset(determineTimeout())
@@ -429,22 +307,11 @@ import rego.v1
 	}
 
 	// update the contents of the bar.rego to bring back the violation
-	err = connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.VersionedTextDocumentIdentifier{
-			URI: barURI,
-		},
-		ContentChanges: []types.TextDocumentContentChangeEvent{
-			{
-				Text: `package bar # original package to bring back the violation
+	bar := filepath.Join(tempDir, "bar.rego")
+	notifyDocumentChange(t, connClient, bar, `package bar # original package to bring back the violation
 
 import rego.v1
-`,
-			},
-		},
-	}, nil)
-	if err != nil {
-		t.Fatalf("failed to send didChange notification: %s", err)
-	}
+`)
 
 	// check the violation is back
 	timeout.Reset(determineTimeout())
@@ -469,4 +336,51 @@ import rego.v1
 			t.Fatalf("timed out waiting for foo.rego diagnostics")
 		}
 	}
+}
+
+func toStringSlice(arr *ast.Array) []string {
+	result := make([]string, 0, arr.Len())
+	for i := range arr.Len() {
+		if str, ok := arr.Elem(i).Value.(ast.String); ok {
+			result = append(result, string(str))
+		}
+	}
+
+	return result
+}
+
+func notifyDocumentChange(t *testing.T, connClient *jsonrpc2.Conn, path, newContents string) {
+	t.Helper()
+
+	err := connClient.Notify(t.Context(), "textDocument/didChange", types.DidChangeTextDocumentParams{
+		TextDocument:   types.VersionedTextDocumentIdentifier{URI: uri.FromPath(clients.IdentifierGoTest, path)},
+		ContentChanges: []types.TextDocumentContentChangeEvent{{Text: newContents}},
+	}, nil)
+	if err != nil {
+		t.Fatalf("failed to send didChange notification: %s", err)
+	}
+}
+
+func determineImports(t *testing.T, aggs ast.Object) (imports []string) {
+	t.Helper()
+
+	for _, fileURI := range aggs.Keys() {
+		fileAggs := aggs.Get(fileURI).Value.(ast.Object)
+
+		if aggregates, ok := rast.GetValue[ast.Set](fileAggs, "imports/unresolved-import"); ok {
+			for aggregate := range rast.ValuesOfType[ast.Object](aggregates.Slice()) {
+				if importsList, ok := rast.GetValue[*ast.Array](aggregate, "imports"); ok {
+					importsList.Foreach(func(entry *ast.Term) {
+						if arrEntry, ok := entry.Value.(*ast.Array); ok && arrEntry.Len() > 0 {
+							if pathArr, ok := arrEntry.Elem(0).Value.(*ast.Array); ok {
+								imports = append(imports, strings.Join(toStringSlice(pathArr), "."))
+							}
+						}
+					})
+				}
+			}
+		}
+	}
+
+	return util.Sorted(imports)
 }

@@ -98,14 +98,7 @@ test_aggregate_function_builtin_rule if {
 		"package": {"path": [{"value": "data"}, {"value": "a"}, {"value": "b"}, {"value": "c"}]},
 	}
 	r == {
-		"rule": {
-			"category": "testing",
-			"title": "aggregation",
-		},
-		"aggregate_source": {
-			"file": "policy.rego",
-			"package_path": ["a", "b", "c"],
-		},
+		"aggregate_source": {"package_path": ["a", "b", "c"]},
 		"aggregate_data": {
 			"foo": "bar",
 			"baz": [1, 2, 3],
@@ -129,14 +122,7 @@ test_aggregate_function_custom_rule if {
 		"package": {"path": [{"value": "data"}, {"value": "a"}, {"value": "b"}, {"value": "c"}]},
 	}
 	r == {
-		"rule": {
-			"category": "testing",
-			"title": "aggregation",
-		},
-		"aggregate_source": {
-			"file": "policy.rego",
-			"package_path": ["a", "b", "c"],
-		},
+		"aggregate_source": {"package_path": ["a", "b", "c"]},
 		"aggregate_data": {
 			"foo": "bar",
 			"baz": [1, 2, 3],

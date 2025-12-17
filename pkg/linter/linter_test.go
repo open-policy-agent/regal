@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/topdown"
 
 	"github.com/open-policy-agent/regal/internal/parse"
@@ -14,7 +15,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
-	"github.com/open-policy-agent/regal/pkg/report"
 	"github.com/open-policy-agent/regal/pkg/rules"
 )
 
@@ -457,9 +457,9 @@ func TestLintWithAggregateRule(t *testing.T) {
 
 	linter := NewLinter().
 		WithDisableAll(true).
+		WithPrintHook(topdown.NewPrintHook(t.Output())).
 		WithEnabledRules("prefer-package-imports").
 		WithInputModules(&input)
-
 	result := testutil.Must(linter.Lint(t.Context()))(t)
 
 	testutil.AssertNumViolations(t, 1, result)
@@ -563,6 +563,15 @@ func TestEnabledAggregateRules(t *testing.T) {
 	}
 }
 
+func ref(s ...string) ast.Ref {
+	terms := make([]*ast.Term, len(s))
+	for i, part := range s {
+		terms[i] = ast.InternedTerm(part)
+	}
+
+	return terms
+}
+
 func TestLintWithCollectQuery(t *testing.T) {
 	t.Parallel()
 
@@ -575,12 +584,12 @@ func TestLintWithCollectQuery(t *testing.T) {
 
 	result := testutil.Must(linter.Lint(t.Context()))(t)
 
-	if len(result.Aggregates) != 1 {
-		t.Fatalf("expected one aggregate, got %d", len(result.Aggregates))
+	if result.Aggregates.Len() != 1 {
+		t.Fatalf("expected one aggregate, got %d", result.Aggregates.Len())
 	}
 
-	if _, ok := result.Aggregates["imports/unresolved-import"]; !ok {
-		t.Errorf("expected aggregates to contain 'imports/unresolved-import'")
+	if _, err := result.Aggregates.Find(ref("p.rego", "imports/unresolved-import")); err != nil {
+		t.Errorf("expected aggregates to contain 'p.rego/imports/unresolved-import'")
 	}
 }
 
@@ -588,18 +597,14 @@ func TestLintWithCollectQueryAndAggregates(t *testing.T) {
 	t.Parallel()
 
 	files := map[string]string{
-		"foo.rego": `package foo
-
-import data.unresolved`,
-		"bar.rego": `package foo
-
-import data.unresolved`,
-		"baz.rego": `package foo
-
-import data.unresolved`,
+		"foo.rego": "package foo\n\nimport data.unresolved",
+		"bar.rego": "package foo\n\nimport data.unresolved",
+		"baz.rego": "package foo\n\nimport data.unresolved",
 	}
 
-	allAggregates := make(map[string][]report.Aggregate)
+	var ok bool
+
+	allAggregates := ast.NewObject()
 
 	for file, content := range files {
 		linter := NewLinter().
@@ -609,8 +614,8 @@ import data.unresolved`,
 			WithExportAggregates(true).
 			WithInputModules(test.InputPolicy(file, content))
 
-		for k, aggs := range testutil.Must(linter.Lint(t.Context()))(t).Aggregates {
-			allAggregates[k] = append(allAggregates[k], aggs...)
+		if allAggregates, ok = allAggregates.Merge(testutil.Must(linter.Lint(t.Context()))(t).Aggregates); !ok {
+			t.Fatalf("failed to merge aggregates for file %s", file)
 		}
 	}
 

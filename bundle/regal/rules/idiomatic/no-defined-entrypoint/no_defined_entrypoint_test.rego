@@ -16,32 +16,24 @@ allow := false`)
 
 	aggregate := rule.aggregate with input as module
 	aggregate == {
-		{
-			"aggregate_data": {"entrypoint": {
-				"col": 1,
-				"row": 2,
-				"end": {
-					"col": 19,
-					"row": 3,
-				},
-				"text": "# METADATA\n# entrypoint: true",
-			}},
-			"aggregate_source": {"file": "policy.rego", "package_path": ["p"]},
-			"rule": {"category": "idiomatic", "title": "no-defined-entrypoint"},
-		},
-		{
-			"aggregate_data": {"entrypoint": {
-				"col": 1,
-				"row": 6,
-				"end": {
-					"col": 19,
-					"row": 7,
-				},
-				"text": "# METADATA\n# entrypoint: true",
-			}},
-			"aggregate_source": {"file": "policy.rego", "package_path": ["p"]},
-			"rule": {"category": "idiomatic", "title": "no-defined-entrypoint"},
-		},
+		{"entrypoint": {
+			"col": 1,
+			"row": 2,
+			"end": {
+				"col": 19,
+				"row": 3,
+			},
+			"text": "# METADATA\n# entrypoint: true",
+		}},
+		{"entrypoint": {
+			"col": 1,
+			"row": 6,
+			"end": {
+				"col": 19,
+				"row": 7,
+			},
+			"text": "# METADATA\n# entrypoint: true",
+		}},
 	}
 }
 
@@ -60,26 +52,17 @@ test_fail_no_entrypoint_defined if {
 }
 
 test_success_single_entrypoint_defined if {
-	r := rule.aggregate_report with input as {"aggregate": [{
-		"aggregate_data": {"entrypoint": {"col": 1, "file": "policy.rego", "row": 2}},
-		"aggregate_source": {"file": "policy.rego", "package_path": ["p"]},
-		"rule": {"category": "idiomatic", "title": "no-defined-entrypoint"},
-	}]}
+	a := {"p.rego": {"idiomatic/no-defined-entrypoint": {{"entrypoint": {"col": 1, "file": "policy.rego", "row": 2}}}}}
+	r := rule.aggregate_report with input.aggregates_internal as a
+
 	r == set()
 }
 
 test_success_multiple_entrypoints_defined if {
-	r := rule.aggregate_report with input as {"aggregate": [
-		{
-			"aggregate_data": {"entrypoint": {"col": 1, "file": "policy.rego", "row": 2}},
-			"aggregate_source": {"file": "policy.rego", "package_path": ["p"]},
-			"rule": {"category": "idiomatic", "title": "no-defined-entrypoint"},
-		},
-		{
-			"aggregate_data": {"entrypoint": {"col": 1, "file": "policy.rego", "row": 6}},
-			"aggregate_source": {"file": "policy.rego", "package_path": ["p"]},
-			"rule": {"category": "idiomatic", "title": "no-defined-entrypoint"},
-		},
-	]}
+	r := rule.aggregate_report with input.aggregates_internal as {"p.rego": {"idiomatic/no-defined-entrypoint": [
+		{"entrypoint": {"col": 1, "file": "policy.rego", "row": 2}},
+		{"entrypoint": {"col": 1, "file": "policy.rego", "row": 6}},
+	]}}
+
 	r == set()
 }

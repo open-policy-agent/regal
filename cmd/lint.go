@@ -20,7 +20,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
-	"github.com/open-policy-agent/regal/internal/cache"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	regalmetrics "github.com/open-policy-agent/regal/internal/metrics"
 	"github.com/open-policy-agent/regal/internal/update"
@@ -190,8 +189,7 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 		WithDebugMode(params.debug).
 		WithProfiling(params.profile).
 		WithInstrumentation(params.instrument).
-		WithInputPaths(args).
-		WithBaseCache(cache.NewBaseCache())
+		WithInputPaths(args)
 
 	if params.enablePrint {
 		regal = regal.WithPrintHook(topdown.NewPrintHook(os.Stderr))

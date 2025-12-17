@@ -1,6 +1,7 @@
 package regal.rules.custom["missing-metadata_test"]
 
 import data.regal.config
+import data.regal.util
 
 import data.regal.rules.custom["missing-metadata"] as rule
 
@@ -18,39 +19,31 @@ none := false
 	aggregated := rule.aggregate with input as module
 
 	aggregated == {{
-		"aggregate_data": {
-			"package_annotated": true,
-			"package_location": {
-				"col": 1,
+		"file": "p.rego",
+		"package_name": "foo.bar",
+		"package_annotated": true,
+		"package_location": {
+			"col": 1,
+			"row": 3,
+			"end": {
+				"col": 8,
 				"row": 3,
-				"end": {
-					"col": 8,
-					"row": 3,
-				},
-				"text": "package",
 			},
-			"rule_annotations": {
-				"foo.bar.none": {false},
-				"foo.bar.rule": {true},
-			},
-			"rule_locations": {"foo.bar.none": {
-				"col": 1,
+			"text": "package",
+		},
+		"rule_annotations": {
+			"foo.bar.none": {false},
+			"foo.bar.rule": {true},
+		},
+		"rule_locations": {"foo.bar.none": {
+			"col": 1,
+			"row": 9,
+			"end": {
+				"col": 5,
 				"row": 9,
-				"end": {
-					"col": 5,
-					"row": 9,
-				},
-				"text": "none := false",
-			}},
-		},
-		"aggregate_source": {
-			"file": "p.rego",
-			"package_path": ["foo", "bar"],
-		},
-		"rule": {
-			"category": "custom",
-			"title": "missing-metadata",
-		},
+			},
+			"text": "none := false",
+		}},
 	}}
 }
 
@@ -66,8 +59,11 @@ package foo.bar
 }
 
 test_fail_missing_package_metadata_report if {
-	a := rule.aggregate with input as regal.parse_module("p.rego", "package foo.bar")
-	r := rule.aggregate_report with input.aggregate as a with config.rules as {"custom": {"missing-metadata": {}}}
+	a := rule.aggregate with input as regal.parse_module("p1.rego", "package foo.bar")
+	aggs := util.with_source_files("custom/missing-metadata", [a])
+
+	r := rule.aggregate_report with input.aggregates_internal as aggs
+		with config.rules as {"custom": {"missing-metadata": {}}}
 
 	r == {{
 		"category": "custom",
@@ -81,7 +77,7 @@ test_fail_missing_package_metadata_report if {
 				"row": 1,
 			},
 			"text": "package",
-			"file": "p.rego",
+			"file": "p1.rego",
 		},
 		"related_resources": [{
 			"description": "documentation",
@@ -100,7 +96,12 @@ package foo.bar
 	agg1 := rule.aggregate with input as module1
 	agg2 := rule.aggregate with input as module2
 
-	r := rule.aggregate_report with input.aggregate as {agg1, agg2}
+	aggregates := {agg |
+		some old in (agg1 | agg2)
+		agg := object.union(old, {"aggregate_source": {"file": "p.rego"}})
+	}
+
+	r := rule.aggregate_report with input.aggregate as aggregates
 		with config.rules as {"custom": {"missing-metadata": {}}}
 
 	r == set()
@@ -123,14 +124,16 @@ baz := true
 }
 
 test_fail_missing_rule_metadata_report if {
-	module := regal.parse_module("p.rego", `# METADATA
+	module := regal.parse_module("p1.rego", `# METADATA
 # title: pkg
 package foo.bar
 
 baz := true
 `)
 	a := rule.aggregate with input as module
-	r := rule.aggregate_report with input.aggregate as a with config.rules as {"custom": {"missing-metadata": {}}}
+	f := util.with_source_files("custom/missing-metadata", [a])
+	r := rule.aggregate_report with input.aggregates_internal as f
+		with config.rules as {"custom": {"missing-metadata": {}}}
 
 	r == {{
 		"category": "custom",
@@ -138,7 +141,7 @@ baz := true
 		"level": "error",
 		"location": {
 			"col": 1,
-			"file": "p.rego",
+			"file": "p1.rego",
 			"row": 5,
 			"end": {
 				"col": 4,

@@ -31,13 +31,6 @@ var (
 	)
 )
 
-// ModuleToValue provides the fastest possible path for converting a Rego
-// module to an ast.Value, which is the format used by OPA for its input,
-// i.e. via rego.EvalParsedInput.
-func ModuleToValue(mod *ast.Module) (ast.Value, error) {
-	return module.ToValue(mod)
-}
-
 // AnyToValue converts a native Go value x to a Value.
 // This is an optimized version of the same function in the OPA codebase,
 // and optimized in a way that makes it useful only for a map[string]any

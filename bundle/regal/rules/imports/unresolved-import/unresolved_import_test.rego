@@ -1,6 +1,7 @@
 package regal.rules.imports["unresolved-import_test"]
 
 import data.regal.config
+import data.regal.util
 
 import data.regal.rules.imports["unresolved-import"] as rule
 
@@ -19,7 +20,11 @@ test_fail_identifies_unresolved_imports if {
 
 	x := 1
 	`)
-	r := rule.aggregate_report with input as {"aggregate": (agg1 | agg2)}
+
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"imports/unresolved-import",
+		[agg1, agg2],
+	)
 
 	r == {
 		with_location({

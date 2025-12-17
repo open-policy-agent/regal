@@ -14,7 +14,7 @@ aggregate contains entry if {
 		not rule in unexported_rules
 	}
 
-	entry := result.aggregate(rego.metadata.chain(), {
+	entry := {
 		"exported_rules": exported,
 		"expanded_refs": _all_full_path_refs,
 		"prefix_set": {["data"]} | {prefix_path |
@@ -23,7 +23,7 @@ aggregate contains entry if {
 			some i in numbers.range(2, count(rule_path))
 			prefix_path := array.slice(rule_path, 0, i)
 		},
-	})
+	}
 }
 
 default _excepted_export_patterns := {"**.test_*"}
@@ -87,11 +87,12 @@ _all_full_path_refs[expanded] contains [ref.location, ref.text] if {
 # schemas:
 #   - input: schema.regal.aggregate
 aggregate_report contains violation if {
-	all_exports := {export | export := input.aggregate[_].aggregate_data.exported_rules[_]}
-	prefix_set := {prefix | prefix := input.aggregate[_].aggregate_data.prefix_set[_]}
+	all_exports := {export | export := _aggregates[_][_].exported_rules[_]}
+	prefix_set := {prefix | prefix := _aggregates[_][_].prefix_set[_]}
 
-	some entry in input.aggregate
-	some name, refs in entry.aggregate_data.expanded_refs
+	some file
+	entry := _aggregates[file][_]
+	some name, refs in entry.expanded_refs
 
 	# ignore everything from the first "[" in the ref name. E.g. foo.bar[0].baz becomes foo.bar
 	ref_name := regex.replace(name, `^([^\[]+)\[.*`, "$1")
@@ -107,7 +108,7 @@ aggregate_report contains violation if {
 
 	some ref in refs
 
-	violation := result.fail(rego.metadata.chain(), _to_location_object(ref[0], ref[1], entry.aggregate_source.file))
+	violation := result.fail(rego.metadata.chain(), _to_location_object(ref[0], ref[1], file))
 }
 
 _is_excepted(ref_full_name) if {
@@ -145,3 +146,8 @@ _to_location_object(loc, text, file) := {"location": {
 
 	end_col := col + count(ref_text)
 }
+
+# METADATA
+# schemas:
+#   - input: schema.regal.aggregate
+_aggregates[file] := input.aggregates_internal[file]["imports/unresolved-reference"] if some file

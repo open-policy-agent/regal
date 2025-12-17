@@ -16,8 +16,8 @@ func TestSchemaSet(t *testing.T) {
 	}
 }
 
-// 67207511 ns/op  42652069 B/op    1032387 allocs/op
-// 62502125 ns/op  35918354 B/op     929634 allocs/op
+// 66581660 ns/op	36151370 B/op	  937768 allocs/op
+// 65395669 ns/op	33885737 B/op	  869142 allocs/op
 func BenchmarkCompileBundle(b *testing.B) {
 	bndl := bundle.Loaded()
 	compiler := NewCompilerWithRegalBuiltins()
