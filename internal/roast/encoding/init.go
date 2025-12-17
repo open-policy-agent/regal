@@ -29,6 +29,7 @@ func init() {
 	jsoniter.RegisterTypeEncoder("ast.ArrayComprehension", &arrayComprehensionCodec{})
 	jsoniter.RegisterTypeEncoder("ast.ObjectComprehension", &objectComprehensionCodec{})
 	jsoniter.RegisterTypeEncoder("ast.SetComprehension", &setComprehensionCodec{})
+	jsoniter.RegisterTypeEncoder("ast.TemplateString", &templateStringCodec{})
 
 	// special cases as these are not public — see implementation for details
 	jsoniter.RegisterTypeEncoder("ast.set", &setCodec{})

@@ -26,8 +26,7 @@ import rego.v1
 
 `
 	module := regal.parse_module("p.rego", policy)
-	new_policy := concat("", [policy, "d"])
-	items := provider.items with input as util.input_module_with_location(module, new_policy, {"row": 5, "col": 2})
+	items := provider.items with input as util.input_module_with_location(module, $`{policy}d`, {"row": 5, "col": 2})
 
 	expected_item(items, "deny")
 }
@@ -38,7 +37,7 @@ expected_item(items, label) if {
 		"detail": "common name",
 		"documentation": {
 			"kind": "markdown",
-			"value": sprintf("%q is a common rule name", [label]),
+			"value": $`"{label}" is a common rule name`,
 		},
 		"kind": 15,
 		"textEdit": {
@@ -52,7 +51,7 @@ expected_item(items, label) if {
 					"character": 1,
 				},
 			},
-			"newText": sprintf("%s ", [label]),
+			"newText": $"{label} ",
 		},
 	}
 

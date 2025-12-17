@@ -96,7 +96,7 @@ word_at(line, col) := word if {
 		"text_after": substring(text_after, offset_after, count(text_after)),
 		"offset_before": offset_before,
 		"offset_after": offset_after,
-		"text": concat("", [word_before, word_after]),
+		"text": $"{word_before}{word_after}",
 	}
 }
 
@@ -115,7 +115,7 @@ ref_at(line, col) := word if {
 	word := {
 		"offset_before": count(word_before),
 		"offset_after": count(word_after),
-		"text": concat("", [word_before, word_after]),
+		"text": $"{word_before}{word_after}",
 	}
 }
 

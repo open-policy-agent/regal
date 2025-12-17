@@ -6,9 +6,8 @@ import data.regal.config
 import data.regal.rules.idiomatic["use-strings-count"] as rule
 
 test_fail_can_use_strings_count if {
-	module := ast.with_rego_v1(`x := count(indexof_n("foo", "o"))`)
+	r := rule.report with input as ast.with_rego_v1(`x := count(indexof_n("foo", "o"))`)
 
-	r := rule.report with input as module
 	r == {{
 		"category": "idiomatic",
 		"description": "Use `strings.count` where possible",
@@ -30,6 +29,7 @@ test_fail_can_use_strings_count if {
 
 test_has_notice_if_unmet_capability if {
 	r := rule.notices with config.capabilities as {}
+
 	r == {{
 		"category": "idiomatic",
 		"description": "Missing capability for built-in function `strings.count`",

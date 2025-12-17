@@ -15,7 +15,7 @@ test_keyword_completion_after_rule_name_no_prefix[label] if {
 
 	some label, completion in provider.completions
 	expected := object.union(completion, {"textEdit": {
-		"newText": sprintf("%s ", [label]),
+		"newText": $"{label} ",
 		"range": {
 			"start": {"line": 2, "character": 5},
 			"end": {"line": 2, "character": 5},

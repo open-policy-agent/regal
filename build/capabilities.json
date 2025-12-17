@@ -48,7 +48,8 @@
           "type": "boolean"
         },
         "type": "function"
-      }
+      },
+      "deprecated": true
     },
     {
       "name": "and",
@@ -113,7 +114,8 @@
           "type": "boolean"
         },
         "type": "function"
-      }
+      },
+      "deprecated": true
     },
     {
       "name": "array.concat",
@@ -512,7 +514,8 @@
           "type": "array"
         },
         "type": "function"
-      }
+      },
+      "deprecated": true
     },
     {
       "name": "cast_boolean",
@@ -526,7 +529,8 @@
           "type": "boolean"
         },
         "type": "function"
-      }
+      },
+      "deprecated": true
     },
     {
       "name": "cast_null",
@@ -540,7 +544,8 @@
           "type": "null"
         },
         "type": "function"
-      }
+      },
+      "deprecated": true
     },
     {
       "name": "cast_object",
@@ -562,7 +567,8 @@
           "type": "object"
         },
         "type": "function"
-      }
+      },
+      "deprecated": true
     },
     {
       "name": "cast_set",
@@ -579,7 +585,8 @@
           "type": "set"
         },
         "type": "function"
-      }
+      },
+      "deprecated": true
     },
     {
       "name": "cast_string",
@@ -593,7 +600,8 @@
           "type": "string"
         },
         "type": "function"
-      }
+      },
+      "deprecated": true
     },
     {
       "name": "ceil",
@@ -2030,6 +2038,23 @@
             "type": "array"
           }
         ],
+        "type": "function"
+      }
+    },
+    {
+      "name": "internal.template_string",
+      "decl": {
+        "args": [
+          {
+            "dynamic": {
+              "type": "any"
+            },
+            "type": "array"
+          }
+        ],
+        "result": {
+          "type": "string"
+        },
         "type": "function"
       }
     },
@@ -3807,7 +3832,8 @@
           "type": "boolean"
         },
         "type": "function"
-      }
+      },
+      "deprecated": true
     },
     {
       "name": "net.lookup_ip_addr",
@@ -4442,6 +4468,88 @@
           "type": "boolean"
         },
         "type": "function"
+      },
+      "deprecated": true
+    },
+    {
+      "name": "regal.is_formatted",
+      "decl": {
+        "args": [
+          {
+            "description": "input string to check for formatting",
+            "name": "input",
+            "type": "string"
+          },
+          {
+            "description": "formatting options",
+            "dynamic": {
+              "key": {
+                "type": "string"
+              },
+              "value": {
+                "type": "any"
+              }
+            },
+            "name": "options",
+            "type": "object"
+          }
+        ],
+        "result": {
+          "type": "boolean"
+        },
+        "type": "function"
+      }
+    },
+    {
+      "name": "regal.last",
+      "description": "Function optimized for retrieving the last element of an array.",
+      "decl": {
+        "args": [
+          {
+            "description": "performance optimized last index retrieval",
+            "dynamic": {
+              "type": "any"
+            },
+            "name": "array",
+            "type": "array"
+          }
+        ],
+        "result": {
+          "name": "element",
+          "type": "any"
+        },
+        "type": "function"
+      }
+    },
+    {
+      "name": "regal.parse_module",
+      "description": "Parses a Regal module similarly to rego.parse_module, but returns a RoAST representation.",
+      "decl": {
+        "args": [
+          {
+            "description": "file name to attach to AST nodes' locations",
+            "name": "filename",
+            "type": "string"
+          },
+          {
+            "description": "Rego module",
+            "name": "rego",
+            "type": "string"
+          }
+        ],
+        "result": {
+          "dynamic": {
+            "key": {
+              "type": "string"
+            },
+            "value": {
+              "type": "any"
+            }
+          },
+          "name": "output",
+          "type": "object"
+        },
+        "type": "function"
       }
     },
     {
@@ -4874,7 +4982,8 @@
           "type": "set"
         },
         "type": "function"
-      }
+      },
+      "deprecated": true
     },
     {
       "name": "sort",
@@ -6267,89 +6376,11 @@
         },
         "type": "function"
       }
-    },
-    {
-      "name": "regal.parse_module",
-      "decl": {
-        "args": [
-          {
-            "description": "file name to attach to AST nodes' locations",
-            "name": "filename",
-            "type": "string"
-          },
-          {
-            "description": "Rego module",
-            "name": "rego",
-            "type": "string"
-          }
-        ],
-        "result": {
-          "dynamic": {
-            "key": {
-              "type": "string"
-            },
-            "value": {
-              "type": "any"
-            }
-          },
-          "name": "output",
-          "type": "object"
-        },
-        "type": "function"
-      }
-    },
-    {
-      "name": "regal.last",
-      "decl": {
-        "args": [
-          {
-            "description": "performance optimized last index retrieval",
-            "dynamic": {
-              "type": "any"
-            },
-            "name": "array",
-            "type": "array"
-          }
-        ],
-        "result": {
-          "name": "element",
-          "type": "any"
-        },
-        "type": "function"
-      }
-    },
-    {
-      "name": "regal.is_formatted",
-      "decl": {
-        "args": [
-          {
-            "description": "input string to check for formatting",
-            "name": "input",
-            "type": "string"
-          },
-          {
-            "description": "formatting options",
-            "dynamic": {
-              "key": {
-                "type": "string"
-              },
-              "value": {
-                "type": "any"
-              }
-            },
-            "name": "options",
-            "type": "object"
-          }
-        ],
-        "result": {
-          "type": "boolean"
-        },
-        "type": "function"
-      }
     }
   ],
   "features": [
     "keywords_in_refs",
-    "rego_v1"
+    "rego_v1",
+    "template_strings"
   ]
 }

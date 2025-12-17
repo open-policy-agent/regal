@@ -35,7 +35,7 @@ items contains item if {
 		"detail": _kind_detail[kind],
 		"textEdit": {
 			"range": location.word_range(word, input.params.position),
-			"newText": concat("", [name, " "]),
+			"newText": $"{name} ",
 		},
 	}
 }

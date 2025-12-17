@@ -31,7 +31,7 @@ items contains item if {
 		"detail": "suggested package name based on directory structure",
 		"textEdit": {
 			"range": location.word_range(word, input.params.position),
-			"newText": concat("", [suggestion, "\n\n"]),
+			"newText": $"{suggestion}\n\n",
 		},
 	}
 }
@@ -70,12 +70,11 @@ _suggestions(dir, text) := [path |
 _needs_quoting(part) := regex.match(`[^a-zA-Z0-9_]`, part)
 
 _format_part(part, false) := part
-_format_part(part, true) := sprintf(`["%s"]`, [part])
+_format_part(part, true) := $`["{part}"]`
 
-_delimit_part(part, next_part) := delimited_part if {
+_delimit_part(part, next_part) := $"{part}." if {
 	next_part != []
 	not startswith(next_part[0], "[")
-	delimited_part := sprintf("%s.", [part])
 }
 
 _delimit_part(part, next_part) := part if {
@@ -83,4 +82,4 @@ _delimit_part(part, next_part) := part if {
 	startswith(next_part[0], "[")
 }
 
-_delimit_part(part, next_part) := part if next_part == []
+_delimit_part(part, []) := part

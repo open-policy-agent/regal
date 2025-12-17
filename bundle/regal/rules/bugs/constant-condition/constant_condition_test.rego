@@ -31,6 +31,37 @@ test_fail_simple_constant_condition if {
 	}}
 }
 
+test_fail_if_template_string_constant_condition if {
+	r := rule.report with input as ast.policy(`allow if $"{input.foo == 1}"`)
+
+	r == {{
+		"category": "bugs",
+		"description": "Constant condition",
+		"location": {
+			"col": 10,
+			"file": "policy.rego",
+			"row": 3,
+			"text": `allow if $"{input.foo == 1}"`,
+			"end": {
+				"row": 3,
+				"col": 29,
+			},
+		},
+		"related_resources": [{
+			"description": "documentation",
+			"ref": config.docs.resolve_url("$baseUrl/$category/constant-condition", "bugs"),
+		}],
+		"title": "constant-condition",
+		"level": "error",
+	}}
+}
+
+test_success_emplate_string_non_constant_condition if {
+	r := rule.report with input as ast.policy(`allow if $"{input.foo}" == "bar"`)
+
+	r == set()
+}
+
 test_fail_simple_constant_condition_nested if {
 	r := rule.report with input as ast.policy(`allow if {
 		every x in [1, 2] {

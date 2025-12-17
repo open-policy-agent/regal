@@ -5,7 +5,7 @@ import data.regal.lsp.completion.providers.rulename as provider
 test_rule_name_completion[title] if {
 	above := "package p\n\n"
 	below := "\n\nconstant := 5\n\nfunction(_) := true\n\nrule if 1 + 1 == 3\n\nrule if true\n"
-	cache := {"file:///ws/p.rego": regal.parse_module("p.rego", concat("", [above, below]))}
+	cache := {"file:///ws/p.rego": regal.parse_module("p.rego", $"{above}{below}")}
 
 	some case in [
 		{"name": "all", "typed": "", "expect": ["constant", "function", "rule"]},
@@ -14,7 +14,7 @@ test_rule_name_completion[title] if {
 		{"name": "rule", "typed": "r", "expect": ["rule"]},
 	]
 
-	title := sprintf("typing '%s' suggests: %s", [case.typed, concat(", ", case.expect)])
+	title := $"typing '{case.typed}' suggests: {concat(", ", case.expect)}"
 	items := provider.items with data.workspace.parsed as cache with input as {
 		"params": {
 			"textDocument": {"uri": "file:///ws/p.rego"},
@@ -33,7 +33,7 @@ test_rule_name_completion[title] if {
 test_rule_name_completion_only_start_of_line if {
 	above := "package p\n\n"
 	below := "\n\nconstant := 5\n\nfunction(_) := true\n\nrule if 1 + 1 == 3\n\nrule if true\n"
-	cache := {"file:///ws/p.rego": regal.parse_module("p.rego", concat("", [above, below]))}
+	cache := {"file:///ws/p.rego": regal.parse_module("p.rego", $"{above}{below}")}
 	typed := "foo r"
 	items := provider.items with data.workspace.parsed as cache with input as {
 		"params": {
@@ -49,14 +49,14 @@ test_rule_name_completion_only_start_of_line if {
 test_rule_name_completion_no_tests if {
 	above := "package p\n\n"
 	below := "\n\ntest_foo if true\n\n"
-	cache := {"file:///ws/p.rego": regal.parse_module("p.rego", concat("", [above, below]))}
+	cache := {"file:///ws/p.rego": regal.parse_module("p.rego", $"{above}{below}")}
 	typed := "t"
 	items := provider.items with data.workspace.parsed as cache with input as {
 		"params": {
 			"textDocument": {"uri": "file:///ws/p.rego"},
 			"position": {"line": 2, "character": count(typed)},
 		},
-		"regal": {"file": {"lines": split(concat("", [above, typed, below]), "\n")}},
+		"regal": {"file": {"lines": split($"{above}{typed}{below}", "\n")}},
 	}
 
 	count(items) == 0

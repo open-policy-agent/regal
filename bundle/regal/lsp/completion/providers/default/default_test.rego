@@ -11,7 +11,7 @@ import rego.v1
 
 `
 	module := regal.parse_module("p.rego", policy)
-	new_policy := sprintf("%s%s", [policy, "d"])
+	new_policy := $"{policy}d"
 	items := provider.items with input as util.input_module_with_location(module, new_policy, {"row": 5, "col": 2})
 
 	items == {{
@@ -40,7 +40,7 @@ deny if false
 
 `
 	module := regal.parse_module("p.rego", policy)
-	new_policy := sprintf("%s%s", [policy, "d"])
+	new_policy := $"{policy}d"
 	items := provider.items with input as util.input_module_with_location(module, new_policy, {"row": 9, "col": 2})
 
 	items == {

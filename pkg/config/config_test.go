@@ -372,7 +372,7 @@ func TestUnmarshalConfigDefaultCapabilities(t *testing.T) {
 	t.Parallel()
 
 	conf := testutil.MustUnmarshalYAML[Config](t, []byte("rules: {}\n"))
-	caps := io.OPACapabilities
+	caps := io.Capabilities()
 
 	if exp, got := len(caps.Builtins), len(conf.Capabilities.Builtins); exp != got {
 		t.Errorf("expected %d builtins, got %d", exp, got)

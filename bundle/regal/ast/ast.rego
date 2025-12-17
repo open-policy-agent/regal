@@ -268,7 +268,14 @@ _format_part(part) := concat("", [".", part.value]) if {
 	regex.match(`^[a-zA-Z_][a-zA-Z1-9_]*$`, part.value)
 } else := sprintf(`["%v"]`, [part.value]) if {
 	part.type == "string"
-} else := sprintf(`[%v]`, [part.value])
+} else := sprintf(`[%v]`, [part.value]) if {
+	# for now, only allow printing the static parts of refs containing
+	# template strings, as we don't likely want to rebuild the template string
+	# from its parts here. if we need the string representation anywhere, we
+	# can revisit this later, and perhaps simply grab the original text from its
+	# location.
+	part.type != "templatestring"
+}
 
 # METADATA
 # description: |
@@ -280,7 +287,7 @@ ref_static_to_string(ref) := ref_to_string(array.slice(ref, 0, first_non_static)
 	first_non_static := [i |
 		some i, part in ref
 		i > 0
-		part.type in {"var", "ref"}
+		part.type in {"call", "var", "ref", "templatestring"}
 	][0]
 } else := ref_to_string(ref)
 
@@ -292,7 +299,7 @@ static_ref(ref) if not _non_static_ref(ref)
 # 128 is used only as a reasonable (well...) upper limit for a ref, but the
 # slice will be capped at the length of the ref anyway (avoids count)
 # regal ignore:narrow-argument
-_non_static_ref(ref) if array.slice(ref.value, 1, 128)[_].type in {"var", "ref"}
+_non_static_ref(ref) if array.slice(ref.value, 1, 128)[_].type in {"call", "var", "ref", "templatestring"}
 
 # METADATA
 # description: provides a set of names of all built-in functions called in the input policy

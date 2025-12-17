@@ -237,3 +237,22 @@ test_var_in_head[case] if {
 
 	ast.var_in_head(head, "foo")
 }
+
+test_var_in_head_templatestring[case] if {
+	some case, head in {
+		"value": `rule := $"{x}"`,
+		"key": `rule contains $"{x}"`,
+		"term value": `rule := {"a": $"{x}"}`,
+		"term key": `rule contains { $"{x}": "a" }`,
+		"ref": `rule[$"{x}"].y if { x := 1 }`,
+	}
+
+	ast.var_in_head(ast.policy(head).rules[0].head, "x")
+}
+
+test_builtin_functions_called_in_templatestring if {
+	module := ast.policy(`r := $"{upper("a")} {lower("b")}"`)
+	names := ast.builtin_functions_called with input as module with config.capabilities as capabilities.provided
+
+	names == {"upper", "lower"}
+}

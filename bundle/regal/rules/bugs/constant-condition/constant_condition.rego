@@ -6,13 +6,13 @@ import data.regal.ast
 import data.regal.result
 
 # METADATA
-# description: single scalar value, like a lone `true` inside a rule body
+# description: single scalar value or templatestring, like a lone `true` inside a rule body
 # scope: rule
 report contains violation if {
 	terms := ast.found.expressions[_][_].terms
 
 	# We could include composite types too, but less comomon and more expensive to check
-	terms.type in ast.scalar_types
+	terms.type in {"boolean", "null", "number", "string", "templatestring"}
 
 	violation := result.fail(rego.metadata.chain(), result.location(terms))
 }

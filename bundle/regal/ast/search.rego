@@ -69,7 +69,7 @@ has_named_var(node, name) if {
 	node.type == "var"
 	node.value == name
 } else if {
-	node.type in {"array", "object", "set", "ref"}
+	node.type in {"array", "object", "set", "ref", "templatestring"}
 
 	walk(node.value, [_, nested])
 
@@ -160,9 +160,7 @@ find_vars(node) := array.concat(
 	[var |
 		walk(node, [path, value])
 
-		last := regal.last(path)
-		last in {"terms", "symbols", "args"}
-
+		last := {"terms", "symbols", "args"}[regal.last(path)]
 		var := _find_vars(value, last)[_][_]
 	],
 	[var |
@@ -207,8 +205,7 @@ found.vars[rule_index][context] contains var if {
 
 	walk(rule[node], [path, value])
 
-	last := regal.last(path)
-	last in {"terms", "symbols", "args"}
+	last := {"terms", "symbols", "args"}[regal.last(path)]
 
 	some context, vars in _find_vars(value, last)
 	some var in vars

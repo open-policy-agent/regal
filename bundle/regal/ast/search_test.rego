@@ -159,3 +159,51 @@ test_find_vars_in_local_scope_complex_comprehension_term if {
 		{"location": {"col": 31, "row": 7, "text": "Yg=="}, "type": "var", "value": "b"},
 	]
 }
+
+test_found_refs_in_template_strings if {
+	refs := ast.found.refs["0"] with input as ast.policy(`r := $"{input.foo + input.bar} {data.baz}"`)
+
+	count(refs) == 4
+}
+
+test_found_calls_in_template_strings if {
+	calls := ast.found.calls["0"] with input as ast.policy("r := $`{count(split(input.ref, \".\"))}`")
+
+	count(calls) == 2
+}
+
+test_found_expressions_in_template_strings if {
+	exprs := ast.found.expressions["0"] with input as ast.policy(`r if $"{x > 10}" == "true"`)
+
+	count(exprs) == 2
+	count([1 | exprs[_].interpolated]) == 1
+}
+
+test_found_comprehensions_in_template_strings if {
+	comps := ast.found.comprehensions["0"] with input as ast.policy(`r := $"{[x | some x in input.arr]}"`)
+
+	count(comps) == 1
+}
+
+test_found_symbols_in_template_strings if {
+	syms := ast.found.symbols["0"] with input as ast.policy(`r := $"{[{x, y} |
+		some x
+		some y in input.arr
+		data.foo[a][b] == x + y
+	]}"`)
+
+	count(syms) == 2
+}
+
+test_found_vars_in_template_strings if {
+	vars := ast.found.vars["0"] with input as ast.policy(`r := $"{[{x, y, z} |
+		some x
+		some y in input.arr
+		z := x + y
+	]}"`)
+
+	count(vars.assign) == 1
+	count(vars.some) == 1
+	count(vars.somein) == 1
+	count([1 | vars[_][_]]) == 3
+}

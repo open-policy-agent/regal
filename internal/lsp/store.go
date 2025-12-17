@@ -49,26 +49,7 @@ func PutFileMod(ctx context.Context, store storage.Store, fileURI string, mod *a
 }
 
 func PutBuiltins(ctx context.Context, store storage.Store, builtins map[string]*ast.Builtin) error {
-	// Note(anderseknert): this is ugly, and should not be necessary, as the deprecated status
-	// should be part of a builtin's JSON representation: https://github.com/open-policy-agent/opa/issues/7912
-	// If that's fixed, we should be able to simply defer to Put with the builtins map directly here.
-	bmap, err := encoding.JSONRoundTripTo[map[string]any](builtins)
-	if err != nil {
-		return fmt.Errorf("failed to marshal value to JSON: %w", err)
-	}
-
-	for name, builtin := range builtins {
-		if builtin.IsDeprecated() {
-			if attr, ok := bmap[name].(map[string]any); ok {
-				attr["deprecated"] = true
-				bmap[name] = attr
-			}
-		}
-	}
-
-	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
-		return write(ctx, store, txn, pathWorkspaceBuiltins, bmap)
-	})
+	return Put(ctx, store, pathWorkspaceBuiltins, builtins)
 }
 
 func PutConfig(ctx context.Context, store storage.Store, config *config.Config) error {
@@ -77,6 +58,7 @@ func PutConfig(ctx context.Context, store storage.Store, config *config.Config) 
 
 func Put[T any](ctx context.Context, store storage.Store, path storage.Path, value T) error {
 	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+		// TODO: Since we use the AST backend, we should not have to round trip via JSON here.
 		asMap, err := encoding.JSONRoundTripTo[map[string]any](value)
 		if err != nil {
 			return fmt.Errorf("failed to marshal value to JSON: %w", err)

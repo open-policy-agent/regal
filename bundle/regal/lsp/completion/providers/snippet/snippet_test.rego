@@ -185,4 +185,8 @@ test_metadata_snippet_completion if {
 	}
 }
 
-_with_header(policy) := concat("\n\n", ["package policy", "import rego.v1", policy])
+_with_header(policy) := $`package policy
+
+import rego.v1
+
+{policy}`

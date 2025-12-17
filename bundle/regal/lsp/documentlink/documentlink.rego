@@ -40,12 +40,12 @@ items contains item if {
 	col := loc.col + pos
 
 	item := {
-		"target": concat("/", ["https://www.openpolicyagent.org/projects/regal/rules", _category_for[rule], rule]),
+		"target": $"https://www.openpolicyagent.org/projects/regal/rules/{_category_for[rule]}/{rule}",
 		"range": {
 			"start": {"line": row, "character": col},
 			"end": {"line": row, "character": col + count(rule)},
 		},
-		"tooltip": concat(" ", ["See documentation for", rule]),
+		"tooltip": $"See documentation for {rule}",
 	}
 }
 

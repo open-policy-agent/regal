@@ -134,7 +134,7 @@ test_fail_object_comprehension_value_assignment_static_ref if {
 test_success_not_flagging_function_call if {
 	r := rule.report with input as ast.policy(`comp := [x |
 		some y in input
-		x := http.send({"method": "get", "url": sprintf("https://example.org/%s", [y])})
+		x := http.send({"method": "get", "url": $"https://example.org/{y}"})
 	]`)
 
 	r == set()

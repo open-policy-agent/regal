@@ -34,6 +34,7 @@ var stages = []stage{
 	{"SetModuleTree", "compile_stage_set_module_tree"},
 	{"SetRuleTree", "compile_stage_set_rule_tree"},
 	{"RewriteLocalVars", "compile_stage_rewrite_local_vars"},
+	{"RewriteTemplateStrings", "compile_stage_rewrite_template_strings"},
 	{"CheckVoidCalls", "compile_stage_check_void_calls"},
 	{"RewritePrintCalls", "compile_stage_rewrite_print_calls"},
 	{"RewriteExprTerms", "compile_stage_rewrite_expr_terms"},

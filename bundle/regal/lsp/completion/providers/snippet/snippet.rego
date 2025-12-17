@@ -31,7 +31,7 @@ items contains item if {
 	strings.count(line, snippet.prefix[0]) < 2
 
 	item := {
-		"label": sprintf("%s (snippet)", [label]),
+		"label": $"{label} (snippet)",
 		"kind": kind.snippet,
 		"detail": label,
 		"textEdit": {

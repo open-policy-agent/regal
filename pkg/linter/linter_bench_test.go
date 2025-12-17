@@ -11,9 +11,7 @@ import (
 	"github.com/open-policy-agent/regal/pkg/report"
 )
 
-// 756176916 ns/op	2614292780 B/op	53440051 allocs/op
-// 730942916 ns/op	2464477440 B/op	51673366 allocs/op
-// 728470104 ns/op	2352869984 B/op	51152483 allocs/op
+// 736486708 ns/op	2348230496 B/op	51198148 allocs/op // OPA v1.12.2
 func BenchmarkRegalLintingItself(b *testing.B) {
 	conf := testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
 
@@ -32,6 +30,7 @@ func BenchmarkRegalLintingItself(b *testing.B) {
 }
 
 // 694275500 ns/op	2568604236 B/op	52506343 allocs/op // OPA v1.10.0
+// 656495042 ns/op	2309640068 B/op	50264746 allocs/op // OPA v1.12.2
 func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
 	conf := testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
 
@@ -50,8 +49,8 @@ func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
 	testutil.AssertNumViolations(b, 0, rep)
 }
 
-// 65815866 ns/op   43852693 B/op   1025467 allocs/op // OPA v1.10.0
-// 59223982 ns/op	37109532 B/op	  921483 allocs/op
+// 65815866 ns/op   43852693 B/op    1025467 allocs/op // OPA v1.10.0
+// 64977849 ns/op   38570571 B/op     932404 allocs/op // OPA v1.12.2
 func BenchmarkOnlyPrepare(b *testing.B) {
 	conf := testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
 	linter := NewLinter().WithInputPaths([]string{"../../bundle"}).WithUserConfig(conf)
@@ -62,6 +61,7 @@ func BenchmarkOnlyPrepare(b *testing.B) {
 }
 
 // 127396828 ns/op	300739526 B/op	 5938689 allocs/op // OPA v1.10.0
+// 123784616 ns/op	284724624 B/op	 5918990 allocs/op // OPA v1.12.2
 func BenchmarkRegalNoEnabledRules(b *testing.B) {
 	linter := NewLinter().
 		WithInputPaths([]string{"../../bundle"}).
@@ -78,6 +78,7 @@ func BenchmarkRegalNoEnabledRules(b *testing.B) {
 }
 
 // 53643340 ns/op	256599746 B/op	 4910862 allocs/op // OPA v1.10.0
+// 53197442 ns/op	245969548 B/op	 4984253 allocs/op // OPA v1.12.2
 func BenchmarkRegalNoEnabledRulesPrepareOnce(b *testing.B) {
 	linter := NewLinter().
 		WithInputPaths([]string{"../../bundle"}).

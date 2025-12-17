@@ -21,7 +21,7 @@ report contains violation if {
 	))
 }
 
-_message(locations) := sprintf("Duplicate rule found at line %d", [locations[0].row]) if count(locations) == 1
+_message(locations) := $"Duplicate rule found at line {locations[0].row}" if count(locations) == 1
 
 _message(locations) := sprintf(
 	"Duplicate rules found at lines %s",

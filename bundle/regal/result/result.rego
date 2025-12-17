@@ -135,7 +135,7 @@ _related_resources(annotations, category, title) := rr if {
 	not annotations.related_resources
 	rr := [{
 		"description": "documentation",
-		"ref": sprintf("%s/%s/%s", [config.docs.base_url, category, title]),
+		"ref": $"{config.docs.base_url}/{category}/{title}",
 	}]
 }
 
@@ -183,8 +183,6 @@ _with_text(loc_obj) := loc if {
 		"file": input.regal.file.name,
 		"text": input.regal.file.lines[loc_obj.row - 1],
 	})}
-
-	loc_obj.row
 } else := {"location": loc_obj}
 
 # METADATA

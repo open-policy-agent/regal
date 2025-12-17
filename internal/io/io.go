@@ -21,12 +21,13 @@ import (
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/builtins/regal"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
+
+	_ "github.com/open-policy-agent/regal/pkg/builtins/regal"
 )
 
 var (
-	OPACapabilities = ast.CapabilitiesForThisVersion()
+	OPACapabilities = sync.OnceValue(opaCapabilities)
 	Capabilities    = sync.OnceValue(capabilities)
 )
 
@@ -332,9 +333,19 @@ func DirCleanUpPaths(target string, preserve []string) ([]string, error) {
 	return dirs, nil
 }
 
+// An interestng side-effect of pushing our builtins into ast.RegisterBuiltin is that
+// they end up in "OPA's" list of builtins. Hence why we reverse that here.
 func capabilities() *ast.Capabilities {
-	cpy := *OPACapabilities
-	cpy.Builtins = append(cpy.Builtins, regal.ParseModule, regal.Last, regal.IsFormatted)
+	cpy := *ast.CapabilitiesForThisVersion()
+
+	return &cpy
+}
+
+func opaCapabilities() *ast.Capabilities {
+	cpy := *ast.CapabilitiesForThisVersion()
+	cpy.Builtins = util.Filter(cpy.Builtins, func(b *ast.Builtin) bool {
+		return !strings.HasPrefix(b.Name, "regal.")
+	})
 
 	return &cpy
 }

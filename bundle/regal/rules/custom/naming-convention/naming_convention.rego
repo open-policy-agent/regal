@@ -15,10 +15,7 @@ report contains violation if {
 
 	violation := _with_description(
 		result.fail(rego.metadata.chain(), result.location(input.package)),
-		sprintf(
-			"Naming convention violation: package name %q does not match pattern '%s'",
-			[ast.package_name, convention.pattern],
-		),
+		_message("package", ast.package_name, convention.pattern),
 	)
 }
 
@@ -35,10 +32,7 @@ report contains violation if {
 
 	violation := _with_description(
 		result.fail(rego.metadata.chain(), result.location(rule.head)),
-		sprintf(
-			"Naming convention violation: rule name %q does not match pattern '%s'",
-			[name, convention.pattern],
-		),
+		_message("rule", name, convention.pattern),
 	)
 }
 
@@ -55,10 +49,7 @@ report contains violation if {
 
 	violation := _with_description(
 		result.fail(rego.metadata.chain(), result.location(rule.head)),
-		sprintf(
-			"Naming convention violation: function name %q does not match pattern '%s'",
-			[name, convention.pattern],
-		),
+		_message("function", name, convention.pattern),
 	)
 }
 
@@ -75,12 +66,11 @@ report contains violation if {
 
 	violation := _with_description(
 		result.fail(rego.metadata.chain(), result.location(var)),
-		sprintf(
-			"Naming convention violation: variable name %q does not match pattern '%s'",
-			[var.value, convention.pattern],
-		),
+		_message("variable", var.value, convention.pattern),
 	)
 }
+
+_message(kind, name, pattern) := $`Naming convention violation: {kind} name "{name}" does not match pattern '{pattern}'`
 
 _with_description(violation, description) := json.patch(
 	violation,

@@ -31,7 +31,7 @@ items contains item if {
 		"detail": type,
 		"documentation": {
 			"kind": "markdown",
-			"value": sprintf("(inferred from [`input.json`](%s))", [input.regal.environment.input_dot_json_path]),
+			"value": $"(inferred from [`input.json`]({input.regal.environment.input_dot_json_path}))",
 		},
 		"textEdit": {
 			"range": location.word_range(word, input.params.position),
@@ -53,7 +53,7 @@ _matching_input_suggestions contains [suggestion, type] if {
 	startswith(suggestion, word.text)
 }
 
-_input_paths contains [input_path, input_type] if {
+_input_paths contains [$"input.{concat(".", path)}", type_name(value)] if {
 	walk(input.regal.environment.input_dot_json, [path, value])
 
 	count(path) > 0
@@ -62,7 +62,4 @@ _input_paths contains [input_path, input_type] if {
 	every value in path {
 		is_string(value)
 	}
-
-	input_type := type_name(value)
-	input_path := concat(".", ["input", concat(".", path)])
 }

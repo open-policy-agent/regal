@@ -40,7 +40,7 @@ _patterns_compiler(patterns) := {pat |
 # mydir/p and mydir/d/ are returned as is
 _internal_slashes(pattern) := pattern if {
 	contains(trim_suffix(pattern, "/"), "/")
-} else := concat("", ["**/", pattern])
+} else := $"**/{pattern}"
 
 # **/pattern might match my/dir/pattern and pattern
 # So we branch it into itself and one with the leading **/ removed
@@ -52,11 +52,9 @@ _leading_doublestar_pattern(pattern) := {pattern, p} if {
 # If a pattern does not end with a "/", then it can both
 # - match a folder => pattern + "/**"
 # - match a file => pattern
-_trailing_slash(pattern) := {pattern, np} if {
+_trailing_slash(pattern) := {pattern, $"{pattern}/**"} if {
 	not endswith(pattern, "/")
 	not endswith(pattern, "**")
-	np := concat("", [pattern, "/**"])
-} else := {np} if {
+} else := {$"{pattern}**"} if {
 	endswith(pattern, "/")
-	np := concat("", [pattern, "**"])
 } else := {pattern}
