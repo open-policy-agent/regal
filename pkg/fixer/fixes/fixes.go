@@ -23,6 +23,8 @@ func NewDefaultFixes() []Fix {
 		&DirectoryPackageMismatch{},
 		&NonRawRegexPattern{},
 		&PreferEqualsComparison{},
+		&RedundantExistenceCheck{},
+		&ConstantCondition{},
 	}
 }
 
@@ -35,6 +37,8 @@ func NewDefaultFormatterFixes() []Fix {
 		&NoWhitespaceComment{},
 		&NonRawRegexPattern{},
 		&PreferEqualsComparison{},
+		&RedundantExistenceCheck{},
+		&ConstantCondition{},
 	}
 }
 
