@@ -4,6 +4,8 @@ import (
 	"cmp"
 	"runtime"
 	"strings"
+
+	opaversion "github.com/open-policy-agent/opa/v1/version"
 )
 
 const platform = runtime.GOOS + "/" + runtime.GOARCH
@@ -21,23 +23,25 @@ var (
 
 // Info wraps the various version metadata values and provides a means of marshalling as JSON or pretty string.
 type Info struct {
-	Version   string `json:"version"`
-	GoVersion string `json:"go_version"`
-	Platform  string `json:"platform"`
-	Commit    string `json:"commit"`
-	Timestamp string `json:"timestamp"`
-	Hostname  string `json:"hostname"`
+	Version    string `json:"version"`
+	GoVersion  string `json:"go_version"`
+	OPAVersion string `json:"opa_version"`
+	Platform   string `json:"platform"`
+	Commit     string `json:"commit"`
+	Timestamp  string `json:"timestamp"`
+	Hostname   string `json:"hostname"`
 }
 
 func (vi Info) String() string {
 	return strings.Join(
 		[]string{
-			"Version:    " + vi.Version,
-			"Go Version: " + vi.GoVersion,
-			"Platform:   " + vi.Platform,
-			"Commit:     " + vi.Commit,
-			"Timestamp:  " + vi.Timestamp,
-			"Hostname:   " + vi.Hostname,
+			"Version:       " + vi.Version,
+			"Go Version:    " + vi.GoVersion,
+			"OPA Version:   " + vi.OPAVersion,
+			"Platform:      " + vi.Platform,
+			"Commit:        " + vi.Commit,
+			"Timestamp:     " + vi.Timestamp,
+			"Installed via: " + vi.Hostname,
 		},
 		"\n",
 	) + "\n"
@@ -45,11 +49,12 @@ func (vi Info) String() string {
 
 func New() Info {
 	return Info{
-		Version:   cmp.Or(Version, "unknown"),
-		GoVersion: goVersion,
-		Platform:  platform,
-		Commit:    cmp.Or(Commit, "unknown"),
-		Timestamp: cmp.Or(Timestamp, "unknown"),
-		Hostname:  cmp.Or(Hostname, "unknown"),
+		Version:    cmp.Or(Version, "unknown"),
+		GoVersion:  goVersion,
+		OPAVersion: opaversion.Version,
+		Platform:   platform,
+		Commit:     cmp.Or(Commit, "unknown"),
+		Timestamp:  cmp.Or(Timestamp, "unknown"),
+		Hostname:   cmp.Or(Hostname, "unknown"),
 	}
 }
