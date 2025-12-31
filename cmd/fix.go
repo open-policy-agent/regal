@@ -43,7 +43,7 @@ func init() {
 Note that this command is intended to help fix style-related issues,
 and could be considered as a stricter opa fmt command.
 Issues like bugs should be fixed manually,
-as it is important to understand why the were flagged.`, "\n", " ")
+as it is important to understand why they were flagged.`, "\n", " ")
 
 	fixCommand := &cobra.Command{
 		Use:   "fix <path> [path [...]]",
