@@ -223,8 +223,8 @@ func TestSerializedModuleSize(t *testing.T) {
 	// This test will fail whenever the size of the serialized module changes,
 	// which not often and when it happens it's good to know about it, update
 	// and move on.
-	if len(roast) != 85979 {
-		t.Fatalf("expected %d but got %d", 85979, len(roast))
+	if exp, got := 85981, len(roast); got != exp {
+		t.Fatalf("expected %d but got %d", exp, got)
 	}
 }
 
