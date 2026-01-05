@@ -129,6 +129,7 @@ rules := {
 		"Move file so that directory structure mirrors package path",
 		["target", "diagnostic"],
 	],
+	"prefer-equals-comparison": ["Replace `=` with `==` in comparison", ["target", "diagnostic"]],
 }
 
 # METADATA
