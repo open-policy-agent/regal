@@ -83,11 +83,12 @@ var (
 	regalEvalUseAsInputComment = regexp.MustCompile(`^\s*regal eval:\s*use-as-input`)
 	validPathComponentPattern  = regexp.MustCompile(`^\w+[\w\-]*\w+$`)
 
-	fixFmt                   = &fixes.Fmt{OPAFmtOpts: format.Opts{}}
-	fixUseRegoV1             = &fixes.Fmt{OPAFmtOpts: format.Opts{RegoVersion: ast.RegoV0CompatV1}}
-	fixUseAssignmentOperator = &fixes.UseAssignmentOperator{}
-	fixNoWhitespaceComment   = &fixes.NoWhitespaceComment{}
-	fixNonRawRegexPattern    = &fixes.NonRawRegexPattern{}
+	fixFmt                    = &fixes.Fmt{OPAFmtOpts: format.Opts{}}
+	fixUseRegoV1              = &fixes.Fmt{OPAFmtOpts: format.Opts{RegoVersion: ast.RegoV0CompatV1}}
+	fixUseAssignmentOperator  = &fixes.UseAssignmentOperator{}
+	fixNoWhitespaceComment    = &fixes.NoWhitespaceComment{}
+	fixNonRawRegexPattern     = &fixes.NonRawRegexPattern{}
+	fixPreferEqualsComparison = &fixes.PreferEqualsComparison{}
 )
 
 type LanguageServerOptions struct {
@@ -598,6 +599,8 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 				fixed, editParams, err = l.fixEditParams("Format comment to have leading whitespace", fixNoWhitespaceComment, args)
 			case "regal.fix.non-raw-regex-pattern":
 				fixed, editParams, err = l.fixEditParams("Replace \" with ` in regex pattern", fixNonRawRegexPattern, args)
+			case "regal.fix.prefer-equals-comparison":
+				fixed, editParams, err = l.fixEditParams("Replace = with == in comparison", fixPreferEqualsComparison, args)
 			case "regal.fix.directory-package-mismatch":
 				params, err := l.fixRenameParams("Rename file to match package path", args.Target)
 				if err != nil {
@@ -1890,6 +1893,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 					"regal.fix.no-whitespace-comment",
 					"regal.fix.directory-package-mismatch",
 					"regal.fix.non-raw-regex-pattern",
+					"regal.fix.prefer-equals-comparison",
 					"regal.config.disable-rule",
 				},
 			},
