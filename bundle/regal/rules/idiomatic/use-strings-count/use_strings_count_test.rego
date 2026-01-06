@@ -18,7 +18,7 @@ test_fail_can_use_strings_count if {
 			"file": "policy.rego",
 			"row": 5,
 			"text": `x := count(indexof_n("foo", "o"))`,
-			"end": {"col": 34, "row": 5},
+			"end": {"col": 33, "row": 5},
 		},
 		"related_resources": [{
 			"description": "documentation",
