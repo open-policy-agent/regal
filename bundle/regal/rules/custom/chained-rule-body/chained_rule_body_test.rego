@@ -1,9 +1,9 @@
-package regal.rules.style["chained-rule-body_test"]
+package regal.rules.custom["chained-rule-body_test"]
 
 import data.regal.ast
 import data.regal.config
 
-import data.regal.rules.style["chained-rule-body"] as rule
+import data.regal.rules.custom["chained-rule-body"] as rule
 
 test_fail_chained_incremental_definition if {
 	module := ast.policy(`rule if {
@@ -14,7 +14,7 @@ test_fail_chained_incremental_definition if {
 	r := rule.report with input as module
 
 	r == {{
-		"category": "style",
+		"category": "custom",
 		"description": "Avoid chaining rule bodies",
 		"level": "error",
 		"location": {
@@ -28,7 +28,7 @@ test_fail_chained_incremental_definition if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/chained-rule-body", "style"),
+			"ref": config.docs.resolve_url("$baseUrl/$category/chained-rule-body", "custom"),
 		}],
 		"title": "chained-rule-body",
 	}}
