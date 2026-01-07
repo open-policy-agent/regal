@@ -29,6 +29,13 @@ func (*exprCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 		write.Bool(stream, strGenerated, expr.Generated)
 	}
 
+	if stream.Attachment != nil {
+		if s, ok := stream.Attachment.(string); ok && s == "interpolated" {
+			write.Bool(stream, "interpolated", true)
+			stream.Attachment = nil
+		}
+	}
+
 	if len(expr.With) > 0 {
 		write.ValsArrayAttr(stream, strWith, expr.With)
 	}

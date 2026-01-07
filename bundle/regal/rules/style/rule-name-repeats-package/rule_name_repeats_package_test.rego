@@ -1,19 +1,15 @@
 package regal.rules.style["rule-name-repeats-package_test"]
 
-import data.regal.config
-
 import data.regal.rules.style["rule-name-repeats-package"] as rule
-
-related_resources := [{
-	"description": "documentation",
-	"ref": config.docs.resolve_url("$baseUrl/$category/rule-name-repeats-package", "style"),
-}]
 
 base_result := {
 	"title": "rule-name-repeats-package",
 	"description": "Rule name repeats package",
 	"category": "style", "level": "error",
-	"related_resources": related_resources,
+	"related_resources": [{
+		"description": "documentation",
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/rule-name-repeats-package",
+	}],
 }
 
 test_rule_empty_if_no_repetition if {

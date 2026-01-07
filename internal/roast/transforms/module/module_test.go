@@ -63,6 +63,50 @@ setcomp := {x | some x in input}
 	}
 }
 
+func TestModuleToValueTemplateString(t *testing.T) {
+	t.Parallel()
+
+	policy := `package p
+
+	r := $"{x}...{input.bar + 1}"`
+
+	module := ast.MustParseModuleWithOpts(policy, ast.ParserOptions{ProcessAnnotation: true})
+
+	value, err := ToValue(module)
+	if err != nil {
+		t.Fatalf("failed to convert module to value: %v", err)
+	}
+
+	val, err := value.Find(ast.Ref{
+		ast.InternedTerm("rules"),
+		ast.InternedTerm(0),
+		ast.InternedTerm("head"),
+		ast.InternedTerm("value"),
+		ast.InternedTerm("value"),
+	})
+	if err != nil {
+		t.Fatalf("failed to find 'rules' key in module object: %v", err)
+	}
+
+	tsv, ok := val.(ast.Object)
+	if !ok {
+		t.Fatalf("expected template string value to be object, got: %T", val)
+	}
+
+	if parts := tsv.Get(ast.InternedTerm("parts")); parts != nil {
+		partsArr, ok := parts.Value.(*ast.Array)
+		if !ok {
+			t.Fatalf("expected parts to be array, got: %T", parts)
+		}
+
+		if partsArr.Len() != 3 {
+			t.Fatalf("expected 3 parts in template string, got: %d", partsArr.Len())
+		}
+	} else {
+		t.Fatalf("expected parts key in template string value")
+	}
+}
+
 // BenchmarkModuleToValue/ToValue-16         	   25171	     46355 ns/op	   65489 B/op	    1802 allocs/op
 // BenchmarkModuleToValue/RoundTrip-16       	   10000	    119018 ns/op	  166038 B/op	    3924 allocs/op
 func BenchmarkModuleToValue(b *testing.B) {

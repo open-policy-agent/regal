@@ -33,7 +33,7 @@ actions contains action if {
 		"isPreferred": true,
 		"command": {
 			"title": title,
-			"command": concat("", ["regal.fix.", diag.code]),
+			"command": $"regal.fix.{diag.code}",
 			"tooltip": title,
 			"arguments": [json.marshal(object.filter(
 				{
@@ -79,7 +79,7 @@ actions contains action if {
 	some diag in input.params.context.diagnostics
 
 	# always show the docs link
-	title := concat("", ["Show documentation for ", diag.code])
+	title := $"Show documentation for {diag.code}"
 	action := {
 		"title": title,
 		"kind": "quickfix",
@@ -104,7 +104,7 @@ actions contains action if {
 	strings.any_prefix_match("source.explore", only)
 
 	document := trim_prefix(input.params.textDocument.uri, input.regal.environment.workspace_root_uri)
-	explorer_url := concat("", [input.regal.environment.web_server_base_uri, "/explorer", document])
+	explorer_url := $"{input.regal.environment.web_server_base_uri}/explorer{document}"
 	action := {
 		"title": "Explore compiler stages for this policy",
 		"kind": "source.explore",

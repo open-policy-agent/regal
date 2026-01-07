@@ -28,6 +28,6 @@ report contains violation if {
 
 	violation := result.fail(rego.metadata.chain(), object.union(
 		result.location(ref),
-		{"description": sprintf("Reference ignores import of %s", [concat(".", most_specific_match)])},
+		{"description": $"Reference ignores import of {concat(".", most_specific_match)}"},
 	))
 }

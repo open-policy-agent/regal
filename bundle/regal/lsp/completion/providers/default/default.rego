@@ -34,12 +34,12 @@ items contains item if {
 	some name in ast.rule_and_function_names
 
 	item := {
-		"label": sprintf("default %s := <value>", [name]),
+		"label": $"default {name} := <value>",
 		"kind": kind.keyword,
-		"detail": sprintf("add default assignment for %s rule", [name]),
+		"detail": $"add default assignment for {name} rule",
 		"textEdit": {
 			"range": location.from_start_of_line_to_position(input.params.position),
-			"newText": sprintf("default %s := ", [name]),
+			"newText": $"default {name} := ",
 		},
 	}
 }

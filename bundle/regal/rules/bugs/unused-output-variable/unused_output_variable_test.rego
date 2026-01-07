@@ -46,6 +46,31 @@ test_fail_unused_output_variable_some if {
 	}}
 }
 
+# NOTE(anders): this should be caught! don't have the time to look into this now though,
+# so just leaving this test here for someone to come back to later
+_test_fail_unused_output_variable_assignment if {
+	# regal ignore:with-outside-test-context
+	r := rule.report with input as ast.policy(`
+	fail if {
+		some y
+		x := input[y]
+		x == 0
+	}
+	`)
+
+	r == {{
+		"category": "bugs",
+		"description": "Unused output variable",
+		"level": "error",
+		"location": {"col": 14, "end": {"col": 15, "row": 6}, "file": "policy.rego", "row": 6, "text": "\t\tx := input[y]"},
+		"related_resources": [{
+			"description": "documentation",
+			"ref": config.docs.resolve_url("$baseUrl/$category/unused-output-variable", "bugs"),
+		}],
+		"title": "unused-output-variable",
+	}}
+}
+
 test_success_unused_wildcard if {
 	r := rule.report with input as ast.policy("success if input[_]")
 

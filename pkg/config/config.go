@@ -700,7 +700,7 @@ func extractDefaults(c *Config, result *marshallingIntermediary) error {
 
 // CapabilitiesForThisVersion returns the capabilities for the current OPA version Regal depends on.
 func CapabilitiesForThisVersion() *Capabilities {
-	return fromOPACapabilities(rio.OPACapabilities)
+	return fromOPACapabilities(rio.OPACapabilities())
 }
 
 func fromOPABuiltin(builtin ast.Builtin) *Builtin {

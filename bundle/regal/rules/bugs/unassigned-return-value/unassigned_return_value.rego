@@ -7,7 +7,10 @@ import data.regal.config
 import data.regal.result
 
 report contains violation if {
-	terms := ast.found.expressions[_][_].terms
+	some expr
+	terms := ast.found.expressions[_][expr].terms
+
+	not expr.interpolated
 
 	terms[0].type == "ref"
 	terms[0].value[0].type == "var"

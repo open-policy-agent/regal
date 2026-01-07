@@ -14,6 +14,8 @@ import data.regal.util
 report contains violation if {
 	some rule in input.rules
 
+	ast.ref_static_to_string(rule.head.ref)
+
 	strings.any_prefix_match(ast.ref_static_to_string(rule.head.ref), _possible_offending_prefixes)
 
 	violation := result.fail(rego.metadata.chain(), result.location(rule.head.ref[0]))

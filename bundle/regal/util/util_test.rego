@@ -47,7 +47,7 @@ test_to_location_object if {
 	}
 }
 
-test_point_in_range[sprintf("%v %v", [point, range])] if {
+test_point_in_range[$"{point} {range}"] if {
 	some [point, range, want] in [
 		[[1, 2], [[0, 0], [1, 10]], true],
 		[[0, 3], [[0, 1], [0, 4]], true],

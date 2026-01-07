@@ -59,8 +59,6 @@ var (
 		),
 		CanSkipBctx: true,
 	}
-
-	capabilities *ast.Capabilities
 )
 
 func init() {
@@ -71,10 +69,6 @@ func init() {
 	topdown.RegisterBuiltinFunc(ParseModule.Name, RegalParseModule)
 	topdown.RegisterBuiltinFunc(Last.Name, RegalLast)
 	topdown.RegisterBuiltinFunc(IsFormatted.Name, RegalIsFormatted)
-
-	// This here only to allow the io package to import builtins without causing a cicular dependency.
-	capabilities = ast.CapabilitiesForThisVersion()
-	capabilities.Builtins = append(capabilities.Builtins, ParseModule, Last, IsFormatted)
 }
 
 // RegalParseModule regal.parse_module, like rego.parse_module but with location data included in AST.
@@ -92,7 +86,7 @@ func RegalParseModule(_ rego.BuiltinContext, operands []*ast.Term, iter func(*as
 	filenameStr := string(filenameValue)
 	policyStr := string(policyValue)
 
-	opts := ast.ParserOptions{ProcessAnnotation: true, Capabilities: capabilities}
+	opts := ast.ParserOptions{ProcessAnnotation: true}
 
 	// Allow testing Rego v0 modules. We could provide a separate builtin for this,
 	// but the need for this will likely diminish over time, so let's start simple.

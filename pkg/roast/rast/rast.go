@@ -4,6 +4,7 @@ package rast
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"reflect"
 	"slices"
 	"strconv"
@@ -219,8 +220,7 @@ func toAstValue(v any) ast.Value {
 		return ast.InternedTerm(rv.Bool()).Value
 	}
 	// Fallback: string representation
-	//nolint:forbidigo
-	fmt.Println("WARNING: Unsupported type for conversion to ast.Value:", rv.Kind())
+	fmt.Fprintln(os.Stderr, "WARNING: Unsupported type for conversion to ast.Value:", rv.Kind())
 
 	return ast.String(fmt.Sprintf("%v", v))
 }

@@ -121,6 +121,47 @@ func TestDirCleanUpPaths(t *testing.T) {
 	}
 }
 
+func TestCapabilitiesNoDuplicateBuiltins(t *testing.T) {
+	t.Parallel()
+
+	builtinSet := util.NewSet[string]()
+
+	for _, b := range Capabilities().Builtins {
+		if builtinSet.Contains(b.Name) {
+			t.Fatalf("duplicate builtin found: %s", b.Name)
+		}
+
+		builtinSet.Add(b.Name)
+	}
+}
+
+func TestCapabilitiesIncludeRegalBuiltins(t *testing.T) {
+	t.Parallel()
+
+	expectedBuiltins := util.NewSet("regal.parse_module", "regal.last", "regal.is_formatted")
+	found := util.NewSet[string]()
+
+	for _, b := range Capabilities().Builtins {
+		if expectedBuiltins.Contains(b.Name) {
+			found.Add(b.Name)
+		}
+	}
+
+	if !expectedBuiltins.Equal(found) {
+		t.Fatalf("expected builtins %v, got %v", expectedBuiltins, found)
+	}
+}
+
+func TestOPACapabilitiesIncludeNoRegalBuiltins(t *testing.T) {
+	t.Parallel()
+
+	for _, b := range OPACapabilities().Builtins {
+		if strings.HasPrefix(b.Name, "regal.") {
+			t.Fatalf("found regal builtin in opa capabilities: %s", b.Name)
+		}
+	}
+}
+
 func BenchmarkLoadRegalBundlePath(b *testing.B) {
 	for b.Loop() {
 		_, err := LoadRegalBundlePath("../../bundle")

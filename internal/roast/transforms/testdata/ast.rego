@@ -242,7 +242,7 @@ _ref_part_to_string(0, part) := part.value
 
 _ref_part_to_string(i, part) := _format_part(part) if i > 0
 
-_format_part(part) := sprintf(".%s", [part.value]) if {
+_format_part(part) := concat("", [".", part.value]) if {
 	part.type == "string"
 	regex.match(`^[a-zA-Z_][a-zA-Z1-9_]*$`, part.value)
 } else := sprintf(`["%v"]`, [part.value]) if {

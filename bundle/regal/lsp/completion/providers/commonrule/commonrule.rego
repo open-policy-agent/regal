@@ -27,11 +27,11 @@ items contains item if {
 		"detail": "common name",
 		"documentation": {
 			"kind": "markdown",
-			"value": sprintf("%q is a common rule name", [label]),
+			"value": $`"{label}" is a common rule name`,
 		},
 		"textEdit": {
 			"range": location.from_start_of_line_to_position(input.params.position),
-			"newText": concat("", [label, " "]),
+			"newText": $"{label} ",
 		},
 	}
 }

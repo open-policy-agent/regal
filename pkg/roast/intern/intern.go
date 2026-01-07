@@ -87,6 +87,10 @@ func init() {
 		"capabilities",
 		"system",
 		"main",
+		"templatestring",
+		"parts",
+		"multi_line",
+		"interpolated",
 
 		// Regal specific keys
 		"file",

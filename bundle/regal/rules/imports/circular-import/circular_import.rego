@@ -50,13 +50,10 @@ aggregate_report contains violation if {
 		some loc in _package_locations[m1][m2]
 	][0]
 
-	violation := result.fail(
-		rego.metadata.chain(),
-		{
-			"description": sprintf("Circular import detected in: %s", [concat(", ", sort(g))]),
-			"location": location,
-		},
-	)
+	violation := result.fail(rego.metadata.chain(), {
+		"description": $`Circular import detected in: {concat(", ", sorted_group)}`,
+		"location": location,
+	})
 }
 
 # METADATA
@@ -70,13 +67,10 @@ aggregate_report contains violation if {
 
 	some pkg in g # this will the only package
 
-	violation := result.fail(
-		rego.metadata.chain(),
-		{
-			"description": sprintf("Circular self-dependency in: %s", [pkg]),
-			"location": [e | some e in _package_locations[pkg][pkg]][0],
-		},
-	)
+	violation := result.fail(rego.metadata.chain(), {
+		"description": $`Circular self-dependency in: {pkg}`,
+		"location": [e | some e in _package_locations[pkg][pkg]][0],
+	})
 }
 
 # METADATA
@@ -87,7 +81,7 @@ _package_locations[referenced_pkg][referencing_pkg] contains location if {
 
 	some [referenced_pkg, referenced_location] in ag_pkg.aggregate_data.refs
 
-	referencing_pkg := sprintf("data.%s", [concat(".", ag_pkg.aggregate_source.package_path)])
+	referencing_pkg := $"data.{concat(".", ag_pkg.aggregate_source.package_path)}"
 	ref_loc := util.to_location_no_text(referenced_location)
 
 	location := {
@@ -103,8 +97,7 @@ _package_locations[referenced_pkg][referencing_pkg] contains location if {
 _import_graph[pkg] contains edge if {
 	some ag_pkg in input.aggregate
 
-	pkg := sprintf("data.%s", [concat(".", ag_pkg.aggregate_source.package_path)])
-
+	pkg := $"data.{concat(".", ag_pkg.aggregate_source.package_path)}"
 	edge := ag_pkg.aggregate_data.refs[_][0]
 }
 

@@ -182,6 +182,37 @@ func termValueTerm(val ast.Value) *ast.Term {
 			item("value", termToObject(v.Value)),
 			item("body", bodyToArray(v.Body)),
 		)
+	case *ast.TemplateString:
+		parts := make([]*ast.Term, 0, len(v.Parts))
+		for _, part := range v.Parts {
+			switch p := part.(type) {
+			case *ast.Term:
+				parts = append(parts, termToObject(p))
+			case *ast.Expr:
+				exprObj := objectWithLocation(p.Location)
+				if p.Terms != nil {
+					switch t := p.Terms.(type) {
+					case *ast.Term:
+						insert(exprObj, "terms", termToObject(t))
+					case []*ast.Term:
+						insert(exprObj, "terms", ast.ArrayTerm(util.Map(t, termToObject)...))
+					}
+				}
+				// Mark expression as part of a template string as interpolated, as some linter rules
+				// apply differently or not at all in that context, like e.g. unassigned-return-value
+				insert(exprObj, "interpolated", ast.InternedTerm(true))
+				parts = append(parts, ast.NewTerm(exprObj))
+			}
+		}
+
+		if v.MultiLine {
+			return ast.ObjectTerm(
+				item("parts", ast.ArrayTerm(parts...)),
+				item("multi_line", ast.InternedBooleanTrueTerm),
+			)
+		}
+
+		return ast.ObjectTerm(item("parts", ast.ArrayTerm(parts...)))
 	}
 
 	return ast.NewTerm(val)

@@ -40,7 +40,7 @@ items contains object.union(completion, {"_regal": {"provider": provider}}) if {
 inside_comment if {
 	# avoid unmarshalling every comment location but only one that starts
 	# with the line number of the current position
-	line := sprintf("%d:", [input.params.position.line + 1])
+	line := $"{input.params.position.line + 1}:"
 
 	some comment in data.workspace.parsed[input.params.textDocument.uri].comments
 
