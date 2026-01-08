@@ -169,9 +169,14 @@ single_set_item(s) := item if {
 	some item in s
 }
 
+# @anderseknert looked into the different implementations and sort was still the fastest
+# | Implementation        | ns/op  | B/op  | allocs/op |
+# | [x | some x in s][0]  | 12,496 | 9,103 | 184       |
+# | max(s)                | 9,671  | 8,049 | 150       |
+# | sort(s)[0]            | 9,184  | 7,816 | 133       |
 # METADATA
 # description: returns any item of a set
-any_set_item(s) := [x | some x in s][0] # this is convoluted.. but can't think of a better way
+any_set_item(s) := sort(s)[0]
 
 # METADATA
 # description: returns last index of item, or undefined (*not* -1) if missing
