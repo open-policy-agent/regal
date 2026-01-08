@@ -408,8 +408,8 @@ func TestLintMergedConfigUsesProvidedDefaults(t *testing.T) {
 	}
 
 	// other rule in style should have the default level for the category
-	if mergedConfig.Rules["style"]["chained-rule-body"].Level != "error" {
-		t.Errorf("expected level to be 'error', got %q", mergedConfig.Rules["style"]["chained-rule-body"].Level)
+	if mergedConfig.Rules["style"]["pointless-reassignment"].Level != "error" {
+		t.Errorf("expected level to be 'error', got %q", mergedConfig.Rules["style"]["pointless-reassignment"].Level)
 	}
 
 	// rule in bugs should have the default level for the category

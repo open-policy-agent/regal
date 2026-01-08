@@ -206,12 +206,6 @@ x := y if {
 
 use_assignment = "oparator"
 
-chained_rule_body if {
-	input.x
-} {
-	input.y
-}
-
 rule_length if {
 	input.x1
 	input.x2

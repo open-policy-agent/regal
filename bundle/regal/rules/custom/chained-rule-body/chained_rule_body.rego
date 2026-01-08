@@ -1,6 +1,6 @@
 # METADATA
 # description: Avoid chaining rule bodies
-package regal.rules.style["chained-rule-body"]
+package regal.rules.custom["chained-rule-body"]
 
 import data.regal.ast
 import data.regal.result
