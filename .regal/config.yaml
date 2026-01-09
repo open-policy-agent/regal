@@ -27,6 +27,7 @@ rules:
     prefer-value-in-head:
       level: error
       only-scalars: true
+      include-interpolated: true
   style:
     line-length:
       level: error
