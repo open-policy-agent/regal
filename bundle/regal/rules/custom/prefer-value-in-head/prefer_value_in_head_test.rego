@@ -80,6 +80,51 @@ test_fail_value_could_be_in_head_but_not_a_scalar if {
 	r == set()
 }
 
+test_fail_value_could_be_in_head_templatestring if {
+	r := rule.report with input as ast.policy(`value := x if {
+		input.x
+		x := $"{input.y}"
+	}`)
+
+	r == expected_with_location({
+		"col": 8,
+		"row": 5,
+		"end": {
+			"col": 20,
+			"row": 5,
+		},
+		"text": "\t\tx := $\"{input.y}\"",
+	})
+}
+
+test_success_only_scalar_no_include_interpolated if {
+	r := rule.report with input as ast.policy(`value := x if {
+		input.x
+		x := $"{input.y}"
+	}`)
+		with config.rules as {"custom": {"prefer-value-in-head": {"only-scalars": true}}}
+
+	r == set()
+}
+
+test_fail_value_could_be_in_head_only_scalars_with_include_interpolated if {
+	r := rule.report with input as ast.policy(`value := x if {
+		input.x
+		x := $"{input.y}"
+	}`)
+		with config.rules as {"custom": {"prefer-value-in-head": {"only-scalars": true, "include-interpolated": true}}}
+
+	r == expected_with_location({
+		"col": 8,
+		"row": 5,
+		"end": {
+			"col": 20,
+			"row": 5,
+		},
+		"text": "\t\tx := $\"{input.y}\"",
+	})
+}
+
 test_fail_value_could_be_in_head_and_is_a_scalar if {
 	module := ast.policy(`value := x if {
 		input.x
