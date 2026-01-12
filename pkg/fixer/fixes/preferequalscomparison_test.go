@@ -124,6 +124,35 @@ test_rule {
 			fixExpected:    true,
 			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 5, Column: 2}, {Row: 6, Column: 2}}},
 		},
+		"multiple = signs": {
+			fc: &FixCandidate{
+				Filename: "test.rego",
+				Contents: `package test
+
+apples := [
+	{"name": "Red"},
+	{"name": "Green"}
+]
+
+var1 := "Red"
+
+some_var := {var1 | var1 = apples[_].name}
+`,
+			},
+			contentAfterFix: `package test
+
+apples := [
+	{"name": "Red"},
+	{"name": "Green"}
+]
+
+var1 := "Red"
+
+some_var := {var1 | var1 == apples[_].name}
+`,
+			fixExpected:    true,
+			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 10, Column: 21}}},
+		},
 	}
 	for testName, tc := range testCases {
 		t.Run(testName, func(t *testing.T) {
