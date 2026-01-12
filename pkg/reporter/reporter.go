@@ -103,7 +103,6 @@ func NewJUnitReporter(out io.Writer) JUnitReporter {
 // Publish prints a pretty report to the configured output.
 func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
 	table := buildPrettyViolationsTable(r.Violations)
-
 	numsWarning, numsError := 0, 0
 
 	for i := range r.Violations {
@@ -162,10 +161,13 @@ func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
 	f := fixer.NewFixer().RegisterFixes(fixes.NewDefaultFixes()...)
 
 	fixableViolations := util.NewSet[string]()
+	fixableCount := 0
 
 	for i := range r.Violations {
 		if fix, ok := f.GetFixForName(r.Violations[i].Title); ok {
 			fixableViolations.Add(fix.Name())
+
+			fixableCount++
 		}
 	}
 
@@ -177,7 +179,7 @@ func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
 Hint: %d/%d violations can be automatically fixed (%s)
       Run regal fix --help for more details.
 `,
-			fixableViolations.Size(),
+			fixableCount,
 			r.Summary.NumViolations,
 			strings.Join(violationKeys, ", "),
 		)
