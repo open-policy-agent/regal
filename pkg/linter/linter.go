@@ -648,6 +648,11 @@ func (l Linter) createDataBundle(conf config.Config) *bundle.Bundle {
 		"ignore_files":     util.NilSliceToEmpty(l.ignoreFiles),
 	}
 
+	userConfigMap := map[string]any{}
+	if l.userConfig != nil {
+		userConfigMap = config.ToMap(*l.userConfig)
+	}
+
 	return &bundle.Bundle{
 		Manifest: bundle.Manifest{
 			Roots:    &[]string{"internal", "eval"},
@@ -659,6 +664,7 @@ func (l Linter) createDataBundle(conf config.Config) *bundle.Bundle {
 			},
 			"internal": map[string]any{
 				"combined_config": config.ToMap(conf),
+				"user_config":     userConfigMap,
 				"capabilities":    rio.ToMap(config.CapabilitiesForThisVersion()),
 				"path_prefix":     l.pathPrefix,
 			},
