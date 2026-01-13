@@ -143,5 +143,5 @@ _to_location_object(loc, text, file) := {"location": {
 	from_col := substring(text, col - 1, -1)
 	ref_text := substring(from_col, 0, indexof(from_col, " "))
 
-	end_col := to_number(vals[1]) + count(ref_text)
+	end_col := col + count(ref_text)
 }
