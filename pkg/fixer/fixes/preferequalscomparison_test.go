@@ -129,29 +129,15 @@ test_rule {
 				Filename: "test.rego",
 				Contents: `package test
 
-apples := [
-	{"name": "Red"},
-	{"name": "Green"}
-]
-
-var1 := "Red"
-
-some_var := {var1 | var1 = apples[_].name}
+is_get := true if input.request.method = "GET"
 `,
 			},
 			contentAfterFix: `package test
 
-apples := [
-	{"name": "Red"},
-	{"name": "Green"}
-]
-
-var1 := "Red"
-
-some_var := {var1 | var1 == apples[_].name}
+is_get := true if input.request.method == "GET"
 `,
 			fixExpected:    true,
-			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 10, Column: 21}}},
+			runtimeOptions: &RuntimeOptions{Locations: []report.Location{{Row: 3, Column: 40}}},
 		},
 	}
 	for testName, tc := range testCases {
