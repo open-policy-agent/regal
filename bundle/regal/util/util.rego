@@ -228,3 +228,23 @@ parse_bool("FALSE") := false
 # METADATA
 # description: creates a string where s is repeated n times
 repeat(s, n) := replace(sprintf("%-*s", [n, " "]), " ", s)
+
+# METADATA
+# description: true if location 'sub' is fully contained within location 'sup'
+contains_location(sup, sub) if {
+	sup.row < sub.row
+	sup.end.row > sub.end.row
+} else if {
+	sup.row == sub.row
+	sup.col <= sub.col
+	sup.end.row > sub.end.row
+} else if {
+	sup.row < sub.row
+	sup.end.row == sub.end.row
+	sup.end.col >= sub.end.col
+} else if {
+	sup.row == sub.row
+	sup.col <= sub.col
+	sup.end.row == sub.end.row
+	sup.end.col >= sub.end.col
+}
