@@ -130,6 +130,8 @@ rules := {
 		["target", "diagnostic"],
 	],
 	"prefer-equals-comparison": ["Replace = with == in comparison", ["target", "diagnostic"]],
+	"constant-condition": ["Remove constant condition", ["target", "diagnostic"]],
+	"redundant-existence-check": ["Remove redundant existence check", ["target", "diagnostic"]],
 }
 
 # METADATA
