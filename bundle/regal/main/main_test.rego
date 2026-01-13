@@ -358,22 +358,6 @@ test_rules_to_run_not_excluded if {
 	rules_to_run == {"testing": {"test"}}
 }
 
-test_notices if {
-	notice := {
-		"category": "idiomatic",
-		"description": "here's a notice",
-		"level": "notice",
-		"title": "testme notice",
-		"severity": "none",
-	}
-
-	notices := main.lint.notices with main._rules_to_run as {"idiomatic": {"testme"}}
-		with data.regal.rules.idiomatic.testme.notices as {notice} # regal ignore:unresolved-reference
-		with input.regal.operations as ["lint"]
-
-	notices == {notice}
-}
-
 test_main_fail_when_input_not_object if {
 	violation := {
 		"category": "error",

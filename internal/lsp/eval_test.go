@@ -76,7 +76,7 @@ func TestEvalWorkspacePathInternalData(t *testing.T) {
 	val := testutil.MustBe[[]any](t, res.Value)
 	act := util.Sorted(testutil.Must(util.AnySliceTo[string](val))(t))
 
-	if exp := []string{"capabilities", "combined_config"}; !slices.Equal(exp, act) {
+	if exp := []string{"capabilities", "combined_config", "user_config"}; !slices.Equal(exp, act) {
 		t.Fatalf("expected %v, got %v", exp, act)
 	}
 }

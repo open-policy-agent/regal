@@ -10,11 +10,20 @@ package regal.main
 
 import data.regal.ast
 import data.regal.config
+import data.regal.notices
 import data.regal.util
 
 # METADATA
 # description: set of all notices returned from linter rules
-lint.notices contains _grouped_notices[_][_][_] if "lint" in input.regal.operations
+lint.notices contains notice if {
+	"lint" in input.regal.operations
+
+	some category, title
+	_rules_to_run[category][title]
+
+	rule_notices := notices.promoted_notices[category][title]
+	some notice in rule_notices
+}
 
 # METADATA
 # description: map of all ignore directives encountered when linting
@@ -57,13 +66,6 @@ _rules_to_run[category] contains title if {
 	not config.excluded_file(category, title, relative_filename)
 }
 
-_grouped_notices[category][title] contains notice if {
-	some category, title
-	_rules_to_run[category][title]
-
-	some notice in data.regal.rules[category][title].notices
-}
-
 # METADATA
 # title: report
 # description: |
@@ -94,7 +96,7 @@ report contains violation if {
 	some category, title
 	_rules_to_run[category][title]
 
-	count(object.get(_grouped_notices, [category, title], [])) == 0
+	count(object.get(notices.promoted_notices, [category, title], [])) == 0
 
 	some violation in data.regal.rules[category][title].report
 

@@ -119,6 +119,11 @@ func prepareRegoArgs(
 		evalConfig = *cfg
 	}
 
+	userConfigMap := map[string]any{}
+	if cfg != nil {
+		userConfigMap = config.ToMap(*cfg)
+	}
+
 	internalBundle := &bundle.Bundle{
 		Manifest: bundle.Manifest{
 			Roots:    &[]string{"internal"},
@@ -127,6 +132,7 @@ func prepareRegoArgs(
 		Data: map[string]any{
 			"internal": map[string]any{
 				"combined_config": config.ToMap(evalConfig),
+				"user_config":     userConfigMap,
 				"capabilities":    caps,
 			},
 		},
