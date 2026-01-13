@@ -117,3 +117,39 @@ test_success_not_impossible_assignment_output_var_equals_static_ref if {
 
 	r == set()
 }
+
+test_success_not_impossible_assignment_set_comprehension_term if {
+	r := rule.report with input as ast.policy(`r := {x | x = y[_].z}`)
+
+	r == set()
+}
+
+test_success_not_impossible_assignment_set_comprehension_term_complex if {
+	r := rule.report with input as ast.policy(`r := {{x} | x = y[_].z}`)
+
+	r == set()
+}
+
+test_success_not_impossible_assignment_array_comprehension_term if {
+	r := rule.report with input as ast.policy(`r := [x | x = y[_].z]`)
+
+	r == set()
+}
+
+test_success_not_impossible_assignment_array_comprehension_term_complex if {
+	r := rule.report with input as ast.policy(`r := [[x] | x = y[_].z]`)
+
+	r == set()
+}
+
+test_success_not_impossible_assignment_object_comprehension_term if {
+	r := rule.report with input as ast.policy(`r := {k: v | k = y[v].k}`)
+
+	r == set()
+}
+
+test_success_not_impossible_assignment_object_comprehension_term_complex if {
+	r := rule.report with input as ast.policy(`r := {{k}: {v} | k = y[v].k}`)
+
+	r == set()
+}
