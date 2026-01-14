@@ -89,6 +89,8 @@ var (
 	fixNoWhitespaceComment    = &fixes.NoWhitespaceComment{}
 	fixNonRawRegexPattern     = &fixes.NonRawRegexPattern{}
 	fixPreferEqualsComparison = &fixes.PreferEqualsComparison{}
+	fixConstantCondition      = &fixes.ConstantCondition{}
+	fixRedundantExistence     = &fixes.RedundantExistenceCheck{}
 )
 
 type LanguageServerOptions struct {
@@ -601,6 +603,10 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 				fixed, editParams, err = l.fixEditParams("Replace \" with ` in regex pattern", fixNonRawRegexPattern, args)
 			case "regal.fix.prefer-equals-comparison":
 				fixed, editParams, err = l.fixEditParams("Replace = with == in comparison", fixPreferEqualsComparison, args)
+			case "regal.fix.constant-condition":
+				fixed, editParams, err = l.fixEditParams("Remove constant condition", fixConstantCondition, args)
+			case "regal.fix.redundant-existence-check":
+				fixed, editParams, err = l.fixEditParams("Remove redundant existence check", fixRedundantExistence, args)
 			case "regal.fix.directory-package-mismatch":
 				params, err := l.fixRenameParams("Rename file to match package path", args.Target)
 				if err != nil {
@@ -1894,6 +1900,8 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 					"regal.fix.directory-package-mismatch",
 					"regal.fix.non-raw-regex-pattern",
 					"regal.fix.prefer-equals-comparison",
+					"regal.fix.constant-condition",
+					"regal.fix.redundant-existence-check",
 					"regal.config.disable-rule",
 				},
 			},
