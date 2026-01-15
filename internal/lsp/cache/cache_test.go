@@ -156,7 +156,7 @@ func TestCacheRename(t *testing.T) {
 	c.SetModule("file:///tmp/foo.rego", &ast.Module{})
 	c.Rename("file:///tmp/foo.rego", "file:///tmp/bar.rego")
 
-	if _, ok := c.GetFileContents("file:///tmp/foo.rego"); ok {
+	if ok := c.HasFileContents("file:///tmp/foo.rego"); ok {
 		t.Fatalf("expected foo.rego to be removed")
 	}
 

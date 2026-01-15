@@ -18,6 +18,18 @@ import data.regal.util
 result["response"] := {
 	"items": items,
 	"isIncomplete": true,
+} if {
+	input.method == "textDocument/completion"
+}
+
+# METADATA
+# schemas:
+#   - input: {}
+result["response"] := data.regal.lsp.completion.resolvers[input.params.data.resolver].resolve if {
+	input.method == "completionItem/resolve"
+} else := input.params if {
+	# if there was nothing to resolve, return the input as-is
+	input.method == "completionItem/resolve"
 }
 
 # METADATA

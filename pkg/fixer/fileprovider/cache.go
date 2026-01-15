@@ -66,7 +66,7 @@ func (c *CacheFileProvider) Rename(from, to string) error {
 		return fmt.Errorf("file %s not found", from)
 	}
 
-	if _, exists := c.Cache.GetFileContents(toURI); exists {
+	if ok := c.Cache.HasFileContents(toURI); ok {
 		return RenameConflictError{From: from, To: to}
 	}
 

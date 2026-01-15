@@ -34,7 +34,7 @@ var (
 
 type (
 	Providers struct {
-		ContextProvider              func(uri string, reqs *Requirements) RegalContext
+		ContextProvider              func(uri string, reqs *Requirements) *RegalContext
 		ContentProvider              func(uri string) (string, bool)
 		IgnoredProvider              func(uri string) bool
 		ParseErrorsProvider          func(uri string) ([]types.Diagnostic, bool)
@@ -49,11 +49,12 @@ type (
 
 	Route struct {
 		handler  regoContextHandler
+		resolver regoContextHandler
 		requires *Requirements
 	}
 
 	regoHandler        = func(context.Context, *query.Prepared, Providers, *jsonrpc2.Request) (any, error)
-	regoContextHandler = func(context.Context, RegalContext, *jsonrpc2.Request) (any, error)
+	regoContextHandler = func(context.Context, *RegalContext, *jsonrpc2.Request) (any, error)
 )
 
 func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, prvs Providers) *RegoRouter {
@@ -100,6 +101,9 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 			handler:  textDocument[types.SignatureHelpParams, *types.SignatureHelp],
 			requires: &Requirements{File: FileRequirements{Lines: true}},
 		},
+		"completionItem/resolve": {
+			resolver: resolve[types.CompletionItem],
+		},
 	}
 
 	router := &RegoRouter{routes: routes, providers: prvs, qc: qc}
@@ -112,6 +116,12 @@ func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2
 		pq := m.qc.Get(query.MainEval)
 		if pq == nil {
 			return nil, fmt.Errorf("no prepared query for %s", query.MainEval)
+		}
+
+		if strings.HasSuffix(req.Method, "/resolve") && route.resolver != nil {
+			resolve := resolverFor(route)
+
+			return resolve(ctx, pq, m.providers, req)
 		}
 
 		return handlerFor(route)(ctx, pq, m.providers, req)
@@ -134,75 +144,97 @@ func handlerFor(route Route) regoHandler {
 			return nil, err
 		}
 
-		// Set up a basic RegalContext, which while not used by all routes, is provided for all.
-		rctx := prvs.ContextProvider(uri, route.requires)
+		rctx, err := regalContextForRequirements(prvs, uri, route.requires)
+		if err != nil {
+			return nil, err
+		}
+
+		if rctx == nil {
+			return emptyResponse[req.Method], nil // e.g. file has always been unparsable
+		}
+
 		rctx.Query = query
-		rctx.File.URI = uri
-
-		if route.requires == nil {
-			return route.handler(ctx, rctx, req)
-		}
-
-		if route.requires.File.Lines && rctx.File.Lines == nil {
-			if prvs.ContentProvider == nil {
-				return nil, errors.New("content provider required but not provided")
-			}
-
-			content, ok := prvs.ContentProvider(uri)
-			if !ok {
-				return nil, errors.New("content provider failed to provide content for URI: " + uri)
-			}
-
-			rctx.File.Lines = strings.Split(content, "\n")
-		}
-
-		if route.requires.File.SuccessfulParseLineCount {
-			if prvs.SuccessfulParseCountProvider == nil {
-				return nil, errors.New("successful parse count provider required but not provided")
-			}
-
-			if splc, ok := prvs.SuccessfulParseCountProvider(uri); ok {
-				rctx.File.SuccessfulParseCount = util.SafeIntToUint(splc)
-			} else {
-				// if the file has always been unparsable, we can return early
-				return emptyResponse[req.Method], nil
-			}
-		}
-
-		if route.requires.File.ParseErrors {
-			if prvs.ParseErrorsProvider == nil {
-				return nil, errors.New("parse errors provider required but not provided")
-			}
-
-			if rctx.File.ParseErrors, _ = prvs.ParseErrorsProvider(uri); rctx.File.ParseErrors == nil {
-				rctx.File.ParseErrors = make([]types.Diagnostic, 0)
-			}
-		}
-
-		if route.requires.InputDotJSON {
-			path := ruri.ToPath(uri)
-			root := ruri.ToPath(rctx.Environment.WorkspaceRootURI)
-
-			// TODO: Avoid the intermediate map[string]any step and unmarshal directly into ast.Value.
-			inputDotJSONPath, inputDotJSONContent := io.FindInput(path, root)
-			if inputDotJSONPath != "" && inputDotJSONContent != nil {
-				inputDotJSONValue, err := transform.ToOPAInputValue(inputDotJSONContent)
-				if err != nil {
-					return nil, fmt.Errorf("failed to convert input.json to value: %w", err)
-				}
-
-				rctx.Environment.InputDotJSONPath = &inputDotJSONPath
-				rctx.Environment.InputDotJSON = inputDotJSONValue
-			}
-		}
 
 		return route.handler(ctx, rctx, req)
 	}
 }
 
+func resolverFor(route Route) regoHandler {
+	return func(ctx context.Context, query *query.Prepared, prvs Providers, req *jsonrpc2.Request) (any, error) {
+		rctx := prvs.ContextProvider("", nil) // No requirements for resolvers yet
+		rctx.Query = query
+
+		return route.resolver(ctx, rctx, req)
+	}
+}
+
+func regalContextForRequirements(prvs Providers, uri string, reqs *Requirements) (*RegalContext, error) {
+	// Set up a basic RegalContext, which while not used by all routes, is provided for all.
+	rctx := prvs.ContextProvider(uri, reqs)
+
+	if reqs == nil {
+		return rctx, nil
+	}
+
+	if reqs.File.Lines && rctx.File.Lines == nil {
+		if prvs.ContentProvider == nil {
+			return nil, errors.New("content provider required but not provided")
+		}
+
+		content, ok := prvs.ContentProvider(uri)
+		if !ok {
+			return nil, errors.New("content provider failed to provide content for URI: " + uri)
+		}
+
+		rctx.File.Lines = strings.Split(content, "\n")
+	}
+
+	if reqs.File.SuccessfulParseLineCount {
+		if prvs.SuccessfulParseCountProvider == nil {
+			return nil, errors.New("successful parse count provider required but not provided")
+		}
+
+		if splc, ok := prvs.SuccessfulParseCountProvider(uri); ok {
+			rctx.File.SuccessfulParseCount = util.SafeIntToUint(splc)
+		} else {
+			// if the file has always been unparsable, we can return early
+			return nil, nil //nolint:nilnil
+		}
+	}
+
+	if reqs.File.ParseErrors {
+		if prvs.ParseErrorsProvider == nil {
+			return nil, errors.New("parse errors provider required but not provided")
+		}
+
+		if rctx.File.ParseErrors, _ = prvs.ParseErrorsProvider(uri); rctx.File.ParseErrors == nil {
+			rctx.File.ParseErrors = make([]types.Diagnostic, 0)
+		}
+	}
+
+	if reqs.InputDotJSON {
+		path := ruri.ToPath(uri)
+		root := ruri.ToPath(rctx.Environment.WorkspaceRootURI)
+
+		// TODO: Avoid the intermediate map[string]any step and unmarshal directly into ast.Value.
+		inputDotJSONPath, inputDotJSONContent := io.FindInput(path, root)
+		if inputDotJSONPath != "" && inputDotJSONContent != nil {
+			inputDotJSONValue, err := transform.ToOPAInputValue(inputDotJSONContent)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert input.json to value: %w", err)
+			}
+
+			rctx.Environment.InputDotJSONPath = &inputDotJSONPath
+			rctx.Environment.InputDotJSON = inputDotJSONValue
+		}
+	}
+
+	return rctx, nil
+}
+
 // textDocument is a handler that requires TextDocumentParams (i.e. a document URI)
 // embedded in parameter of type P, returning a result of type R.
-func textDocument[P, R any](ctx context.Context, rctx RegalContext, req *jsonrpc2.Request) (any, error) {
+func textDocument[P, R any](ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request) (any, error) {
 	params, err := decodeParams[P](req)
 	if err != nil {
 		return nil, err
@@ -215,6 +247,21 @@ func textDocument[P, R any](ctx context.Context, rctx RegalContext, req *jsonrpc
 
 	// For now we just unwrap the LSP response here, but may use other fields in the future.
 	// In particular, we'll likely want to allow Rego handlers to return detailed error messages.
+	return result.Response, nil
+}
+
+// resolve handlers return the same type they receive as parameter, but enriched with data it resolves.
+func resolve[P any](ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request) (any, error) {
+	params, err := decodeParams[P](req)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := QueryEval[P, P](ctx, rctx.Query, NewInput(req.Method, rctx, params))
+	if err != nil {
+		return nil, err
+	}
+
 	return result.Response, nil
 }
 

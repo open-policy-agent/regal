@@ -26,3 +26,5 @@ eval := response if {
 }
 
 _handler_for(method) := lower(name) if ["textDocument", name] = split(method, "/")
+
+_handler_for("completionItem/resolve") := "completion"

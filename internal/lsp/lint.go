@@ -206,10 +206,8 @@ func updateFileDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
 	fileDiags := convertReportToDiagnostics(&rpt, opts.WorkspaceRootURI)
 
 	for uri := range opts.Cache.GetAllFiles() {
-		// if a file has parse errors, continue to show these until they're addressed
-		parseErrs, ok := opts.Cache.GetParseErrors(uri)
-		if ok && len(parseErrs) > 0 {
-			continue
+		if parseErrs, ok := opts.Cache.GetParseErrors(uri); ok && len(parseErrs) > 0 {
+			continue // continue to show these until addressed
 		}
 
 		// For updateFileDiagnostics, we only update the file in question.

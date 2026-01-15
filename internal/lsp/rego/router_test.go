@@ -74,7 +74,7 @@ func TestRouteTextDocumentDocumentHighlight(t *testing.T) {
 		"parsed": map[string]any{doc.uri: doc.parsed},
 	}}, inmem.OptRoundTripOnWrite(false))
 	mgr := rego.NewRegoRouter(t.Context(), stg, query.NewCache(), rego.Providers{
-		ContextProvider: func(string, *rego.Requirements) rego.RegalContext {
+		ContextProvider: func(string, *rego.Requirements) *rego.RegalContext {
 			return regalContext()
 		},
 		ContentProvider: func(uri string) (string, bool) {
@@ -206,6 +206,30 @@ allow if concat(",", "a", "b") == "b,a"`)
 	}
 }
 
+func TestRouteCompletionItemResolve(t *testing.T) {
+	t.Parallel()
+
+	store := inmem.NewFromObjectWithOpts(map[string]any{"workspace": map[string]any{
+		"builtins": map[string]any{"count": ast.Count},
+	}}, inmem.OptReturnASTValuesOnRead(true))
+
+	mgr := rego.NewRegoRouter(t.Context(), store, query.NewCache(), providers(regalContext(), "", ""))
+	req := request("completionItem/resolve", testutil.ToJSONRawMessage(t, map[string]any{
+		"label": "count",
+		"data":  map[string]any{"resolver": "builtins"},
+	}))
+	rsp := testutil.Must(mgr.Handle(t.Context(), nil, req))(t)
+	cmi := testutil.MustBe[types.CompletionItem](t, rsp)
+
+	if cmi.Documentation == nil {
+		t.Fatal("expected documentation to be set, got nil")
+	}
+
+	if cmi.Documentation.Kind != "markdown" {
+		t.Errorf("expected documentation kind to be 'markdown', got '%s'", cmi.Documentation.Kind)
+	}
+}
+
 func docPositionParams(t *testing.T, uri string, position types.Position) *json.RawMessage {
 	t.Helper()
 
@@ -233,9 +257,9 @@ func linkParams(t *testing.T, uri string) *json.RawMessage {
 	return testutil.ToJSONRawMessage(t, map[string]any{"textDocument": map[string]any{"uri": uri}})
 }
 
-func providers(rc rego.RegalContext, content, ignored string) rego.Providers {
+func providers(rc *rego.RegalContext, content, ignored string) rego.Providers {
 	return rego.Providers{
-		ContextProvider: func(string, *rego.Requirements) rego.RegalContext {
+		ContextProvider: func(string, *rego.Requirements) *rego.RegalContext {
 			return rc
 		},
 		IgnoredProvider: func(uri string) bool {
@@ -247,8 +271,8 @@ func providers(rc rego.RegalContext, content, ignored string) rego.Providers {
 	}
 }
 
-func regalContext() rego.RegalContext {
-	return rego.RegalContext{
+func regalContext() *rego.RegalContext {
+	return &rego.RegalContext{
 		Client: types.Client{Identifier: clients.IdentifierVSCode},
 		Environment: rego.Environment{
 			PathSeparator:    "/",

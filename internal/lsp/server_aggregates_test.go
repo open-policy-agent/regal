@@ -72,7 +72,7 @@ import rego.v1
 	barURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego"))
 
 	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.TextDocumentIdentifier{
+		TextDocument: types.VersionedTextDocumentIdentifier{
 			URI: barURI,
 		},
 		ContentChanges: []types.TextDocumentContentChangeEvent{
@@ -108,7 +108,7 @@ import rego.v1
 	fooURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "foo.rego"))
 
 	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.TextDocumentIdentifier{
+		TextDocument: types.VersionedTextDocumentIdentifier{
 			URI: fooURI,
 		},
 		ContentChanges: []types.TextDocumentContentChangeEvent{
@@ -289,7 +289,7 @@ import data.quz
 
 	// 2. check the aggregates for a file are updated after an update
 	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.TextDocumentIdentifier{
+		TextDocument: types.VersionedTextDocumentIdentifier{
 			URI: uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego")),
 		},
 		ContentChanges: []types.TextDocumentContentChangeEvent{
@@ -388,7 +388,7 @@ import rego.v1
 	barURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego"))
 
 	err = connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.TextDocumentIdentifier{
+		TextDocument: types.VersionedTextDocumentIdentifier{
 			URI: barURI,
 		},
 		ContentChanges: []types.TextDocumentContentChangeEvent{
@@ -430,7 +430,7 @@ import rego.v1
 
 	// update the contents of the bar.rego to bring back the violation
 	err = connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.TextDocumentIdentifier{
+		TextDocument: types.VersionedTextDocumentIdentifier{
 			URI: barURI,
 		},
 		ContentChanges: []types.TextDocumentContentChangeEvent{

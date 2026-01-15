@@ -67,7 +67,7 @@ rules:
 	// Client sends textDocument/didChange notification with new contents for main.rego
 	// no response to the call is expected
 	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.TextDocumentIdentifier{
+		TextDocument: types.VersionedTextDocumentIdentifier{
 			URI: mainRegoURI,
 		},
 		ContentChanges: []types.TextDocumentContentChangeEvent{
@@ -188,7 +188,7 @@ capabilities:
 	// loaded correctly, we should see a completion later after we ask for
 	// it.
 	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.TextDocumentIdentifier{
+		TextDocument: types.VersionedTextDocumentIdentifier{
 			URI: mainRegoURI,
 		},
 		ContentChanges: []types.TextDocumentContentChangeEvent{

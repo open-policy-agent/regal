@@ -97,9 +97,9 @@ type (
 	}
 
 	Input[T any] struct {
-		Method string       `json:"method"`
-		Params T            `json:"params"`
-		Regal  RegalContext `json:"regal"`
+		Method string        `json:"method"`
+		Params T             `json:"params"`
+		Regal  *RegalContext `json:"regal"`
 	}
 
 	Result[R any] struct {
@@ -114,7 +114,7 @@ type (
 	}
 )
 
-func NewInput[T any](method string, regal RegalContext, params T) Input[T] {
+func NewInput[T any](method string, regal *RegalContext, params T) Input[T] {
 	return Input[T]{Method: method, Regal: regal, Params: params}
 }
 
