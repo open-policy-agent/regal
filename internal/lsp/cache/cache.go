@@ -69,6 +69,12 @@ func (c *Cache) GetAllFiles() map[string]string {
 	return c.fileContents.Clone()
 }
 
+func (c *Cache) HasFileContents(fileURI string) bool {
+	_, ok := c.fileContents.Get(fileURI)
+
+	return ok
+}
+
 func (c *Cache) GetFileContents(fileURI string) (string, bool) {
 	return c.fileContents.Get(fileURI)
 }

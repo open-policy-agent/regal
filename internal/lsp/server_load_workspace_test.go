@@ -209,7 +209,7 @@ func TestLoadWorkspaceContents(t *testing.T) {
 			for _, expectedFile := range tc.expectChangedFiles {
 				for _, changedURI := range changedURIs {
 					if filepath.Base(changedURI) == expectedFile {
-						if _, found := server.cache.GetFileContents(changedURI); !found {
+						if found := server.cache.HasFileContents(changedURI); !found {
 							t.Errorf("expected file %s to be cached", expectedFile)
 						}
 

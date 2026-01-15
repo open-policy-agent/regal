@@ -13,10 +13,7 @@ allow if {
 
 	items == {{
 		"detail": "input document",
-		"documentation": {
-			"kind": "markdown",
-			"value": provider._doc,
-		},
+		"data": {"resolver": "input"},
 		"kind": 14,
 		"label": "input",
 		"textEdit": {

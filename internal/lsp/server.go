@@ -298,6 +298,7 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	// - textDocument/codeAction
 	// - textDocument/codeLens
 	// - textDocument/completion
+	//   - completionItem/resolve
 	// - textDocument/documentLink
 	// - textDocument/documentHighlight
 	// - textDocument/linkedEditingRange
@@ -851,8 +852,7 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
 		}
 
 		// ignored contents will only be used when there is no existing content
-		_, ok := l.cache.GetFileContents(k)
-		if !ok {
+		if ok := l.cache.HasFileContents(k); !ok {
 			l.cache.SetFileContents(k, v)
 
 			// updating the parse here will enable things like go-to definition
@@ -1230,7 +1230,7 @@ func (l *LanguageServer) processHoverContentUpdate(ctx context.Context, fileURI 
 		return nil
 	}
 
-	if _, ok := l.cache.GetFileContents(fileURI); !ok {
+	if ok := l.cache.HasFileContents(fileURI); !ok {
 		// If the file is not in the cache, exit early or else
 		// we might accidentally put it in the cache after it's been
 		// deleted: https://github.com/open-policy-agent/regal/issues/679
@@ -1542,8 +1542,7 @@ func (l *LanguageServer) maybeIgnoredContents(uri string) (string, bool) {
 
 func (l *LanguageServer) setMaybeIgnoredContents(uri, contents string) bool {
 	ignored := l.ignoreURI(uri)
-
-	if l.ignoreURI(uri) {
+	if ignored {
 		l.cache.SetIgnoredFileContents(uri, contents)
 	} else {
 		l.cache.SetFileContents(uri, contents)
@@ -1856,8 +1855,10 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 		Capabilities: types.ServerCapabilities{
 			TextDocumentSyncOptions: types.TextDocumentSyncOptions{
 				OpenClose: true,
-				Change:    1, // we support incremental updates
-				Save:      types.SaveOptions{IncludeText: true},
+				// For now, send full document on change, but this is something we should improve.
+				// See https://github.com/open-policy-agent/regal/issues/1651
+				Change: 1,
+				Save:   types.SaveOptions{IncludeText: true},
 			},
 			DiagnosticProvider: types.DiagnosticOptions{
 				Identifier:            "rego",
@@ -1917,6 +1918,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 					":", // to suggest :=
 					".", // for refs
 				},
+				ResolveProvider: true,
 			},
 			CodeLensProvider:           types.ResolveProviderOption{},
 			DocumentLinkProvider:       types.ResolveProviderOption{},
@@ -2026,9 +2028,7 @@ func (l *LanguageServer) updateRootURI(ctx context.Context, rootURI string) erro
 	return nil
 }
 
-func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool) (
-	[]string, []fileLoadFailure, error,
-) {
+func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool) ([]string, []fileLoadFailure, error) {
 	changedOrNewURIs := make([]string, 0)
 	failed := make([]fileLoadFailure, 0)
 
@@ -2041,7 +2041,7 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 		// if the caller has requested only new files, then we can exit early
 		// if the file is already in the cache.
 		if newOnly {
-			if _, ok := l.cache.GetFileContents(fileURI); ok {
+			if ok := l.cache.HasFileContents(fileURI); ok {
 				return nil
 			}
 		}
@@ -2227,13 +2227,14 @@ func (l *LanguageServer) parseOpts(fileURI string, bis map[string]*ast.Builtin) 
 	}
 }
 
-func (l *LanguageServer) regalContext(fileURI string, req *rego.Requirements) rego.RegalContext {
-	rctx := rego.RegalContext{
+func (l *LanguageServer) regalContext(fileURI string, _ *rego.Requirements) *rego.RegalContext {
+	return &rego.RegalContext{
 		Client: l.client,
 		File: rego.File{
 			Name:        l.toRelativePath(fileURI),
 			RegoVersion: l.regoVersionForURI(fileURI).String(),
 			Abs:         uri.ToPath(fileURI),
+			URI:         fileURI,
 		},
 		Environment: rego.Environment{
 			PathSeparator:     string(os.PathSeparator),
@@ -2242,20 +2243,6 @@ func (l *LanguageServer) regalContext(fileURI string, req *rego.Requirements) re
 			WorkspaceRootPath: l.workspacePath(),
 		},
 	}
-
-	if req == nil {
-		return rctx
-	}
-
-	if req.File.Lines {
-		if content, ok := l.cache.GetFileContents(fileURI); ok {
-			rctx.File.Lines = strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
-		} else {
-			l.log.Message("failed to get file contents for uri %q", fileURI)
-		}
-	}
-
-	return rctx
 }
 
 func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.CommandArgs) error {

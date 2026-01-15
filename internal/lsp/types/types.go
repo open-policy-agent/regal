@@ -126,6 +126,7 @@ type (
 	}
 
 	CompletionItem struct {
+		Data            any                         `json:"data,omitempty"`
 		LabelDetails    *CompletionItemLabelDetails `json:"labelDetails,omitempty"`
 		Documentation   *MarkupContent              `json:"documentation,omitempty"`
 		TextEdit        *TextEdit                   `json:"textEdit,omitempty"`
@@ -414,8 +415,13 @@ type (
 	}
 
 	DidChangeTextDocumentParams struct {
-		TextDocument   TextDocumentIdentifier           `json:"textDocument"`
+		TextDocument   VersionedTextDocumentIdentifier  `json:"textDocument"`
 		ContentChanges []TextDocumentContentChangeEvent `json:"contentChanges"`
+	}
+
+	VersionedTextDocumentIdentifier struct {
+		Version uint   `json:"version"`
+		URI     string `json:"uri"`
 	}
 
 	TextDocumentContentChangeEvent struct {
