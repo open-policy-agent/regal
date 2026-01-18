@@ -94,6 +94,7 @@ func (s *Server) Start(context.Context) {
 		var (
 			enableStrict, enableAnnotationProcessing, enablePrint bool // TODO(sr): expose
 			hideIdentical                                         bool
+			hasErrors                                             bool
 			tmpl                                                  string
 		)
 
@@ -110,28 +111,24 @@ func (s *Server) Start(context.Context) {
 		st := state{Code: policy, Result: make([]stringResult, n+1)}
 
 		for i := range cs {
-			show := i == 0 || st.Result[i-1].Output != cs[i].Result.String()
-
-			st.Result[i] = stringResult{Stage: cs[i].Stage, Show: show}
-
 			if cs[i].Error != "" {
-				st.Result[i].Output = cs[i].Error
-				st.Result[i].Class = "bad"
+				hasErrors = true
+				st.Result[i] = stringResult{Stage: cs[i].Stage, Show: true, Output: cs[i].Error, Class: "bad"}
 			} else {
-				st.Result[i].Output = cs[i].Result.String()
-			}
-
-			if st.Result[i].Class == "" {
-				if show {
-					st.Result[i].Class = "ok"
-				} else {
-					st.Result[i].Class = "plain"
+				class, output := "plain", cs[i].Result.String()
+				if i == 0 || st.Result[i-1].Output != output {
+					class = "ok"
 				}
+
+				st.Result[i] = stringResult{Stage: cs[i].Stage, Show: class == "ok", Output: output, Class: class}
 			}
 		}
 
 		st.Result[n] = stringResult{Stage: "Plan", Show: true}
-		if p, err := explorer.Plan(r.Context(), path, policy, enablePrint); err != nil {
+		if hasErrors {
+			st.Result[n].Class = "plain"
+			st.Result[n].Output = "Skipped due to errors in previous stages"
+		} else if p, err := explorer.Plan(r.Context(), path, policy, enablePrint); err != nil {
 			st.Result[n].Class = "bad"
 			st.Result[n].Output = err.Error()
 		} else {
