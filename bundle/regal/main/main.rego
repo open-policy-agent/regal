@@ -11,18 +11,24 @@ package regal.main
 import data.regal.ast
 import data.regal.config
 import data.regal.notices
+import data.regal.prepared
 import data.regal.util
 
 # METADATA
-# description: set of all notices returned from linter rules
+# description: |
+#   set of all notices returned from linter rules
+#   all notices for v1 projects run in the prepare stage, and we only run
+#   the (rather expensive per-file notices if a file specifically is not v1
+# scope: document
 lint.notices contains notice if {
 	"lint" in input.regal.operations
+
+	prepared.file_notices
 
 	some category, title
 	_rules_to_run[category][title]
 
-	rule_notices := notices.promoted_notices[category][title]
-	some notice in rule_notices
+	some notice in notices.promoted_notices[category][title]
 }
 
 # METADATA
@@ -40,6 +46,10 @@ lint.aggregates := aggregate if "collect" in input.regal.operations
 # METADATA
 # description: all violations from aggregate rules
 lint.aggregate.violations := aggregate_report if "aggregate" in input.regal.operations
+
+# METADATA
+# description: prepared state for linting, after Rego preparation step
+lint.prepared := prepared.prepare if "prepare" in input.regal.operations
 
 _file_name_relative_to_root(filename, "/") := trim_prefix(filename, "/")
 _file_name_relative_to_root(filename, root) := trim_prefix(filename, concat("", [root, "/"])) if root != "/"
@@ -60,9 +70,8 @@ _rules_to_run[category] contains title if {
 	not config.ignored_globally(relative_filename)
 
 	some category, title
-	config.rules[category][title]
+	prepared.rules_to_run[category][title]
 
-	not config.ignored_rule(category, title)
 	not config.excluded_file(category, title, relative_filename)
 }
 
@@ -96,7 +105,7 @@ report contains violation if {
 	some category, title
 	_rules_to_run[category][title]
 
-	count(object.get(notices.promoted_notices, [category, title], [])) == 0
+	count(object.get(prepared.notices, [category, title], [])) == 0
 
 	some violation in data.regal.rules[category][title].report
 
@@ -109,7 +118,6 @@ report contains violation if {
 	not config.ignored_globally(file_name_relative_to_root)
 
 	some category, title
-
 	violation := data.custom.regal.rules[category][title].report[_]
 
 	not config.ignored_rule(category, title)
@@ -120,11 +128,11 @@ report contains violation if {
 # METADATA
 # description: collects aggregates in bundled rules
 # scope: rule
-aggregate[category_title] contains entry if {
+aggregate[input.regal.file.name][category_title] contains entry if {
 	some category, title
 	_rules_to_run[category][title]
 
-	some entry in data.regal.rules[category][title].aggregate
+	some entry in _mark_if_empty(data.regal.rules[category][title].aggregate)
 
 	category_title := concat("/", [category, title])
 }
@@ -132,7 +140,7 @@ aggregate[category_title] contains entry if {
 # METADATA
 # description: collects aggregates in custom rules
 # scope: rule
-aggregate[category_title] contains entry if {
+aggregate[input.regal.file.name][category_title] contains entry if {
 	not config.ignored_globally(input.regal.file.name)
 
 	some category, title
@@ -165,14 +173,7 @@ aggregate_report contains violation if {
 	some category, title
 	_rules_to_run[category][title]
 
-	key := concat("/", [category, title])
-	input_for_rule := object.remove(
-		object.union(input, {"aggregate": object.get(input, ["aggregates_internal", key], [])}),
-		["aggregates_internal"],
-	)
-
-	# regal ignore:with-outside-test-context
-	some violation in data.regal.rules[category][title].aggregate_report with input as input_for_rule
+	some violation in data.regal.rules[category][title].aggregate_report
 
 	not _ignored(violation, util.keys_to_numbers(object.get(
 		input.ignore_directives,
@@ -187,18 +188,15 @@ aggregate_report contains violation if {
 # schemas:
 #   - input: schema.regal.aggregate
 aggregate_report contains violation if {
-	not config.ignored_globally(input.regal.file.name)
+	data.custom.regal
 
-	some key in object.keys(input.aggregates_internal)
+	some key, aggregate in _aggregate_report_inputs
 	[category, title] := split(key, "/")
 
 	not config.ignored_rule(category, title)
 	not config.excluded_file(category, title, input.regal.file.name)
 
-	input_for_rule := object.remove(
-		object.union(input, {"aggregate": _null_to_empty(input.aggregates_internal[key])}),
-		["aggregates_internal"],
-	)
+	input_for_rule := _remove_empty_aggregates(aggregate)
 
 	# regal ignore:with-outside-test-context
 	some violation in data.custom.regal.rules[category][title].aggregate_report with input as input_for_rule
@@ -207,6 +205,29 @@ aggregate_report contains violation if {
 	ignore_directives := object.get(input, ["ignore_directives", object.get(violation, ["location", "file"], "")], {})
 
 	not _ignored(violation, util.keys_to_numbers(ignore_directives))
+}
+
+_remove_empty_aggregates(aggregates) := {"aggregate": set()} if {
+	aggregates == {"aggregate": {set()}}
+} else := aggregates
+
+# METADATA
+# description: |
+#   Restructure aggregate report input for conformance with "legacy"
+#   format, so that we don't break existing rules. Later on we can deprecate
+#   this and make it opt-in.
+# schemas:
+#   - input: schema.regal.aggregate
+_aggregate_report_inputs[cat_title].aggregate contains formatted if {
+	some filename, cat_title
+	aggregate := input.aggregates_internal[filename][cat_title][_]
+	formatted := _format_aggregate(aggregate, filename)
+}
+
+default _format_aggregate(_, _) := set()
+
+_format_aggregate(aggregate, filename) := object.union(aggregate, {"aggregate_source": {"file": filename}}) if {
+	aggregate.aggregate_data
 }
 
 _ignored(violation, directives) if {

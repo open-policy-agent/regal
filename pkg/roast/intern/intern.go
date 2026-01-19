@@ -2,6 +2,11 @@ package intern
 
 import "github.com/open-policy-agent/opa/v1/ast"
 
+var (
+	EmptyObject = ast.NewObject()
+	EmptyRef    = ast.Ref{}
+)
+
 func init() {
 	ast.InternStringTerm(
 		// Rego
@@ -109,8 +114,6 @@ func init() {
 		"rule",
 		"category",
 		"completion",
-		"aggregate_source",
-		"aggregate_data",
 		"rego_version",
 		"negated_refs",
 		"ast",

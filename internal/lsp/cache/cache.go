@@ -9,7 +9,6 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/report"
 	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
 )
 
@@ -30,8 +29,8 @@ type Cache struct {
 
 	// aggregateData stores the aggregate data from evaluations for each file.
 	// This is used to cache the results of expensive evaluations and can be used
-	// to update aggregate diagostics incrementally.
-	aggregateData *concurrent.Map[string, []report.Aggregate]
+	// to update aggregate diagnostics incrementally.
+	aggregateData *concurrent.Object
 
 	// diagnosticsFile is a map of file URI to diagnostics for that file
 	diagnosticsFile *concurrent.Map[string, []types.Diagnostic]
@@ -56,12 +55,12 @@ func NewCache() *Cache {
 		fileContents:              concurrent.MapOf(make(map[string]string)),
 		ignoredFileContents:       concurrent.MapOf(make(map[string]string)),
 		modules:                   concurrent.MapOf(make(map[string]*ast.Module)),
-		aggregateData:             concurrent.MapOf(make(map[string][]report.Aggregate)),
 		diagnosticsFile:           concurrent.MapOf(make(map[string][]types.Diagnostic)),
 		diagnosticsParseErrors:    concurrent.MapOf(make(map[string][]types.Diagnostic)),
 		builtinPositionsFile:      concurrent.MapOf(make(map[string]map[uint][]types.BuiltinPosition)),
 		keywordLocationsFile:      concurrent.MapOf(make(map[string]map[uint][]types.KeywordLocation)),
 		successfulParseLineCounts: concurrent.MapOf(make(map[string]int)),
+		aggregateData:             concurrent.NewObject(),
 	}
 }
 
@@ -126,96 +125,37 @@ func (c *Cache) GetContentAndModule(fileURI string) (string, *ast.Module, bool) 
 }
 
 func (c *Cache) Rename(oldKey, newKey string) {
-	if content, ok := c.fileContents.Get(oldKey); ok {
-		c.fileContents.Set(newKey, content)
-		c.fileContents.Delete(oldKey)
-	}
+	c.fileContents.RenameKey(oldKey, newKey)
+	c.ignoredFileContents.RenameKey(oldKey, newKey)
+	c.modules.RenameKey(oldKey, newKey)
+	c.aggregateData.RenameKey(oldKey, newKey)
+	c.diagnosticsFile.RenameKey(oldKey, newKey)
+	c.diagnosticsParseErrors.RenameKey(oldKey, newKey)
+	c.builtinPositionsFile.RenameKey(oldKey, newKey)
+	c.keywordLocationsFile.RenameKey(oldKey, newKey)
+	c.successfulParseLineCounts.RenameKey(oldKey, newKey)
+}
 
-	if content, ok := c.ignoredFileContents.Get(oldKey); ok {
-		c.ignoredFileContents.Set(newKey, content)
-		c.ignoredFileContents.Delete(oldKey)
-	}
+func (c *Cache) SetAggregates(aggregates ast.Object) {
+	c.aggregateData.Reset(aggregates)
+}
 
-	if module, ok := c.modules.Get(oldKey); ok {
-		c.modules.Set(newKey, module)
-		c.modules.Delete(oldKey)
-	}
-
-	if aggregates, ok := c.aggregateData.Get(oldKey); ok {
-		c.aggregateData.Set(newKey, aggregates)
-		c.aggregateData.Delete(oldKey)
-	}
-
-	if diagnostics, ok := c.diagnosticsFile.Get(oldKey); ok {
-		c.diagnosticsFile.Set(newKey, diagnostics)
-		c.diagnosticsFile.Delete(oldKey)
-	}
-
-	if parseErrors, ok := c.diagnosticsParseErrors.Get(oldKey); ok {
-		c.diagnosticsParseErrors.Set(newKey, parseErrors)
-		c.diagnosticsParseErrors.Delete(oldKey)
-	}
-
-	if builtinPositions, ok := c.builtinPositionsFile.Get(oldKey); ok {
-		c.builtinPositionsFile.Set(newKey, builtinPositions)
-		c.builtinPositionsFile.Delete(oldKey)
-	}
-
-	if keywordLocations, ok := c.keywordLocationsFile.Get(oldKey); ok {
-		c.keywordLocationsFile.Set(newKey, keywordLocations)
-		c.keywordLocationsFile.Delete(oldKey)
-	}
-
-	if lineCount, ok := c.successfulParseLineCounts.Get(oldKey); ok {
-		c.successfulParseLineCounts.Set(newKey, lineCount)
-		c.successfulParseLineCounts.Delete(oldKey)
+// SetFileAggregates sets aggregate data for the provided URI.
+func (c *Cache) SetFileAggregates(fileURI string, data ast.Object) {
+	if data != nil {
+		c.aggregateData.Set(fileURI, ast.NewTerm(data))
 	}
 }
 
-// SetFileAggregates will only set aggregate data for the provided URI. Even if
-// data for other files is provided, only the specified URI is updated.
-func (c *Cache) SetFileAggregates(fileURI string, data map[string][]report.Aggregate) {
-	flattenedAggregates := make([]report.Aggregate, 0, len(data))
-
-	for _, aggregates := range data {
-		for _, aggregate := range aggregates {
-			if aggregate.SourceFile() == fileURI {
-				flattenedAggregates = append(flattenedAggregates, aggregate)
-			}
-		}
+// GetFileAggregates is used to get aggregate data for a given list of files, or
+// all files if no file URIs are provided. Note that the returned object includes
+// also the provided file URIs as keys.. i.e. not just the values.
+func (c *Cache) GetFileAggregates(fileURIs ...string) ast.Object {
+	if len(fileURIs) == 0 {
+		return c.aggregateData.UnsafeObject()
 	}
 
-	c.aggregateData.Set(fileURI, flattenedAggregates)
-}
-
-func (c *Cache) SetAggregates(data map[string][]report.Aggregate) {
-	c.aggregateData.Clear()
-
-	for _, aggregates := range data {
-		for _, aggregate := range aggregates {
-			c.aggregateData.UpdateValue(aggregate.SourceFile(), func(val []report.Aggregate) []report.Aggregate {
-				return append(val, aggregate)
-			})
-		}
-	}
-}
-
-// GetFileAggregates is used to get aggregate data for a given list of files.
-// This is only used in tests to validate the cache state.
-func (c *Cache) GetFileAggregates(fileURIs ...string) map[string][]report.Aggregate {
-	includedFiles := util.NewSet(fileURIs...)
-	getAll := len(fileURIs) == 0
-	allAggregates := make(map[string][]report.Aggregate)
-
-	for sourceFile, aggregates := range c.aggregateData.Clone() {
-		if getAll || includedFiles.Contains(sourceFile) {
-			for _, aggregate := range aggregates {
-				allAggregates[aggregate.IndexKey()] = append(allAggregates[aggregate.IndexKey()], aggregate)
-			}
-		}
-	}
-
-	return allAggregates
+	return c.aggregateData.Keep(fileURIs...)
 }
 
 func (c *Cache) GetFileDiagnostics(uri string) ([]types.Diagnostic, bool) {

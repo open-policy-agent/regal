@@ -141,9 +141,15 @@ func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
 		sb := &strings.Builder{}
 
 		for _, notice := range r.Notices {
-			if notice.Severity != "none" {
-				fmt.Fprintf(sb, "- %s: %s\n", notice.Title, notice.Description)
+			if notice.Severity == "none" {
+				continue
 			}
+
+			sb.WriteString("- ")
+			sb.WriteString(notice.Title)
+			sb.WriteString(": ")
+			sb.WriteString(notice.Description)
+			sb.WriteString("\n")
 		}
 
 		footer += sb.String()

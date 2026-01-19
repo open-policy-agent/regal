@@ -13,14 +13,19 @@ aggregate contains entry if {
 	some annotation in ast.annotations
 	annotation.entrypoint == true
 
-	entry := result.aggregate(rego.metadata.chain(), {"entrypoint": util.to_location_object(annotation.location)})
+	entry := {"entrypoint": util.to_location_object(annotation.location)}
 }
 
 # METADATA
 # schemas:
 #   - input: schema.regal.aggregate
 aggregate_report contains violation if {
-	count(input.aggregate) == 0
+	not _any_entrypoint
 
 	violation := result.fail(rego.metadata.chain(), {})
 }
+
+# METADATA
+# schemas:
+#   - input: schema.regal.aggregate
+_any_entrypoint if input.aggregates_internal[_]["idiomatic/no-defined-entrypoint"][_].entrypoint

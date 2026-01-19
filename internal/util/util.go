@@ -8,7 +8,6 @@ import (
 	"iter"
 	"math"
 	"net"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -147,30 +146,6 @@ func FilepathJoiner(base string) func(string) string {
 	}
 }
 
-// DeleteEmptyDirs will delete empty directories up to the root for a given
-// directory.
-func DeleteEmptyDirs(dir string) error {
-	for {
-		// os.Remove will only delete empty directories
-		if err := os.Remove(dir); err != nil {
-			if os.IsExist(err) {
-				break
-			} else if !os.IsPermission(err) {
-				return fmt.Errorf("failed to clean directory %s: %w", dir, err)
-			}
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-
-		dir = parent
-	}
-
-	return nil
-}
-
 // SafeUintToInt will convert a uint to an int, clamping the result to
 // math.MaxInt.
 func SafeUintToInt(u uint) int {
@@ -293,13 +268,6 @@ func SendToAll[T any](val T, ch ...chan T) {
 // Pointer returns a pointer to the provided value.
 func Pointer[T any](v T) *T {
 	return &v
-}
-
-// Zero returns the zero value for any type T.
-func Zero[T any]() T {
-	var zero T
-
-	return zero
 }
 
 // AnySliceTo converts a slice of any to a slice of T, returning an error if any element cannot be casted.

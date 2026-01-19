@@ -64,6 +64,17 @@ func (cm *Map[K, V]) Delete(k K) {
 	cm.murw.Unlock()
 }
 
+func (cm *Map[K, V]) RenameKey(oldKey, newKey K) {
+	cm.murw.Lock()
+
+	if v, ok := cm.m[oldKey]; ok {
+		cm.m[newKey] = v
+		delete(cm.m, oldKey)
+	}
+
+	cm.murw.Unlock()
+}
+
 // Keys returns a slice of all keys in the map.
 func (cm *Map[K, V]) Keys() []K {
 	cm.murw.RLock()

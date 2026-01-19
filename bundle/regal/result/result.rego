@@ -17,12 +17,7 @@ import data.regal.util
 #  aggregate data entries. Example return value:
 #
 #  {
-#      "rule": {
-#          "category": "testing",
-#          "title": "aggregation",
-#      },
 #      "aggregate_source": {
-#          "file": "policy.rego",
 #          "package_path": ["a", "b", "c"],
 #      },
 #      "aggregate_data": {
@@ -31,32 +26,16 @@ import data.regal.util
 #      },
 #  }
 #
-aggregate(chain, aggregate_data) := entry if {
-	is_array(chain)
-
-	some link in chain
-	link.annotations.scope == "package"
-
-	[category, title] := _category_title_from_path(link.path)
-
-	entry := {
-		"rule": {
-			"category": category,
-			"title": title,
-		},
-		"aggregate_source": {
-			"file": input.regal.file.name,
-			"package_path": [part.value |
-				some i, part in input.package.path
-				i > 0
-			],
-		},
-		"aggregate_data": aggregate_data,
-	}
+#  Note that the first argument, which was the metadata chain from the package, is
+#  no longer used, but kept for compatibility reasons.
+## regal ignore:argument-always-wildcard
+aggregate(_, aggregate_data) := {
+	"aggregate_source": {"package_path": [part.value |
+		some i, part in input.package.path
+		i > 0
+	]},
+	"aggregate_data": aggregate_data,
 }
-
-_category_title_from_path(path) := [category, title] if ["regal", "rules", category, title] = path
-_category_title_from_path(path) := [category, title] if ["custom", "regal", "rules", category, title] = path
 
 # METADATA
 # description: |

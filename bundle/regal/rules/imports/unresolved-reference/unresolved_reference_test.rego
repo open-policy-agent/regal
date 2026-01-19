@@ -1,6 +1,7 @@
 package regal.rules.imports["unresolved-reference_test"]
 
 import data.regal.config
+import data.regal.util
 
 import data.regal.rules.imports["unresolved-reference"] as rule
 
@@ -14,7 +15,11 @@ test_fail_identifies_unresolved_reference if {
 
 	x := 1
 	`)
-	r := rule.aggregate_report with input as {"aggregate": (agg1 | agg2)}
+
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"imports/unresolved-reference",
+		[agg1, agg2],
+	)
 
 	r == {with_location({
 		"file": "p1.rego",
@@ -52,7 +57,11 @@ test_fail_identifies_unresolved_reference_with_alias if {
 
 	x := 1
 	`)
-	r := rule.aggregate_report with input as {"aggregate": (agg1 | agg2)}
+
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"imports/unresolved-reference",
+		[agg1, agg2],
+	)
 
 	r == {with_location({
 		"file": "p1.rego",
@@ -90,7 +99,11 @@ test_fail_identifies_unresolved_full_path if {
 
 	x := 1
 	`)
-	r := rule.aggregate_report with input as {"aggregate": (agg1 | agg2)}
+
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"imports/unresolved-reference",
+		[agg1, agg2],
+	)
 
 	r == {with_location({
 		"file": "p1.rego",
@@ -139,7 +152,11 @@ test_fail_everything_all_at_once if {
 
 	known := 1
 	`)
-	r := rule.aggregate_report with input as {"aggregate": (((agg1 | agg2) | agg3) | agg4)}
+
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"imports/unresolved-reference",
+		[agg1, agg2, agg3, agg4],
+	)
 
 	r == {
 		with_location({
@@ -254,7 +271,11 @@ test_fail_builtin_namespaces_are_not_ignored if {
 	`)
 		with data.regal.ast.builtin_names as {"time.now_ns"}
 		with data.regal.ast.builtin_namespaces as {"time"}
-	r := rule.aggregate_report with input as {"aggregate": agg}
+
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"imports/unresolved-reference",
+		[agg],
+	)
 
 	expected := {with_location({
 		"file": "p1.rego",

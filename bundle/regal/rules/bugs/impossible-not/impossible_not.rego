@@ -56,20 +56,20 @@ _negated_refs contains negated_ref if {
 
 # METADATA
 # description: collects imported symbols, multi-value rules and negated refs
-aggregate contains result.aggregate(rego.metadata.chain(), {
+aggregate contains {
 	"imported_symbols": ast.resolved_imports,
 	"multivalue_rules": _multivalue_rules,
 	"negated_refs": _negated_refs,
-})
+}
 
 report contains violation if {
 	some entry in aggregate
-	some negated in entry.aggregate_data.negated_refs
+	some negated in entry.negated_refs
 
-	negated.resolved_path in entry.aggregate_data.multivalue_rules
+	negated.resolved_path in entry.multivalue_rules
 
 	loc := object.union(result.location(negated.ref), {"location": {
-		"file": entry.aggregate_source.file,
+		"file": input.regal.file.name,
 		# note that the "not" isn't present in the AST, so we'll add it manually to the text
 		# in the location to try and make it clear where the issue is (as opposed to just
 		# printing the ref)
@@ -83,22 +83,22 @@ report contains violation if {
 # schemas:
 #   - input: schema.regal.aggregate
 aggregate_report contains violation if {
-	all_multivalue_refs := {{"path": path, "file": entry.aggregate_source.file} |
-		some entry in input.aggregate
-		some path in entry.aggregate_data.multivalue_rules
+	all_multivalue_refs := {{"path": path, "file": file} |
+		some file, aggregate in _aggregates
+		some path in aggregate.multivalue_rules
 	}
 
-	some entry in input.aggregate
-	some negated in entry.aggregate_data.negated_refs
+	some file
+	negated := _aggregates[file].negated_refs[_] # regal ignore:prefer-some-in-iteration
+
 	some multivalue_ref in all_multivalue_refs
 
 	# violations in same file handled by non-aggregate "report"
-	multivalue_ref.file != entry.aggregate_source.file
-
+	multivalue_ref.file != file
 	negated.resolved_path == multivalue_ref.path
 
 	loc := object.union(result.location(negated.ref), {"location": {
-		"file": entry.aggregate_source.file,
+		"file": file,
 		# note that the "not" isn't present in the AST, so we'll add it manually to the text
 		# in the location to try and make it clear where the issue is (as opposed to just
 		# printing the ref)
@@ -135,4 +135,13 @@ _resolve(ref, pkg_path, imported_symbols) := concat(".", resolved) if {
 		pkg_path,
 		[part.value | some part in ref],
 	)
+}
+
+# METADATA
+# schemas:
+#   - input: schema.regal.aggregate
+_aggregates[file] := agg if {
+	# only one aggregate exported per file, so this is safe
+	some file
+	agg := input.aggregates_internal[file]["bugs/impossible-not"][_]
 }

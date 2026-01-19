@@ -142,7 +142,7 @@ func AssertNumViolations(tb testing.TB, num int, rep report.Report) {
 	tb.Helper()
 
 	if rep.Summary.NumViolations != num {
-		tb.Errorf("expected %d violations, got %d", num, rep.Summary.NumViolations)
+		tb.Fatalf("expected %d violations, got %d", num, rep.Summary.NumViolations)
 	}
 }
 

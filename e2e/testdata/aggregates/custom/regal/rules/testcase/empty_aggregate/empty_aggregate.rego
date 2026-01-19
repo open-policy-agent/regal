@@ -8,7 +8,7 @@ package custom.regal.rules.testcase.empty_aggregates
 
 import data.regal.result
 
-aggregate contains result.aggregate(rego.metadata.chain(), {}) if {
+aggregate contains {} if {
 	input.nope
 }
 

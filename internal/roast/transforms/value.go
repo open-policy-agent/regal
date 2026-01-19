@@ -28,6 +28,12 @@ func AnyToValue(x any) (ast.Value, error) {
 		}
 
 		return ast.Number(strconv.FormatFloat(x, 'g', -1, 64)), nil
+	case int:
+		if interned := ast.InternedValue(x); interned != nil {
+			return interned, nil
+		}
+
+		return ast.Number(strconv.Itoa(x)), nil
 	case json.Number:
 		if interned := ast.InternedTerm(string(x)); interned != nil {
 			return interned.Value, nil

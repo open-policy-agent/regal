@@ -11,19 +11,22 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/opa/v1/ast"
-	"github.com/open-policy-agent/opa/v1/rego"
 
+	"github.com/open-policy-agent/regal/internal/ogre"
 	"github.com/open-policy-agent/regal/internal/semver"
-	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 
 	_ "embed"
 )
 
-//go:embed update.rego
-var updateModule string
-
 const CheckVersionDisableEnvVar = "REGAL_DISABLE_VERSION_CHECK"
+
+var (
+	//go:embed update.rego
+	updateModule string
+	query        = ast.MustParseBody("result = data.update.check")
+)
 
 type Options struct {
 	CurrentTime       time.Time
@@ -46,8 +49,6 @@ type decision struct {
 	CTA           string `json:"cta"`
 }
 
-var query = ast.MustParseBody("result := data.update.check")
-
 func CheckAndWarn(opts Options, w io.Writer) {
 	// only perform the version check on binaries with production semvers set
 	if _, err := semver.Parse(opts.CurrentVersion); err != nil {
@@ -59,29 +60,41 @@ func CheckAndWarn(opts Options, w io.Writer) {
 	}
 
 	latestVersion, cacheIsStale := getLatestCachedVersionAndCheckStale(opts)
+	ctx := context.Background()
+	mod := map[string]*ast.Module{"update.rego": ast.MustParseModule(updateModule)}
 
-	regoArgs := []func(*rego.Rego){
-		rego.Module("update.rego", updateModule),
-		rego.ParsedQuery(query),
-		rego.ParsedInput(ast.NewObject(
-			ast.Item(ast.StringTerm("current_version"), ast.StringTerm(opts.CurrentVersion)),
-			ast.Item(ast.StringTerm("latest_version"), ast.StringTerm(latestVersion)),
-			ast.Item(ast.StringTerm("cta_url_prefix"), ast.StringTerm(opts.CTAURLPrefix)),
-			ast.Item(ast.StringTerm("release_server_host"), ast.StringTerm(opts.ReleaseServerHost)),
-			ast.Item(ast.StringTerm("release_server_path"), ast.StringTerm(opts.ReleaseServerPath)),
-		)),
-	}
-
-	rs, err := rego.New(regoArgs...).Eval(context.Background())
+	q, err := ogre.New(query).WithModules(mod).Prepare(ctx)
 	if err != nil {
 		if opts.Debug {
-			w.Write([]byte(err.Error()))
+			w.Write(fmt.Appendf(nil, "failed to prepare update query: %v", err))
 		}
 
 		return
 	}
 
-	result, err := resultSetToDecision(rs)
+	input := ast.NewObject(
+		rast.Item("current_version", ast.InternedTerm(opts.CurrentVersion)),
+		rast.Item("latest_version", ast.InternedTerm(latestVersion)),
+		rast.Item("cta_url_prefix", ast.InternedTerm(opts.CTAURLPrefix)),
+		rast.Item("release_server_host", ast.InternedTerm(opts.ReleaseServerHost)),
+		rast.Item("release_server_path", ast.InternedTerm(opts.ReleaseServerPath)),
+	)
+
+	var result decision
+
+	err = q.Evaluator().WithInput(input).WithResultHandler(func(qr ast.Value) (err error) {
+		if obj, ok := qr.(ast.Object); ok {
+			result = decision{
+				NeedsUpdate:   rast.GetBool(obj, "needs_update"),
+				LatestVersion: rast.GetString(obj, "latest_version"),
+				CTA:           rast.GetString(obj, "cta"),
+			}
+
+			return nil
+		}
+
+		return errors.New("no result set")
+	}).Eval(ctx)
 	if err != nil {
 		if opts.Debug {
 			w.Write([]byte(err.Error()))
@@ -100,21 +113,9 @@ func CheckAndWarn(opts Options, w io.Writer) {
 
 	if result.NeedsUpdate {
 		w.Write([]byte(result.CTA))
-
-		return
-	}
-
-	if opts.Debug {
+	} else if opts.Debug {
 		w.Write([]byte("Regal is up to date"))
 	}
-}
-
-func resultSetToDecision(rs rego.ResultSet) (decision, error) {
-	if len(rs) == 0 || rs[0].Bindings["result"] == nil {
-		return decision{}, errors.New("no result set")
-	}
-
-	return util.Wrap(encoding.JSONRoundTripTo[decision](rs[0].Bindings["result"]))("failed to decode result set")
 }
 
 func getLatestCachedVersionAndCheckStale(opts Options) (string, bool) {

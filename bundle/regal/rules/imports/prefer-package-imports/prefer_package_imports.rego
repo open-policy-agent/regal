@@ -25,10 +25,10 @@ aggregate contains entry if {
 		imp := [path, _import.location]
 	]
 
-	entry := result.aggregate(rego.metadata.chain(), {
+	entry := {
 		"imports": imports_with_location,
 		"package_path": ast.package_path,
-	})
+	}
 }
 
 _custom_regal_package_and_import(pkg_path, "regal") if {
@@ -40,10 +40,14 @@ _custom_regal_package_and_import(pkg_path, "regal") if {
 # schemas:
 #   - input: schema.regal.aggregate
 aggregate_report contains violation if {
-	all_package_paths := {entry.aggregate_data.package_path | some entry in input.aggregate}
+	all_package_paths := {path | path := _aggregates[_].package_path}
 
-	some entry in input.aggregate
-	some [path, location] in entry.aggregate_data.imports
+	some file
+
+	# regal ignore:prefer-some-in-iteration
+	entry := _aggregates[file]
+
+	some [path, location] in entry.imports
 
 	not path in all_package_paths
 	not path in _ignored_import_paths
@@ -54,11 +58,21 @@ aggregate_report contains violation if {
 	]) > 0
 
 	violation := result.fail(rego.metadata.chain(), {"location": object.union(util.to_location_no_text(location), {
-		"file": entry.aggregate_source.file,
+		"file": file,
 		"text": concat("", ["import data.", concat(".", path)]),
 	})})
 }
 
 _ignored_import_paths contains split(trim_prefix(item, "data."), ".") if {
 	some item in config.rules.imports["prefer-package-imports"]["ignore-import-paths"]
+}
+
+# METADATA
+# schemas:
+#   - input: schema.regal.aggregate
+_aggregates[file] := agg if {
+	# we know that there is only one aggregate of this type per file,
+	# so we can simplify things some for our callers
+	some file
+	agg := input.aggregates_internal[file]["imports/prefer-package-imports"][_]
 }

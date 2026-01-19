@@ -13,35 +13,28 @@ test_aggregate_collects_imports_with_location if {
 	`)
 
 	r == {{
-		"aggregate_data": {
-			"imports": [
-				[["b"], "4:2:4:8"],
-				[["c", "d"], "5:2:5:8"],
-			],
-			"package_path": ["a"],
-		},
-		"aggregate_source": {"file": "p.rego", "package_path": ["a"]},
-		"rule": {"category": "imports", "title": "prefer-package-imports"},
+		"imports": [
+			[["b"], "4:2:4:8"],
+			[["c", "d"], "5:2:5:8"],
+		],
+		"package_path": ["a"],
 	}}
 }
 
 test_fail_aggregate_report_on_imported_rule if {
-	r := rule.aggregate_report with input.aggregate as {
-		{
-			"aggregate_data": {
-				"package_path": ["a"],
-				"imports": [
-					[["b", "c"], "3:1:3:8"], # likely import of rule — should fail
-					[["b"], "4:1:4:8"], # import of package, should not fail
-					[["c"], "5:1:5:8"], # unresolved import, should not fail
-				],
-			},
-			"aggregate_source": {"file": "policy.rego", "package_path": ["a"]},
-		},
-		{
-			"aggregate_data": {"package_path": ["b"], "imports": []},
-			"aggregate_source": {"file": "policy2.rego", "package_path": ["b"]},
-		},
+	r := rule.aggregate_report with input.aggregates_internal as {
+		"policy1.rego": {"imports/prefer-package-imports": {{
+			"package_path": ["a"],
+			"imports": [
+				[["b", "c"], "3:1:3:8"], # likely import of rule — should fail
+				[["b"], "4:1:4:8"], # import of package, should not fail
+				[["c"], "5:1:5:8"], # unresolved import, should not fail
+			],
+		}}},
+		"policy2.rego": {"imports/prefer-package-imports": {{
+			"package_path": ["b"],
+			"imports": [],
+		}}},
 	}
 
 	r == {{
@@ -49,7 +42,7 @@ test_fail_aggregate_report_on_imported_rule if {
 		"description": "Prefer importing packages over rules",
 		"level": "error",
 		"location": {
-			"file": "policy.rego",
+			"file": "policy1.rego",
 			"col": 1,
 			"row": 3,
 			"end": {
@@ -129,11 +122,7 @@ test_aggregate_ignores_imports_of_regal_in_custom_rule if {
 	`)
 
 	r == {{
-		"aggregate_data": {
-			"imports": [[["a", "b", "c"], "6:2:6:8"]],
-			"package_path": ["custom", "regal", "rules", "foo", "bar"],
-		},
-		"aggregate_source": {"file": "p.rego", "package_path": ["custom", "regal", "rules", "foo", "bar"]},
-		"rule": {"category": "imports", "title": "prefer-package-imports"},
+		"imports": [[["a", "b", "c"], "6:2:6:8"]],
+		"package_path": ["custom", "regal", "rules", "foo", "bar"],
 	}}
 }

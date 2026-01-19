@@ -230,6 +230,17 @@ parse_bool("FALSE") := false
 repeat(s, n) := replace(sprintf("%-*s", [n, " "]), " ", s)
 
 # METADATA
+# description: |
+#   adds source files for each aggregate in aggs array, which is only useful
+#   for testing, when this isn't done in the main routing logic
+with_source_files(aggregator, aggs) := {file: {aggregator: agg} |
+	is_string(aggregator)
+
+	some i, agg in aggs
+	file := sprintf("p%d.rego", [i + 1])
+}
+
+# METADATA
 # description: true if location 'sub' is fully contained within location 'sup'
 contains_location(sup, sub) if {
 	sup.row < sub.row

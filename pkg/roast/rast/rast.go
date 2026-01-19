@@ -4,6 +4,7 @@ package rast
 import (
 	"bytes"
 	"fmt"
+	"iter"
 	"os"
 	"reflect"
 	"slices"
@@ -123,6 +124,65 @@ func refHeadTerm(name string) *ast.Term {
 		return ast.InputRootDocument
 	default:
 		return ast.VarTerm(name)
+	}
+}
+
+// Item is a helper function to create an ast.Item with an interned key.
+func Item(key string, value *ast.Term) [2]*ast.Term {
+	return ast.Item(ast.InternedTerm(key), value)
+}
+
+// GetValue works like ast.Object.Get but with type assertion for the return value,
+// and a boolean return indicator.
+func GetValue[T ast.Value](obj ast.Object, key string) (T, bool) {
+	var zero T
+
+	if term := obj.Get(ast.InternedTerm(key)); term != nil {
+		if v, ok := term.Value.(T); ok {
+			return v, true
+		}
+	}
+
+	return zero, false
+}
+
+// GetString retrieves a string from an obj by key, or empty string if not found.
+func GetString(obj ast.Object, key string) string {
+	if strObj, ok := GetValue[ast.String](obj, key); ok {
+		return string(strObj)
+	}
+
+	return ""
+}
+
+// GetInt retrieves an int from an obj by key, or zero if not found.
+func GetInt(obj ast.Object, key string) int {
+	if val, ok := GetValue[ast.Number](obj, key); ok {
+		if i, ok := val.Int64(); ok {
+			return int(i)
+		}
+	}
+
+	return 0
+}
+
+// GetBool retrieves a bool from an obj by key, or false if not found.
+func GetBool(obj ast.Object, key string) bool {
+	if val, ok := GetValue[ast.Boolean](obj, key); ok {
+		return bool(val)
+	}
+
+	return false
+}
+
+// ValuesOfType creates an iterator over the [ast.Value]s of the specified type from a slice of terms.
+func ValuesOfType[T ast.Value](terms []*ast.Term) iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for _, term := range terms {
+			if v, ok := term.Value.(T); ok && !yield(v) {
+				return
+			}
+		}
 	}
 }
 

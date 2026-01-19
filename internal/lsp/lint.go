@@ -21,6 +21,7 @@ import (
 	"github.com/open-policy-agent/regal/pkg/hints"
 	"github.com/open-policy-agent/regal/pkg/linter"
 	"github.com/open-policy-agent/regal/pkg/report"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/rules"
 )
 
@@ -221,17 +222,18 @@ func updateFileDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
 		}
 	}
 
-	opts.Cache.SetFileAggregates(opts.FileURI, rpt.Aggregates)
+	// update only this file's aggregates
+	if agg, ok := rast.GetValue[ast.Object](rpt.Aggregates, opts.FileURI); ok {
+		opts.Cache.SetFileAggregates(opts.FileURI, agg)
+	}
 
 	return nil
 }
 
-func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
+func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (err error) {
 	if opts.FileURI != "" {
 		return errors.New("FileURI should not be set for updateAllDiagnostics")
 	}
-
-	var err error
 
 	modules := opts.Cache.GetAllModules()
 	files := opts.Cache.GetAllFiles()

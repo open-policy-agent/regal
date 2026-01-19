@@ -6,7 +6,7 @@ import data.regal.result
 
 # METADATA
 # description: Collect aggregates
-aggregate contains result.aggregate(rego.metadata.chain(), {})
+aggregate contains {}
 
 # METADATA
 # description: Validate that two files were processed

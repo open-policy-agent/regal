@@ -1,6 +1,7 @@
 package regal.rules.bugs["impossible-not_test"]
 
 import data.regal.config
+import data.regal.util
 
 import data.regal.rules.bugs["impossible-not"] as rule
 
@@ -16,7 +17,10 @@ test_fail_multivalue_not_reference_same_package if {
 		not partial
 	}
 	`)
-	r := rule.aggregate_report with input as {"aggregate": (agg1 | agg2)}
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"bugs/impossible-not",
+		[agg1, agg2],
+	)
 
 	r == expected_with_location({
 		"col": 7,
@@ -41,7 +45,10 @@ test_fail_multivalue_not_reference_same_package_nested_expression if {
 		comprehension := [1 | not partial]
 	}`)
 
-	r := rule.aggregate_report with input as {"aggregate": (agg1 | agg2)}
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"bugs/impossible-not",
+		[agg1, agg2],
+	)
 
 	r == expected_with_location({
 		"col": 29,
@@ -67,7 +74,10 @@ test_fail_multivalue_not_reference_different_package_using_direct_reference if {
 		not data.foo.partial
 	}
 	`)
-	r := rule.aggregate_report with input as {"aggregate": (agg1 | agg2)}
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"bugs/impossible-not",
+		[agg1, agg2],
+	)
 
 	r == expected_with_location({
 		"col": 7,
@@ -97,7 +107,10 @@ test_fail_multivalue_not_reference_different_package_using_import if {
 		not foo.partial
 	}
 	`)
-	r := rule.aggregate_report with input as {"aggregate": (agg1 | agg2)}
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"bugs/impossible-not",
+		[agg1, agg2],
+	)
 
 	r == expected_with_location({
 		"col": 7,
@@ -126,7 +139,10 @@ test_success_multivalue_not_reference_invalidated_by_local_var if {
 		not foo.partial
 	}
 	`)
-	r := rule.aggregate_report with input as {"aggregate": (agg1 | agg2)}
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"bugs/impossible-not",
+		[agg1, agg2],
+	)
 
 	r == set()
 }
@@ -145,7 +161,10 @@ test_success_multivalue_not_reference_invalidated_by_function_argument if {
 		not foo.partial
 	}
 	`)
-	r := rule.aggregate_report with input as {"aggregate": (agg1 | agg2)}
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"bugs/impossible-not",
+		[agg1, agg2],
+	)
 
 	r == set()
 }

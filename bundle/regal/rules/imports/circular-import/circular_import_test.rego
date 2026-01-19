@@ -19,16 +19,14 @@ test_aggregate_rule_empty_if_no_static_refs if {
 
 test_aggregate_rule_contains_single_self_ref if {
 	aggregate := rule.aggregate with input as ast.policy("import data.example")
+		with ast.package_name_full as "data.policy"
 
-	aggregate == {{
-		"aggregate_data": {"refs": {["data.example", "3:8:3:20"]}},
-		"aggregate_source": {"file": "policy.rego", "package_path": ["policy"]},
-		"rule": {"category": "imports", "title": "circular-import"},
-	}}
+	aggregate == {{"refs": {"data.example": {"3:8:3:20"}}, "package_name": "data.policy"}}
 }
 
 test_aggregate_rule_surfaces_refs if {
-	aggregate := rule.aggregate with input as regal.parse_module("example.rego", `
+	aggregate := rule.aggregate with ast.package_name_full as "data.policy.foo"
+		with input as regal.parse_module("example.rego", `
     package policy.foo
 
     import future.keywords
@@ -44,67 +42,41 @@ test_aggregate_rule_surfaces_refs if {
     `)
 
 	aggregate == {{
-		"aggregate_data": {"refs": {
-			["data.config.deny.enabled", "11:7:11:31"],
-			["data.foo.bar", "6:12:6:24"],
-			["data.baz.qux", "8:14:8:26"],
-		}},
-		"aggregate_source": {
-			"file": "example.rego",
-			"package_path": ["policy", "foo"],
+		"refs": {
+			"data.config.deny.enabled": {"11:7:11:31"},
+			"data.foo.bar": {"6:12:6:24"},
+			"data.baz.qux": {"8:14:8:26"},
 		},
-		"rule": {"category": "imports", "title": "circular-import"},
+		"package_name": "data.policy.foo",
 	}}
 }
 
 test_import_graph if {
-	r := rule._import_graph with input as {"aggregate": {
-		{
-			"aggregate_data": {"refs": {["data.policy.b", "3:12:3:12"]}},
-			"aggregate_source": {
-				"file": "a.rego",
-				"package_path": ["policy", "a"],
-			},
-			"rule": {"category": "imports", "title": "circular-import"},
-		},
-		{
-			"aggregate_data": {"refs": {["data.policy.c", "3:12:3:12"]}},
-			"aggregate_source": {
-				"file": "b.rego",
-				"package_path": ["policy", "b"],
-			},
-			"rule": {"category": "imports", "title": "circular-import"},
-		},
-		{
-			"aggregate_data": {"refs": {["data.policy.a", "3:12:3:12"]}},
-			"aggregate_source": {
-				"file": "c.rego",
-				"package_path": ["policy", "c"],
-			},
-			"rule": {"category": "imports", "title": "circular-import"},
-		},
-	}}
+	r := rule._import_graph with input.aggregates_internal as {
+		"a.rego": {"imports/circular-import": {{
+			"refs": {"data.policy.b": {"3:12:3:12"}},
+			"package_name": "data.policy.a",
+		}}},
+		"b.rego": {"imports/circular-import": {{
+			"refs": {"data.policy.c": {"3:12:3:12"}},
+			"package_name": "data.policy.b",
+		}}},
+		"c.rego": {"imports/circular-import": {{
+			"refs": {"data.policy.a": {"3:12:3:12"}},
+			"package_name": "data.policy.c",
+		}}},
+	}
 
 	r == {"data.policy.a": {"data.policy.b"}, "data.policy.b": {"data.policy.c"}, "data.policy.c": {"data.policy.a"}}
 }
 
 test_import_graph_self_import if {
-	r := rule._import_graph with input as {"aggregate": {{
-		"aggregate_data": {"refs": {["data.example", "4:12:4:12"]}},
-		"aggregate_source": {"file": "example.rego", "package_path": ["example"]},
-		"rule": {"category": "imports", "title": "circular-import"},
-	}}}
+	r := rule._import_graph with input.aggregates_internal as {"example.rego": {"imports/circular-import": {{
+		"refs": {"data.example": {"4:12:4:12"}},
+		"package_name": "data.example",
+	}}}}
 
 	r == {"data.example": {"data.example"}}
-}
-
-test_self_reachable if {
-	r := rule._self_reachable with rule._import_graph as {
-		"data.policy.a": {"data.policy.b"},
-		"data.policy.b": {"data.policy.c"}, "data.policy.c": {"data.policy.a"},
-	}
-
-	r == {"data.policy.a", "data.policy.b", "data.policy.c"}
 }
 
 test_groups if {
@@ -132,56 +104,53 @@ test_groups_empty_graph if {
 }
 
 test_package_locations if {
-	r := rule._package_locations with input as {"aggregate": {
-		{
-			"aggregate_data": {"refs": {["data.policy.b", "3:12:3:12"]}},
-			"aggregate_source": {"file": "a.rego", "package_path": ["policy.a"]},
-			"rule": {"category": "imports", "title": "circular-import"},
-		},
-		{
-			"aggregate_data": {"refs": {["data.policy.c", "3:12:3:12"]}},
-			"aggregate_source": {"file": "b.rego", "package_path": ["policy.b"]},
-			"rule": {"category": "imports", "title": "circular-import"},
-		},
-		{
-			"aggregate_data": {"refs": {["data.policy.a", "3:12:3:12"]}},
-			"aggregate_source": {"file": "c.rego", "package_path": ["policy.c"]},
-			"rule": {"category": "imports", "title": "circular-import"},
-		},
-	}}
+	r := rule._package_locations with input.aggregates_internal as {
+		"a.rego": {"imports/circular-import": {{
+			"refs": {"data.policy.b": {"3:12:3:12"}},
+			"package_name": "data.policy.a",
+		}}},
+		"b.rego": {"imports/circular-import": {{
+			"refs": {"data.policy.c": {"3:12:3:12"}},
+			"package_name": "data.policy.b",
+		}}},
+		"c.rego": {"imports/circular-import": {{
+			"refs": {"data.policy.a": {"3:12:3:12"}},
+			"package_name": "data.policy.c",
+		}}},
+	}
 
 	r == {
-		"data.policy.a": {"data.policy.c": {{"col": 12, "file": "c.rego", "row": 3}}},
-		"data.policy.b": {"data.policy.a": {{"col": 12, "file": "a.rego", "row": 3}}},
-		"data.policy.c": {"data.policy.b": {{"col": 12, "file": "b.rego", "row": 3}}},
+		"data.policy.a": {"data.policy.c": ["c.rego", "3:12:3:12"]},
+		"data.policy.b": {"data.policy.a": ["a.rego", "3:12:3:12"]},
+		"data.policy.c": {"data.policy.b": ["b.rego", "3:12:3:12"]},
 	}
 }
 
 test_aggregate_report_fails_when_cycle_present if {
-	r := rule.aggregate_report with input as {"aggregate": {
-		{
-			"aggregate_data": {"refs": {["data.policy.b", "3:12:3:12"]}},
-			"aggregate_source": {
-				"file": "a.rego",
-				"package_path": ["policy", "a"],
-			},
-			"rule": {"category": "imports", "title": "circular-import"},
-		},
-		{
-			"aggregate_data": {"refs": {["data.policy.a", "2:0:2:0"]}},
-			"aggregate_source": {
-				"file": "b.rego",
-				"package_path": ["policy", "b"],
-			},
-			"rule": {"category": "imports", "title": "circular-import"},
-		},
-	}}
+	r := rule.aggregate_report with input.aggregates_internal as {
+		"a.rego": {"imports/circular-import": {{
+			"refs": {"data.policy.b": {"3:12:3:12"}},
+			"package_name": "data.policy.a",
+		}}},
+		"b.rego": {"imports/circular-import": {{
+			"refs": {"data.policy.a": {"2:0:2:0"}},
+			"package_name": "data.policy.b",
+		}}},
+	}
 
 	r == {{
 		"category": "imports",
 		"description": "Circular import detected in: data.policy.a, data.policy.b",
 		"level": "error",
-		"location": {"col": 0, "file": "b.rego", "row": 2},
+		"location": {
+			"col": 0,
+			"file": "b.rego",
+			"row": 2,
+			"end": {
+				"col": 0,
+				"row": 2,
+			},
+		},
 		"related_resources": [{
 			"description": "documentation",
 			"ref": config.docs.resolve_url("$baseUrl/$category/circular-import", "imports"),
@@ -191,20 +160,23 @@ test_aggregate_report_fails_when_cycle_present if {
 }
 
 test_aggregate_report_fails_when_cycle_present_in_1_package if {
-	r := rule.aggregate_report with input as {"aggregate": {{
-		"aggregate_data": {"refs": {["data.policy.a", "3:12:3:12"]}},
-		"aggregate_source": {
-			"file": "a.rego",
-			"package_path": ["policy", "a"],
-		},
-		"rule": {"category": "imports", "title": "circular-import"},
-	}}}
+	r := rule.aggregate_report with input.aggregates_internal as {"a.rego": {"imports/circular-import": {{
+		"refs": {"data.policy.a": {"3:12:3:12"}},
+		"package_name": "data.policy.a",
+	}}}}
 
 	r == {{
 		"category": "imports",
 		"description": "Circular self-dependency in: data.policy.a",
 		"level": "error",
-		"location": {"col": 12, "file": "a.rego", "row": 3},
+		"location": {
+			"col": 12,
+			"end": {
+				"col": 12,
+				"row": 3,
+			},
+			"file": "a.rego", "row": 3,
+		},
 		"related_resources": [{
 			"description": "documentation",
 			"ref": config.docs.resolve_url("$baseUrl/$category/circular-import", "imports"),
@@ -214,29 +186,34 @@ test_aggregate_report_fails_when_cycle_present_in_1_package if {
 }
 
 test_aggregate_report_fails_when_cycle_present_in_n_packages if {
-	r := rule.aggregate_report with input as {"aggregate": {
-		{
-			"aggregate_data": {"refs": {["data.policy.b", "3:12:3:12"]}},
-			"aggregate_source": {"file": "a.rego", "package_path": ["policy", "a"]},
-			"rule": {"category": "imports", "title": "circular-import"},
-		},
-		{
-			"aggregate_data": {"refs": {["data.policy.c", "3:12:3:12"]}},
-			"aggregate_source": {"file": "b.rego", "package_path": ["policy", "b"]},
-			"rule": {"category": "imports", "title": "circular-import"},
-		},
-		{
-			"aggregate_data": {"refs": {["data.policy.a", "3:12:3:12"]}},
-			"aggregate_source": {"file": "c.rego", "package_path": ["policy", "c"]},
-			"rule": {"category": "imports", "title": "circular-import"},
-		},
-	}}
+	r := rule.aggregate_report with input.aggregates_internal as {
+		"a.rego": {"imports/circular-import": {{
+			"refs": {"data.policy.b": {"3:12:3:12"}},
+			"package_name": "data.policy.a",
+		}}},
+		"b.rego": {"imports/circular-import": {{
+			"refs": {"data.policy.c": {"3:12:3:12"}},
+			"package_name": "data.policy.b",
+		}}},
+		"c.rego": {"imports/circular-import": {{
+			"refs": {"data.policy.a": {"3:12:3:12"}},
+			"package_name": "data.policy.c",
+		}}},
+	}
 
 	r == {{
 		"category": "imports",
 		"description": "Circular import detected in: data.policy.a, data.policy.b, data.policy.c",
 		"level": "error",
-		"location": {"col": 12, "file": "c.rego", "row": 3},
+		"location": {
+			"col": 12,
+			"file": "c.rego",
+			"row": 3,
+			"end": {
+				"col": 12,
+				"row": 3,
+			},
+		},
 		"related_resources": [{
 			"description": "documentation",
 			"ref": config.docs.resolve_url("$baseUrl/$category/circular-import", "imports"),
