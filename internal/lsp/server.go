@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/sourcegraph/jsonrpc2"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -253,6 +254,8 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return handler.WithParams(req, l.handleTextDocumentHover)
 	case "textDocument/inlayHint":
 		return handler.WithParams(req, l.handleTextDocumentInlayHint)
+	case "textDocument/semanticTokens/full":
+		return handler.WithParams(req, l.handleTextDocumentSemanticTokensFull)
 	case "workspace/didChangeWatchedFiles":
 		return handler.WithParams(req, l.handleWorkspaceDidChangeWatchedFiles)
 	case "workspace/diagnostic":
@@ -1717,6 +1720,19 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 	return ComputeEdits(oldContent, newContent), nil
 }
 
+func (l *LanguageServer) handleTextDocumentSemanticTokensFull(params types.SemanticTokensParams) (any, error) {
+	if l.ignoreURI(params.TextDocument.URI) {
+		return nil, nil
+	}
+
+	module, ok := l.cache.GetModule(params.TextDocument.URI)
+	if !ok {
+		return nil, nil
+	}
+
+	return semantictokens.Full(module), nil
+}
+
 func (l *LanguageServer) handleWorkspaceDidCreateFiles(params types.CreateFilesParams) (any, error) {
 	if l.ignoreURI(params.Files[0].URI) {
 		return emptyStruct, nil
@@ -1925,6 +1941,13 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			DocumentHighlightProvider:  true,
 			SelectionRangeProvider:     true,
 			LinkedEditingRangeProvider: true,
+			SemanticTokensProvider: types.SemanticTokensOptions{
+				Legend: types.SemanticTokensLegend{
+					TokenTypes:     []string{},
+					TokenModifiers: []string{},
+				},
+				Full: true,
+			},
 		},
 	}
 
