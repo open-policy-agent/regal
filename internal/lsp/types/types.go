@@ -80,7 +80,7 @@ type (
 		InlayHintProvider          ResolveProviderOption   `json:"inlayHintProvider"`
 		DocumentLinkProvider       ResolveProviderOption   `json:"documentLinkProvider"`
 		SignatureHelpProvider      SignatureHelpOptions    `json:"signatureHelpProvider"`
-		SemanticTokensProvider     SemanticTokensOptions   `json:"semanticTokensProvider,omitempty"`
+		SemanticTokensProvider     SemanticTokensOptions   `json:"semanticTokensProvider"`
 		DocumentHighlightProvider  bool                    `json:"documentHighlightProvider"`
 		HoverProvider              bool                    `json:"hoverProvider"`
 		DocumentFormattingProvider bool                    `json:"documentFormattingProvider"`

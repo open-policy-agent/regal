@@ -15,7 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/sourcegraph/jsonrpc2"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -42,6 +41,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
+	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
@@ -1730,7 +1730,9 @@ func (l *LanguageServer) handleTextDocumentSemanticTokensFull(params types.Seman
 		return nil, nil
 	}
 
-	return semantictokens.Full(module), nil
+	result := semantictokens.Full(module)
+
+	return result, nil
 }
 
 func (l *LanguageServer) handleWorkspaceDidCreateFiles(params types.CreateFilesParams) (any, error) {
@@ -1943,8 +1945,14 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			LinkedEditingRangeProvider: true,
 			SemanticTokensProvider: types.SemanticTokensOptions{
 				Legend: types.SemanticTokensLegend{
-					TokenTypes:     []string{},
-					TokenModifiers: []string{},
+					TokenTypes: []string{
+						"package",
+						"variable",
+					},
+					TokenModifiers: []string{
+						"declaration",
+						"reference",
+					},
 				},
 				Full: true,
 			},
