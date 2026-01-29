@@ -1,115 +1,95 @@
 package semantictokens
 
 import (
-	"encoding/json"
 	"testing"
 
-	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/google/go-cmp/cmp"
 
-	"github.com/open-policy-agent/regal/pkg/roast/transform"
+	"github.com/open-policy-agent/opa/v1/ast"
 )
 
 func TestFull(t *testing.T) {
 	t.Parallel()
 
-	policy := `
-# METADATA
-# description: Ambiguous metadata scope
-package regal.woo
+	testCases := map[string]struct {
+		policy         string
+		expectedTokens []uint
+	}{
+		"package only": {
+			policy: `package regal.woo`,
+			expectedTokens: []uint{
+				0, 8, 5, 0, 0,
+				0, 6, 3, 0, 0,
+			},
+		},
+		"variable declarations": {
+			policy: `package regal.woo
 
-# METADATA
-# description: Ambiguous metadata scope
 test_function(param1, param2) := result if {
+      true
+}
+`,
+			expectedTokens: []uint{
+				0, 8, 5, 0, 0,
+				0, 6, 3, 0, 0,
+				2, 14, 6, 1, 1,
+				0, 8, 6, 1, 1,
+			},
+		},
+		"variable references": {
+			policy: `package regal.woo
+			
+test_function(param1) := result if {
       calc3 := 1
       calc3 == param1
-      calc1 := param1 * 2
+}
+`,
+			expectedTokens: []uint{
+				0, 8, 5, 0, 0,
+				0, 6, 3, 0, 0,
+				2, 14, 6, 1, 1,
+				2, 15, 6, 1, 2,
+			},
+		},
+		"full policy with package, declarations and references": {
+			policy: `package regal.woo
+			
+test_function(param1) := result if {
+	  calc1 := param1 * 2
       calc2 := param2 + 10
       result := calc1 + calc2
+	  
+      calc3 := 1
+      calc3 == param1
 }
-
-allow if test_function(1, 2) == 14
-`
-
-	module := ast.MustParseModuleWithOpts(policy, ast.ParserOptions{
-		ProcessAnnotation: true,
-	})
-
-	roastInput, err := transform.ToAST("semantictokens.rego", "", module, true)
-	if err != nil {
-		t.Fatal("Failed to transform to roast format")
+`,
+			expectedTokens: []uint{
+				0, 8, 5, 0, 0,
+				0, 6, 3, 0, 0,
+				2, 14, 6, 1, 1,
+				1, 12, 6, 1, 2,
+				5, 15, 6, 1, 2,
+			},
+		},
 	}
 
-	// Pretty print roast input as JSON
-	if jsonBytes, err := json.MarshalIndent(roastInput, "", "  "); err == nil {
-		t.Logf("Roast input (JSON):\n%s", string(jsonBytes))
-	} else {
-		t.Logf("Failed to marshal roast input: %v", err)
-		t.Logf("Roast input (raw): %#v", roastInput)
-	}
+	for testName, tc := range testCases {
+		t.Run(testName, func(t *testing.T) {
+			t.Parallel()
 
-	result, err := Full(module)
-	if err != nil {
-		t.Logf("%#v", err)
-		t.Fatal("Result expected what happened")
-	}
+			module := ast.MustParseModule(tc.policy)
 
-	t.Logf("%#v", result)
-	// t.Fail()
+			result, err := Full(module)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			t.Logf("Actual tokens: %v", result.Data)
+			t.Logf("Expected tokens: %v", tc.expectedTokens)
+
+			if diff := cmp.Diff(result.Data, tc.expectedTokens); diff != "" {
+				t.Errorf("unexpected token data (-got +want):\n%s", diff)
+			}
+		})
+	}
 }
-
-// func TestPackages(t *testing.T) {
-// 	t.Parallel()
-
-// 	policy := ``
-
-// 	module := ast.MustParseModuleWithOpts(policy, ast.ParserOptions{
-// 		ProcessAnnotation: true,
-// 	})
-
-// 	result, err := Full(module)
-// 	if err != nil {
-// 		t.Logf("%#v", err)
-// 		t.Fatal("Result expected what happened")
-// 	}
-
-// 	t.Logf("%#v", result)
-// 	// t.Fail()
-// }
-
-// func TestVarDeclaration(t *testing.T) {
-// 	t.Parallel()
-
-// 	policy := ``
-
-// 	module := ast.MustParseModuleWithOpts(policy, ast.ParserOptions{
-// 		ProcessAnnotation: true,
-// 	})
-
-// 	result, err := Full(module)
-// 	if err != nil {
-// 		t.Logf("%#v", err)
-// 		t.Fatal("Result expected what happened")
-// 	}
-
-// 	t.Logf("%#v", result)
-// 	// t.Fail()
-// }
-
-// func TestVarReference(t *testing.T) {
-// 	t.Parallel()
-
-// 	policy := ``
-
-// 	module := ast.MustParseModuleWithOpts(policy, ast.ParserOptions{
-// 		ProcessAnnotation: true,
-// 	})
-
-// 	result, err := Full(module)
-// 	if err != nil {
-// 		t.Logf("%#v", err)
-// 		t.Fatal("Result expected what happened")
-// 	}
-
-// 	t.Logf("%#v", result)
-// 	// t.Fail()
-// }
