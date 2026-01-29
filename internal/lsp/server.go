@@ -77,6 +77,7 @@ var (
 	noInlayHints                            any = make([]types.InlayHint, 0)
 	noWorkspaceFullDocumentDiagnosticReport any = make([]types.WorkspaceFullDocumentDiagnosticReport, 0)
 	emptyStruct                             any = struct{}{}
+	noTokenRequests                         any = &types.SemanticTokens{Data: []uint{}}
 
 	noDiagnostics = make([]types.Diagnostic, 0)
 	orc           = oracle.New()
@@ -627,7 +628,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 				fixed = false
 			case "regal.eval":
 				err = l.handleEvalCommand(ctx, args)
-			case "regal.Debug":
+			case "regal.debug":
 				if args.Target == "" || args.Query == "" {
 					l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
 
@@ -635,7 +636,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 				}
 
 				responseParams := map[string]any{
-					"type":        "opa-Debug",
+					"type":        "opa-debug",
 					"name":        args.Query,
 					"request":     "launch",
 					"command":     "eval",
@@ -1721,28 +1722,18 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 }
 
 func (l *LanguageServer) handleTextDocumentSemanticTokensFull(params types.SemanticTokensParams) (any, error) {
-	l.log.Message("SemanticTokensFull handler called for URI: %s", params.TextDocument.URI)
-
 	if l.ignoreURI(params.TextDocument.URI) {
-		l.log.Message("URI ignored: %s", params.TextDocument.URI)
-
-		return nil, nil
+		return noTokenRequests, nil
 	}
 
 	module, ok := l.cache.GetModule(params.TextDocument.URI)
 	if !ok {
-		l.log.Message("Module not found in cache for URI: %s", params.TextDocument.URI)
-
-		return nil, nil
+		return noTokenRequests, nil
 	}
 
-	l.log.Message("Calling semantictokens.Full for module")
-
 	result, err := semantictokens.Full(module)
-	l.log.Message("semantictokens.Full returned %d data points", len(result.Data))
-
 	if err != nil {
-		return nil, err
+		return noTokenRequests, fmt.Errorf("error running semantic token request %w", err)
 	}
 
 	return result, nil
@@ -1846,7 +1837,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 		bundle.Dev.SetPath(path)
 	}
 
-	if os.Getenv("REGAL_Debug") != "" {
+	if os.Getenv("REGAL_DEBUG") != "" {
 		fmt.Fprintln(os.Stderr, "Debug mode enabled")
 		l.log.SetLevel(log.LevelDebug)
 	}
@@ -1923,7 +1914,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			CodeActionProvider: types.CodeActionOptions{CodeActionKinds: []string{"quickfix", "source.explore"}},
 			ExecuteCommandProvider: types.ExecuteCommandOptions{
 				Commands: []string{
-					"regal.Debug",
+					"regal.debug",
 					"regal.eval",
 					"regal.fix.opa-fmt",
 					"regal.fix.use-rego-v1",
