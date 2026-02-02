@@ -2,18 +2,25 @@
 # description: Missing entrypoint annotation
 package regal.rules.idiomatic["no-defined-entrypoint"]
 
-import data.regal.ast
 import data.regal.result
 import data.regal.util
 
 # METADATA
 # description: |
 #   collects `entrypoint: true` annotations from any given module
+# scope: document
 aggregate contains entry if {
-	some annotation in ast.annotations
-	annotation.entrypoint == true
+	some i
+	input.package.annotations[i].entrypoint == true
 
-	entry := {"entrypoint": util.to_location_object(annotation.location)}
+	entry := {"entrypoint": util.to_location_object(input.package.annotations[i].location)}
+}
+
+aggregate contains entry if {
+	some i, j
+	input.rules[i].annotations[j].entrypoint == true
+
+	entry := {"entrypoint": util.to_location_object(input.rules[i].annotations[j].location)}
 }
 
 # METADATA

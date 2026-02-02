@@ -237,13 +237,11 @@ ref_value_equal(v1, v2) if {
 # description: |
 #   returns a new ref value made by extending terms1 with terms2,
 #   where the first term of terms2 transformed to string
-extend_ref_terms(terms1, terms2) := array.concat(
+extend_ref_terms(terms1, terms2) := array.flatten([
 	terms1,
-	array.concat(
-		[object.union(terms2[0], {"type": "string"})],
-		array.slice(terms2, 1, 100),
-	),
-)
+	object.union(terms2[0], {"type": "string"}),
+	array.slice(terms2, 1, 100),
+])
 
 # METADATA
 # description: |

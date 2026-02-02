@@ -150,7 +150,7 @@ _fail_annotated_custom(metadata, details) := violation if {
 
 _resource_urls(related_resources, category) := [r |
 	some item in related_resources
-	r := object.union(object.remove(item, ["ref"]), {"ref": config.docs.resolve_url(item.ref, category)})
+	r := object.union(item, {"ref": config.docs.resolve_url(item.ref, category)})
 ]
 
 # Note that the `text` attribute always returns the entire line and *not*
@@ -189,7 +189,8 @@ ranged_from_ref(ref) := ranged_location_between(ref[0], regal.last(ref))
 # description: |
 #   creates a ranged location where the start location is the left hand side of an infix
 #   expression, like `"foo" == "bar"`, and the end location is the end of the infix operator
-infix_expr_location(terms) := location(sprintf("%s:%s:%s:%s", array.concat(
-	array.slice(split(terms[1].location, ":"), 0, 2),
-	array.slice(split(terms[0].location, ":"), 2, 4),
-)))
+infix_expr_location(terms) := location(regex.replace(
+	$"{terms[1].location}{terms[0].location}",
+	`^(\d+:\d+:).+:(\d+:\d+)$`,
+	`$1$2`,
+))

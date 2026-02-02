@@ -73,7 +73,7 @@ report contains violation if {
 		# note that the "not" isn't present in the AST, so we'll add it manually to the text
 		# in the location to try and make it clear where the issue is (as opposed to just
 		# printing the ref)
-		"text": concat(" ", ["not", _to_string(negated.ref)]),
+		"text": $"not {_to_string(negated.ref)}",
 	}})
 
 	violation := result.fail(rego.metadata.chain(), loc)
@@ -102,7 +102,7 @@ aggregate_report contains violation if {
 		# note that the "not" isn't present in the AST, so we'll add it manually to the text
 		# in the location to try and make it clear where the issue is (as opposed to just
 		# printing the ref)
-		"text": concat(" ", ["not", _to_string(negated.ref)]),
+		"text": $"not {_to_string(negated.ref)}",
 	}})
 
 	violation := result.fail(rego.metadata.chain(), loc)
