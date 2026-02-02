@@ -7,13 +7,9 @@ import data.regal.result
 
 report contains violation if {
 	some i, rule in input.rules
-	some expr in ast.found.expressions[ast.rule_index_strings[i]]
+	not startswith(trim_prefix(rule.head.ref[0].value, "todo_"), "test_")
 
-	expr.with
-	not strings.any_prefix_match(ast.ref_to_string(rule.head.ref), {"test_", "todo_test"})
-
-	some _with in expr.with
-
+	_with := ast.found.expressions[ast.rule_index_strings[i]][_].with[_]
 	loc := result.location(_with)
 
 	violation := result.fail(rego.metadata.chain(), object.union(loc, {"location": {"end": {

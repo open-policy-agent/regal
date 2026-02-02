@@ -19,8 +19,7 @@ default result["response"] := null
 # METADATA
 # entrypoint: true
 result["response"] := ranges if {
-	# we don't have a array.concat_n function, and of course, no reduce
-	ranges := array.concat(array.concat(package_ranges, import_ranges), rule_ranges)
+	ranges := array.flatten([package_ranges, import_ranges, rule_ranges])
 
 	count(ranges) > 0
 }
@@ -61,7 +60,7 @@ package_ranges := [item |
 	# package locations are even worse than imports, as there isn't even a location of
 	# the path itself, but only the `package` keyword and the indivdual path terms.. but OTOH,
 	# copy/pasting that line is probably not too common
-	item := _to_selection_range(array.concat(ranges, [path_range, line_range]))
+	item := _to_selection_range(array.flatten([ranges, path_range, line_range]))
 ]
 
 # METADATA
@@ -81,7 +80,7 @@ import_ranges := [item |
 
 	# import locations don't include the full text of the line, so we'll need to
 	# improvise here some, assuming properly formatted Rego
-	item := _to_selection_range(array.concat(ranges, [{"range": _estimated_import_range(imp)}]))
+	item := _to_selection_range(array.flatten([ranges, {"range": _estimated_import_range(imp)}]))
 ]
 
 # METADATA

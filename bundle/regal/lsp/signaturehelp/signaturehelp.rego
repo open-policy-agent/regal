@@ -60,10 +60,10 @@ _text_up_to_position(lines, _, position) := concat("\n", all_lines) if {
 	current_line := lines[position.line]
 	position.character < count(current_line)
 
-	complete_lines := [line | some i, line in lines; i < position.line]
-	partial_line := substring(current_line, 0, position.character)
-
-	all_lines := array.concat(complete_lines, [partial_line])
+	all_lines := array.flatten([
+		[line | some i, line in lines; i < position.line],
+		substring(current_line, 0, position.character),
+	])
 }
 
 _build_function_label(decl, func_name) := label if {

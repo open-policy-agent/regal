@@ -18,9 +18,8 @@ func BenchmarkRegalLintingItself(b *testing.B) {
 
 // 694275500 ns/op	2568604236 B/op	52506343 allocs/op // OPA v1.10.0
 // 656495042 ns/op	2309640068 B/op	50264746 allocs/op // OPA v1.12.2
-// 551525958 ns/op	2275908548 B/op	51672983 allocs/op // AST aggregates refactor
-// 524393812 ns/op	2115294120 B/op	49079915 allocs/op // With Rego prepare eval phase
-// 497374153 ns/op	1923188613 B/op	45981278 allocs/op // With notices in prepare
+// 497374153 ns/op	1923188613 B/op	45981278 allocs/op // AST aggregates refactor
+// 486491514 ns/op	1906786789 B/op	45640947 allocs/op // OPA v1.13.1 + fixes
 func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
 	benchmarkLint(b, bundleLinter(b, true).MustPrepare(b.Context()))
 }

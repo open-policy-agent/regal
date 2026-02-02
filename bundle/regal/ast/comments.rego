@@ -36,13 +36,6 @@ comments["annotation_match"](str) if regex.match(
 )
 
 # METADATA
-# description: array containing all annotations from the module
-annotations := array.concat(
-	[annotation | some annotation in input.package.annotations],
-	[annotation | annotation := input.rules[_].annotations[_]],
-)
-
-# METADATA
 # description: |
 #   map of all ignore directive comments, like ("# regal ignore:line-length")
 #   found in input AST, indexed by the row they're at
@@ -92,15 +85,15 @@ comment_blocks(comments) := blocks if {
 	]
 }
 
-_splits(xs) := array.concat(
-	array.concat(
-		# [-1] ++ [ all indices where there's a step larger than one ] ++ [length of xs]
-		# the -1 is because we're adding +1 in array.slice
-		[-1],
-		[i |
-			some i in numbers.range(0, count(xs) - 1)
-			xs[i + 1] != xs[i] + 1
-		],
-	),
-	[count(xs)],
-)
+_splits(xs) := array.flatten([
+	# -1 ++ [ all indices where there's a step larger than one ] ++ length of xs
+	# the -1 is because we're adding +1 in array.slice
+	-1,
+	[i |
+		some i in numbers.range(0, n - 1)
+		xs[i + 1] != xs[i] + 1
+	],
+	n,
+]) if {
+	n := count(xs)
+}

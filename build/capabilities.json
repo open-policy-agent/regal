@@ -151,6 +151,31 @@
       }
     },
     {
+      "name": "array.flatten",
+      "description": "Non-recursively unpacks array items in arr into the flattened array. Other types are appended as-is.",
+      "decl": {
+        "args": [
+          {
+            "description": "the array to be flattened",
+            "dynamic": {
+              "type": "any"
+            },
+            "name": "arr",
+            "type": "array"
+          }
+        ],
+        "result": {
+          "description": "array flattened one level",
+          "dynamic": {
+            "type": "any"
+          },
+          "name": "flattened",
+          "type": "array"
+        },
+        "type": "function"
+      }
+    },
+    {
       "name": "array.reverse",
       "description": "Returns the reverse of a given array.",
       "decl": {
