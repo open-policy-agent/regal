@@ -256,7 +256,7 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	case "textDocument/inlayHint":
 		return handler.WithParams(req, l.handleTextDocumentInlayHint)
 	case "textDocument/semanticTokens/full":
-		return handler.WithParams(req, l.handleTextDocumentSemanticTokensFull)
+		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentSemanticTokensFull)
 	case "workspace/didChangeWatchedFiles":
 		return handler.WithParams(req, l.handleWorkspaceDidChangeWatchedFiles)
 	case "workspace/diagnostic":
@@ -1721,7 +1721,10 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 	return ComputeEdits(oldContent, newContent), nil
 }
 
-func (l *LanguageServer) handleTextDocumentSemanticTokensFull(params types.SemanticTokensParams) (any, error) {
+func (l *LanguageServer) handleTextDocumentSemanticTokensFull(
+	ctx context.Context,
+	params types.SemanticTokensParams,
+) (any, error) {
 	if l.ignoreURI(params.TextDocument.URI) {
 		return noTokenRequests, nil
 	}
@@ -1731,7 +1734,7 @@ func (l *LanguageServer) handleTextDocumentSemanticTokensFull(params types.Seman
 		return noTokenRequests, nil
 	}
 
-	result, err := semantictokens.Full(module)
+	result, err := semantictokens.Full(ctx, module)
 	if err != nil {
 		return noTokenRequests, fmt.Errorf("error running semantic token request %w", err)
 	}

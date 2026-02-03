@@ -3,14 +3,15 @@ package semantictokens
 import (
 	"context"
 	"fmt"
+	"slices"
 
-	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/ogre"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
@@ -32,7 +33,7 @@ type Token struct {
 	Modifiers uint
 }
 
-func Full(module *ast.Module) (*types.SemanticTokens, error) {
+func Full(ctx context.Context, module *ast.Module) (*types.SemanticTokens, error) {
 	tokens := make([]Token, 0)
 
 	packageTokens, err := extractPackageTokens(module)
@@ -41,7 +42,7 @@ func Full(module *ast.Module) (*types.SemanticTokens, error) {
 	}
 	tokens = append(tokens, packageTokens...)
 
-	variableTokens, err := extractVariableTokens(module)
+	variableTokens, err := extractVariableTokens(ctx, module)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract variable tokens: %w", err)
 	}
@@ -54,11 +55,8 @@ func extractPackageTokens(module *ast.Module) ([]Token, error) {
 	var tokens []Token
 
 	if module.Package != nil && module.Package.Path != nil {
-		for _, term := range module.Package.Path {
+		for _, term := range module.Package.Path[1:] {
 			packageString := term.Value.String()
-			if packageString == "data" {
-				continue
-			}
 
 			trimmedValue := strings.Trim(packageString, `"`)
 			length := uint(len(trimmedValue))
@@ -76,16 +74,17 @@ func extractPackageTokens(module *ast.Module) ([]Token, error) {
 	return tokens, nil
 }
 
-func extractVariableTokens(module *ast.Module) ([]Token, error) {
-	ctx := context.Background()
+var (
+	semanticTokensQuery = ast.MustParseBody(`arg_tokens = data.regal.lsp.semantictokens.arg_tokens`)
+)
+
+func extractVariableTokens(ctx context.Context, module *ast.Module) ([]Token, error) {
 	var tokens []Token
 
 	roastInput, err := transform.ToAST("policy.rego", "", module, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to transform to roast format: %w", err)
 	}
-
-	query := ast.MustParseBody(`arg_tokens = data.regal.lsp.semantictokens.arg_tokens`)
 
 	resultHandler := func(result ast.Value) error {
 		resultObj := result.(ast.Object)
@@ -94,14 +93,16 @@ func extractVariableTokens(module *ast.Module) ([]Token, error) {
 			varObj := varTerm.Value.(ast.Object)
 			typeStr := string(typeTerm.Value.(ast.String))
 
-			locationStr := string(varObj.Get(ast.StringTerm("location")).Value.(ast.String))
-			varName := string(varObj.Get(ast.StringTerm("value")).Value.(ast.String))
+			locationStr := rast.GetString(varObj, "location")
+			varName := rast.GetString(varObj, "value")
 
 			trimmedVarName := strings.Trim(varName, `"' `)
 
-			parts := strings.Split(locationStr, ":")
-			row, _ := strconv.Atoi(parts[0])
-			col, _ := strconv.Atoi(parts[1])
+			rowStr, rest, _ := strings.Cut(locationStr, ":")
+			colStr, _, _ := strings.Cut(rest, ":")
+
+			row, _ := strconv.Atoi(rowStr)
+			col, _ := strconv.Atoi(colStr)
 
 			modifier := ModifierReference
 			if typeStr == "declaration" {
@@ -121,7 +122,7 @@ func extractVariableTokens(module *ast.Module) ([]Token, error) {
 		return nil
 	}
 
-	q, err := ogre.New(query).Prepare(ctx)
+	q, err := ogre.New(semanticTokensQuery).Prepare(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run ogre query: %w", err)
 	}
@@ -144,11 +145,11 @@ func encodeTokens(tokens []Token) *types.SemanticTokens {
 	}
 
 	// Sort tokens by position (line first, then column)
-	sort.Slice(tokens, func(i, j int) bool {
-		if tokens[i].Line != tokens[j].Line {
-			return tokens[i].Line < tokens[j].Line
+	slices.SortFunc(tokens, func(a, b Token) int {
+		if a.Line != b.Line {
+			return int(a.Line) - int(b.Line)
 		}
-		return tokens[i].Col < tokens[j].Col
+		return int(a.Col) - int(b.Col)
 	})
 
 	data := make([]uint, 0, len(tokens)*5)
@@ -177,5 +178,4 @@ func encodeTokens(tokens []Token) *types.SemanticTokens {
 	}
 
 	return &types.SemanticTokens{Data: data}
-
 }
