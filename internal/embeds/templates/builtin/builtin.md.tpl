@@ -4,7 +4,7 @@
 
 **Category**: {{.Category | ToUpper}}
 
-**Automatically fixable**: Yes/No
+**Automatically fixable**: [Yes](https://www.openpolicyagent.org/projects/regal/fixing) / No
 
 **Avoid**
 ```rego
