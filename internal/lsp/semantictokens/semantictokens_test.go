@@ -13,13 +13,13 @@ func TestFull(t *testing.T) {
 
 	testCases := map[string]struct {
 		policy         string
-		expectedTokens []uint
+		expectedTokens []semanticTokenInstance
 	}{
 		"package only": {
 			policy: `package regal.woo`,
-			expectedTokens: []uint{
-				0, 8, 5, 0, 0,
-				0, 6, 3, 0, 0,
+			expectedTokens: []semanticTokenInstance{
+				{DeltaLine: 0, DeltaCol: 8, Length: 5, Type: 0, Modifier: 0},
+				{DeltaLine: 0, DeltaCol: 6, Length: 3, Type: 0, Modifier: 0},
 			},
 		},
 		"variable declarations": {
@@ -29,11 +29,11 @@ test_function(param1, param2) := result if {
       true
 }
 `,
-			expectedTokens: []uint{
-				0, 8, 5, 0, 0,
-				0, 6, 3, 0, 0,
-				2, 14, 6, 1, 1,
-				0, 8, 6, 1, 1,
+			expectedTokens: []semanticTokenInstance{
+				{DeltaLine: 0, DeltaCol: 8, Length: 5, Type: 0, Modifier: 0},
+				{DeltaLine: 0, DeltaCol: 6, Length: 3, Type: 0, Modifier: 0},
+				{DeltaLine: 2, DeltaCol: 14, Length: 6, Type: 1, Modifier: 1},
+				{DeltaLine: 0, DeltaCol: 8, Length: 6, Type: 1, Modifier: 1},
 			},
 		},
 		"variable references": {
@@ -44,11 +44,11 @@ test_function(param1) := result if {
       calc3 == param1
 }
 `,
-			expectedTokens: []uint{
-				0, 8, 5, 0, 0,
-				0, 6, 3, 0, 0,
-				2, 14, 6, 1, 1,
-				2, 15, 6, 1, 2,
+			expectedTokens: []semanticTokenInstance{
+				{DeltaLine: 0, DeltaCol: 8, Length: 5, Type: 0, Modifier: 0},
+				{DeltaLine: 0, DeltaCol: 6, Length: 3, Type: 0, Modifier: 0},
+				{DeltaLine: 2, DeltaCol: 14, Length: 6, Type: 1, Modifier: 1},
+				{DeltaLine: 2, DeltaCol: 15, Length: 6, Type: 1, Modifier: 2},
 			},
 		},
 		"full policy with package, declarations and references": {
@@ -63,12 +63,12 @@ test_function(param1) := result if {
       calc3 == param1
 }
 `,
-			expectedTokens: []uint{
-				0, 8, 5, 0, 0,
-				0, 6, 3, 0, 0,
-				2, 14, 6, 1, 1,
-				1, 12, 6, 1, 2,
-				5, 15, 6, 1, 2,
+			expectedTokens: []semanticTokenInstance{
+				{DeltaLine: 0, DeltaCol: 8, Length: 5, Type: 0, Modifier: 0},
+				{DeltaLine: 0, DeltaCol: 6, Length: 3, Type: 0, Modifier: 0},
+				{DeltaLine: 2, DeltaCol: 14, Length: 6, Type: 1, Modifier: 1},
+				{DeltaLine: 1, DeltaCol: 12, Length: 6, Type: 1, Modifier: 2},
+				{DeltaLine: 5, DeltaCol: 15, Length: 6, Type: 1, Modifier: 2},
 			},
 		},
 	}
@@ -84,12 +84,44 @@ test_function(param1) := result if {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			t.Logf("Actual tokens: %v", result.Data)
-			t.Logf("Expected tokens: %v", tc.expectedTokens)
+			// Convert actual result to readable format
+			actualTokens := uintsToTestTokens(result.Data)
 
-			if diff := cmp.Diff(result.Data, tc.expectedTokens); diff != "" {
+			t.Logf("Actual tokens: %+v", actualTokens)
+			t.Logf("Expected tokens: %+v", tc.expectedTokens)
+
+			if diff := cmp.Diff(actualTokens, tc.expectedTokens); diff != "" {
 				t.Errorf("unexpected token data (-got +want):\n%s", diff)
 			}
 		})
 	}
+}
+
+// semanticTokenInstance adds structure to uint data stream in the SemanticToken
+// return type making it more readable for error messages and comparisons in tests
+type semanticTokenInstance struct {
+	DeltaLine uint
+	DeltaCol  uint
+	Length    uint
+	Type      uint
+	Modifier  uint
+}
+
+func uintsToTestTokens(data []uint) []semanticTokenInstance {
+	if len(data)%5 != 0 {
+		panic("invalid token data length, must be multiple of 5")
+	}
+
+	tokens := make([]semanticTokenInstance, 0, len(data)/5)
+	for i := 0; i < len(data); i += 5 {
+		tokens = append(tokens, semanticTokenInstance{
+			DeltaLine: data[i],
+			DeltaCol:  data[i+1],
+			Length:    data[i+2],
+			Type:      data[i+3],
+			Modifier:  data[i+4],
+		})
+	}
+
+	return tokens
 }

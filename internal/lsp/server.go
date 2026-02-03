@@ -1950,7 +1950,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			SemanticTokensProvider: types.SemanticTokensOptions{
 				Legend: types.SemanticTokensLegend{
 					TokenTypes: []string{
-						"package",
+						"namespace",
 						"variable",
 					},
 					TokenModifiers: []string{

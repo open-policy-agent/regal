@@ -3,6 +3,7 @@ package semantictokens
 import (
 	"context"
 	"fmt"
+
 	"sort"
 	"strconv"
 	"strings"
@@ -32,16 +33,34 @@ type Token struct {
 }
 
 func Full(module *ast.Module) (*types.SemanticTokens, error) {
-
 	tokens := make([]Token, 0)
+
+	packageTokens, err := extractPackageTokens(module)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract package tokens: %w", err)
+	}
+	tokens = append(tokens, packageTokens...)
+
+	variableTokens, err := extractVariableTokens(module)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract variable tokens: %w", err)
+	}
+	tokens = append(tokens, variableTokens...)
+
+	return encodeTokens(tokens), nil
+}
+
+func extractPackageTokens(module *ast.Module) ([]Token, error) {
+	var tokens []Token
 
 	if module.Package != nil && module.Package.Path != nil {
 		for _, term := range module.Package.Path {
-			if term.Value.String() == "data" {
+			packageString := term.Value.String()
+			if packageString == "data" {
 				continue
 			}
 
-			trimmedValue := strings.Trim(term.Value.String(), `"`)
+			trimmedValue := strings.Trim(packageString, `"`)
 			length := uint(len(trimmedValue))
 
 			tokens = append(tokens, Token{
@@ -51,63 +70,27 @@ func Full(module *ast.Module) (*types.SemanticTokens, error) {
 				Type:      TokenTypePackage,
 				Modifiers: 0,
 			})
-
 		}
 	}
 
+	return tokens, nil
+}
+
+func extractVariableTokens(module *ast.Module) ([]Token, error) {
 	ctx := context.Background()
+	var tokens []Token
 
-	roastInput, err := transform.ToAST("semantictokens.rego", "", module, true)
+	roastInput, err := transform.ToAST("policy.rego", "", module, true)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to transform to roast format: %w", err)
+		return nil, fmt.Errorf("failed to transform to roast format: %w", err)
 	}
 
-	queryModule, err := ast.ParseModule("query.rego", `
-		package semantictokens
-
-		import data.regal.ast
-
-		# Function argument declarations
-		arg_tokens[var] := "declaration" if {
-			some rule_index, contexts in ast.found.vars
-			some var in contexts.args
-		}
-		
-		# Variable references from function calls
-		arg_tokens[var] := "reference" if {
-			some rule_index, calls in ast.function_calls
-			some call in calls
-			some var in call.args
-			var.type == "var"
-			
-			arg_names := {v.value | some v in ast.found.vars[rule_index].args}
-			var.value in arg_names
-		}
-		
-		# Variable references from expressions
-		arg_tokens[var] := "reference" if {
-			some rule_index, expressions in ast.found.expressions
-			some expr in expressions
-			some term in expr.terms
-			term.type == "var"
-			
-			arg_names := {v.value | some v in ast.found.vars[rule_index].args}
-			term.value in arg_names
-			
-			var := term
-		}
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to parse module here: %w", err)
-	}
-
-	query := ast.MustParseBody(`arg_tokens = data.semantictokens.arg_tokens`)
+	query := ast.MustParseBody(`arg_tokens = data.regal.lsp.semantictokens.arg_tokens`)
 
 	resultHandler := func(result ast.Value) error {
-		// Process variable tokens (args) from rego
 		resultObj := result.(ast.Object)
 
-		resultObj.Iter(func(varTerm, typeTerm *ast.Term) error {
+		resultObj.Foreach(func(varTerm, typeTerm *ast.Term) {
 			varObj := varTerm.Value.(ast.Object)
 			typeStr := string(typeTerm.Value.(ast.String))
 
@@ -133,18 +116,14 @@ func Full(module *ast.Module) (*types.SemanticTokens, error) {
 				Modifiers: uint(modifier),
 			}
 			tokens = append(tokens, token)
-
-			return nil
 		})
 
 		return nil
 	}
 
-	q, err := ogre.New(query).
-		WithModules(map[string]*ast.Module{"query.rego": queryModule}).
-		Prepare(ctx)
+	q, err := ogre.New(query).Prepare(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to run ogre query: %w", err)
+		return nil, fmt.Errorf("failed to run ogre query: %w", err)
 	}
 
 	err = q.Evaluator().
@@ -153,12 +132,10 @@ func Full(module *ast.Module) (*types.SemanticTokens, error) {
 		Eval(ctx)
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to evaluate ogre query: %w", err)
+		return nil, fmt.Errorf("failed to evaluate ogre query: %w", err)
 	}
 
-	result := encodeTokens(tokens)
-
-	return result, nil
+	return tokens, nil
 }
 
 func encodeTokens(tokens []Token) *types.SemanticTokens {
