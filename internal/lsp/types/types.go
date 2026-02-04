@@ -80,6 +80,7 @@ type (
 		InlayHintProvider          ResolveProviderOption   `json:"inlayHintProvider"`
 		DocumentLinkProvider       ResolveProviderOption   `json:"documentLinkProvider"`
 		SignatureHelpProvider      SignatureHelpOptions    `json:"signatureHelpProvider"`
+		SemanticTokensProvider     SemanticTokensOptions   `json:"semanticTokensProvider"`
 		DocumentHighlightProvider  bool                    `json:"documentHighlightProvider"`
 		HoverProvider              bool                    `json:"hoverProvider"`
 		DocumentFormattingProvider bool                    `json:"documentFormattingProvider"`
@@ -553,6 +554,25 @@ type (
 	ParameterInformation struct {
 		Label         string  `json:"label"`
 		Documentation *string `json:"documentation,omitempty"`
+	}
+
+	SemanticTokens struct {
+		ResultID *string `json:"resultId,omitempty"`
+		Data     []uint  `json:"data"`
+	}
+
+	SemanticTokensParams struct {
+		TextDocument TextDocumentIdentifier `json:"textDocument"`
+	}
+
+	SemanticTokensLegend struct {
+		TokenTypes     []string `json:"tokenTypes"`
+		TokenModifiers []string `json:"tokenModifiers"`
+	}
+
+	SemanticTokensOptions struct {
+		Legend SemanticTokensLegend `json:"legend"`
+		Full   bool                 `json:"full,omitempty"`
 	}
 
 	iuint interface{ ~int | ~uint }
