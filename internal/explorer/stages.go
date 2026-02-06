@@ -28,6 +28,7 @@ func (cr *CompileResult) FormattedResult() string {
 	}
 
 	formatted, _ := format.Ast(cr.Result)
+
 	return string(formatted)
 }
 

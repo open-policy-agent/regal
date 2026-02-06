@@ -119,12 +119,14 @@ func (s *Server) Start(context.Context) {
 				st.Result[i] = stringResult{Stage: cs[i].Stage, Show: true, Output: cs[i].Error, Class: "bad"}
 			} else {
 				class := "plain"
+
 				var output string
 				if format {
 					output = cs[i].FormattedResult()
 				} else if cs[i].Result != nil {
 					output = cs[i].Result.String()
 				}
+
 				if i == 0 || st.Result[i-1].Output != output {
 					class = "ok"
 				}
