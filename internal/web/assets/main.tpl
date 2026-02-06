@@ -16,10 +16,27 @@
       <input hx-get="?tmpl=output"
         hx-target="#output"
         hx-trigger="change"
+        hx-include="form"
         type="checkbox"
         name="hide_identical"
         id="hide_identical">
       <label for="hide_identical">Hide stages without effect on code</label>
+      <input hx-get="?tmpl=output"
+        hx-target="#output"
+        hx-trigger="change"
+        hx-include="form"
+        type="checkbox"
+        name="print"
+        id="print">
+      <label for="print">Enable print</label>
+      <input hx-get="?tmpl=output"
+        hx-target="#output"
+        hx-trigger="change"
+        hx-include="form"
+        type="checkbox"
+        name="format"
+        id="format">
+      <label for="format">Format stages</label>
     </div>
   </form>
   <section id="output">

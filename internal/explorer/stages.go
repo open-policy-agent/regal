@@ -7,6 +7,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/compile"
+	"github.com/open-policy-agent/opa/v1/format"
 	"github.com/open-policy-agent/opa/v1/ir"
 	"github.com/open-policy-agent/opa/v1/util"
 
@@ -19,6 +20,16 @@ type CompileResult struct {
 	Stage  string
 	Result *ast.Module
 	Error  string
+}
+
+func (cr *CompileResult) FormattedResult() string {
+	if cr.Result == nil {
+		return ""
+	}
+
+	formatted, _ := format.Ast(cr.Result)
+
+	return string(formatted)
 }
 
 type stage struct{ name, metricName string }

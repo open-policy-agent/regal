@@ -92,10 +92,12 @@ func (s *Server) Start(context.Context) {
 		}
 
 		var (
-			enableStrict, enableAnnotationProcessing, enablePrint bool // TODO(sr): expose
-			hideIdentical                                         bool
-			hasErrors                                             bool
-			tmpl                                                  string
+			enableStrict, enableAnnotationProcessing bool // TODO(sr): expose
+			hideIdentical                            bool
+			enablePrint                              bool
+			format                                   bool
+			hasErrors                                bool
+			tmpl                                     string
 		)
 
 		if err := r.ParseForm(); err == nil {
@@ -103,6 +105,7 @@ func (s *Server) Start(context.Context) {
 			enableAnnotationProcessing = r.Form.Get("annotations") == "on"
 			enablePrint = r.Form.Get("print") == "on"
 			hideIdentical = r.Form.Get("hide_identical") == "on"
+			format = r.Form.Get("format") == "on"
 			tmpl = cmp.Or(r.Form.Get("tmpl"), mainTemplate)
 		}
 
@@ -115,7 +118,15 @@ func (s *Server) Start(context.Context) {
 				hasErrors = true
 				st.Result[i] = stringResult{Stage: cs[i].Stage, Show: true, Output: cs[i].Error, Class: "bad"}
 			} else {
-				class, output := "plain", cs[i].Result.String()
+				class := "plain"
+
+				var output string
+				if format {
+					output = cs[i].FormattedResult()
+				} else if cs[i].Result != nil {
+					output = cs[i].Result.String()
+				}
+
 				if i == 0 || st.Result[i-1].Output != output {
 					class = "ok"
 				}
