@@ -208,7 +208,7 @@ func termValueTerm(val ast.Value) *ast.Term {
 		if v.MultiLine {
 			return ast.ObjectTerm(
 				item("parts", ast.ArrayTerm(parts...)),
-				item("multi_line", ast.InternedBooleanTrueTerm),
+				item("multi_line", ast.InternedTerm(true)),
 			)
 		}
 

@@ -7,18 +7,19 @@ import data.regal.result
 import data.regal.util
 
 report contains violation if {
+	ast.package_name != lower(ast.package_name)
+
 	some part in input.package.path
 
-	not util.is_snake_case(part.value)
+	part.value != lower(part.value)
 
 	violation := result.fail(rego.metadata.chain(), result.location(part))
 }
 
 report contains violation if {
-	some rule in input.rules
-	some part in ast.named_refs(rule.head.ref)
+	part := input.rules[_].head.ref[_]
 
-	not util.is_snake_case(part.value)
+	part.value != lower(part.value)
 
 	violation := result.fail(rego.metadata.chain(), result.location(part))
 }

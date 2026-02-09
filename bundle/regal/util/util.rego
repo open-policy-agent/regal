@@ -208,8 +208,8 @@ longest_prefix(coll) := [] if {
 	prefix := array.slice(arr[0], 0, _longest_dif(dif, end))
 }
 
-_longest_dif(diff, len) := len + 1 if count(diff) == 0
-_longest_dif(diff, _) := diff[0] if count(diff) > 0
+_longest_dif(diff, len) := len + 1 if diff == []
+_longest_dif(diff, _) := diff[0] if diff != []
 
 # METADATA
 # description: |

@@ -73,22 +73,12 @@ _custom_regal_package_and_import(pkg_path, "regal") if {
 _to_paths(pkg_path, ref) := util.all_paths(_to_path(pkg_path, ref)) if count(ref) < 3
 _to_paths(pkg_path, ref) := [_to_path(pkg_path, p) | some p in util.all_paths(ref)] if count(ref) > 2
 
-_to_path(pkg_path, ref) := array.concat(pkg_path, [str |
-	some i, part in ref
-	str := _to_string(i, part)
-])
+_to_path(pkg_path, ref) := array.flatten([pkg_path, ref[0].value, [_to_string(part) |
+	some part in array.slice(ref, 1, 100)
+]])
 
-_to_string(0, part) := part.value
-
-_to_string(i, part) := part.value if {
-	i > 0
-	part.type == "string"
-}
-
-_to_string(i, part) := "**" if {
-	i > 0
-	part.type == "var"
-}
+_to_string(part) := part.value if part.type == "string"
+_to_string(part) := "**" if part.type == "var"
 
 _except_imports contains split(trim_prefix(str, "data."), ".") if {
 	some str in config.rules.imports["unresolved-import"]["except-imports"]

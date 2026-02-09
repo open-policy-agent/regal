@@ -10,15 +10,12 @@ report contains violation if {
 
 	regex.match(`^\s*METADATA`, block[0].text)
 
-	some attribute in object.keys(yaml.unmarshal(concat("\n", [entry.text |
-		some i, entry in block
-		i > 0
-	])))
+	some attribute, _ in yaml.unmarshal(concat("\n", [entry.text | some entry in array.slice(block, 1, 100)]))
 
 	not attribute in ast.comments.metadata_attributes
 
 	violation := result.fail(rego.metadata.chain(), result.location([line |
 		some line in block
-		startswith(trim_space(line.text), concat("", [attribute, ":"]))
+		startswith(trim_space(line.text), $"{attribute}:")
 	][0]))
 }

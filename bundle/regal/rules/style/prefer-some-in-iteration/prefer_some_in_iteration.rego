@@ -9,19 +9,16 @@ import data.regal.util
 
 report contains violation if {
 	cfg := config.rules.style["prefer-some-in-iteration"]
+	some i, rule_index in ast.rule_index_strings
 
-	some rule in input.rules
+	rule := input.rules[i]
 
 	not _possible_top_level_iteration(rule)
 
-	some node in ["head", "body", "else"]
+	some ref in ast.found.refs[rule_index]
 
-	walk(rule[node], [path, value])
-
-	value.type == "ref"
-
-	vars_in_ref := ast.find_ref_vars(value)
-	count(vars_in_ref) > 0
+	vars_in_ref := ast.find_ref_vars(ref)
+	vars_in_ref != []
 
 	# we don't need the location of each var, but using the first
 	# ref will do, and will hopefully help with caching the result
@@ -29,10 +26,10 @@ report contains violation if {
 	num_output_vars != 0
 	num_output_vars < cfg["ignore-nesting-level"]
 
-	not _except_sub_attribute(cfg, value.value)
-	not _invalid_some_context(rule, array.concat([node], path))
+	not _except_sub_attribute(cfg, ref.value)
+	not _invalid_some_location(rule, ref.location)
 
-	violation := result.fail(rego.metadata.chain(), result.location(value))
+	violation := result.fail(rego.metadata.chain(), result.location(ref))
 }
 
 _except_sub_attribute(cfg, ref) if {
@@ -40,12 +37,12 @@ _except_sub_attribute(cfg, ref) if {
 	_has_sub_attribute(ref)
 }
 
-_has_sub_attribute(ref) if {
+_has_sub_attribute(terms) if {
 	last_var_pos := regal.last([i |
-		some i, part in ref
-		part.type == "var"
+		some i, term in terms
+		term.type == "var"
 	])
-	last_var_pos < count(ref) - 1
+	last_var_pos < count(terms) - 1
 }
 
 # don't walk top level iteration refs:
@@ -53,6 +50,15 @@ _has_sub_attribute(ref) if {
 _possible_top_level_iteration(rule) if {
 	not rule.body
 	rule.head.value.type == "ref"
+}
+
+_invalid_some_location(rule, location) if {
+	some node in ["head", "body", "else"]
+	walk(rule[node], [path, value])
+
+	value.location == location
+
+	_invalid_some_context(rule, array.concat([node], path))
 }
 
 # don't recommend `some .. in` if iteration occurs inside of arrays, objects, or sets
