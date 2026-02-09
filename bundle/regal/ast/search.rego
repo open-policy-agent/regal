@@ -53,7 +53,9 @@ find_ref_vars(value) := [var | # regal ignore:narrow-argument
 # or `every`, i.e. `every x, y in z {}`
 _find_every_vars(value) := [var |
 	some kind in ["key", "value"]
+
 	var := value[kind]
+
 	var.type == "var"
 	indexof(var.value, "$") == -1
 ]
@@ -192,28 +194,91 @@ _rules := data.workspace.parsed[object.get(input, ["params", "textDocument", "ur
 #   - some
 #   - somein
 #   - ref
+# scope: document
 found.vars[rule_index][context] contains var if {
-	some i, rule in _rules
+	some i, rule_index in rule_index_strings
+	some expr in _rules[i].body
 
-	rule_index := rule_index_strings[i]
+	some context, vars in _find_vars(expr.terms, "terms")
+	some var in vars
+}
 
+found.vars[rule_index][context] contains var if {
+	some i, rule_index in rule_index_strings
+	some expr in _rules[i].body
+
+	walk(expr.terms, [_, value])
+
+	some context, vars in _find_vars(value.terms, "terms")
+	some var in vars
+}
+
+found.vars[rule_index][context] contains var if {
+	some i, rule_index in rule_index_strings
+	some expr in _rules[i].body
+
+	walk(expr.terms, [_, value])
+
+	some context, vars in _find_vars(value.symbols, "symbols")
+	some var in vars
+}
+
+found.vars[rule_index][context] contains var if {
+	some i, rule_index in rule_index_strings
+	rule := _rules[i].else
 	some node in ["head", "body", "else"]
 
 	walk(rule[node], [path, value])
 
-	last := {"terms", "symbols", "args"}[regal.last(path)]
+	last := {"terms", "symbols"}[regal.last(path)]
 
 	some context, vars in _find_vars(value, last)
 	some var in vars
 }
 
-found.vars[rule_index].ref contains var if {
+found.vars[rule_index][context] contains var if {
+	some i, rule_index in rule_index_strings
+	head := _rules[i].head
+
+	some node in ["key", "value"]
+	not head[node].type in {"string", "number", "boolean", "null", "var"}
+
+	walk(head[node].value, [path, value])
+
+	last := {"terms", "symbols"}[regal.last(path)]
+
+	some context, vars in _find_vars(value, last)
+	some var in vars
+}
+
+found.vars[rule_index].args contains term if {
+	some i, rule_index in rule_index_strings
+	some term in _rules[i].head.args
+
+	term.type == "var"
+}
+
+found.vars[rule_index].args contains value if {
+	some i, rule_index in rule_index_strings
+	some term in _rules[i].head.args
+
+	term.type == "array" # only composite type that can contain vars in args position (right?)
+
+	some item in term.value
+	not item.type in {"string", "number", "boolean", "null"}
+
+	walk(item, [_, value])
+
+	value.type == "var"
+}
+
+found.vars[rule_index].ref contains term if {
 	some rule_index in rule_index_strings
 	some ref in found.refs[rule_index]
-	some x, var in ref.value
+	some x, term in ref.value
 
 	x > 0
-	var.type == "var"
+	term.type == "var"
 }
 
 # METADATA

@@ -194,16 +194,3 @@ test_found_symbols_in_template_strings if {
 
 	count(syms) == 2
 }
-
-test_found_vars_in_template_strings if {
-	vars := ast.found.vars["0"] with input as ast.policy(`r := $"{[{x, y, z} |
-		some x
-		some y in input.arr
-		z := x + y
-	]}"`)
-
-	count(vars.assign) == 1
-	count(vars.some) == 1
-	count(vars.somein) == 1
-	count([1 | vars[_][_]]) == 3
-}

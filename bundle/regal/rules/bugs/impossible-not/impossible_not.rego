@@ -28,28 +28,30 @@ _negated_refs contains negated_ref if {
 	ast.found.expressions[rule_index][value].negated
 
 	# if terms is an array, it's a function call, and most likely not "impossible"
-	is_object(value.terms)
 	value.terms.type in {"ref", "var"}
 
 	ref := _var_to_ref(value.terms)
+	rest := util.rest(ref)
 
 	# for now, ignore ref if it has variable components
-	every path in util.rest(ref) {
+	every path in rest {
 		path.type == "string"
 	}
 
 	rule := input.rules[to_number(rule_index)]
+	ref_head := ref[0]
 
 	# ignore negated local vars
-	not ref[0].value in ast.function_arg_names(rule)
-	not ref[0].value in {var.value |
+	not ref_head.value in ast.function_arg_names(rule)
+	not ref_head.value in {var.value |
 		some var in ast.find_vars_in_local_scope(rule, util.to_location_object(value.location))
 	}
 
-	term1 := object.union(ref[0], {"location": util.to_location_object(ref[0].location)})
-
 	negated_ref := {
-		"ref": array.concat([term1], util.rest(ref)),
+		"ref": array.flatten([
+			object.union(ref_head, {"location": util.to_location_object(ref_head.location)}),
+			rest,
+		]),
 		"resolved_path": _resolve(ref, _package_path, ast.resolved_imports),
 	}
 }
@@ -83,7 +85,7 @@ report contains violation if {
 # schemas:
 #   - input: schema.regal.aggregate
 aggregate_report contains violation if {
-	all_multivalue_refs := {{"path": path, "file": file} |
+	all_multivalue_refs := {[path, file] |
 		some file, aggregate in _aggregates
 		some path in aggregate.multivalue_rules
 	}
@@ -94,8 +96,8 @@ aggregate_report contains violation if {
 	some multivalue_ref in all_multivalue_refs
 
 	# violations in same file handled by non-aggregate "report"
-	multivalue_ref.file != file
-	negated.resolved_path == multivalue_ref.path
+	multivalue_ref[1] != file
+	negated.resolved_path == multivalue_ref[0]
 
 	loc := object.union(result.location(negated.ref), {"location": {
 		"file": file,

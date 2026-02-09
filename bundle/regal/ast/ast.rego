@@ -68,10 +68,7 @@ builtin_namespaces contains regex.replace(name, `\..*`, "") if some name in buil
 # description: |
 #   provides the package path values (strings) as an array starting _from_ "data":
 #   package foo.bar -> ["foo", "bar"]
-package_path := [path.value |
-	some i, path in input.package.path
-	i > 0
-]
+package_path := [path.value | some path in array.slice(input.package.path, 1, 100)]
 
 # METADATA
 # description: |
@@ -124,21 +121,12 @@ functions := [rule |
 #   manually checking for this using the rule ref
 public_rules_and_functions := [rule |
 	some rule in input.rules
+	not startswith(rule.head.ref[0].value, "_")
 
-	count([part |
-		some i, part in rule.head.ref
-
-		_private_rule(i, part)
-	]) == 0
+	every part in array.slice(rule.head.ref, 1, 100) {
+		[part.type, startswith(part.value, "_")] != ["string", true]
+	}
 ]
-
-_private_rule(0, part) if startswith(part.value, "_")
-
-_private_rule(i, part) if {
-	i > 0
-	part.type == "string"
-	startswith(part.value, "_")
-}
 
 # METADATA
 # description: a list of the argument names for the given rule (if function)
@@ -258,26 +246,24 @@ is_terms_subset(terms1, terms2) if {
 
 # METADATA
 # description: returns the "path" string of any given ref value
-ref_to_string(ref) := ref[0].value if {
-	count(ref) == 1
-} else := concat("", [_ref_part_to_string(i, part) | some i, part in ref])
+ref_to_string(ref) := concat("", array.flatten([ref[0].value, [_format_part(part) |
+	some part in array.slice(ref, 1, 100)
 
-_ref_part_to_string(0, part) := part.value
-_ref_part_to_string(i, part) := _format_part(part) if i > 0
+	not part.type in {"call", "ref", "templatestring"}
+]]))
 
 _format_part(part) := concat("", [".", part.value]) if {
 	part.type == "string"
 	regex.match(`^[a-zA-Z_][a-zA-Z1-9_]*$`, part.value)
-} else := sprintf(`["%v"]`, [part.value]) if {
-	part.type == "string"
-} else := sprintf(`[%v]`, [part.value]) if {
-	# for now, only allow printing the static parts of refs containing
-	# template strings, as we don't likely want to rebuild the template string
-	# from its parts here. if we need the string representation anywhere, we
-	# can revisit this later, and perhaps simply grab the original text from its
-	# location.
-	part.type != "templatestring"
-}
+} else := sprintf(
+	{
+		"string": `["%v"]`,
+		"var": `[%v]`,
+		"number": `[%d]`,
+		"boolean": `[%v]`,
+	}[part.type],
+	[part.value],
+)
 
 # METADATA
 # description: |
@@ -386,12 +372,10 @@ is_chained_rule_body(rule, lines) if {
 # description: answers whether variable of `name` is found anywhere in provided rule `head`
 # scope: document
 var_in_head(head, name) if {
-	has_named_var(head.value, name)
+	some part in ["key", "value"]
+	has_named_var(head[part], name)
 } else if {
-	has_named_var(head.key, name)
-} else if {
-	some i, part in head.ref
-	i > 0
+	some part in array.slice(head.ref, 1, 100)
 	has_named_var(part, name)
 }
 

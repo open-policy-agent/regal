@@ -11,9 +11,16 @@ report contains violation if {
 
 	some rule in input.rules
 
+	is_test := startswith(rule.head.ref[0].value, "test_")
+	max_length := cfg[{false: "max-rule-length", true: "max-test-rule-length"}[is_test]]
+
 	text := util.to_location_object(rule.location).text
 
-	_line_count(cfg, text) > cfg[_max_length_property(rule.head.ref[0].value)]
+	# cheaper check first, and only account for comments if too long to begin with
+	rule_length := strings.count(text, "\n") + 1
+	rule_length > max_length
+
+	_line_count(cfg, text, rule_length) > max_length
 
 	not _no_body_exception(cfg, rule)
 
@@ -25,17 +32,13 @@ _no_body_exception(cfg, rule) if {
 	not rule.body
 }
 
-default _max_length_property(_) := "max-rule-length"
+_line_count(cfg, _, rule_length) := rule_length if cfg["count-comments"] == true
 
-_max_length_property(value) := "max-test-rule-length" if startswith(value, "test_")
-
-_line_count(cfg, text) := strings.count(text, "\n") + 1 if cfg["count-comments"] == true
-
-_line_count(cfg, text) := n if {
+_line_count(cfg, text, rule_length) := without_comments if {
 	not cfg["count-comments"]
 
-	n := count([1 |
+	without_comments := rule_length - count([1 |
 		some line in split(text, "\n")
-		not startswith(trim_space(line), "#")
+		startswith(trim_space(line), "#")
 	])
 }

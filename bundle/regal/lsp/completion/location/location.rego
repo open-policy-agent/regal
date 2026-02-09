@@ -119,5 +119,5 @@ ref_at(line, col) := word if {
 	}
 }
 
-_to_string(arr) := "" if count(arr) == 0
-_to_string(arr) := arr[0] if count(arr) > 0
+_to_string([]) := ""
+_to_string(arr) := arr[0] if arr != []

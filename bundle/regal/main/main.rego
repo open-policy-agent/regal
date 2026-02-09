@@ -105,8 +105,7 @@ report contains violation if {
 	some category, title
 	_rules_to_run[category][title]
 
-	count(object.get(prepared.notices, [category, title], [])) == 0
-
+	object.get(prepared.notices, [category, title], set()) == set()
 	some violation in data.regal.rules[category][title].report
 
 	not _ignored(violation, ast.ignore_directives)
@@ -239,7 +238,3 @@ _ignored(violation, directives) if {
 	ignored_rules := directives[util.to_location_object(violation.location).row + 1]
 	violation.title in ignored_rules
 }
-
-_null_to_empty(x) := [] if {
-	x == null
-} else := x

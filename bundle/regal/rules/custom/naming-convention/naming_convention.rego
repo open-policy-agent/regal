@@ -72,7 +72,8 @@ report contains violation if {
 
 _message(kind, name, pattern) := $`Naming convention violation: {kind} name "{name}" does not match pattern '{pattern}'`
 
-_with_description(violation, description) := json.patch(
-	violation,
-	[{"op": "replace", "path": "/description", "value": description}],
-)
+_with_description(violation, description) := json.patch(violation, [{
+	"op": "replace",
+	"path": "/description",
+	"value": description,
+}])

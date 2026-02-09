@@ -95,80 +95,124 @@ test_function_calls if {
 
 test_implicit_boolean_assignment if ast.implicit_boolean_assignment(ast.with_rego_v1(`a.b if true`).rules[0])
 
-test_ref_to_string if {
-	ast.ref_to_string([{"type": "var", "value": "data"}]) == `data`
-	ast.ref_to_string([{"type": "var", "value": "foo"}, {"type": "var", "value": "bar"}]) == `foo[bar]`
-	ast.ref_to_string([{"type": "var", "value": "data"}, {"type": "string", "value": "/foo/"}]) == `data["/foo/"]`
-	ast.ref_to_string([
-		{"type": "var", "value": "foo"},
-		{"type": "var", "value": "bar"},
-		{"type": "var", "value": "baz"},
-	]) == `foo[bar][baz]`
-	ast.ref_to_string([
-		{"type": "var", "value": "foo"},
-		{"type": "var", "value": "bar"},
-		{"type": "var", "value": "baz"},
-		{"type": "string", "value": "qux"},
-	]) == `foo[bar][baz].qux`
-	ast.ref_to_string([
-		{"type": "var", "value": "foo"},
-		{"type": "string", "value": "~bar~"},
-		{"type": "string", "value": "boo"},
-		{"type": "var", "value": "baz"},
-	]) == `foo["~bar~"].boo[baz]`
-	ast.ref_to_string([
-		{"type": "var", "value": "data"},
-		{"type": "string", "value": "regal"},
-		{"type": "string", "value": "lsp"},
-		{"type": "string", "value": "completion_test"},
-	]) == `data.regal.lsp.completion_test`
-	ast.ref_to_string([
-		{"type": "var", "value": "data"},
-		{"type": "string", "value": "regal"},
-		{"type": "number", "value": 1},
-	]) == `data.regal[1]`
-	ast.ref_to_string([
-		{"type": "var", "value": "data"},
-		{"type": "string", "value": "regal"},
-		{"type": "boolean", "value": true},
-	]) == `data.regal[true]`
+test_ref_to_string[exp] if {
+	some [ref, exp] in [
+		[[{"type": "var", "value": "data"}], `data`],
+		[[{"type": "var", "value": "foo"}, {"type": "var", "value": "bar"}], `foo[bar]`],
+		[[{"type": "var", "value": "data"}, {"type": "string", "value": "/foo/"}], `data["/foo/"]`],
+		[
+			[
+				{"type": "var", "value": "foo"},
+				{"type": "var", "value": "bar"},
+				{"type": "var", "value": "baz"},
+			],
+			`foo[bar][baz]`,
+		],
+		[
+			[
+				{"type": "var", "value": "foo"},
+				{"type": "var", "value": "bar"},
+				{"type": "var", "value": "baz"},
+				{"type": "string", "value": "qux"},
+			],
+			`foo[bar][baz].qux`,
+		],
+		[
+			[
+				{"type": "var", "value": "foo"},
+				{"type": "string", "value": "~bar~"},
+				{"type": "string", "value": "boo"},
+				{"type": "var", "value": "baz"},
+			],
+			`foo["~bar~"].boo[baz]`,
+		],
+		[
+			[
+				{"type": "var", "value": "data"},
+				{"type": "string", "value": "regal"},
+				{"type": "string", "value": "lsp"},
+				{"type": "string", "value": "completion_test"},
+			],
+			`data.regal.lsp.completion_test`,
+		],
+		[
+			[
+				{"type": "var", "value": "data"},
+				{"type": "string", "value": "regal"},
+				{"type": "number", "value": 1},
+			],
+			`data.regal[1]`,
+		],
+		[
+			[
+				{"type": "var", "value": "data"},
+				{"type": "string", "value": "regal"},
+				{"type": "boolean", "value": true},
+			],
+			`data.regal[true]`,
+		],
+	]
+
+	ast.ref_to_string(ref) == exp
 }
 
-test_ref_static_to_string if {
-	ast.ref_static_to_string([{"type": "var", "value": "data"}]) == `data`
-	ast.ref_static_to_string([{"type": "var", "value": "foo"}, {"type": "var", "value": "bar"}]) == `foo`
-	ast.ref_static_to_string([{"type": "var", "value": "data"}, {"type": "string", "value": "/foo/"}]) == `data["/foo/"]`
-	ast.ref_static_to_string([
-		{"type": "var", "value": "foo"},
-		{"type": "string", "value": "bar"},
-		{"type": "var", "value": "baz"},
-	]) == `foo.bar`
-	ast.ref_static_to_string([
-		{"type": "var", "value": "foo"},
-		{"type": "string", "value": "~bar~"},
-		{"type": "string", "value": "qux"},
-	]) == `foo["~bar~"].qux`
-	ast.ref_static_to_string([
-		{"type": "var", "value": "data"},
-		{"type": "string", "value": "regal"},
-		{"type": "string", "value": "lsp"},
-		{"type": "string", "value": "completion_test"},
-	]) == `data.regal.lsp.completion_test`
-	ast.ref_static_to_string([
-		{"type": "var", "value": "data"},
-		{"type": "string", "value": "regal"},
-		{"type": "number", "value": 1},
-	]) == `data.regal[1]`
-	ast.ref_static_to_string([
-		{"type": "var", "value": "data"},
-		{"type": "string", "value": "regal"},
-		{"type": "boolean", "value": true},
-	]) == `data.regal[true]`
-	ast.ref_static_to_string([
-		{"type": "var", "value": "data"},
-		{"type": "string", "value": "regal"},
-		{"type": "boolean", "value": false},
-	]) == `data.regal[false]`
+test_ref_static_to_string[exp] if {
+	some [ref, exp] in [
+		[[{"type": "var", "value": "data"}], `data`],
+		[[{"type": "var", "value": "foo"}, {"type": "var", "value": "bar"}], `foo`],
+		[[{"type": "var", "value": "data"}, {"type": "string", "value": "/foo/"}], `data["/foo/"]`],
+		[
+			[
+				{"type": "var", "value": "foo"},
+				{"type": "string", "value": "bar"},
+				{"type": "var", "value": "baz"},
+			],
+			`foo.bar`,
+		],
+		[
+			[
+				{"type": "var", "value": "foo"},
+				{"type": "string", "value": "~bar~"},
+				{"type": "string", "value": "qux"},
+			],
+			`foo["~bar~"].qux`,
+		],
+		[
+			[
+				{"type": "var", "value": "data"},
+				{"type": "string", "value": "regal"},
+				{"type": "string", "value": "lsp"},
+				{"type": "string", "value": "completion_test"},
+			],
+			`data.regal.lsp.completion_test`,
+		],
+		[
+			[
+				{"type": "var", "value": "data"},
+				{"type": "string", "value": "regal"},
+				{"type": "number", "value": 1},
+			],
+			`data.regal[1]`,
+		],
+		[
+			[
+				{"type": "var", "value": "data"},
+				{"type": "string", "value": "regal"},
+				{"type": "boolean", "value": true},
+			],
+			`data.regal[true]`,
+		],
+		[
+			[
+				{"type": "var", "value": "data"},
+				{"type": "string", "value": "regal"},
+				{"type": "boolean", "value": false},
+			],
+			`data.regal[false]`,
+		],
+	]
+
+	ast.ref_static_to_string(ref) == exp
 }
 
 test_rule_head_locations if {

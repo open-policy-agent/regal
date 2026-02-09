@@ -20,6 +20,7 @@ func BenchmarkRegalLintingItself(b *testing.B) {
 // 656495042 ns/op	2309640068 B/op	50264746 allocs/op // OPA v1.12.2
 // 497374153 ns/op	1923188613 B/op	45981278 allocs/op // AST aggregates refactor
 // 486491514 ns/op	1906786789 B/op	45640947 allocs/op // OPA v1.13.1 + fixes
+// 420959403 ns/op	1534395760 B/op	36917131 allocs/op // Performance refactor
 func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
 	benchmarkLint(b, bundleLinter(b, true).MustPrepare(b.Context()))
 }
