@@ -83,6 +83,14 @@ See the [adopters](https://www.openpolicyagent.org/projects/regal/adopters) file
 brew install regal
 ```
 
+**Linux, MacOS, and Windows using mise**
+
+If you are using [mise](https://mise.jdx.dev), the polyglot tool version manager, you can install regal using a command like:
+
+```shell
+mise use -g regal@latest
+```
+
 <details>
   <summary><strong>Other Installation Options</strong></summary>
 
