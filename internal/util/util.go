@@ -270,6 +270,20 @@ func Pointer[T any](v T) *T {
 	return &v
 }
 
+// GetMapValue extracts a typed value from a map[string]any, returning the value if the type matched,
+// or the zero values of correct type.
+func GetMapValue[T any](m map[string]any, key string) T {
+	if val, ok := m[key]; ok {
+		if typed, ok := val.(T); ok {
+			return typed
+		}
+	}
+
+	var zero T
+
+	return zero
+}
+
 // AnySliceTo converts a slice of any to a slice of T, returning an error if any element cannot be casted.
 func AnySliceTo[T any](in []any) ([]T, error) {
 	out := make([]T, 0, len(in))

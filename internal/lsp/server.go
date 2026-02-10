@@ -26,6 +26,7 @@ import (
 	"github.com/open-policy-agent/regal/bundle"
 	"github.com/open-policy-agent/regal/internal/capabilities"
 	"github.com/open-policy-agent/regal/internal/compile"
+	"github.com/open-policy-agent/regal/internal/explorer"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/lsp/bundles"
@@ -569,6 +570,35 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case params := <-l.commandRequest:
+			// Handle regal.explorer separately as VS Code sends map arguments
+			if params.Command == "regal.explorer" {
+				var explorerArgs types.ExplorerCommandArgs
+
+				if len(params.Arguments) > 0 {
+					arg, ok := params.Arguments[0].(map[string]any)
+					if !ok {
+						l.log.Message("expected explorer argument to be a map, got %T", params.Arguments[0])
+
+						continue
+					}
+
+					explorerArgs = types.ExplorerCommandArgs{
+						Target:      util.GetMapValue[string](arg, "target"),
+						Strict:      util.GetMapValue[bool](arg, "strict"),
+						Annotations: util.GetMapValue[bool](arg, "annotations"),
+						Print:       util.GetMapValue[bool](arg, "print"),
+						Format:      util.GetMapValue[bool](arg, "format"),
+					}
+				}
+
+				if err := l.handleExplorerCommand(ctx, explorerArgs); err != nil {
+					l.log.Message("failed to handle explorer command: %s", err)
+				}
+
+				continue
+			}
+
+			// Handle all other commands (they use string arguments)
 			var (
 				editParams *types.ApplyWorkspaceEditParams
 				args       types.CommandArgs
@@ -1919,6 +1949,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 				Commands: []string{
 					"regal.debug",
 					"regal.eval",
+					"regal.explorer",
 					"regal.fix.opa-fmt",
 					"regal.fix.use-rego-v1",
 					"regal.fix.use-assignment-operator",
@@ -2281,6 +2312,68 @@ func (l *LanguageServer) regalContext(fileURI string, _ *rego.Requirements) *reg
 			WorkspaceRootPath: l.workspacePath(),
 		},
 	}
+}
+
+func (l *LanguageServer) handleExplorerCommand(ctx context.Context, args types.ExplorerCommandArgs) error {
+	if args.Target == "" {
+		l.log.Message("expected command target, got empty string")
+
+		return errors.New("target file URI is required")
+	}
+
+	contents, ok := l.cache.GetFileContents(args.Target)
+	if !ok {
+		return fmt.Errorf("could not get file contents for uri %q", args.Target)
+	}
+
+	path := l.toRelativePath(args.Target)
+
+	compileResults := explorer.CompilerStages(
+		path,
+		contents,
+		args.Strict,
+		args.Annotations,
+		args.Print,
+	)
+
+	stages := make([]types.ExplorerStageResult, 0, len(compileResults))
+	hasErrors := false
+
+	for _, cs := range compileResults {
+		stage := types.ExplorerStageResult{
+			Name:  cs.Stage,
+			Error: cs.Error != "",
+		}
+
+		if cs.Error != "" {
+			hasErrors = true
+			stage.Output = cs.Error
+		} else {
+			if args.Format {
+				stage.Output = cs.FormattedResult()
+			} else if cs.Result != nil {
+				stage.Output = cs.Result.String()
+			}
+		}
+
+		stages = append(stages, stage)
+	}
+
+	responseParams := types.ExplorerResult{
+		Stages: stages,
+	}
+
+	if !hasErrors {
+		if plan, err := explorer.Plan(ctx, path, contents, args.Print); err == nil {
+			responseParams.Plan = plan
+		}
+	}
+
+	if err := l.conn.Notify(ctx, "regal/showExplorerResult", responseParams); err != nil {
+		return fmt.Errorf("regal/showExplorerResult notification failed: %w", err)
+	}
+
+	return nil
 }
 
 func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.CommandArgs) error {

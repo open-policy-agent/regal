@@ -154,3 +154,118 @@ allow if {
 		})
 	}
 }
+
+func TestExecuteCommandExplorer(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+
+	defer func() {
+		time.Sleep(200 * time.Millisecond)
+		cancel()
+	}()
+
+	receivedNotifications := make(chan map[string]any, defaultBufferedChannelSize)
+
+	createExplorerNotificationTestHandler := func(
+		t *testing.T,
+		receivedNotifications chan map[string]any,
+	) func(_ context.Context, _ *jsonrpc2.Conn, _ *jsonrpc2.Request) (result any, err error) {
+		t.Helper()
+
+		return func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
+			if req.Method == "regal/showExplorerResult" {
+				if req.Params == nil {
+					t.Fatal("expected notification params to be non-nil")
+				}
+
+				var notificationData map[string]any
+				if err := encoding.JSON().Unmarshal(*req.Params, &notificationData); err != nil {
+					t.Fatalf("failed to unmarshal notification params: %s", err)
+				}
+
+				receivedNotifications <- notificationData
+
+				return nil, nil
+			}
+
+			if req.Method == "workspace/applyEdit" {
+				return map[string]any{"applied": true}, nil
+			}
+
+			return struct{}{}, nil
+		}
+	}
+
+	tempDir := t.TempDir()
+	clientHandler := createExplorerNotificationTestHandler(t, receivedNotifications)
+	ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
+
+	go ls.StartCommandWorker(ctx)
+
+	content := `package test
+
+allow if {
+	1 == 1
+}
+`
+
+	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "test.rego"))
+	ls.cache.SetFileContents(mainRegoURI, content)
+
+	executeParams := types.ExecuteCommandParams{
+		Command: "regal.explorer",
+		Arguments: []any{
+			map[string]any{
+				"target":      mainRegoURI,
+				"strict":      false,
+				"annotations": false,
+				"print":       false,
+				"format":      true,
+			},
+		},
+	}
+
+	var executeResponse any
+
+	testutil.NoErr(connClient.Call(ctx, "workspace/executeCommand", executeParams, &executeResponse))(t)
+
+	timeout := time.NewTimer(determineTimeout())
+	defer timeout.Stop()
+
+	select {
+	case notification := <-receivedNotifications:
+		if _, ok := notification["stages"]; !ok {
+			t.Fatal("expected notification to contain 'stages' field")
+		}
+
+		stages, ok := notification["stages"].([]any)
+		if !ok {
+			t.Fatalf("expected 'stages' to be a slice, got %T", notification["stages"])
+		}
+
+		if len(stages) == 0 {
+			t.Fatal("expected at least one compilation stage")
+		}
+
+		firstStage, ok := stages[0].(map[string]any)
+		if !ok {
+			t.Fatalf("expected first stage to be a map, got %T", stages[0])
+		}
+
+		if _, ok := firstStage["name"]; !ok {
+			t.Fatal("expected stage to have 'name' field")
+		}
+
+		if _, ok := firstStage["output"]; !ok {
+			t.Fatal("expected stage to have 'output' field")
+		}
+
+		if _, ok := firstStage["error"]; !ok {
+			t.Fatal("expected stage to have 'error' field")
+		}
+
+	case <-timeout.C:
+		t.Fatal("timeout waiting for regal/showExplorerResult notification")
+	}
+}
