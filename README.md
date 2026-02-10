@@ -77,64 +77,31 @@ See the [adopters](https://www.openpolicyagent.org/projects/regal/adopters) file
 
 ### Download Regal
 
-**MacOS and Linux**
+**MacOS**
 
 ```shell
 brew install regal
 ```
 
-**Linux, MacOS, and Windows using mise**
-
-If you are using [mise](https://mise.jdx.dev), the polyglot tool version manager, you can install regal using a command like:
+**Linux**
 
 ```shell
-mise use -g regal@latest
-```
-
-<details>
-  <summary><strong>Other Installation Options</strong></summary>
-
-Please see [Packages](https://www.openpolicyagent.org/projects/regal/adopters#packaging)
-for a list of package repositories which distribute Regal.
-
-Manual installation commands:
-
-**MacOS (Apple Silicon)**
-
-```shell
-curl -L -o regal "https://github.com/open-policy-agent/regal/releases/latest/download/regal_Darwin_arm64"
-```
-
-**MacOS (x86_64)**
-
-```shell
-curl -L -o regal "https://github.com/open-policy-agent/regal/releases/latest/download/regal_Darwin_x86_64"
-```
-
-**Linux (x86_64)**
-
-```shell
-curl -L -o regal "https://github.com/open-policy-agent/regal/releases/latest/download/regal_Linux_x86_64"
-chmod +x regal
+curl -L -o regal https://github.com/open-policy-agent/regal/releases/latest/download/regal_Linux_x86_64
+chmod 755 ./regal
 ```
 
 **Windows**
 
-```shell
-curl.exe -L -o regal.exe "https://github.com/open-policy-agent/regal/releases/latest/download/regal_Windows_x86_64.exe"
+```powershell
+Invoke-WebRequest -Uri "https://github.com/open-policy-agent/regal/releases/latest/download/regal_Windows_x86_64.exe" -OutFile "regal.exe"
 ```
 
-**Docker**
+For more installation options, including mise, Docker, architecture-specific
+downloads, and community package repositories, see the [Getting Started
+guide](https://www.openpolicyagent.org/projects/regal#getting-started).
 
-```shell
-docker pull ghcr.io/styrainc/regal:latest
-```
 
-See all versions, and checksum files, at the Regal [releases](https://github.com/open-policy-agent/regal/releases/)
-page, and published Docker images at the [packages](https://github.com/open-policy-agent/regal/pkgs/container/regal)
-page.
-
-</details>
+<!-- markdownlint-disable MD041 -->
 
 ### Try it out!
 
