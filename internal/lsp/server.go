@@ -195,7 +195,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		templateFileJobs:            make(chan lintFileJob, 10),
 		prepareQueryJobs:            make(chan struct{}, 1),
 		templatingFiles:             concurrent.MapOf(make(map[string]bool)),
-		webServer:                   web.NewServer(c, opts.Logger),
+		webServer:                   web.NewServer(opts.Logger),
 		loadedBuiltins:              concurrent.MapOf(make(map[string]map[string]*ast.Builtin)),
 		workspaceDiagnosticsPoll:    opts.WorkspaceDiagnosticsPoll,
 		loadedConfigAllRegoVersions: concurrent.MapOf(make(map[string]ast.RegoVersion)),
@@ -1875,8 +1875,6 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 		)
 	}
 
-	l.webServer.SetClient(l.client.Identifier)
-
 	regoFilter := types.FileOperationFilter{Scheme: "file", Pattern: types.FileOperationPattern{Glob: "**/*.rego"}}
 	fileOpOpts := types.FileOperationRegistrationOptions{Filters: []types.FileOperationFilter{regoFilter}}
 
@@ -1918,7 +1916,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			SignatureHelpProvider: types.SignatureHelpOptions{
 				TriggerCharacters: []string{"(", ","},
 			},
-			CodeActionProvider: types.CodeActionOptions{CodeActionKinds: []string{"quickfix", "source.explore"}},
+			CodeActionProvider: types.CodeActionOptions{CodeActionKinds: []string{"quickfix"}},
 			ExecuteCommandProvider: types.ExecuteCommandOptions{
 				Commands: []string{
 					"regal.debug",
@@ -2061,8 +2059,6 @@ func (l *LanguageServer) updateRootURI(ctx context.Context, rootURI string) erro
 	if err != nil {
 		l.log.Message("failed to load workspace contents: %s", err)
 	}
-
-	l.webServer.SetWorkspaceURI(l.workspaceRootURI)
 
 	// 'OverwriteAggregates' is set to populate the cache's initial aggregate state.
 	// Subsequent runs of lintWorkspaceJobs will not set this and use the cached state.

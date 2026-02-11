@@ -11,7 +11,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ir"
 	"github.com/open-policy-agent/opa/v1/util"
 
-	compile2 "github.com/open-policy-agent/regal/internal/compile"
+	regal_compile "github.com/open-policy-agent/regal/internal/compile"
 	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
@@ -34,7 +34,7 @@ func (cr *CompileResult) FormattedResult() string {
 
 type stage struct{ name, metricName string }
 
-// NOTE(sr): copied from 0.68.0.
+// NOTE(sr): copied from 0.68.0. When upgrading OPA to v1.14.0, let's use its v1/ast.AllStages().
 var stages = []stage{
 	{"ResolveRefs", "compile_stage_resolve_refs"},
 	{"InitLocalVarGen", "compile_stage_init_local_var_gen"},
@@ -73,7 +73,7 @@ var stages = []stage{
 }
 
 func CompilerStages(path, rego string, useStrict, useAnno, usePrint bool) []CompileResult {
-	c := compile2.NewCompilerWithRegalBuiltins().
+	c := regal_compile.NewCompilerWithRegalBuiltins().
 		WithStrict(useStrict).
 		WithEnablePrintStatements(usePrint).
 		WithUseTypeCheckAnnotations(useAnno)

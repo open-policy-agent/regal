@@ -94,30 +94,6 @@ actions contains action if {
 }
 
 # METADATA
-# description: |
-#   Code action to explore the compiler stages for a policy. This is *source action*,
-#   unrelated to diagnostics. Depends on the "vscode.open" command being available, and
-#   therefore currently only works in VSCode clients.
-actions contains action if {
-	input.regal.client.identifier == clients.vscode
-
-	strings.any_prefix_match("source.explore", only)
-
-	document := trim_prefix(input.params.textDocument.uri, input.regal.environment.workspace_root_uri)
-	explorer_url := $"{input.regal.environment.web_server_base_uri}/explorer{document}"
-	action := {
-		"title": "Explore compiler stages for this policy",
-		"kind": "source.explore",
-		"command": {
-			"title": "Explore compiler stages for this policy",
-			"command": "vscode.open",
-			"tooltip": "Explore compiler stages for this policy",
-			"arguments": [explorer_url],
-		},
-	}
-}
-
-# METADATA
 # description: All code actions for fixing reported diagnostics
 rules := {
 	"opa-fmt": ["Format using opa-fmt", ["target"]],
@@ -140,9 +116,6 @@ rules := {
 #   be hierarchical — if only contains "source" it matches all source actions,
 #   while "source.foo" matches only source actions with a "foo" prefix.
 # scope: document
-default only := [
-	"quickfix",
-	"source.explore",
-]
+default only := ["quickfix"]
 
 only := input.params.context.only if count(input.params.context.only) > 0

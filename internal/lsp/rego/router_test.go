@@ -248,6 +248,16 @@ func codeActionParams(t *testing.T, uri string, ls, cs, le, ce int) *json.RawMes
 			"start": map[string]int{"line": ls, "character": cs},
 			"end":   map[string]int{"line": le, "character": ce},
 		},
+		"context": map[string]any{
+			"diagnostics": []map[string]any{{
+				"code":    "opa-fmt",
+				"message": "Format using opa-fmt",
+				"range": map[string]any{
+					"start": map[string]int{"line": ls, "character": cs},
+					"end":   map[string]int{"line": le, "character": ce},
+				},
+			}},
+		},
 	})
 }
 

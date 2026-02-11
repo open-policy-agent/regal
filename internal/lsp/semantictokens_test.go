@@ -158,7 +158,7 @@ func generateLargePolicy(numFunctions int) string {
 func setupLanguageServerWithPolicy(tb testing.TB, policy string) (*LanguageServer, types.SemanticTokensParams) {
 	tb.Helper()
 
-	webServer := web.NewServer(nil, log.NewLogger(log.LevelDebug, tb.Output()))
+	webServer := web.NewServer(log.NewLogger(log.LevelDebug, tb.Output()))
 	webServer.SetBaseURL("http://foo.bar")
 
 	l := NewLanguageServer(tb.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, tb.Output())})

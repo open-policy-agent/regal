@@ -7,10 +7,7 @@ test_actions_reported_in_expected_format if {
 	r := codeaction.actions with input as {
 		"regal": {
 			"client": {"identifier": clients.generic},
-			"environment": {
-				"web_server_base_uri": "http://irrelevant",
-				"workspace_root_uri": "file:///irrelevant",
-			},
+			"environment": {"workspace_root_uri": "file:///irrelevant"},
 		},
 		"params": {
 			"textDocument": {"uri": "policy.rego"},
@@ -54,10 +51,7 @@ test_code_action_returned_for_every_linter[rule] if {
 	r := codeaction.actions with input as {
 		"regal": {
 			"client": {"identifier": 0},
-			"environment": {
-				"web_server_base_uri": "http://irrelevant",
-				"workspace_root_uri": "file:///irrelevant",
-			},
+			"environment": {"workspace_root_uri": "file:///irrelevant"},
 		},
 		"params": {
 			"textDocument": {"uri": "policy.rego"},
@@ -77,10 +71,7 @@ test_code_actions_specific_to_vscode_reported_on_client_match if {
 	r := codeaction.actions with input as {
 		"regal": {
 			"client": {"identifier": clients.vscode},
-			"environment": {
-				"web_server_base_uri": "http://localhost:8000",
-				"workspace_root_uri": "file:///workspace",
-			},
+			"environment": {"workspace_root_uri": "file:///workspace"},
 		},
 		"params": {
 			"textDocument": {"uri": "file:///workspace/policy.rego"},
@@ -111,16 +102,6 @@ test_code_actions_specific_to_vscode_reported_on_client_match if {
 			"diagnostics": [diagnostic],
 		},
 		_ignore_rule(diagnostic),
-		{
-			"title": "Explore compiler stages for this policy",
-			"kind": "source.explore",
-			"command": {
-				"arguments": ["http://localhost:8000/explorer/policy.rego"],
-				"command": "vscode.open",
-				"title": "Explore compiler stages for this policy",
-				"tooltip": "Explore compiler stages for this policy",
-			},
-		},
 	}
 }
 
@@ -130,10 +111,7 @@ test_code_actions_only_quickfix if {
 	r := codeaction.actions with input as {
 		"regal": {
 			"client": {"identifier": clients.vscode},
-			"environment": {
-				"web_server_base_uri": "http://localhost:8000",
-				"workspace_root_uri": "file:///workspace",
-			},
+			"environment": {"workspace_root_uri": "file:///workspace"},
 		},
 		"params": {
 			"textDocument": {"uri": "file:///workspace/policy.rego"},
@@ -172,47 +150,12 @@ test_code_actions_only_quickfix if {
 	}
 }
 
-test_code_actions_only_source if {
-	diagnostic := _diagnostics["use-assignment-operator"]
-	r := codeaction.actions with input as {
-		"regal": {
-			"client": {"identifier": clients.vscode},
-			"environment": {
-				"web_server_base_uri": "http://localhost:8000",
-				"workspace_root_uri": "file:///workspace",
-			},
-		},
-		"params": {
-			"textDocument": {"uri": "file:///workspace/policy.rego"},
-			"context": {
-				"diagnostics": [diagnostic],
-				# this is the only field different from the previous test
-				"only": ["source"],
-			},
-		},
-	}
-
-	r == {{
-		"title": "Explore compiler stages for this policy",
-		"kind": "source.explore",
-		"command": {
-			"arguments": ["http://localhost:8000/explorer/policy.rego"],
-			"command": "vscode.open",
-			"title": "Explore compiler stages for this policy",
-			"tooltip": "Explore compiler stages for this policy",
-		},
-	}}
-}
-
 test_code_actions_empty_only_means_all if {
 	diagnostic := _diagnostics["use-assignment-operator"]
 	r := codeaction.actions with input as {
 		"regal": {
 			"client": {"identifier": clients.vscode},
-			"environment": {
-				"web_server_base_uri": "http://localhost:8000",
-				"workspace_root_uri": "file:///workspace",
-			},
+			"environment": {"workspace_root_uri": "file:///workspace"},
 		},
 		"params": {
 			"textDocument": {"uri": "file:///workspace/policy.rego"},
@@ -223,7 +166,7 @@ test_code_actions_empty_only_means_all if {
 		},
 	}
 
-	count(r) == 4
+	count(r) == 3
 }
 
 _diagnostics["opa-fmt"] := {
