@@ -8,11 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
-	"github.com/open-policy-agent/regal/internal/ogre"
-	"github.com/open-policy-agent/regal/pkg/roast/rast"
-	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
 const (
@@ -33,16 +29,16 @@ type Token struct {
 	Modifiers uint
 }
 
-func Full(ctx context.Context, module *ast.Module) (*types.SemanticTokens, error) {
+func Full(ctx context.Context, queryResult map[string]any) (*types.SemanticTokens, error) {
 	tokens := make([]Token, 0)
 
-	packageTokens, err := extractPackageTokens(module)
+	packageTokens, err := extractPackageTokens(queryResult)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract package tokens: %w", err)
 	}
 	tokens = append(tokens, packageTokens...)
 
-	variableTokens, err := extractVariableTokens(ctx, module)
+	variableTokens, err := extractVariableTokens(queryResult)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract variable tokens: %w", err)
 	}
@@ -51,89 +47,97 @@ func Full(ctx context.Context, module *ast.Module) (*types.SemanticTokens, error
 	return encodeTokens(tokens), nil
 }
 
-func extractPackageTokens(module *ast.Module) ([]Token, error) {
+func extractPackageTokens(queryResult map[string]any) ([]Token, error) {
 	var tokens []Token
 
-	if module.Package != nil && module.Package.Path != nil {
-		for _, term := range module.Package.Path[1:] {
-			packageString := term.Value.String()
+	if packageTokens, ok := queryResult["package_tokens"]; ok {
 
-			trimmedValue := strings.Trim(packageString, `"`)
-			length := uint(len(trimmedValue))
+		if tokenSlice, ok := packageTokens.([]any); ok {
+			for _, tokenItem := range tokenSlice[1:] {
+				if tokenMap, ok := tokenItem.(map[string]any); ok {
+					value, ok := tokenMap["value"].(string)
+					if !ok {
+						return nil, fmt.Errorf("Error parsing ast key")
+					}
+					locationStr, ok := tokenMap["location"].(string)
+					if !ok {
+						return nil, fmt.Errorf("Error parsing ast key")
+					}
 
-			tokens = append(tokens, Token{
-				Line:      uint(term.Location.Row - 1),
-				Col:       uint(term.Location.Col - 1),
-				Length:    length,
-				Type:      TokenTypePackage,
-				Modifiers: 0,
-			})
+					rowStr, rest, _ := strings.Cut(locationStr, ":")
+					colStr, _, _ := strings.Cut(rest, ":")
+
+					row, _ := strconv.Atoi(rowStr)
+					col, _ := strconv.Atoi(colStr)
+
+					trimmedValue := strings.Trim(value, `"`)
+
+					token := Token{
+						Line:      uint(row - 1),
+						Col:       uint(col - 1),
+						Length:    uint(len(trimmedValue)),
+						Type:      TokenTypePackage,
+						Modifiers: 0,
+					}
+
+					tokens = append(tokens, token)
+
+				}
+			}
 		}
 	}
 
 	return tokens, nil
 }
 
-var (
-	semanticTokensQuery = ast.MustParseBody(`arg_tokens = data.regal.lsp.semantictokens.arg_tokens`)
-)
-
-func extractVariableTokens(ctx context.Context, module *ast.Module) ([]Token, error) {
+func extractVariableTokens(queryResult map[string]any) ([]Token, error) {
 	var tokens []Token
 
-	roastInput, err := transform.ToAST("policy.rego", "", module, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to transform to roast format: %w", err)
-	}
+	if argTokens, ok := queryResult["arg_tokens"]; ok {
 
-	resultHandler := func(result ast.Value) error {
-		resultObj := result.(ast.Object)
+		if argTokensMap, ok := argTokens.(map[string]any); ok {
+			for typeKey, varData := range argTokensMap {
+				typeStr := typeKey
 
-		resultObj.Foreach(func(varTerm, typeTerm *ast.Term) {
-			varObj := varTerm.Value.(ast.Object)
-			typeStr := string(typeTerm.Value.(ast.String))
+				if varSlice, ok := varData.([]any); ok {
+					for _, varItem := range varSlice {
+						if varMap, ok := varItem.(map[string]any); ok {
+							value, ok := varMap["value"].(string)
+							if !ok {
+								return nil, fmt.Errorf("Error parsing ast key")
+							}
+							locationStr, ok := varMap["location"].(string)
+							if !ok {
+								return nil, fmt.Errorf("Error parsing ast key")
+							}
 
-			locationStr := rast.GetString(varObj, "location")
-			varName := rast.GetString(varObj, "value")
+							trimmedVarName := strings.Trim(value, `"' `)
 
-			trimmedVarName := strings.Trim(varName, `"' `)
+							rowStr, rest, _ := strings.Cut(locationStr, ":")
+							colStr, _, _ := strings.Cut(rest, ":")
 
-			rowStr, rest, _ := strings.Cut(locationStr, ":")
-			colStr, _, _ := strings.Cut(rest, ":")
+							row, _ := strconv.Atoi(rowStr)
+							col, _ := strconv.Atoi(colStr)
 
-			row, _ := strconv.Atoi(rowStr)
-			col, _ := strconv.Atoi(colStr)
+							modifier := ModifierReference
+							if typeStr == "declaration" {
+								modifier = ModifierDeclaration
+							}
 
-			modifier := ModifierReference
-			if typeStr == "declaration" {
-				modifier = ModifierDeclaration
+							token := Token{
+								Line:      uint(row - 1),
+								Col:       uint(col - 1),
+								Length:    uint(len(trimmedVarName)),
+								Type:      TokenTypeVariable,
+								Modifiers: uint(modifier),
+							}
+
+							tokens = append(tokens, token)
+						}
+					}
+				}
 			}
-
-			token := Token{
-				Line:      uint(row - 1),
-				Col:       uint(col - 1),
-				Length:    uint(len(trimmedVarName)),
-				Type:      TokenTypeVariable,
-				Modifiers: uint(modifier),
-			}
-			tokens = append(tokens, token)
-		})
-
-		return nil
-	}
-
-	q, err := ogre.New(semanticTokensQuery).Prepare(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to run ogre query: %w", err)
-	}
-
-	err = q.Evaluator().
-		WithInput(roastInput).
-		WithResultHandler(resultHandler).
-		Eval(ctx)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to evaluate ogre query: %w", err)
+		}
 	}
 
 	return tokens, nil

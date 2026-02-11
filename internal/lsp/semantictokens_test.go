@@ -1,11 +1,21 @@
-package semantictokens
+package lsp
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/sourcegraph/jsonrpc2"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/web"
+	"github.com/open-policy-agent/regal/pkg/config"
 )
 
 func TestFull(t *testing.T) {
@@ -77,14 +87,10 @@ test_function(param1) := result if {
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
-			module := ast.MustParseModule(tc.policy)
+			l, params := setupLanguageServerWithPolicy(t, tc.policy)
 
-			result, err := Full(t.Context(), module)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			result := invokeSemanticTokensHandler(t, l, params)
 
-			// Convert actual result to readable format
 			actualTokens := uintsToTestTokens(result.Data)
 
 			t.Logf("Actual tokens: %+v", actualTokens)
@@ -126,168 +132,96 @@ func uintsToTestTokens(data []uint) []semanticTokenInstance {
 	return tokens
 }
 
-func BenchmarkFullOneFunction(b *testing.B) {
-	policy := `package regal.woo
-
-test_function(param1, param2) := result if {
-	calc1 := param1 * 2
-	calc2 := param2 + 10
-	result := calc1 + calc2
-
-	calc3 := 1
-	calc3 == param1
-}`
-
-	module := ast.MustParseModule(policy)
-
-	b.ResetTimer()
-
-	for b.Loop() {
-		result, err := Full(b.Context(), module)
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		_ = result
+// generateLargePolicy creates a policy with the specified number of functions for benchmarking
+func generateLargePolicy(numFunctions int) string {
+	if numFunctions <= 0 {
+		return "package regal.woo\n"
 	}
-}
 
-func BenchmarkFullTwoFunctions(b *testing.B) {
-	policy := `package regal.woo
+	var policy strings.Builder
+	policy.WriteString("package regal.woo\n\n")
 
-test_function_one(param1, param2) := result if {
-	calc1 := param1 * 2
-	calc2 := param2 + 10
+	for i := range numFunctions {
+		policy.WriteString(fmt.Sprintf(`test_function_%d(param1, param2) := result if {
+	calc1 := param1 * %d
+	calc2 := param2 + %d
 	result := calc1 + calc2
 }
 
-test_function_two(x, y, z) := output if {
-	temp := x + y
-	output := temp * z
-}`
+`, i, i+1, i+10))
+	}
+
+	return policy.String()
+}
+
+// setupLanguageServerWithPolicy sets up a language server for testing/benchmarking with the given policy
+func setupLanguageServerWithPolicy(tb testing.TB, policy string) (*LanguageServer, types.SemanticTokensParams) {
+	tb.Helper()
+
+	webServer := web.NewServer(nil, log.NewLogger(log.LevelDebug, tb.Output()))
+	webServer.SetBaseURL("http://foo.bar")
+
+	l := NewLanguageServer(tb.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, tb.Output())})
+
+	l.workspaceRootURI = "file:///foo"
+	l.client = types.Client{Identifier: clients.IdentifierVSCode}
+	l.webServer = webServer
+	l.loadedConfig = &config.Config{}
+
+	fileURI := "file:///foo/test.rego"
+	l.cache.SetFileContents(fileURI, policy)
 
 	module := ast.MustParseModule(policy)
+	l.cache.SetModule(fileURI, module)
+
+	err := PutFileMod(tb.Context(), l.regoStore, fileURI, module)
+	if err != nil {
+		tb.Fatalf("failed to store module: %v", err)
+	}
+
+	params := types.SemanticTokensParams{
+		TextDocument: types.TextDocumentIdentifier{
+			URI: fileURI,
+		},
+	}
+
+	return l, params
+}
+
+// Benchmark function that runs the language server request for a policy containing x amount of rules
+func BenchmarkFullCustomRuleCount(b *testing.B) {
+	policy := generateLargePolicy(100)
+	l, params := setupLanguageServerWithPolicy(b, policy)
 
 	b.ResetTimer()
 
 	for b.Loop() {
-		result, err := Full(b.Context(), module)
-		if err != nil {
-			b.Fatal(err)
-		}
-
+		result := invokeSemanticTokensHandler(b, l, params)
 		_ = result
 	}
 }
 
-func BenchmarkFullFiveFunctions(b *testing.B) {
-	policy := `package regal.woo
+func invokeSemanticTokensHandler(
+	tb testing.TB,
+	l *LanguageServer,
+	params types.SemanticTokensParams,
+) *types.SemanticTokens {
+	tb.Helper()
 
-test_function_one(a, b) := result if {
-	temp := a * b
-	result := temp + 10
-}
-
-test_function_two(x, y, z) := output if {
-	calc := x + y
-	output := calc * z
-}
-
-test_function_three(p1, p2, p3, p4) := value if {
-	step1 := p1 + p2
-	step2 := p3 - p4
-	value := step1 * step2
-}
-
-test_function_four(input1, input2) := final if {
-	intermediate := input1 / input2
-	final := intermediate + 100
-}
-
-test_function_five(v1, v2, v3, v4, v5) := combined if {
-	sum := v1 + v2 + v3
-	product := v4 * v5
-	combined := sum + product
-}`
-
-	module := ast.MustParseModule(policy)
-
-	b.ResetTimer()
-
-	for b.Loop() {
-		result, err := Full(b.Context(), module)
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		_ = result
+	req := &jsonrpc2.Request{
+		Method: "textDocument/semanticTokens/full",
+		Params: testutil.ToJSONRawMessage(tb, params),
 	}
-}
 
-func BenchmarkFullTenFunctions(b *testing.B) {
-	policy := `package regal.woo
-
-test_function_one(a, b) := result if {
-	result := a + b
-}
-
-test_function_two(x, y) := output if {
-	output := x * y
-}
-
-test_function_three(p, q, r) := value if {
-	temp := p + q
-	value := temp - r
-}
-
-test_function_four(m, n) := result if {
-	result := m / n
-}
-
-test_function_five(v1, v2, v3) := combined if {
-	sum := v1 + v2
-	combined := sum * v3
-}
-
-test_function_six(param1, param2, param3, param4) := final if {
-	step1 := param1 * param2
-	step2 := param3 + param4
-	final := step1 - step2
-}
-
-test_function_seven(input1, input2) := output if {
-	temp := input1 + 50
-	output := temp * input2
-}
-
-test_function_eight(a, b, c, d, e) := result if {
-	part1 := a + b + c
-	part2 := d * e
-	result := part1 + part2
-}
-
-test_function_nine(x, y, z) := value if {
-	intermediate := x * y
-	value := intermediate + z
-}
-
-test_function_ten(p1, p2, p3, p4, p5, p6) := final if {
-	group1 := p1 + p2 + p3
-	group2 := p4 * p5 * p6
-	temp := group1 + group2
-	final := temp / 2
-}`
-
-	module := ast.MustParseModule(policy)
-
-	b.ResetTimer()
-
-	for b.Loop() {
-		result, err := Full(b.Context(), module)
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		_ = result
+	result, err := l.Handle(tb.Context(), nil, req)
+	if err != nil {
+		tb.Errorf("Unexpected error: %v", err)
 	}
+
+	tokens, ok := result.(*types.SemanticTokens)
+	if !ok {
+		tb.Errorf("Expected result to be of type *types.SemanticTokens, got %T", result)
+	}
+
+	return tokens
 }

@@ -6,37 +6,60 @@
 #     - variable references that are used in expressions
 # related_resources:
 #   - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_semanticTokens
+# schemas:
+#   - input:        schema.regal.lsp.common
+#   - input.params: schema.regal.lsp.semantictokens
 package regal.lsp.semantictokens
 
-import data.regal.ast
+# METADATA
+# description: Get the module from workspace
+module := data.workspace.parsed[input.params.textDocument.uri]
 
 # METADATA
-# description: finds declarations of function args in text documents
-arg_tokens[var] := "declaration" if {
-	some rule_index, contexts in ast.found.vars
-	some var in contexts.args
+# entrypoint: true
+result.response := {
+	"arg_tokens": arg_tokens,
+	"package_tokens": package_tokens,
 }
 
 # METADATA
-# description: finds variable references that are used in function calls
-arg_tokens[var] := "reference" if {
-	some rule_index, calls in ast.function_calls
-	some call in calls
-	some var in call.args
-	var.type == "var"
-
-	arg_names := {v.value | some v in ast.found.vars[rule_index].args}
-	var.value in arg_names
+# description: Extract function argument declarations
+arg_tokens.declaration contains arg if {
+	some rule in module.rules
+	some arg in rule.head.args
+	arg.type == "var"
 }
 
 # METADATA
-# description: finds variable references that are used in expressions
-arg_tokens[var] := "reference" if {
-	some rule_index, expressions in ast.found.expressions
-	some expr in expressions
-	some var in expr.terms
-	var.type == "var"
+# description: Extract variable references in function calls
+arg_tokens.reference contains arg if {
+	some rule in module.rules
+	count(rule.head.args) > 0
+	arg_names := {v.value | some v in rule.head.args}
+	walk(rule.body, [_, expr])
+	expr.terms[0].type == "ref"
+	some arg in array.slice(expr.terms, 1, count(expr.terms))
+	arg.type == "var"
 
-	arg_names := {v.value | some v in ast.found.vars[rule_index].args}
-	var.value in arg_names
+	arg.value in arg_names
 }
+
+# METADATA
+# description: Extract variable references in call expressions
+arg_tokens.reference contains arg if {
+	some rule in module.rules
+	arg_names := {v.value | some v in rule.head.args}
+	walk(rule.body, [_, expr])
+
+	some term in expr.terms
+	term.type == "call"
+
+	some arg in term.value
+	arg.type == "var"
+
+	arg.value in arg_names
+}
+
+# METADATA
+# description: Extract package tokens - return full package path
+package_tokens := module.package.path

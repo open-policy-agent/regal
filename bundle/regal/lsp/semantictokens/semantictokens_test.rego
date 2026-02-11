@@ -13,17 +13,17 @@ test_function(param1, param2) := result if {
 	calc3 := 1
 	calc3 == param1
 }`
+	tokens := semantictokens.arg_tokens with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
 
-	module := regal.parse_module("policy.rego", policy)
+	# Check declarations
+	{"location": "3:15:3:21", "value": "param1", "type": "var"} in tokens.declaration
+	{"location": "3:23:3:29", "value": "param2", "type": "var"} in tokens.declaration
 
-	tokens := semantictokens.arg_tokens with input as module
-
-	tokens[{"location": "3:15:3:21", "value": "param1", "type": "var"}] == "declaration"
-	tokens[{"location": "3:23:3:29", "value": "param2", "type": "var"}] == "declaration"
-
-	tokens[{"location": "4:11:4:17", "value": "param1", "type": "var"}] == "reference"
-	tokens[{"location": "5:11:5:17", "value": "param2", "type": "var"}] == "reference"
-	tokens[{"location": "9:11:9:17", "value": "param1", "type": "var"}] == "reference"
+	# Check references
+	{"location": "4:11:4:17", "value": "param1", "type": "var"} in tokens.reference
+	{"location": "5:11:5:17", "value": "param2", "type": "var"} in tokens.reference
+	{"location": "9:11:9:17", "value": "param1", "type": "var"} in tokens.reference
 }
 
 test_arg_tokens_declarations_only if {
@@ -32,13 +32,15 @@ test_arg_tokens_declarations_only if {
 test_function(param1, param2) := result if {
 	true
 }`
+	tokens := semantictokens.arg_tokens with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
 
-	module := regal.parse_module("policy.rego", policy)
+	# Check declarations
+	{"location": "3:15:3:21", "value": "param1", "type": "var"} in tokens.declaration
+	{"location": "3:23:3:29", "value": "param2", "type": "var"} in tokens.declaration
 
-	tokens := semantictokens.arg_tokens with input as module
-
-	tokens[{"location": "3:15:3:21", "value": "param1", "type": "var"}] == "declaration"
-	tokens[{"location": "3:23:3:29", "value": "param2", "type": "var"}] == "declaration"
+	# Should have no references since variables aren't used
+	count(tokens.reference) == 0
 }
 
 test_arg_tokens_no_variables if {
@@ -46,10 +48,10 @@ test_arg_tokens_no_variables if {
 
 allow := true`
 
-	module := regal.parse_module("policy.rego", policy)
-
-	tokens := semantictokens.arg_tokens with input as module
+	tokens := semantictokens.arg_tokens with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
 
 	# Should find no tokens for a policy with no function arguments
-	count(tokens) == 0
+	count(tokens.declaration) == 0
+	count(tokens.reference) == 0
 }
