@@ -42,7 +42,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
-	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
@@ -78,7 +77,6 @@ var (
 	noInlayHints                            any = make([]types.InlayHint, 0)
 	noWorkspaceFullDocumentDiagnosticReport any = make([]types.WorkspaceFullDocumentDiagnosticReport, 0)
 	emptyStruct                             any = struct{}{}
-	noTokenRequests                         any = &types.SemanticTokens{Data: []uint{}}
 
 	noDiagnostics = make([]types.Diagnostic, 0)
 	orc           = oracle.New()
@@ -256,8 +254,6 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return handler.WithParams(req, l.handleTextDocumentHover)
 	case "textDocument/inlayHint":
 		return handler.WithParams(req, l.handleTextDocumentInlayHint)
-	case "textDocument/semanticTokens/full":
-		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentSemanticTokensFull)
 	case "workspace/didChangeWatchedFiles":
 		return handler.WithParams(req, l.handleWorkspaceDidChangeWatchedFiles)
 	case "workspace/diagnostic":
@@ -1749,27 +1745,6 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 	}
 
 	return ComputeEdits(oldContent, newContent), nil
-}
-
-func (l *LanguageServer) handleTextDocumentSemanticTokensFull(
-	ctx context.Context,
-	params types.SemanticTokensParams,
-) (any, error) {
-	if l.ignoreURI(params.TextDocument.URI) {
-		return noTokenRequests, nil
-	}
-
-	module, ok := l.cache.GetModule(params.TextDocument.URI)
-	if !ok {
-		return noTokenRequests, nil
-	}
-
-	result, err := semantictokens.Full(ctx, module)
-	if err != nil {
-		return noTokenRequests, fmt.Errorf("error running semantic token request %w", err)
-	}
-
-	return result, nil
 }
 
 func (l *LanguageServer) handleWorkspaceDidCreateFiles(params types.CreateFilesParams) (any, error) {

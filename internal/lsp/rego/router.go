@@ -13,6 +13,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
+	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	ruri "github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/util"
@@ -88,6 +89,10 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 		},
 		"textDocument/documentHighlight": {
 			handler:  textDocument[types.DocumentHighlightParams, []types.DocumentHighlight],
+			requires: &Requirements{File: FileRequirements{Lines: true}},
+		},
+		"textDocument/semanticTokens/full": {
+			handler:  semanticTokensHandler,
 			requires: &Requirements{File: FileRequirements{Lines: true}},
 		},
 		"textDocument/linkedEditingRange": {
@@ -248,6 +253,25 @@ func textDocument[P, R any](ctx context.Context, rctx *RegalContext, req *jsonrp
 	// For now we just unwrap the LSP response here, but may use other fields in the future.
 	// In particular, we'll likely want to allow Rego handlers to return detailed error messages.
 	return result.Response, nil
+}
+
+func semanticTokensHandler(ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request) (any, error) {
+	params, err := decodeParams[types.SemanticTokensParams](req)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := QueryEval[types.SemanticTokensParams, map[string]any](
+		ctx,
+		rctx.Query,
+		NewInput(req.Method, rctx, params))
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate prepared query: %w", err)
+	}
+
+	response, err := semantictokens.Full(ctx, result.Response)
+
+	return response, err
 }
 
 // resolve handlers return the same type they receive as parameter, but enriched with data it resolves.
