@@ -575,5 +575,24 @@ type (
 		Full   bool                 `json:"full,omitempty"`
 	}
 
+	ExplorerCommandArgs struct {
+		Target      string `json:"target"`
+		Strict      bool   `json:"strict,omitempty"`
+		Annotations bool   `json:"annotations,omitempty"`
+		Print       bool   `json:"print,omitempty"`
+		Format      bool   `json:"format,omitempty"`
+	}
+
+	ExplorerStageResult struct {
+		Name   string `json:"name"`
+		Output string `json:"output"`
+		Error  bool   `json:"error"`
+	}
+
+	ExplorerResult struct {
+		Stages []ExplorerStageResult `json:"stages"`
+		Plan   string                `json:"plan,omitempty"`
+	}
+
 	iuint interface{ ~int | ~uint }
 )
