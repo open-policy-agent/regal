@@ -90,14 +90,10 @@ regal version
 ```
 
 :::info Community Package Repositories
-There are a number of community-maintained package repositories that provide Regal binaries for Linux/Unix:
+There are a number of community-maintained package repositories that provide Regal binaries for Linux/Unix.
 
-- [Arch Linux (AUR)](https://aur.archlinux.org/packages/opa-regal)
-- [Alpine Linux](https://pkgs.alpinelinux.org/package/edge/testing/x86_64/regal)
-- [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/re/regal/package.nix)
-- [NetBSD (pkgsrc)](https://pkgsrc.se/devel/regal)
-- [aqua](https://github.com/aquaproj/aqua-registry/blob/main/pkgs/open-policy-agent/regal/registry.yaml)
-- [mise](https://mise-versions.jdx.dev/tools/regal)
+See the [Packaging section](https://www.openpolicyagent.org/projects/regal/adopters#packaging)
+of the Adopters page for a complete list of available package managers.
 
 These packages are maintained by their respective communities and may not always have the latest Regal version available.
 :::
