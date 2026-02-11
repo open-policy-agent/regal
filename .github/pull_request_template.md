@@ -6,5 +6,5 @@ contributing](https://github.com/open-policy-agent/regal/blob/main/docs/CONTRIBU
 not made clear enough, that's a bug, and we'd appreciate hearing about it!
 
 If you want to ask questions before submitting your PR, or want to discuss Regal in general, please feel free to join
-us in the `#regal` channel in the [Styra Community Slack](https://inviter.co/styra).
+us in the `#opa-regal` channel in the [OPA Community Slack](https://slack.openpolicyagent.org/).
 -->
