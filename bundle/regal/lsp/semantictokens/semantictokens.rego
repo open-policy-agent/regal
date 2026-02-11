@@ -24,38 +24,40 @@ result.response := {
 
 # METADATA
 # description: Extract function argument declarations
-arg_tokens.declaration contains var if {
+arg_tokens.declaration contains arg if {
 	some rule in module.rules
-	some var in rule.head.args
+	some arg in rule.head.args
+	arg.type == "var"
 }
 
 # METADATA
 # description: Extract variable references in function calls
-arg_tokens.reference contains var if {
+arg_tokens.reference contains arg if {
 	some rule in module.rules
+	count(rule.head.args) > 0
+	arg_names := {v.value | some v in rule.head.args}
 	walk(rule.body, [_, expr])
 	expr.terms[0].type == "ref"
-	some var in array.slice(expr.terms, 1, count(expr.terms))
-	var.type == "var"
+	some arg in array.slice(expr.terms, 1, count(expr.terms))
+	arg.type == "var"
 
-	arg_names := {v.value | some v in rule.head.args}
-	var.value in arg_names
+	arg.value in arg_names
 }
 
 # METADATA
 # description: Extract variable references in call expressions
-arg_tokens.reference contains var if {
+arg_tokens.reference contains arg if {
 	some rule in module.rules
+	arg_names := {v.value | some v in rule.head.args}
 	walk(rule.body, [_, expr])
 
 	some term in expr.terms
 	term.type == "call"
 
-	some var in term.value
-	var.type == "var"
+	some arg in term.value
+	arg.type == "var"
 
-	arg_names := {v.value | some v in rule.head.args}
-	var.value in arg_names
+	arg.value in arg_names
 }
 
 # METADATA
