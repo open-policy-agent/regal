@@ -150,6 +150,50 @@ test_code_actions_only_quickfix if {
 	}
 }
 
+test_code_actions_only_source if {
+	r := codeaction.actions with input as {
+		"regal": {
+			"client": {"identifier": clients.generic},
+			"environment": {"workspace_root_uri": "file:///workspace"},
+		},
+		"params": {
+			"textDocument": {"uri": "file:///workspace/policy.rego"},
+			"context": {
+				"diagnostics": [],
+				"only": ["source"],
+			},
+		},
+	}
+
+	r == {{
+		"title": "Explore compiler stages for this policy",
+		"kind": "source.explore",
+		"command": {
+			"arguments": [{"target": "file:///workspace/policy.rego"}],
+			"command": "regal.explorer",
+			"title": "Explore compiler stages for this policy",
+			"tooltip": "Explore compiler stages for this policy",
+		},
+	}}
+}
+
+test_code_actions_source_explore_in_default if {
+	r := codeaction.actions with input as {
+		"regal": {
+			"client": {"identifier": clients.generic},
+			"environment": {"workspace_root_uri": "file:///workspace"},
+		},
+		"params": {
+			"textDocument": {"uri": "file:///workspace/policy.rego"},
+			"context": {"diagnostics": []},
+		},
+	}
+
+	some action in r
+	action.kind == "source.explore"
+	action.command.command == "regal.explorer"
+}
+
 test_code_actions_empty_only_means_all if {
 	diagnostic := _diagnostics["use-assignment-operator"]
 	r := codeaction.actions with input as {
@@ -166,7 +210,7 @@ test_code_actions_empty_only_means_all if {
 		},
 	}
 
-	count(r) == 3
+	count(r) == 4
 }
 
 _diagnostics["opa-fmt"] := {

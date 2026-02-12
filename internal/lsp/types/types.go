@@ -594,5 +594,16 @@ type (
 		Plan   string                `json:"plan,omitempty"`
 	}
 
+	ShowDocumentParams struct {
+		URI       string `json:"uri"`
+		External  *bool  `json:"external,omitempty"`
+		TakeFocus *bool  `json:"takeFocus,omitempty"`
+		Selection *Range `json:"selection,omitempty"`
+	}
+
+	ShowDocumentResult struct {
+		Success bool `json:"success"`
+	}
+
 	iuint interface{ ~int | ~uint }
 )
