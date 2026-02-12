@@ -70,26 +70,41 @@ type (
 	}
 
 	ServerCapabilities struct {
-		CodeLensProvider           ResolveProviderOption   `json:"codeLensProvider"`
-		Workspace                  WorkspaceOptions        `json:"workspace"`
-		DiagnosticProvider         DiagnosticOptions       `json:"diagnosticProvider"`
-		CodeActionProvider         CodeActionOptions       `json:"codeActionProvider"`
-		ExecuteCommandProvider     ExecuteCommandOptions   `json:"executeCommandProvider"`
-		TextDocumentSyncOptions    TextDocumentSyncOptions `json:"textDocumentSync"`
-		CompletionProvider         CompletionOptions       `json:"completionProvider"`
-		InlayHintProvider          ResolveProviderOption   `json:"inlayHintProvider"`
-		DocumentLinkProvider       ResolveProviderOption   `json:"documentLinkProvider"`
-		SignatureHelpProvider      SignatureHelpOptions    `json:"signatureHelpProvider"`
-		SemanticTokensProvider     SemanticTokensOptions   `json:"semanticTokensProvider"`
-		DocumentHighlightProvider  bool                    `json:"documentHighlightProvider"`
-		HoverProvider              bool                    `json:"hoverProvider"`
-		DocumentFormattingProvider bool                    `json:"documentFormattingProvider"`
-		FoldingRangeProvider       bool                    `json:"foldingRangeProvider"`
-		DocumentSymbolProvider     bool                    `json:"documentSymbolProvider"`
-		WorkspaceSymbolProvider    bool                    `json:"workspaceSymbolProvider"`
-		DefinitionProvider         bool                    `json:"definitionProvider"`
-		SelectionRangeProvider     bool                    `json:"selectionRangeProvider"`
-		LinkedEditingRangeProvider bool                    `json:"linkedEditingRangeProvider"`
+		CodeLensProvider           ResolveProviderOption     `json:"codeLensProvider"`
+		Workspace                  WorkspaceOptions          `json:"workspace"`
+		DiagnosticProvider         DiagnosticOptions         `json:"diagnosticProvider"`
+		CodeActionProvider         CodeActionOptions         `json:"codeActionProvider"`
+		ExecuteCommandProvider     ExecuteCommandOptions     `json:"executeCommandProvider"`
+		TextDocumentSyncOptions    TextDocumentSyncOptions   `json:"textDocumentSync"`
+		CompletionProvider         CompletionOptions         `json:"completionProvider"`
+		InlayHintProvider          ResolveProviderOption     `json:"inlayHintProvider"`
+		DocumentLinkProvider       ResolveProviderOption     `json:"documentLinkProvider"`
+		SignatureHelpProvider      SignatureHelpOptions      `json:"signatureHelpProvider"`
+		SemanticTokensProvider     SemanticTokensOptions     `json:"semanticTokensProvider"`
+		DocumentHighlightProvider  bool                      `json:"documentHighlightProvider"`
+		HoverProvider              bool                      `json:"hoverProvider"`
+		DocumentFormattingProvider bool                      `json:"documentFormattingProvider"`
+		FoldingRangeProvider       bool                      `json:"foldingRangeProvider"`
+		DocumentSymbolProvider     bool                      `json:"documentSymbolProvider"`
+		WorkspaceSymbolProvider    bool                      `json:"workspaceSymbolProvider"`
+		DefinitionProvider         bool                      `json:"definitionProvider"`
+		SelectionRangeProvider     bool                      `json:"selectionRangeProvider"`
+		LinkedEditingRangeProvider bool                      `json:"linkedEditingRangeProvider"`
+		Experimental               *ExperimentalCapabilities `json:"experimental,omitempty"`
+	}
+
+	// ExperimentalCapabilities contains Regal-specific experimental LSP features
+	// that are not part of the standard LSP specification.
+	ExperimentalCapabilities struct {
+		// ExplorerProvider indicates whether the server supports the regal.explorer
+		// command and regal/showExplorerResult notification.
+		ExplorerProvider bool `json:"explorerProvider"`
+		// EvalProvider indicates whether the server supports the regal.eval
+		// command and regal/showEvalResult request.
+		EvalProvider bool `json:"evalProvider"`
+		// DebugProvider indicates whether the server supports the regal.debug
+		// command and regal/startDebugging request.
+		DebugProvider bool `json:"debugProvider"`
 	}
 
 	TextDocumentPositionParams struct {

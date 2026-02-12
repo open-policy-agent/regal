@@ -1968,6 +1968,11 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 				},
 				Full: true,
 			},
+			Experimental: &types.ExperimentalCapabilities{
+				ExplorerProvider: true,
+				EvalProvider:     true,
+				DebugProvider:    true,
+			},
 		},
 	}
 
