@@ -11,10 +11,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/types/symbols"
 )
 
-func toStrPtr(s string) *string {
-	return &s
-}
-
 func TestDocumentSymbols(t *testing.T) {
 	t.Parallel()
 
@@ -44,7 +40,7 @@ func TestDocumentSymbols(t *testing.T) {
 				Children: &[]types.DocumentSymbol{{
 					Name:   "i",
 					Kind:   symbols.Variable,
-					Detail: toStrPtr("single-value rule (number)"),
+					Detail: new("single-value rule (number)"),
 					Range:  types.RangeBetween(2, 3, 2, 22),
 				}},
 			},

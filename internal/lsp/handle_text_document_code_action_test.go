@@ -34,7 +34,7 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 		Code:    ruleNameUseAssignmentOperator,
 		Message: "foobar",
 		Range:   types.RangeBetween(2, 4, 2, 10),
-		Source:  util.Pointer("regal/style"),
+		Source:  new("regal/style"),
 	}
 
 	params := types.CodeActionParams{
@@ -47,7 +47,7 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 		Title:       "Replace = with := in assignment",
 		Kind:        "quickfix",
 		Diagnostics: params.Context.Diagnostics,
-		IsPreferred: util.Pointer(true),
+		IsPreferred: new(true),
 		Command: types.Command{
 			Title:   "Replace = with := in assignment",
 			Command: "regal.fix.use-assignment-operator",
@@ -168,7 +168,7 @@ func BenchmarkHandleTextDocumentCodeAction(b *testing.B) {
 				Code:    ruleNameUseAssignmentOperator,
 				Message: "foobar",
 				Range:   types.RangeBetween(2, 4, 2, 10),
-				Source:  util.Pointer("regal/style"),
+				Source:  new("regal/style"),
 			}},
 		},
 	}

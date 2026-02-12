@@ -1,6 +1,6 @@
 module github.com/open-policy-agent/regal/e2e/testbuild
 
-go 1.25.0
+go 1.26
 
 replace github.com/open-policy-agent/regal => ../../
 

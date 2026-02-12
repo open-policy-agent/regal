@@ -21,7 +21,7 @@ type Ref struct {
 
 // RefKind represents the kind of object that a Ref represents.
 // This is intended to toggle functionality and which UI symbols to use.
-type RefKind int
+type RefKind uint8
 
 const (
 	Package RefKind = iota + 1

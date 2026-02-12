@@ -8,7 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/open-policy-agent/regal/internal/testutil"
-	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/report"
 )
 
@@ -23,7 +22,7 @@ var rep = report.Report{
 				File:   "a.rego",
 				Row:    1,
 				Column: 1,
-				Text:   util.Pointer("package illegal"),
+				Text:   new("package illegal"),
 				End:    &report.Position{Row: 1, Column: 14},
 			},
 			RelatedResources: []report.RelatedResource{{
@@ -40,7 +39,7 @@ var rep = report.Report{
 				File:   "b.rego",
 				Row:    22,
 				Column: 18,
-				Text:   util.Pointer("default allow = true"),
+				Text:   new("default allow = true"),
 			},
 			RelatedResources: []report.RelatedResource{{
 				Description: "documentation",
@@ -97,7 +96,7 @@ func TestPrettyReporterPublishLongText(t *testing.T) {
 					File:   "b.rego",
 					Row:    22,
 					Column: 18,
-					Text:   util.Pointer(strings.Repeat("long,", 1000)),
+					Text:   new(strings.Repeat("long,", 1000)),
 				},
 				RelatedResources: []report.RelatedResource{{
 					Description: "documentation",
