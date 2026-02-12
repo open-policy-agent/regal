@@ -467,7 +467,7 @@ func (tr JUnitReporter) Publish(_ context.Context, r report.Report) error {
 	testSuites := junit.Testsuites{Name: "regal"}
 
 	// group by file & sort by file
-	files := make([]string, 0)
+	files := make([]string, 0, len(r.Violations))
 	violationsPerFile := map[string][]report.Violation{}
 
 	for _, violation := range r.Violations { //nolint:gocritic

@@ -945,11 +945,6 @@ func (l *LanguageServer) processTemplateJob(ctx context.Context, job lintFileJob
 	// to work
 	l.cache.SetFileContents(job.URI, newContents)
 
-	edits := []any{types.TextDocumentEdit{
-		TextDocument: types.OptionalVersionedTextDocumentIdentifier{URI: job.URI},
-		Edits:        ComputeEdits("", newContents),
-	}}
-
 	// determine if a rename is needed based on the new file package.
 	// edits will be empty if no file rename is needed.
 	additionalRenameEdits, err := l.fixRenameParams("Template new Rego file", job.URI)
@@ -960,6 +955,10 @@ func (l *LanguageServer) processTemplateJob(ctx context.Context, job lintFileJob
 	}
 
 	// combine content edits with any additional rename edits
+	edits := append(make([]any, 0, 1+len(additionalRenameEdits.Edit.DocumentChanges)), types.TextDocumentEdit{
+		TextDocument: types.OptionalVersionedTextDocumentIdentifier{URI: job.URI},
+		Edits:        ComputeEdits("", newContents),
+	})
 	edits = append(edits, additionalRenameEdits.Edit.DocumentChanges...)
 
 	// send the edit back to the editor so it appears in the open buffer.

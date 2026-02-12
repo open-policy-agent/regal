@@ -102,9 +102,15 @@ func prepareRegoArgs(
 		bundleArgs = append(bundleArgs, rego.ParsedBundle(key, &b))
 	}
 
-	args := []func(*rego.Rego){rego.ParsedQuery(query), rego.EnablePrintStatements(true), rego.PrintHook(printHook)}
+	schemaResolvers := rquery.SchemaResolvers()
+	args := append(
+		make([]func(*rego.Rego), 0, 3+len(bundleArgs)+len(schemaResolvers)),
+		rego.ParsedQuery(query),
+		rego.EnablePrintStatements(true),
+		rego.PrintHook(printHook),
+	)
 	args = append(args, bundleArgs...)
-	args = append(args, rquery.SchemaResolvers()...)
+	args = append(args, schemaResolvers...)
 
 	var caps *config.Capabilities
 	if cfg != nil && cfg.Capabilities != nil {

@@ -67,6 +67,8 @@ aggregate_report contains violation if {
 
 	some pkg in g # this will be the only package
 
+	pkg in _import_graph[pkg] # without this, check below is extremely expensive!
+
 	[file, referenced_location] := _package_locations[pkg][pkg]
 
 	violation := result.fail(rego.metadata.chain(), {

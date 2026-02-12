@@ -26,7 +26,7 @@ func TestFixer(t *testing.T) {
 		mainRegoFile: `package test
 
 allow if {
-true 
+true
 }
 #no space
 
@@ -106,7 +106,7 @@ deny := true
 		// check that the fixed violations are correct
 		fxs := fixReport.FixesForFile(file)
 
-		var fixes []string
+		fixes := make([]string, 0, len(fxs))
 		for _, fx := range fxs {
 			fixes = append(fixes, fx.Title)
 		}

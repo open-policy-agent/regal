@@ -12,8 +12,15 @@ import (
 
 // 736486708 ns/op	2348230496 B/op	51198148 allocs/op // OPA v1.12.2
 // 563373188 ns/op	1962281168 B/op	46929220 allocs/op // AST aggregates refactor
+// 461607500 ns/op	1543793525 B/op	36938279 allocs/op // Performance refactor + follow-up
 func BenchmarkRegalLintingItself(b *testing.B) {
-	benchmarkLint(b, bundleLinter(b, true))
+	for b.Loop() {
+		linter := NewLinter().
+			WithInputPaths([]string{"../../bundle"}).
+			WithUserConfig(testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b))
+
+		testutil.AssertNumViolations(b, 0, testutil.Must(linter.Lint(b.Context()))(b))
+	}
 }
 
 // 694275500 ns/op	2568604236 B/op	52506343 allocs/op // OPA v1.10.0
@@ -21,12 +28,14 @@ func BenchmarkRegalLintingItself(b *testing.B) {
 // 497374153 ns/op	1923188613 B/op	45981278 allocs/op // AST aggregates refactor
 // 486491514 ns/op	1906786789 B/op	45640947 allocs/op // OPA v1.13.1 + fixes
 // 420959403 ns/op	1534395760 B/op	36917131 allocs/op // Performance refactor
+// 403029542 ns/op	1494994832 B/op	35884349 allocs/op // Performance refactor follow-up
 func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
 	benchmarkLint(b, bundleLinter(b, true).MustPrepare(b.Context()))
 }
 
 // 65815866 ns/op   43852693 B/op    1025467 allocs/op // OPA v1.10.0
 // 64977849 ns/op   38570571 B/op     932404 allocs/op // OPA v1.12.2
+// 61936272 ns/op	38191932 B/op	  921084 allocs/op // OPA v1.13.1
 func BenchmarkOnlyPrepare(b *testing.B) {
 	linter := bundleLinter(b, true)
 	for b.Loop() {
