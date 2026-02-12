@@ -123,8 +123,8 @@ public_rules_and_functions := [rule |
 	some rule in input.rules
 	not startswith(rule.head.ref[0].value, "_")
 
-	every part in array.slice(rule.head.ref, 1, 100) {
-		[part.type, startswith(part.value, "_")] != ["string", true]
+	every term in array.slice(rule.head.ref, 1, 100) {
+		[term.type, startswith(term.value, "_")] != ["string", true]
 	}
 ]
 
@@ -349,7 +349,7 @@ all_function_namespaces := builtin_namespaces | custom_function_namespaces
 
 # METADATA
 # description: set containing the namespaces of all custom functions
-custom_function_namespaces contains regex.replace(name, `\..*`, "") if some name in object.keys(function_decls)
+custom_function_namespaces contains regex.replace(name, `\..*`, "") if some name, _ in function_decls
 
 # METADATA
 # description: |

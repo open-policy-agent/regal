@@ -10,7 +10,7 @@ import data.regal.result
 # description: collects exported and full of used refs from each module
 aggregate contains entry if {
 	exported := {rule |
-		some rule in object.keys(ast.rule_head_locations)
+		some rule, _ in ast.rule_head_locations
 		not rule in unexported_rules
 	}
 

@@ -197,19 +197,8 @@ _rules := data.workspace.parsed[object.get(input, ["params", "textDocument", "ur
 # scope: document
 found.vars[rule_index][context] contains var if {
 	some i, rule_index in rule_index_strings
-	some expr in _rules[i].body
-
+	some expr in found.expressions[rule_index]
 	some context, vars in _find_vars(expr.terms, "terms")
-	some var in vars
-}
-
-found.vars[rule_index][context] contains var if {
-	some i, rule_index in rule_index_strings
-	some expr in _rules[i].body
-
-	walk(expr.terms, [_, value])
-
-	some context, vars in _find_vars(value.terms, "terms")
 	some var in vars
 }
 

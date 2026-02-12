@@ -165,7 +165,7 @@ capabilities:
 				break
 			}
 
-			codes := []string{}
+			codes := make([]string, 0, len(requestData.Items))
 			for _, d := range requestData.Items {
 				codes = append(codes, d.Code)
 			}
@@ -218,7 +218,7 @@ allow := neo4j.q
 				break
 			}
 
-			codes := []string{}
+			codes := make([]string, 0, len(requestData.Items))
 			for _, d := range requestData.Items {
 				codes = append(codes, d.Code)
 			}
