@@ -6,7 +6,6 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
-	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -60,7 +59,7 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 		},
 	}
 
-	actualAction := invokeCodeActionHandler(t, l, params, 2)
+	actualAction := invokeCodeActionHandler(t, l, params, 3)
 
 	assertExpectedCodeAction(t, expectedAction, actualAction)
 
@@ -74,46 +73,6 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 
 	if !reflect.DeepEqual(expDecoded, actDecoded) {
 		t.Errorf("expected Command.Arguments to be %v, got %v", expDecoded, actDecoded)
-	}
-}
-
-func TestHandleTextDocumentCodeActionSourceExplorer(t *testing.T) {
-	t.Parallel()
-
-	webServer := web.NewServer(nil, log.NewLogger(log.LevelDebug, t.Output()))
-	webServer.SetBaseURL("http://foo.bar")
-
-	l := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
-
-	l.workspaceRootURI = "file:///foo"
-	l.client = types.Client{Identifier: clients.IdentifierVSCode}
-	l.webServer = webServer
-	l.loadedConfig = &config.Config{}
-
-	params := types.CodeActionParams{
-		TextDocument: types.TextDocumentIdentifier{URI: "file:///foo/example.rego"},
-		Context:      types.CodeActionContext{},
-		Range:        types.RangeBetween(2, 4, 2, 10),
-	}
-
-	expectedAction := types.CodeAction{
-		Title: "Explore compiler stages for this policy",
-		Kind:  "source.explore",
-		Command: types.Command{
-			Title:     "Explore compiler stages for this policy",
-			Command:   "vscode.open",
-			Tooltip:   "Explore compiler stages for this policy",
-			Arguments: toAnySlicePtr("http://foo.bar/explorer/example.rego"),
-		},
-	}
-
-	actualAction := invokeCodeActionHandler(t, l, params, 1)
-
-	assertExpectedCodeAction(t, expectedAction, actualAction)
-
-	expArgs, actualArgs := *expectedAction.Command.Arguments, *actualAction.Command.Arguments
-	if exp, got := len(expArgs), len(actualArgs); exp != got {
-		t.Fatalf("expected %d arguments, got %d", exp, got)
 	}
 }
 
@@ -223,8 +182,8 @@ func BenchmarkHandleTextDocumentCodeAction(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		if len(res.([]types.CodeAction)) != 2 {
-			b.Fatalf("expected 2 code actions, got %d", len(res.([]types.CodeAction)))
+		if len(res.([]types.CodeAction)) != 3 {
+			b.Fatalf("expected 3 code actions, got %d", len(res.([]types.CodeAction)))
 		}
 	}
 }

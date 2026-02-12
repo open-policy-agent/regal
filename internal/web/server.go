@@ -1,68 +1,28 @@
 package web
 
 import (
-	"cmp"
 	"context"
-	"embed"
 	"fmt"
-	"html/template"
 	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
-	"slices"
-	"strings"
 
 	"github.com/arl/statsviz"
 
-	"github.com/open-policy-agent/regal/internal/explorer"
-	"github.com/open-policy-agent/regal/internal/lsp/cache"
-	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/util"
 )
 
-type (
-	Server struct {
-		cache        *cache.Cache
-		log          *log.Logger
-		workspaceURI string
-		baseURL      string
-		client       clients.Identifier
-	}
-
-	stringResult struct {
-		Class  string
-		Stage  string
-		Output string
-		Show   bool
-	}
-
-	state struct {
-		Code   string
-		Result []stringResult
-	}
-)
-
-const mainTemplate = "main.tpl"
-
-var (
-	//go:embed assets/*
-	assets         embed.FS
-	tpl            = template.Must(template.New(mainTemplate).ParseFS(assets, "assets/main.tpl"))
-	pprofEndpoints = os.Getenv("REGAL_DEBUG") != "" || os.Getenv("REGAL_DEBUG_PPROF") != ""
-)
-
-func NewServer(cache *cache.Cache, logger *log.Logger) *Server {
-	return &Server{cache: cache, log: logger}
+type Server struct {
+	log     *log.Logger
+	baseURL string
 }
 
-func (s *Server) SetWorkspaceURI(uri string) {
-	s.workspaceURI = uri
-}
+var pprofEndpoints = os.Getenv("REGAL_DEBUG") != "" || os.Getenv("REGAL_DEBUG_PPROF") != ""
 
-func (s *Server) SetClient(client clients.Identifier) {
-	s.client = client
+func NewServer(logger *log.Logger) *Server {
+	return &Server{log: logger}
 }
 
 func (s *Server) GetBaseURL() string {
@@ -80,85 +40,6 @@ func (s *Server) Start(context.Context) {
 	if err := statsviz.Register(mux); err != nil {
 		s.log.Message("failed to register statsviz handler: %v", err)
 	}
-
-	mux.HandleFunc("GET /explorer/", func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/explorer/")
-
-		policy, ok := s.cache.GetFileContents(s.workspaceURI + "/" + path)
-		if !ok {
-			http.NotFound(w, r)
-
-			return
-		}
-
-		var (
-			enableStrict, enableAnnotationProcessing bool // TODO(sr): expose
-			hideIdentical                            bool
-			enablePrint                              bool
-			format                                   bool
-			hasErrors                                bool
-			tmpl                                     string
-		)
-
-		if err := r.ParseForm(); err == nil {
-			enableStrict = r.Form.Get("strict") == "on"
-			enableAnnotationProcessing = r.Form.Get("annotations") == "on"
-			enablePrint = r.Form.Get("print") == "on"
-			hideIdentical = r.Form.Get("hide_identical") == "on"
-			format = r.Form.Get("format") == "on"
-			tmpl = cmp.Or(r.Form.Get("tmpl"), mainTemplate)
-		}
-
-		cs := explorer.CompilerStages(path, policy, enableStrict, enableAnnotationProcessing, enablePrint)
-		n := len(cs)
-		st := state{Code: policy, Result: make([]stringResult, n+1)}
-
-		for i := range cs {
-			if cs[i].Error != "" {
-				hasErrors = true
-				st.Result[i] = stringResult{Stage: cs[i].Stage, Show: true, Output: cs[i].Error, Class: "bad"}
-			} else {
-				class := "plain"
-
-				var output string
-				if format {
-					output = cs[i].FormattedResult()
-				} else if cs[i].Result != nil {
-					output = cs[i].Result.String()
-				}
-
-				if i == 0 || st.Result[i-1].Output != output {
-					class = "ok"
-				}
-
-				st.Result[i] = stringResult{Stage: cs[i].Stage, Show: class == "ok", Output: output, Class: class}
-			}
-		}
-
-		st.Result[n] = stringResult{Stage: "Plan", Show: true}
-		if hasErrors {
-			st.Result[n].Class = "plain"
-			st.Result[n].Output = "Skipped due to errors in previous stages"
-		} else if p, err := explorer.Plan(r.Context(), path, policy, enablePrint); err != nil {
-			st.Result[n].Class = "bad"
-			st.Result[n].Output = err.Error()
-		} else {
-			st.Result[n].Class = "ok"
-			st.Result[n].Output = p
-		}
-
-		if hideIdentical {
-			st.Result = slices.CompactFunc(st.Result, func(a, b stringResult) bool {
-				return a.Output == b.Output
-			})
-		}
-
-		if err := tpl.ExecuteTemplate(w, tmpl, st); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
-
-	mux.Handle("/assets/", http.FileServer(http.FS(assets)))
 
 	if pprofEndpoints {
 		mux.HandleFunc("GET /debug/pprof/", pprof.Index)

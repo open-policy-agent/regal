@@ -201,6 +201,9 @@ func TestExecuteCommandExplorer(t *testing.T) {
 	clientHandler := createExplorerNotificationTestHandler(t, receivedNotifications)
 	ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
 
+	// Set client identifier to VSCode so it uses the notification approach
+	ls.client.Identifier = clients.IdentifierVSCode
+
 	go ls.StartCommandWorker(ctx)
 
 	content := `package test

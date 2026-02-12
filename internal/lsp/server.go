@@ -195,7 +195,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		templateFileJobs:            make(chan lintFileJob, 10),
 		prepareQueryJobs:            make(chan struct{}, 1),
 		templatingFiles:             concurrent.MapOf(make(map[string]bool)),
-		webServer:                   web.NewServer(c, opts.Logger),
+		webServer:                   web.NewServer(opts.Logger),
 		loadedBuiltins:              concurrent.MapOf(make(map[string]map[string]*ast.Builtin)),
 		workspaceDiagnosticsPoll:    opts.WorkspaceDiagnosticsPoll,
 		loadedConfigAllRegoVersions: concurrent.MapOf(make(map[string]ast.RegoVersion)),
@@ -566,14 +566,16 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case params := <-l.commandRequest:
-			// Handle regal.explorer separately as VS Code sends map arguments
 			if params.Command == "regal.explorer" {
 				var explorerArgs types.ExplorerCommandArgs
 
 				if len(params.Arguments) > 0 {
 					arg, ok := params.Arguments[0].(map[string]any)
 					if !ok {
-						l.log.Message("expected explorer argument to be a map, got %T", params.Arguments[0])
+						l.log.Message(
+							"failed to unmarshal regal.explorer command arguments, expected object, got %T",
+							params.Arguments[0],
+						)
 
 						continue
 					}
@@ -1875,8 +1877,6 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 		)
 	}
 
-	l.webServer.SetClient(l.client.Identifier)
-
 	regoFilter := types.FileOperationFilter{Scheme: "file", Pattern: types.FileOperationPattern{Glob: "**/*.rego"}}
 	fileOpOpts := types.FileOperationRegistrationOptions{Filters: []types.FileOperationFilter{regoFilter}}
 
@@ -1918,7 +1918,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			SignatureHelpProvider: types.SignatureHelpOptions{
 				TriggerCharacters: []string{"(", ","},
 			},
-			CodeActionProvider: types.CodeActionOptions{CodeActionKinds: []string{"quickfix", "source.explore"}},
+			CodeActionProvider: types.CodeActionOptions{CodeActionKinds: []string{"quickfix", "source"}},
 			ExecuteCommandProvider: types.ExecuteCommandOptions{
 				Commands: []string{
 					"regal.debug",
@@ -2061,8 +2061,6 @@ func (l *LanguageServer) updateRootURI(ctx context.Context, rootURI string) erro
 	if err != nil {
 		l.log.Message("failed to load workspace contents: %s", err)
 	}
-
-	l.webServer.SetWorkspaceURI(l.workspaceRootURI)
 
 	// 'OverwriteAggregates' is set to populate the cache's initial aggregate state.
 	// Subsequent runs of lintWorkspaceJobs will not set this and use the cached state.
@@ -2310,41 +2308,127 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, args types.E
 		args.Print,
 	)
 
-	stages := make([]types.ExplorerStageResult, 0, len(compileResults))
-	hasErrors := false
+	// For VSCode, use the notification approach
+	if l.client.Identifier == clients.IdentifierVSCode {
+		stages := make([]types.ExplorerStageResult, 0, len(compileResults))
+		hasErrors := false
 
-	for _, cs := range compileResults {
-		stage := types.ExplorerStageResult{
-			Name:  cs.Stage,
-			Error: cs.Error != "",
+		for _, cs := range compileResults {
+			stage := types.ExplorerStageResult{
+				Name:  cs.Stage,
+				Error: cs.Error != "",
+			}
+
+			if cs.Error != "" {
+				hasErrors = true
+				stage.Output = cs.Error
+			} else {
+				if args.Format {
+					stage.Output = cs.FormattedResult()
+				} else if cs.Result != nil {
+					stage.Output = cs.Result.String()
+				}
+			}
+
+			stages = append(stages, stage)
 		}
 
-		if cs.Error != "" {
-			hasErrors = true
-			stage.Output = cs.Error
-		} else {
-			if args.Format {
-				stage.Output = cs.FormattedResult()
-			} else if cs.Result != nil {
-				stage.Output = cs.Result.String()
+		responseParams := types.ExplorerResult{
+			Stages: stages,
+		}
+
+		if !hasErrors {
+			if plan, err := explorer.Plan(ctx, path, contents, args.Print); err == nil {
+				responseParams.Plan = plan
 			}
 		}
 
-		stages = append(stages, stage)
+		if err := l.conn.Notify(ctx, "regal/showExplorerResult", responseParams); err != nil {
+			return fmt.Errorf("regal/showExplorerResult notification failed: %w", err)
+		}
+
+		return nil
 	}
 
-	responseParams := types.ExplorerResult{
-		Stages: stages,
+	// For other LSP clients, write stages to temp files and use window/showDocument
+	tmpDir, err := os.MkdirTemp("", "regal-explorer-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary directory: %w", err)
 	}
 
-	if !hasErrors {
-		if plan, err := explorer.Plan(ctx, path, contents, args.Print); err == nil {
-			responseParams.Plan = plan
+	hasErrors := false
+	baseName := filepath.Base(uri.ToPath(args.Target))
+	baseName = strings.TrimSuffix(baseName, ".rego")
+
+	var previousOutput string
+
+	filesToOpen := make([]string, 0)
+
+	for i, cs := range compileResults {
+		var output string
+
+		if cs.Error != "" {
+			hasErrors = true
+			output = cs.Error
+		} else if cs.Result != nil {
+			if args.Format {
+				output = cs.FormattedResult()
+			} else {
+				output = cs.Result.String()
+			}
+		}
+
+		if output == "" {
+			continue
+		}
+
+		stageName := strings.ReplaceAll(cs.Stage, " ", "_")
+		filename := filepath.Join(tmpDir, fmt.Sprintf("%02d_%s_%s.txt", i, baseName, stageName))
+
+		if err := os.WriteFile(filename, []byte(output), 0o600); err != nil {
+			l.log.Message("failed to write stage file %s: %s", filename, err)
+
+			continue
+		}
+
+		// Only open stages where output differs from previous stage
+		if output != previousOutput {
+			filesToOpen = append(filesToOpen, filename)
+			previousOutput = output
 		}
 	}
 
-	if err := l.conn.Notify(ctx, "regal/showExplorerResult", responseParams); err != nil {
-		return fmt.Errorf("regal/showExplorerResult notification failed: %w", err)
+	for _, filename := range filesToOpen {
+		takeFocus := false
+		showParams := types.ShowDocumentParams{
+			URI:       uri.FromPath(l.client.Identifier, filename),
+			TakeFocus: &takeFocus,
+		}
+
+		var result types.ShowDocumentResult
+		if err := l.conn.Call(ctx, "window/showDocument", showParams, &result); err != nil {
+			l.log.Message("window/showDocument failed for %s: %s", filename, err)
+		}
+	}
+
+	if !hasErrors {
+		if plan, err := explorer.Plan(ctx, path, contents, args.Print); err == nil && plan != "" {
+			planFile := filepath.Join(tmpDir, fmt.Sprintf("%02d_%s_Plan.txt", len(compileResults), baseName))
+			if err := os.WriteFile(planFile, []byte(plan), 0o600); err != nil {
+				l.log.Message("failed to write plan file: %s", err)
+			} else {
+				takeFocus := false
+				showParams := types.ShowDocumentParams{
+					URI:       uri.FromPath(l.client.Identifier, planFile),
+					TakeFocus: &takeFocus,
+				}
+
+				var result types.ShowDocumentResult
+				if err := l.conn.Call(ctx, "window/showDocument", showParams, &result); err != nil {
+					l.log.Message("window/showDocument failed for plan: %s", err)
+				}
+			}
+		}
 	}
 
 	return nil
