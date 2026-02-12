@@ -59,7 +59,7 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 		},
 	}
 
-	actualAction := invokeCodeActionHandler(t, l, params, 2)
+	actualAction := invokeCodeActionHandler(t, l, params, 3)
 
 	assertExpectedCodeAction(t, expectedAction, actualAction)
 
@@ -182,8 +182,8 @@ func BenchmarkHandleTextDocumentCodeAction(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		if len(res.([]types.CodeAction)) != 2 {
-			b.Fatalf("expected 2 code actions, got %d", len(res.([]types.CodeAction)))
+		if len(res.([]types.CodeAction)) != 3 {
+			b.Fatalf("expected 3 code actions, got %d", len(res.([]types.CodeAction)))
 		}
 	}
 }

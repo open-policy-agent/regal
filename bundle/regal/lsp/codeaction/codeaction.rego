@@ -94,6 +94,25 @@ actions contains action if {
 }
 
 # METADATA
+# description: |
+#   Code action to explore compiler stages for all LSP clients.
+#   Invokes the regal.explorer command which handles client-specific behavior.
+actions contains action if {
+	strings.any_prefix_match("source.explore", only)
+
+	action := {
+		"title": "Explore compiler stages for this policy",
+		"kind": "source.explore",
+		"command": {
+			"title": "Explore compiler stages for this policy",
+			"command": "regal.explorer",
+			"tooltip": "Explore compiler stages for this policy",
+			"arguments": [{"target": input.params.textDocument.uri, "format": true}],
+		},
+	}
+}
+
+# METADATA
 # description: All code actions for fixing reported diagnostics
 rules := {
 	"opa-fmt": ["Format using opa-fmt", ["target"]],
@@ -116,6 +135,6 @@ rules := {
 #   be hierarchical — if only contains "source" it matches all source actions,
 #   while "source.foo" matches only source actions with a "foo" prefix.
 # scope: document
-default only := ["quickfix"]
+default only := ["quickfix", "source.explore"]
 
 only := input.params.context.only if count(input.params.context.only) > 0

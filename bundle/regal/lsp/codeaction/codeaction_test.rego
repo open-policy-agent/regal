@@ -11,7 +11,10 @@ test_actions_reported_in_expected_format if {
 		},
 		"params": {
 			"textDocument": {"uri": "policy.rego"},
-			"context": {"diagnostics": [_diagnostics["opa-fmt"], _diagnostics["use-assignment-operator"]]},
+			"context": {
+				"diagnostics": [_diagnostics["opa-fmt"], _diagnostics["use-assignment-operator"]],
+				"only": ["quickfix"],
+			},
 		},
 	}
 
@@ -55,11 +58,14 @@ test_code_action_returned_for_every_linter[rule] if {
 		},
 		"params": {
 			"textDocument": {"uri": "policy.rego"},
-			"context": {"diagnostics": [{
-				"code": rule,
-				"message": "irrelevant",
-				"range": {},
-			}]},
+			"context": {
+				"diagnostics": [{
+					"code": rule,
+					"message": "irrelevant",
+					"range": {},
+				}],
+				"only": ["quickfix"],
+			},
 		},
 	}
 	count(r) == 2
@@ -75,7 +81,10 @@ test_code_actions_specific_to_vscode_reported_on_client_match if {
 		},
 		"params": {
 			"textDocument": {"uri": "file:///workspace/policy.rego"},
-			"context": {"diagnostics": [diagnostic]},
+			"context": {
+				"diagnostics": [diagnostic],
+				"only": ["quickfix"],
+			},
 		},
 	}
 	r == {
@@ -165,16 +174,16 @@ test_code_actions_only_source if {
 		},
 	}
 
-	r == {{
-		"title": "Explore compiler stages for this policy",
-		"kind": "source.explore",
-		"command": {
-			"arguments": [{"target": "file:///workspace/policy.rego"}],
-			"command": "regal.explorer",
-			"title": "Explore compiler stages for this policy",
-			"tooltip": "Explore compiler stages for this policy",
-		},
-	}}
+	count(r) == 1
+
+	some action in r
+	action.title == "Explore compiler stages for this policy"
+	action.kind == "source.explore"
+	action.command.command == "regal.explorer"
+	action.command.title == "Explore compiler stages for this policy"
+	action.command.tooltip == "Explore compiler stages for this policy"
+	count(action.command.arguments) == 1
+	action.command.arguments[0].target == "file:///workspace/policy.rego"
 }
 
 test_code_actions_source_explore_in_default if {

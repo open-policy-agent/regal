@@ -572,7 +572,10 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 				if len(params.Arguments) > 0 {
 					arg, ok := params.Arguments[0].(map[string]any)
 					if !ok {
-						l.log.Message("expected explorer argument to be a map, got %T", params.Arguments[0])
+						l.log.Message(
+							"failed to unmarshal regal.explorer command arguments, expected object, got %T",
+							params.Arguments[0],
+						)
 
 						continue
 					}
@@ -1915,7 +1918,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			SignatureHelpProvider: types.SignatureHelpOptions{
 				TriggerCharacters: []string{"(", ","},
 			},
-			CodeActionProvider: types.CodeActionOptions{CodeActionKinds: []string{"quickfix"}},
+			CodeActionProvider: types.CodeActionOptions{CodeActionKinds: []string{"quickfix", "source"}},
 			ExecuteCommandProvider: types.ExecuteCommandOptions{
 				Commands: []string{
 					"regal.debug",
@@ -2372,7 +2375,6 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, args types.E
 		}
 
 		if output == "" {
-
 			continue
 		}
 
@@ -2381,6 +2383,7 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, args types.E
 
 		if err := os.WriteFile(filename, []byte(output), 0o600); err != nil {
 			l.log.Message("failed to write stage file %s: %s", filename, err)
+
 			continue
 		}
 
