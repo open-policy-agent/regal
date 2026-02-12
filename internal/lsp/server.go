@@ -2360,6 +2360,10 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, args types.E
 	baseName := filepath.Base(uri.ToPath(args.Target))
 	baseName = strings.TrimSuffix(baseName, ".rego")
 
+	var previousOutput string
+
+	filesToOpen := make([]string, 0)
+
 	for i, cs := range compileResults {
 		var output string
 
@@ -2387,6 +2391,14 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, args types.E
 			continue
 		}
 
+		// Only open stages where output differs from previous stage
+		if output != previousOutput {
+			filesToOpen = append(filesToOpen, filename)
+			previousOutput = output
+		}
+	}
+
+	for _, filename := range filesToOpen {
 		takeFocus := false
 		showParams := types.ShowDocumentParams{
 			URI:       uri.FromPath(l.client.Identifier, filename),
