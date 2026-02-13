@@ -2399,10 +2399,9 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, args types.E
 	}
 
 	for _, filename := range filesToOpen {
-		takeFocus := false
 		showParams := types.ShowDocumentParams{
 			URI:       uri.FromPath(l.client.Identifier, filename),
-			TakeFocus: &takeFocus,
+			TakeFocus: new(false),
 		}
 
 		var result types.ShowDocumentResult
@@ -2417,10 +2416,9 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, args types.E
 			if err := os.WriteFile(planFile, []byte(plan), 0o600); err != nil {
 				l.log.Message("failed to write plan file: %s", err)
 			} else {
-				takeFocus := false
 				showParams := types.ShowDocumentParams{
 					URI:       uri.FromPath(l.client.Identifier, planFile),
-					TakeFocus: &takeFocus,
+					TakeFocus: new(false),
 				}
 
 				var result types.ShowDocumentResult

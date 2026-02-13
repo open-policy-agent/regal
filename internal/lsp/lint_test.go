@@ -11,7 +11,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/testutil"
-	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/report"
 )
@@ -168,10 +167,10 @@ func TestConvertReportToDiagnostics(t *testing.T) {
 	expectedFileDiags := map[string][]types.Diagnostic{
 		"file1": {
 			{
-				Severity: util.Pointer(uint(2)),
+				Severity: new(uint(2)),
 				Range:    getRangeForViolation(violation1),
 				Message:  "Mock Error",
-				Source:   util.Pointer("regal/mock_category"),
+				Source:   new("regal/mock_category"),
 				Code:     "mock_title",
 				CodeDescription: &types.CodeDescription{
 					Href: "https://www.openpolicyagent.org/projects/regal/rules/mock_category/mock_title",
@@ -180,10 +179,10 @@ func TestConvertReportToDiagnostics(t *testing.T) {
 		},
 		"workspaceRootURI": {
 			{
-				Severity: util.Pointer(uint(3)),
+				Severity: new(uint(3)),
 				Range:    getRangeForViolation(violation2),
 				Message:  "Mock Warning",
-				Source:   util.Pointer("regal/mock_category"),
+				Source:   new("regal/mock_category"),
 				Code:     "mock_title",
 				CodeDescription: &types.CodeDescription{
 					Href: "https://www.openpolicyagent.org/projects/regal/rules/mock_category/mock_title",

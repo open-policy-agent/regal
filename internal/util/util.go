@@ -265,11 +265,6 @@ func SendToAll[T any](val T, ch ...chan T) {
 	}
 }
 
-// Pointer returns a pointer to the provided value.
-func Pointer[T any](v T) *T {
-	return &v
-}
-
 // GetMapValue extracts a typed value from a map[string]any, returning the value if the type matched,
 // or the zero values of correct type.
 func GetMapValue[T any](m map[string]any, key string) T {

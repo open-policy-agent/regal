@@ -192,7 +192,7 @@ func ValuesOfType[T ast.Value](terms []*ast.Term) iter.Seq[T] {
 func StructToValue(input any) ast.Value {
 	v, t := reflect.ValueOf(input), reflect.TypeOf(input)
 
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		v, t = v.Elem(), t.Elem()
 	}
 
@@ -227,7 +227,7 @@ func toAstValue(v any) ast.Value {
 	}
 
 	rv := reflect.ValueOf(v)
-	for rv.Kind() == reflect.Ptr {
+	for rv.Kind() == reflect.Pointer {
 		if rv.IsNil() {
 			return ast.NullValue
 		}

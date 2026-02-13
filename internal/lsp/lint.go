@@ -16,7 +16,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
-	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/hints"
 	"github.com/open-policy-agent/regal/pkg/linter"
@@ -32,9 +31,9 @@ var (
 	errAggOnlyUpdate     = errors.New("AggregateReportOnly should not be set for updateFileDiagnostics")
 	errParseFailNoErrors = errors.New("failed to parse module, but no errors were set as diagnostics")
 
-	diagErrorLevel *uint = util.Pointer(uint(1))
-	diagWarnLevel  *uint = util.Pointer(uint(2))
-	diagInfoLevel  *uint = util.Pointer(uint(3))
+	diagErrorLevel = new(uint(1))
+	diagWarnLevel  = new(uint(2))
+	diagInfoLevel  = new(uint(3))
 )
 
 // diagnosticsRunOpts contains options for file and workspace linting.
@@ -312,7 +311,7 @@ func convertReportToDiagnostics(rpt *report.Report, workspaceRootURI string) map
 			Severity: severity,
 			Range:    getRangeForViolation(item),
 			Message:  item.Description,
-			Source:   util.Pointer("regal/" + item.Category),
+			Source:   new("regal/" + item.Category),
 			Code:     item.Title,
 			CodeDescription: &types.CodeDescription{
 				Href: fmt.Sprintf("https://www.openpolicyagent.org/projects/regal/rules/%s/%s", item.Category, item.Title),

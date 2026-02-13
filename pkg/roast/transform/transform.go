@@ -112,7 +112,7 @@ func reference(x any) *any {
 	var y any
 
 	rv := reflect.ValueOf(x)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		return reference(rv.Elem().Interface())
 	}
 
