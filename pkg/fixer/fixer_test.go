@@ -7,7 +7,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/fixer/fileprovider"
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
@@ -18,7 +18,7 @@ import (
 func TestFixer(t *testing.T) {
 	t.Parallel()
 
-	rootPath := testutil.Must(filepath.Abs(filepath.FromSlash("/root")))(t)
+	rootPath := must.Return(filepath.Abs(filepath.FromSlash("/root")))(t)
 	mainDir := filepath.Join(rootPath, "main")
 	mainRegoFile := filepath.Join(mainDir, "main.rego")
 
@@ -205,7 +205,7 @@ func TestFixViolations(t *testing.T) {
 // 150116720 ns/op  101567417 B/op   2359322 allocs/op
 // 132816578 ns/op   89093239 B/op   2068892 allocs/op // Linter.Prepare()
 func BenchmarkFixViolations(b *testing.B) {
-	rootPath := testutil.Must(filepath.Abs(filepath.FromSlash("/root")))(b)
+	rootPath := must.Return(filepath.Abs(filepath.FromSlash("/root")))(b)
 	mainDir := filepath.Join(rootPath, "main")
 	mainRegoFile := filepath.Join(mainDir, "main.rego")
 

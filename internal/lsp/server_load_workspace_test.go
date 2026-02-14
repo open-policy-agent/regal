@@ -9,6 +9,8 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
@@ -128,9 +130,7 @@ func TestLoadWorkspaceContents(t *testing.T) {
 
 			for _, fileName := range tc.unreadableFiles {
 				unreadableFile := filepath.Join(tempDir, fileName)
-				if err := os.Chmod(unreadableFile, 0o000); err != nil {
-					t.Fatalf("failed to make file %s unreadable: %v", fileName, err)
-				}
+				must.Equal(t, nil, os.Chmod(unreadableFile, 0o000), "make file %s unreadable %v", fileName)
 			}
 
 			opts := &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())}
@@ -162,9 +162,7 @@ func TestLoadWorkspaceContents(t *testing.T) {
 			}
 
 			changedURIs, failedFiles, err := server.loadWorkspaceContents(t.Context(), tc.newOnly)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			must.Equal(t, nil, err)
 
 			if len(failedFiles) != len(tc.expectFailedFiles) {
 				t.Errorf("expected %d failed files, got %d", len(tc.expectFailedFiles), len(failedFiles))
@@ -191,9 +189,7 @@ func TestLoadWorkspaceContents(t *testing.T) {
 			}
 
 			if len(tc.expectChangedFiles) > 0 {
-				if len(changedURIs) < len(tc.expectChangedFiles) {
-					t.Errorf("expected at least %d changed files, got %d", len(tc.expectChangedFiles), len(changedURIs))
-				}
+				assert.False(t, len(changedURIs) < len(tc.expectChangedFiles), "changed files count")
 
 				for _, expectedFile := range tc.expectChangedFiles {
 					found := slices.ContainsFunc(changedURIs, func(changedURI string) bool {
@@ -209,9 +205,7 @@ func TestLoadWorkspaceContents(t *testing.T) {
 			for _, expectedFile := range tc.expectChangedFiles {
 				for _, changedURI := range changedURIs {
 					if filepath.Base(changedURI) == expectedFile {
-						if found := server.cache.HasFileContents(changedURI); !found {
-							t.Errorf("expected file %s to be cached", expectedFile)
-						}
+						assert.True(t, server.cache.HasFileContents(changedURI))
 
 						break
 					}

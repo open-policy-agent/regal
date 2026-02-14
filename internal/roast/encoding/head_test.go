@@ -6,6 +6,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestRuleHeadEncoding(t *testing.T) {
@@ -21,11 +23,7 @@ func TestRuleHeadEncoding(t *testing.T) {
 		Assign:   true,
 		Location: &ast.Location{Row: 1, Col: 1, Text: []byte("foo.bar := true")},
 	}
-
-	bs, err := jsoniter.ConfigFastest.MarshalIndent(head, "", "  ")
-	if err != nil {
-		t.Fatal(err)
-	}
+	bs := must.Return(jsoniter.ConfigFastest.MarshalIndent(head, "", "  "))(t)
 
 	expect := `{
   "location": "1:1:1:16",
@@ -48,21 +46,14 @@ func TestRuleHeadEncoding(t *testing.T) {
     "value": true
   }
 }`
-
-	if string(bs) != expect {
-		t.Fatalf("expected %s but got %s", expect, string(bs))
-	}
+	must.Equal(t, expect, string(bs), "rule head encoding")
 }
 
 func TestRuleHeadEncodingStripsLocationOfGeneratedValue(t *testing.T) {
 	t.Parallel()
 
 	head := ast.MustParseRule(`p[x] if { x := 1 }`).Head
-
-	bs, err := jsoniter.ConfigFastest.MarshalIndent(head, "", "  ")
-	if err != nil {
-		t.Fatal(err)
-	}
+	bs := must.Return(jsoniter.ConfigFastest.MarshalIndent(head, "", "  "))(t)
 
 	expected := `{
   "location": "1:1:1:5",
@@ -88,8 +79,5 @@ func TestRuleHeadEncodingStripsLocationOfGeneratedValue(t *testing.T) {
     "value": true
   }
 }`
-
-	if string(bs) != expected {
-		t.Fatalf("expected %s but got %s", expected, string(bs))
-	}
+	must.Equal(t, expected, string(bs), "rule head encoding with generated value")
 }

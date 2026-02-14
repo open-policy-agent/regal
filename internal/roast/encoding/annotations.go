@@ -20,38 +20,38 @@ func (*annotationsCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	a := *((*ast.Annotations)(ptr))
 
 	write.ObjectStart(stream, a.Location)
-	write.String(stream, strScope, a.Scope)
+	write.String(stream, "scope", a.Scope)
 
 	if a.Title != "" {
-		write.String(stream, strTitle, a.Title)
+		write.String(stream, "title", a.Title)
 	}
 
 	if a.Description != "" {
-		write.String(stream, strDescription, a.Description)
+		write.String(stream, "description", a.Description)
 	}
 
 	if a.Entrypoint {
-		write.Bool(stream, strEntrypoint, a.Entrypoint)
+		write.Bool(stream, "entrypoint", a.Entrypoint)
 	}
 
 	if len(a.Organizations) > 0 {
-		write.ValsArrayAttr(stream, strOrganizations, a.Organizations)
+		write.ValsArrayAttr(stream, "organizations", a.Organizations)
 	}
 
 	if len(a.RelatedResources) > 0 {
-		write.ValsArrayAttr(stream, strRelatedResources, a.RelatedResources)
+		write.ValsArrayAttr(stream, "related_resources", a.RelatedResources)
 	}
 
 	if len(a.Authors) > 0 {
-		write.ValsArrayAttr(stream, strAuthors, a.Authors)
+		write.ValsArrayAttr(stream, "authors", a.Authors)
 	}
 
 	if len(a.Schemas) > 0 {
-		write.ValsArrayAttr(stream, strSchemas, a.Schemas)
+		write.ValsArrayAttr(stream, "schemas", a.Schemas)
 	}
 
 	if len(a.Custom) > 0 {
-		write.Object(stream, strCustom, a.Custom)
+		write.Object(stream, "custom", a.Custom)
 	}
 
 	write.ObjectEnd(stream)

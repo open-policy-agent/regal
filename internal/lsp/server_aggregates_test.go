@@ -16,6 +16,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
@@ -356,9 +357,7 @@ func notifyDocumentChange(t *testing.T, connClient *jsonrpc2.Conn, path, newCont
 		TextDocument:   types.VersionedTextDocumentIdentifier{URI: uri.FromPath(clients.IdentifierGoTest, path)},
 		ContentChanges: []types.TextDocumentContentChangeEvent{{Text: newContents}},
 	}, nil)
-	if err != nil {
-		t.Fatalf("failed to send didChange notification: %s", err)
-	}
+	must.Equal(t, nil, err, "failed to send didChange notification %v", err)
 }
 
 func determineImports(t *testing.T, aggs ast.Object) (imports []string) {

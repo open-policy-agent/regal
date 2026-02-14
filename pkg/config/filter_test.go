@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestFilterIgnoredPaths(t *testing.T) {
@@ -93,10 +93,7 @@ func TestFilterIgnoredPaths(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			filtered, err := FilterIgnoredPaths(tc.paths, tc.ignore, tc.checkFileExists, tc.rootDir)
-			if err != nil {
-				t.Fatal(err)
-			}
+			filtered := must.Return(FilterIgnoredPaths(tc.paths, tc.ignore, tc.checkFileExists, tc.rootDir))(t)
 
 			slices.Sort(filtered)
 			slices.Sort(tc.expected)
@@ -133,7 +130,7 @@ func BenchmarkFilterIgnoredPathsBundleDir(b *testing.B) {
 	ignore := []string{"foo/bar/**", "bar/*.rego"}
 
 	for b.Loop() {
-		testutil.Must(FilterIgnoredPaths([]string{"../../bundle"}, ignore, true, ""))(b)
+		must.Return(FilterIgnoredPaths([]string{"../../bundle"}, ignore, true, ""))(b)
 	}
 }
 
@@ -141,6 +138,6 @@ func BenchmarkFilterIgnoredPathsWorkspace(b *testing.B) {
 	ignore := []string{"foo/bar/**", "bar/*.rego"}
 
 	for b.Loop() {
-		testutil.Must(FilterIgnoredPaths([]string{"../.."}, ignore, true, ""))(b)
+		must.Return(FilterIgnoredPaths([]string{"../.."}, ignore, true, ""))(b)
 	}
 }

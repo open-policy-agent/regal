@@ -5,7 +5,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestLookupFromFile(t *testing.T) {
@@ -17,28 +18,19 @@ func TestLookupFromFile(t *testing.T) {
 	}
 
 	// Test that we are able to load a capabilities file using a file:// URL.
-	caps, err := Lookup(t.Context(), "file://"+testutil.Must(filepath.Abs("./testdata/capabilities.json"))(t))
-	if err != nil {
-		t.Errorf("unexpected error from Lookup: %v", err)
-	}
+	caps, err := Lookup(t.Context(), "file://"+must.Return(filepath.Abs("./testdata/capabilities.json"))(t))
 
-	if len(caps.Builtins) != 1 {
-		t.Errorf("expected capabilities to have exactly 1 builtin")
-	}
-
-	if caps.Builtins[0].Name != "unittest123" {
-		t.Errorf("builtin name is incorrect, expected 'unittest123' but got '%s'", caps.Builtins[0].Name)
-	}
+	assert.Equal(t, nil, err, "unexpected error from Lookup")
+	assert.Equal(t, 1, len(caps.Builtins), "expected capabilities to have exactly 1 builtin")
+	assert.Equal(t, "unittest123", caps.Builtins[0].Name, "builtin name incorrect")
 }
 
 func TestLookupFromEmbedded(t *testing.T) {
 	t.Parallel()
 
 	// existing OPA capabilities files from embedded database.
-	caps := testutil.Must(Lookup(t.Context(), "regal:///capabilities/opa/v0.55.0"))(t)
-	if len(caps.Builtins) != 193 {
-		t.Errorf("OPA v0.55.0 capabilities should have 193 builtins, not %d", len(caps.Builtins))
-	}
+	caps := must.Return(Lookup(t.Context(), "regal:///capabilities/opa/v0.55.0"))(t)
+	assert.Equal(t, 193, len(caps.Builtins), "OPA v0.55.0 caps, unexpected number of builtins")
 }
 
 func TestSemverSort(t *testing.T) {
@@ -73,9 +65,7 @@ func TestSemverSort(t *testing.T) {
 			semverSort(c.input)
 
 			for j, x := range c.expect {
-				if x != c.input[j] {
-					t.Errorf("index=%d actual='%s' expected='%s'", j, c.input[j], x)
-				}
+				assert.Equal(t, x, c.input[j], "index=%d", j)
 			}
 		})
 	}

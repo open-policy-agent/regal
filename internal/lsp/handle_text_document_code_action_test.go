@@ -1,21 +1,20 @@
 package lsp
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/sourcegraph/jsonrpc2"
 
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/internal/web"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
-
-const ruleNameUseAssignmentOperator = "use-assignment-operator"
 
 func TestHandleTextDocumentCodeAction(t *testing.T) {
 	t.Parallel()
@@ -31,7 +30,7 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 	l.loadedConfig = &config.Config{}
 
 	diag := types.Diagnostic{
-		Code:    ruleNameUseAssignmentOperator,
+		Code:    "use-assignment-operator",
 		Message: "foobar",
 		Range:   types.RangeBetween(2, 4, 2, 10),
 		Source:  new("regal/style"),
@@ -64,32 +63,20 @@ func TestHandleTextDocumentCodeAction(t *testing.T) {
 	assertExpectedCodeAction(t, expectedAction, actualAction)
 
 	expArgs, actualArgs := *expectedAction.Command.Arguments, *actualAction.Command.Arguments
-	if exp, got := len(expArgs), len(actualArgs); exp != got {
-		t.Fatalf("expected %d arguments, got %d", exp, got)
-	}
+	must.Equal(t, len(expArgs), len(actualArgs), "number of arguments")
 
-	expDecoded := testutil.Must(encoding.JSONUnmarshalTo[map[string]any]([]byte(expArgs[0].(string))))(t)
-	actDecoded := testutil.Must(encoding.JSONUnmarshalTo[map[string]any]([]byte(actualArgs[0].(string))))(t)
+	expDecoded := must.Return(encoding.JSONUnmarshalTo[map[string]any]([]byte(expArgs[0].(string))))(t)
+	actDecoded := must.Return(encoding.JSONUnmarshalTo[map[string]any]([]byte(actualArgs[0].(string))))(t)
 
-	if !reflect.DeepEqual(expDecoded, actDecoded) {
-		t.Errorf("expected Command.Arguments to be %v, got %v", expDecoded, actDecoded)
-	}
+	assert.DeepEqual(t, expDecoded, actDecoded, "decoded command arguments")
 }
 
 func assertExpectedCodeAction(t *testing.T, expected, actual types.CodeAction) {
 	t.Helper()
 
-	if expected.Title != actual.Title {
-		t.Errorf("expected Title %q, got %q", expected.Title, actual.Title)
-	}
-
-	if expected.Kind != actual.Kind {
-		t.Errorf("expected Kind %q, got %q", expected.Kind, actual.Kind)
-	}
-
-	if len(expected.Diagnostics) != len(actual.Diagnostics) {
-		t.Errorf("expected %d diagnostics, got %d", len(expected.Diagnostics), len(actual.Diagnostics))
-	}
+	assert.Equal(t, expected.Title, actual.Title, "Title")
+	assert.Equal(t, expected.Kind, actual.Kind, "Kind")
+	assert.Equal(t, len(expected.Diagnostics), len(actual.Diagnostics), "# Diagnostics")
 
 	if expected.IsPreferred == nil && actual.IsPreferred != nil { //nolint:gocritic
 		t.Error("expected IsPreferred to be nil")
@@ -99,17 +86,9 @@ func assertExpectedCodeAction(t *testing.T, expected, actual types.CodeAction) {
 		t.Errorf("expected IsPreferred to be %v, got %v", *expected.IsPreferred, *actual.IsPreferred)
 	}
 
-	if expected.Command.Command != actual.Command.Command {
-		t.Errorf("expected Command %q, got %q", expected.Command.Command, actual.Command.Command)
-	}
-
-	if expected.Command.Title != actual.Command.Title {
-		t.Errorf("expected Command.Title %q, got %q", expected.Command.Title, actual.Command.Title)
-	}
-
-	if expected.Command.Tooltip != actual.Command.Tooltip {
-		t.Errorf("expected Command.Tooltip %q, got %q", expected.Command.Tooltip, actual.Command.Tooltip)
-	}
+	assert.Equal(t, expected.Command.Command, actual.Command.Command, "Command.Command")
+	assert.Equal(t, expected.Command.Title, actual.Command.Title, "Command.Title")
+	assert.Equal(t, expected.Command.Tooltip, actual.Command.Tooltip, "Command.Tooltip")
 
 	// Just check nilness here, and leave the actual content to the test.
 	if expected.Command.Arguments == nil && actual.Command.Arguments != nil {
@@ -129,19 +108,9 @@ func invokeCodeActionHandler(
 
 	req := &jsonrpc2.Request{Method: "textDocument/codeAction", Params: testutil.ToJSONRawMessage(t, params)}
 
-	result, err := l.Handle(t.Context(), nil, req)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-
-	actions, ok := result.([]types.CodeAction)
-	if !ok {
-		t.Errorf("Expected result to be of type []types.CodeAction, got %T", result)
-	}
-
-	if exp, got := expectedCount, len(actions); exp != got {
-		t.Fatalf("Expected %d action(s), got %d", exp, got)
-	}
+	result := must.Return(l.Handle(t.Context(), nil, req))(t)
+	actions := must.Be[[]types.CodeAction](t, result)
+	must.Equal(t, expectedCount, len(actions), "number of code actions")
 
 	return actions[0]
 }
@@ -165,7 +134,7 @@ func BenchmarkHandleTextDocumentCodeAction(b *testing.B) {
 		TextDocument: types.TextDocumentIdentifier{URI: "file:///example.rego"},
 		Context: types.CodeActionContext{
 			Diagnostics: []types.Diagnostic{{
-				Code:    ruleNameUseAssignmentOperator,
+				Code:    "use-assignment-operator",
 				Message: "foobar",
 				Range:   types.RangeBetween(2, 4, 2, 10),
 				Source:  new("regal/style"),

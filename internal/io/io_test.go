@@ -2,12 +2,13 @@ package io
 
 import (
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/util/test"
 
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
 )
@@ -25,22 +26,10 @@ func TestFindManifestLocations(t *testing.T) {
 
 	test.WithTempFS(fs, func(root string) {
 		locations, err := FindManifestLocations(root)
-		if err != nil {
-			t.Error(err)
-		}
+		expected := util.Map([]string{"foo/bar/baz", "foo/bar/qux"}, filepath.FromSlash)
 
-		if len(locations) != 2 {
-			t.Errorf("expected 2 locations, got %d", len(locations))
-		}
-
-		expected := []string{
-			filepath.FromSlash("foo/bar/baz"),
-			filepath.FromSlash("foo/bar/qux"),
-		}
-
-		if !slices.Equal(locations, expected) {
-			t.Errorf("expected %v, got %v", expected, locations)
-		}
+		must.Equal(t, nil, err)
+		assert.SlicesEqual(t, expected, locations, "manifest locations")
 	})
 }
 
@@ -109,14 +98,10 @@ func TestDirCleanUpPaths(t *testing.T) {
 				additionalPreserveTargets[i] = filepath.Join(tempDir, v)
 			}
 
-			got, err := DirCleanUpPaths(filepath.Join(tempDir, test.DeleteTarget), additionalPreserveTargets)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			deleteTarget := filepath.Join(tempDir, test.DeleteTarget)
+			got := must.Return(DirCleanUpPaths(deleteTarget, additionalPreserveTargets))(t)
 
-			if !slices.Equal(got, expected) {
-				t.Fatalf("expected\n%v\ngot:\n%v", strings.Join(expected, "\n"), strings.Join(got, "\n"))
-			}
+			assert.SlicesEqual(t, expected, got, "clean up paths")
 		})
 	}
 }
@@ -125,12 +110,8 @@ func TestCapabilitiesNoDuplicateBuiltins(t *testing.T) {
 	t.Parallel()
 
 	builtinSet := util.NewSet[string]()
-
 	for _, b := range Capabilities().Builtins {
-		if builtinSet.Contains(b.Name) {
-			t.Fatalf("duplicate builtin found: %s", b.Name)
-		}
-
+		must.Equal(t, false, builtinSet.Contains(b.Name), "duplicate builtin found: %s", b.Name)
 		builtinSet.Add(b.Name)
 	}
 }
@@ -147,26 +128,19 @@ func TestCapabilitiesIncludeRegalBuiltins(t *testing.T) {
 		}
 	}
 
-	if !expectedBuiltins.Equal(found) {
-		t.Fatalf("expected builtins %v, got %v", expectedBuiltins, found)
-	}
+	assert.True(t, expectedBuiltins.Equal(found))
 }
 
 func TestOPACapabilitiesIncludeNoRegalBuiltins(t *testing.T) {
 	t.Parallel()
 
 	for _, b := range OPACapabilities().Builtins {
-		if strings.HasPrefix(b.Name, "regal.") {
-			t.Fatalf("found regal builtin in opa capabilities: %s", b.Name)
-		}
+		must.Equal(t, false, strings.HasPrefix(b.Name, "regal."), "regal builtin in opa capabilities: %s", b.Name)
 	}
 }
 
 func BenchmarkLoadRegalBundlePath(b *testing.B) {
 	for b.Loop() {
-		_, err := LoadRegalBundlePath("../../bundle")
-		if err != nil {
-			b.Fatal(err)
-		}
+		must.Return(LoadRegalBundlePath("../../bundle"))(b)
 	}
 }

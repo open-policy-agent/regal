@@ -18,6 +18,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
 )
@@ -162,11 +164,8 @@ func TestTemplateContentsForFileWithUnknownRoot(t *testing.T) {
 	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, td)
 	ls.cache.SetFileContents(fileURI, "")
 
-	testutil.MustMkdirAll(t, td, "foo")
-
-	if exp, act := "package foo\n\n", testutil.Must(ls.templateContentsForFile(fileURI))(t); exp != act {
-		t.Errorf("unexpected content: %s, want %s", act, exp)
-	}
+	must.MkdirAll(t, td, "foo")
+	assert.Equal(t, "package foo\n\n", must.Return(ls.templateContentsForFile(fileURI))(t))
 }
 
 func TestNewFileTemplating(t *testing.T) {
@@ -221,8 +220,8 @@ func TestNewFileTemplating(t *testing.T) {
 		tempDir, "foo", "bar_test", "policy_test.rego",
 	))
 
-	testutil.MustMkdirAll(t, filepath.Dir(newFilePath))
-	testutil.MustWriteFile(t, newFilePath, []byte(""))
+	must.MkdirAll(t, filepath.Dir(newFilePath))
+	must.WriteFile(t, newFilePath, []byte(""))
 
 	// Client sends workspace/didCreateFiles notification
 	if err := connClient.Notify(ctx, "workspace/didCreateFiles", types.CreateFilesParams{
@@ -340,8 +339,8 @@ func TestTemplateWorkerRaceConditionWithDidOpen(t *testing.T) {
 	newFilePath := filepath.Join(tempDir, "foo", "bar", "policy.rego")
 	newFileURI := uri.FromPath(clients.IdentifierGeneric, newFilePath)
 
-	testutil.MustMkdirAll(t, filepath.Dir(newFilePath))
-	testutil.MustWriteFile(t, newFilePath, []byte(""))
+	must.MkdirAll(t, filepath.Dir(newFilePath))
+	must.WriteFile(t, newFilePath, []byte(""))
 
 	// create a 'manual' worker so we can time events to recreated the race.
 	templateCompleted := make(chan bool, 1)

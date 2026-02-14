@@ -22,7 +22,7 @@ func (*commentCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 
 	write.ObjectStart(stream, comment.Location)
 
-	stream.WriteObjectField(strText)
+	stream.WriteObjectField("text")
 	stream.WriteString(base64.StdEncoding.EncodeToString(comment.Text))
 
 	stream.WriteObjectEnd()

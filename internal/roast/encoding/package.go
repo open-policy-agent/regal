@@ -29,11 +29,11 @@ func (*packageCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 		// Omit location of "data" part of path, at it isn't present in code
 		pathCopy[0].Location = nil
 
-		write.Val(stream, strPath, pathCopy)
+		write.Val(stream, "path", pathCopy)
 	}
 
 	if stream.Attachment != nil {
-		write.Val(stream, strAnnotations, stream.Attachment)
+		write.Val(stream, "annotations", stream.Attachment)
 	}
 
 	write.ObjectEnd(stream)

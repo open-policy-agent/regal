@@ -8,6 +8,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 
 	"github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -20,10 +22,10 @@ func TestPutFileModStoresRoastRepresentation(t *testing.T) {
 
 	testutil.NoErr(PutFileMod(t.Context(), store, fileURI, module))(t)
 
-	parsed := testutil.Must(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "parsed", fileURI}))(t)
-	parsedVal := testutil.MustBe[ast.Value](t, parsed)
-	parsedMap := testutil.Must(ast.ValueToInterface(parsedVal, nil))(t)
-	pretty := testutil.Must(json.MarshalIndent(parsedMap, "", "  "))(t)
+	parsed := must.Return(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "parsed", fileURI}))(t)
+	parsedVal := must.Be[ast.Value](t, parsed)
+	parsedMap := must.Return(ast.ValueToInterface(parsedVal, nil))(t)
+	pretty := must.Return(json.MarshalIndent(parsedMap, "", "  "))(t)
 
 	// This is certainly testing the implementation rather than the behavior, but we actually
 	// want some tests to fail if the implementation changes, so we don't have to chase this
@@ -65,54 +67,42 @@ func TestPutFileModStoresRoastRepresentation(t *testing.T) {
     }
   ]
 }`
-
-	if string(pretty) != expect {
-		t.Errorf("expected %s, got %s", expect, pretty)
-	}
+	assert.Equal(t, expect, string(pretty))
 }
 
 func TestPutFileRefs(t *testing.T) {
 	t.Parallel()
 
-	store := NewRegalStore()
-	fileURI := "file:///example.rego"
+	store, fileURI := NewRegalStore(), "file:///example.rego"
 
-	testutil.NoErr(PutFileRefs(t.Context(), store, fileURI, []string{"foo", "bar"}))(t)
+	must.Equal(t, nil, PutFileRefs(t.Context(), store, fileURI, []string{"foo", "bar"}))
 
-	val := testutil.Must(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "defined_refs", fileURI}))(t)
-	arr := testutil.MustBe[*ast.Array](t, val)
+	val := must.Return(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "defined_refs", fileURI}))(t)
+	arr := must.Be[*ast.Array](t, val)
+	exp := ast.NewArray(ast.InternedTerm("foo"), ast.InternedTerm("bar"))
 
-	if expected := ast.NewArray(ast.StringTerm("foo"), ast.StringTerm("bar")); !expected.Equal(arr) {
-		t.Errorf("expected %v, got %v", expected, arr)
-	}
+	assert.True(t, exp.Equal(arr), "expected defined refs to be %v, got %v", exp, arr)
 }
 
 func TestPutBuiltins(t *testing.T) {
 	t.Parallel()
 
 	store := NewRegalStore()
-	testutil.NoErr(PutBuiltins(t.Context(), store, map[string]*ast.Builtin{"count": ast.Count}))(t)
+	must.Equal(t, nil, PutBuiltins(t.Context(), store, map[string]*ast.Builtin{"count": ast.Count}))
 
-	val := testutil.Must(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "builtins", "count"}))(t)
-	if val == nil {
-		t.Fatal("expected count builtin to exist in store")
-	}
+	val := must.Return(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "builtins", "count"}))(t)
+	must.NotEqual(t, nil, val, "count builtin should be in store")
 }
 
 func TestPutBuiltinsDeprecated(t *testing.T) {
 	t.Parallel()
 
 	store := NewRegalStore()
-	testutil.NoErr(PutBuiltins(t.Context(), store, map[string]*ast.Builtin{"all": ast.All}))(t)
+	must.Equal(t, nil, PutBuiltins(t.Context(), store, map[string]*ast.Builtin{"all": ast.All}))
 
-	val := testutil.Must(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "builtins", "all"}))(t)
-	if val == nil {
-		t.Fatal("expected count builtin to exist in store")
-	}
+	val := must.Return(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "builtins", "all"}))(t)
+	must.NotEqual(t, nil, val, "all builtin should be in store")
 
-	deprecated := testutil.MustBe[ast.Object](t, val).Get(ast.StringTerm("deprecated"))
-
-	if !ast.Boolean(true).Equal(deprecated.Value) {
-		t.Errorf("expected deprecated field to be true, got %v", deprecated.Value)
-	}
+	deprecated := must.Be[ast.Object](t, val).Get(ast.StringTerm("deprecated"))
+	assert.True(t, ast.Boolean(true).Equal(deprecated.Value), "want deprecated field")
 }
