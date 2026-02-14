@@ -14,6 +14,7 @@ import (
 const (
 	TokenTypePackage  = 0
 	TokenTypeVariable = 1
+	TokenTypeImport   = 2
 )
 
 const (
@@ -44,6 +45,12 @@ func Full(ctx context.Context, queryResult map[string]any) (*types.SemanticToken
 	}
 	tokens = append(tokens, variableTokens...)
 
+	importTokens, err := extractImportTokens(queryResult)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract import tokens: %w", err)
+	}
+	tokens = append(tokens, importTokens...)
+
 	return encodeTokens(tokens), nil
 }
 
@@ -55,10 +62,6 @@ func extractPackageTokens(queryResult map[string]any) ([]Token, error) {
 		if tokenSlice, ok := packageTokens.([]any); ok {
 			for _, tokenItem := range tokenSlice[1:] {
 				if tokenMap, ok := tokenItem.(map[string]any); ok {
-					value, ok := tokenMap["value"].(string)
-					if !ok {
-						return nil, fmt.Errorf("Error parsing ast key")
-					}
 					locationStr, ok := tokenMap["location"].(string)
 					if !ok {
 						return nil, fmt.Errorf("Error parsing ast key")
@@ -70,12 +73,15 @@ func extractPackageTokens(queryResult map[string]any) ([]Token, error) {
 					row, _ := strconv.Atoi(rowStr)
 					col, _ := strconv.Atoi(colStr)
 
-					trimmedValue := strings.Trim(value, `"`)
+					length, err := getTokenLengthFromLocation(locationStr)
+					if err != nil {
+						return nil, fmt.Errorf("failed to get token length: %w", err)
+					}
 
 					token := Token{
 						Line:      uint(row - 1),
 						Col:       uint(col - 1),
-						Length:    uint(len(trimmedValue)),
+						Length:    length,
 						Type:      TokenTypePackage,
 						Modifiers: 0,
 					}
@@ -102,22 +108,21 @@ func extractVariableTokens(queryResult map[string]any) ([]Token, error) {
 				if varSlice, ok := varData.([]any); ok {
 					for _, varItem := range varSlice {
 						if varMap, ok := varItem.(map[string]any); ok {
-							value, ok := varMap["value"].(string)
-							if !ok {
-								return nil, fmt.Errorf("Error parsing ast key")
-							}
 							locationStr, ok := varMap["location"].(string)
 							if !ok {
 								return nil, fmt.Errorf("Error parsing ast key")
 							}
-
-							trimmedVarName := strings.Trim(value, `"' `)
 
 							rowStr, rest, _ := strings.Cut(locationStr, ":")
 							colStr, _, _ := strings.Cut(rest, ":")
 
 							row, _ := strconv.Atoi(rowStr)
 							col, _ := strconv.Atoi(colStr)
+
+							length, err := getTokenLengthFromLocation(locationStr)
+							if err != nil {
+								return nil, fmt.Errorf("failed to get token length: %w", err)
+							}
 
 							modifier := ModifierReference
 							if typeStr == "declaration" {
@@ -127,7 +132,7 @@ func extractVariableTokens(queryResult map[string]any) ([]Token, error) {
 							token := Token{
 								Line:      uint(row - 1),
 								Col:       uint(col - 1),
-								Length:    uint(len(trimmedVarName)),
+								Length:    length,
 								Type:      TokenTypeVariable,
 								Modifiers: uint(modifier),
 							}
@@ -135,6 +140,48 @@ func extractVariableTokens(queryResult map[string]any) ([]Token, error) {
 							tokens = append(tokens, token)
 						}
 					}
+				}
+			}
+		}
+	}
+
+	return tokens, nil
+}
+
+func extractImportTokens(queryResult map[string]any) ([]Token, error) {
+	var tokens []Token
+
+	if importTokens, ok := queryResult["import_tokens"]; ok {
+
+		if tokenSlice, ok := importTokens.([]any); ok {
+			for _, tokenItem := range tokenSlice {
+				if tokenMap, ok := tokenItem.(map[string]any); ok {
+					locationStr, ok := tokenMap["location"].(string)
+					if !ok {
+						return nil, fmt.Errorf("Error parsing ast key")
+					}
+
+					rowStr, rest, _ := strings.Cut(locationStr, ":")
+					colStr, _, _ := strings.Cut(rest, ":")
+
+					row, _ := strconv.Atoi(rowStr)
+					col, _ := strconv.Atoi(colStr)
+
+					length, err := getTokenLengthFromLocation(locationStr)
+					if err != nil {
+						return nil, fmt.Errorf("failed to get token length: %w", err)
+					}
+
+					token := Token{
+						Line:      uint(row - 1),
+						Col:       uint(col - 1),
+						Length:    length,
+						Type:      TokenTypeImport,
+						Modifiers: 0,
+					}
+
+					tokens = append(tokens, token)
+
 				}
 			}
 		}
@@ -182,4 +229,21 @@ func encodeTokens(tokens []Token) *types.SemanticTokens {
 	}
 
 	return &types.SemanticTokens{Data: data}
+}
+
+// getTokenLengthFromLocation calculates token length from location span
+func getTokenLengthFromLocation(locationStr string) (uint, error) {
+	parts := strings.Split(locationStr, ":")
+
+	startCol, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse start column: %w", err)
+	}
+
+	endCol, err := strconv.Atoi(parts[3])
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse end column: %w", err)
+	}
+
+	return uint(endCol - startCol), nil
 }

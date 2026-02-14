@@ -43,6 +43,21 @@ test_function(param1, param2) := result if {
 	count(tokens.reference) == 0
 }
 
+test_import_tokens if {
+	policy := `package regal.woo
+
+import data.regal.ast
+
+test_function(param1, param2) := result if {
+	ast.is_constant
+}`
+	tokens := semantictokens.import_tokens with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
+
+	# Check imports
+	{"location": "3:19:3:22", "type": "string", "value": "ast"} in tokens
+}
+
 test_arg_tokens_no_variables if {
 	policy := `package regal.woo
 

@@ -61,6 +61,25 @@ test_function(param1) := result if {
 				{DeltaLine: 2, DeltaCol: 15, Length: 6, Type: 1, Modifier: 2},
 			},
 		},
+		"imports": {
+			policy: `package regal.woo
+
+import data.regal.ast
+			
+test_function(param1) := result if {
+      calc3 := 1
+      calc3 == param1
+	  ast.is_constant
+}
+`,
+			expectedTokens: []semanticTokenInstance{
+				{DeltaLine: 0, DeltaCol: 8, Length: 5, Type: 0, Modifier: 0},
+				{DeltaLine: 0, DeltaCol: 6, Length: 3, Type: 0, Modifier: 0},
+				{DeltaLine: 2, DeltaCol: 18, Length: 3, Type: 2, Modifier: 0},
+				{DeltaLine: 2, DeltaCol: 14, Length: 6, Type: 1, Modifier: 1},
+				{DeltaLine: 2, DeltaCol: 15, Length: 6, Type: 1, Modifier: 2},
+			},
+		},
 		"full policy with package, declarations and references": {
 			policy: `package regal.woo
 			
@@ -93,8 +112,8 @@ test_function(param1) := result if {
 
 			actualTokens := uintsToTestTokens(result.Data)
 
-			t.Logf("Actual tokens: %+v", actualTokens)
-			t.Logf("Expected tokens: %+v", tc.expectedTokens)
+			t.Logf("Actual tokens:\n%+v", actualTokens)
+			t.Logf("Expected tokens:\n%+v", tc.expectedTokens)
 
 			if diff := cmp.Diff(actualTokens, tc.expectedTokens); diff != "" {
 				t.Errorf("unexpected token data (-got +want):\n%s", diff)
