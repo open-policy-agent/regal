@@ -20,6 +20,16 @@ module := data.workspace.parsed[input.params.textDocument.uri]
 result.response := {
 	"arg_tokens": arg_tokens,
 	"package_tokens": package_tokens,
+	"import_tokens": import_tokens,
+}
+
+# METADATA
+# description: Extract import tokens - return only last term of the path
+import_tokens contains last_term if {
+	some import_statement in module.imports
+	import_path := import_statement.path.value
+
+	last_term := import_path[count(import_path) - 1]
 }
 
 # METADATA

@@ -1960,6 +1960,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 					TokenTypes: []string{
 						"namespace",
 						"variable",
+						"namespace",
 					},
 					TokenModifiers: []string{
 						"declaration",
