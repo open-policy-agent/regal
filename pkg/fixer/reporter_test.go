@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
 )
 
@@ -60,9 +61,7 @@ func TestPrettyReporterOutput(t *testing.T) {
 		"/workspace/bundle2/policy1.rego",
 	)
 
-	if err := reporter.Report(report); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	must.Equal(t, nil, reporter.Report(report))
 
 	expected := `6 fixes applied:
 In project root: /workspace/bundle1
@@ -79,10 +78,7 @@ policy1.rego -> lib/policy2.rego:
 policy3.rego:
 - use-assignment-operator
 `
-
-	if got := buffer.String(); got != expected {
-		t.Fatalf("unexpected output:\nexpected:\n%s\ngot:\n%s", expected, got)
-	}
+	must.Equal(t, expected, buffer.String())
 }
 
 func TestPrettyReporterOutputWithConflicts(t *testing.T) {
@@ -131,9 +127,7 @@ func TestPrettyReporterOutputWithConflicts(t *testing.T) {
 		"/workspace/bundle1/baz.rego",
 	)
 
-	if err := reporter.Report(report); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	must.Equal(t, nil, reporter.Report(report))
 
 	expected := `Source file conflicts:
 In project root: /workspace/bundle1
@@ -148,7 +142,5 @@ Cannot move multiple files to: foo/policy1.rego
 - baz/policy2.rego
 `
 
-	if got := buffer.String(); got != expected {
-		t.Fatalf("unexpected output:\nexpected:\n%s\ngot:\n%s", expected, got)
-	}
+	must.Equal(t, expected, buffer.String())
 }

@@ -1,10 +1,8 @@
 package lsp
 
 import (
-	"maps"
 	"os"
 	"path/filepath"
-	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -13,7 +11,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/util"
 )
 
@@ -43,11 +42,11 @@ func TestEvalWorkspacePath(t *testing.T) {
 
 	policy1URI := uri.FromRelativePath(ls.client.Identifier, "policy1.rego", ls.workspaceRootURI)
 	policy1RelativeFileName := uri.ToRelativePath(policy1URI, ls.workspaceRootURI)
-	module1 := testutil.Must(rparse.ModuleWithOpts(policy1RelativeFileName, policy1, rparse.ParserOptions()))(t)
+	module1 := must.Return(rparse.ModuleWithOpts(policy1RelativeFileName, policy1, rparse.ParserOptions()))(t)
 
 	policy2URI := uri.FromRelativePath(ls.client.Identifier, "policy2.rego", ls.workspaceRootURI)
 	policy2RelativeFileName := uri.ToRelativePath(policy2URI, ls.workspaceRootURI)
-	module2 := testutil.Must(rparse.ModuleWithOpts(policy2RelativeFileName, policy2, rparse.ParserOptions()))(t)
+	module2 := must.Return(rparse.ModuleWithOpts(policy2RelativeFileName, policy2, rparse.ParserOptions()))(t)
 
 	ls.cache.SetFileContents(policy1URI, policy1)
 	ls.cache.SetFileContents(policy2URI, policy2)
@@ -56,15 +55,11 @@ func TestEvalWorkspacePath(t *testing.T) {
 
 	input := map[string]any{"exists": true}
 
-	res := testutil.Must(ls.EvalInWorkspace(t.Context(), "data.policy1.allow", input))(t)
-	if val, ok := res.Value.(bool); !ok || val != true {
-		t.Fatalf("expected true, got false")
-	}
+	res := must.Return(ls.EvalInWorkspace(t.Context(), "data.policy1.allow", input))(t)
+	assert.True(t, must.Be[bool](t, res.Value))
 
 	expectedPrintOutput := map[string]map[int][]string{policy2URI: {4: {"1"}}}
-	if diff := cmp.Diff(expectedPrintOutput, res.PrintOutput); diff != "" {
-		t.Fatalf("unexpected print output (-want +got):\n%s", diff)
-	}
+	must.Equal(t, "", cmp.Diff(expectedPrintOutput, res.PrintOutput), "print output")
 }
 
 func TestEvalWorkspacePathInternalData(t *testing.T) {
@@ -72,13 +67,11 @@ func TestEvalWorkspacePathInternalData(t *testing.T) {
 
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
-	res := testutil.Must(ls.EvalInWorkspace(t.Context(), "object.keys(data.internal)", map[string]any{}))(t)
-	val := testutil.MustBe[[]any](t, res.Value)
-	act := util.Sorted(testutil.Must(util.AnySliceTo[string](val))(t))
+	res := must.Return(ls.EvalInWorkspace(t.Context(), "object.keys(data.internal)", map[string]any{}))(t)
+	val := must.Be[[]any](t, res.Value)
+	act := util.Sorted(must.Return(util.AnySliceTo[string](val))(t))
 
-	if exp := []string{"capabilities", "combined_config", "user_config"}; !slices.Equal(exp, act) {
-		t.Fatalf("expected %v, got %v", exp, act)
-	}
+	assert.SlicesEqual(t, []string{"capabilities", "combined_config", "user_config"}, act)
 }
 
 func TestFindInputPath(t *testing.T) {
@@ -94,27 +87,19 @@ func TestFindInputPath(t *testing.T) {
 			workspacePath := filepath.Join(tmpDir, "workspace")
 			file := filepath.Join(tmpDir, "workspace", "foo", "bar", "baz.rego")
 
-			testutil.MustMkdirAll(t, workspacePath, "foo", "bar")
-
-			if path := rio.FindInputPath(file, workspacePath); path != "" {
-				t.Fatalf("did not expect to find input.%s", tc.fileExt)
-			}
+			must.MkdirAll(t, workspacePath, "foo", "bar")
+			must.Equal(t, "", rio.FindInputPath(file, workspacePath), "expected no input path to be found")
 
 			inputPath := filepath.Join(workspacePath, "foo", "bar", "input."+tc.fileExt)
 			createWithContent(t, inputPath, tc.fileContent)
 
-			if path, exp := rio.FindInputPath(file, workspacePath), inputPath; path != exp {
-				t.Errorf(`expected input at %s, got %s`, exp, path)
-			}
-
-			testutil.MustRemove(t, inputPath)
+			assert.Equal(t, inputPath, rio.FindInputPath(file, workspacePath), "input")
+			must.Remove(t, inputPath)
 
 			workspaceInputPath := filepath.Join(workspacePath, "input."+tc.fileExt)
 			createWithContent(t, workspaceInputPath, tc.fileContent)
 
-			if path, exp := rio.FindInputPath(file, workspacePath), workspaceInputPath; path != exp {
-				t.Errorf(`expected input at %s, got %s`, exp, path)
-			}
+			assert.Equal(t, workspaceInputPath, rio.FindInputPath(file, workspacePath), "input")
 		})
 	}
 }
@@ -132,38 +117,28 @@ func TestFindInput(t *testing.T) {
 			workspacePath := filepath.Join(tmpDir, "workspace")
 			file := filepath.Join(tmpDir, "workspace", "foo", "bar", "baz.rego")
 
-			testutil.MustMkdirAll(t, workspacePath, "foo", "bar")
+			must.MkdirAll(t, workspacePath, "foo", "bar")
 
-			if path, content := rio.FindInput(file, workspacePath); path != "" || content != nil {
-				t.Fatalf("did not expect to find input.%s", tc.fileType)
-			}
+			path, content := rio.FindInput(file, workspacePath)
+			must.Equal(t, "", path, "expected no input path to be found")
+			assert.MapsEqual(t, map[string]any{}, content, "expected no input content")
 
 			inputPath := filepath.Join(workspacePath, "foo", "bar", "input."+tc.fileType)
 
 			createWithContent(t, inputPath, tc.fileContent)
 
-			path, content := rio.FindInput(file, workspacePath)
-			if path != inputPath {
-				t.Errorf(`expected input at %s, got %s`, inputPath, path)
-			}
+			path, content = rio.FindInput(file, workspacePath)
+			assert.Equal(t, inputPath, path, "input path")
+			assert.MapsEqual(t, map[string]any{"x": true}, content, "input content")
 
-			if !maps.Equal(content, map[string]any{"x": true}) {
-				t.Errorf(`expected input {"x": true}, got %s`, content)
-			}
-
-			testutil.MustRemove(t, inputPath)
+			must.Remove(t, inputPath)
 
 			workspaceInputPath := filepath.Join(workspacePath, "input."+tc.fileType)
 			createWithContent(t, workspaceInputPath, tc.fileContent)
 
 			path, content = rio.FindInput(file, workspacePath)
-			if path != workspaceInputPath {
-				t.Errorf(`expected input at %s, got %s`, workspaceInputPath, path)
-			}
-
-			if !maps.Equal(content, map[string]any{"x": true}) {
-				t.Errorf(`expected input {"x": true} at, got %s`, content)
-			}
+			assert.Equal(t, workspaceInputPath, path, "input path")
+			assert.MapsEqual(t, map[string]any{"x": true}, content, "input content")
 		})
 	}
 }
@@ -171,9 +146,9 @@ func TestFindInput(t *testing.T) {
 func createWithContent(t *testing.T, path, content string) {
 	t.Helper()
 
-	testutil.NoErr(rio.WithCreateRecursive(path, func(f *os.File) error {
+	must.Equal(t, nil, rio.WithCreateRecursive(path, func(f *os.File) error {
 		_, err := f.WriteString(content)
 
 		return err
-	}))(t)
+	}))
 }

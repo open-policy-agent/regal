@@ -22,10 +22,10 @@ func (*importCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	write.ObjectStart(stream, imp.Location)
 
 	if imp.Path != nil {
-		write.Val(stream, strPath, imp.Path)
+		write.Val(stream, "path", imp.Path)
 
 		if imp.Alias != "" {
-			write.Val(stream, strAlias, imp.Alias)
+			write.Val(stream, "alias", imp.Alias)
 		}
 	}
 

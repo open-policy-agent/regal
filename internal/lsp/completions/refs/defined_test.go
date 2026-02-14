@@ -2,12 +2,12 @@ package refs
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/internal/test/assert"
 )
 
 func TestForModule_Package(t *testing.T) {
@@ -74,28 +74,16 @@ tags:
 	}
 
 	for key, item := range expectedRefs {
-		if _, ok := items[key]; !ok {
+		if _, ok := items[key]; ok {
+			assert.Equal(t, item.Label, items[key].Label, "label")
+			assert.Equal(t, item.Kind, items[key].Kind, "kind")
+			assert.Equal(t, item.Description, items[key].Description, "description")
+		} else {
 			t.Errorf("missing expected item %s", key)
-
-			continue
-		}
-
-		if items[key].Label != item.Label {
-			t.Errorf("expected label %q, got %q", item.Label, items[key].Label)
-		}
-
-		if items[key].Kind != item.Kind {
-			t.Errorf("expected documentation kind %q, got %q", item.Description, items[key].Description)
-		}
-
-		if items[key].Description != item.Description {
-			t.Errorf("expected description\n%s\ngot\n%s", item.Description, items[key].Description)
 		}
 	}
 
-	if len(items) != len(expectedRefs) {
-		t.Errorf("expected %d items, got %d", len(expectedRefs), len(items))
-	}
+	assert.Equal(t, len(expectedRefs), len(items), "number of items")
 }
 
 func TestRefsForModule_Rules(t *testing.T) {
@@ -167,30 +155,15 @@ A function that's really funky`,
 	}
 
 	for key, item := range expectedRefs {
-		if _, ok := items[key]; !ok {
+		if _, ok := items[key]; ok {
+			assert.Equal(t, item.Label, items[key].Label, "label")
+			assert.Equal(t, item.Kind, items[key].Kind, "kind")
+			assert.Equal(t, item.Detail, items[key].Detail, "detail")
+			assert.StringContains(t, items[key].Description, item.Description, "contains description")
+		} else {
 			t.Errorf("missing expected item %s", key)
-
-			continue
-		}
-
-		if items[key].Label != item.Label {
-			t.Errorf("expected label %q, got %q", item.Label, items[key].Label)
-		}
-
-		if items[key].Kind != item.Kind {
-			t.Errorf("expected kind %q, got %q", item.Kind, items[key].Kind)
-		}
-
-		if items[key].Detail != item.Detail {
-			t.Errorf("expected detail %q, got %q", item.Detail, items[key].Detail)
-		}
-
-		if !strings.Contains(items[key].Description, item.Description) {
-			t.Errorf("expected description\n%s\ngot\n%s", item.Description, items[key].Description)
 		}
 	}
 
-	if len(items) != len(expectedRefs) {
-		t.Errorf("expected %d items, got %d", len(expectedRefs), len(items))
-	}
+	assert.Equal(t, len(expectedRefs), len(items), "number of items")
 }

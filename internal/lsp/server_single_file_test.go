@@ -10,6 +10,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -105,7 +106,7 @@ rules:
       level: ignore
 `
 
-	testutil.MustWriteFile(t, filepath.Join(tempDir, ".regal", "config.yaml"), []byte(newConfigContents))
+	must.WriteFile(t, filepath.Join(tempDir, ".regal", "config.yaml"), []byte(newConfigContents))
 
 	// validate that the client received a new, empty diagnostics notification for the file
 	timeout.Reset(determineTimeout())
@@ -151,7 +152,7 @@ capabilities:
     version: v1.23.0
 `
 
-	testutil.MustWriteFile(t, filepath.Join(tempDir, ".regal", "config.yaml"), []byte(newConfigContents))
+	must.WriteFile(t, filepath.Join(tempDir, ".regal", "config.yaml"), []byte(newConfigContents))
 
 	// validate that the client received a new, empty diagnostics notification for the file
 	timeout.Reset(determineTimeout())
@@ -257,16 +258,13 @@ allow := neo4j.q
 			err := connClient.Call(reqCtx, "textDocument/completion", params, &resp)
 
 			reqCtxCancel()
+			must.Equal(t, nil, err, "failed to send completion request: %s", err)
 
-			if err != nil {
-				t.Fatalf("failed to send completion request: %s", err)
-			}
-
-			itemsList := testutil.MustBe[[]any](t, resp["items"])
+			itemsList := must.Be[[]any](t, resp["items"])
 
 			for _, itemI := range itemsList {
-				item := testutil.MustBe[map[string]any](t, itemI)
-				label := testutil.MustBe[string](t, item["label"])
+				item := must.Be[map[string]any](t, itemI)
+				label := must.Be[string](t, item["label"])
 
 				if label == "neo4j.query" {
 					success = true

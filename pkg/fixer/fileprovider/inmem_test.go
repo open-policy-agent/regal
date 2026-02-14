@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -15,7 +16,7 @@ func TestFromFS(t *testing.T) {
 		filepath.FromSlash("foo/bar/baz"): "bar",
 		filepath.FromSlash("bar/foo"):     "baz",
 	})
-	fp := testutil.Must(NewInMemoryFileProviderFromFS(
+	fp := must.Return(NewInMemoryFileProviderFromFS(
 		filepath.Join(tempDir, "foo", "bar", "baz"),
 		filepath.Join(tempDir, "bar", "foo"),
 	))(t)

@@ -2,9 +2,10 @@ package bundles
 
 import (
 	"path/filepath"
-	"reflect"
 	"testing"
 
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -22,9 +23,7 @@ func TestLoadDataBundle(t *testing.T) {
 				"foo/.manifest": `{"roots":["foo"]}`,
 				"foo/data.json": `{"foo": "bar"}`,
 			},
-			expectedData: map[string]any{
-				"foo": "bar",
-			},
+			expectedData: map[string]any{"foo": "bar"},
 		},
 		"nested bundle": {
 			path: "foo",
@@ -35,9 +34,7 @@ func TestLoadDataBundle(t *testing.T) {
 			},
 			expectedData: map[string]any{
 				"foo": "bar",
-				"bar": map[string]any{
-					"bar": "baz",
-				},
+				"bar": map[string]any{"bar": "baz"},
 			},
 		},
 		"array data": {
@@ -46,13 +43,7 @@ func TestLoadDataBundle(t *testing.T) {
 				filepath.FromSlash("foo/.manifest"):     `{"roots":["bar"]}`,
 				filepath.FromSlash("foo/bar/data.json"): `[{"foo": "bar"}]`,
 			},
-			expectedData: map[string]any{
-				"bar": []any{
-					map[string]any{
-						"foo": "bar",
-					},
-				},
-			},
+			expectedData: map[string]any{"bar": []any{map[string]any{"foo": "bar"}}},
 		},
 		"rego files": {
 			path: "foo",
@@ -69,19 +60,10 @@ func TestLoadDataBundle(t *testing.T) {
 			t.Parallel()
 
 			workspacePath := testutil.TempDirectoryOf(t, testData.files)
+			b := must.Return(LoadDataBundle(filepath.Join(workspacePath, testData.path)))(t)
 
-			b, err := LoadDataBundle(filepath.Join(workspacePath, testData.path))
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if !reflect.DeepEqual(b.Data, testData.expectedData) {
-				t.Fatalf("expected data to be %v, but got %v", testData.expectedData, b.Data)
-			}
-
-			if len(b.Modules) != 0 {
-				t.Fatalf("expected no modules, but got %d", len(b.Modules))
-			}
+			assert.DeepEqual(t, testData.expectedData, b.Data, "bundle data")
+			assert.Equal(t, 0, len(b.Modules), "number of modules")
 		})
 	}
 }

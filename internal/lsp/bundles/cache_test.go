@@ -2,12 +2,12 @@ package bundles
 
 import (
 	"io"
-	"maps"
 	"path/filepath"
-	"slices"
 	"testing"
 
 	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -22,78 +22,48 @@ func TestRefresh(t *testing.T) {
 	c := NewCache(workspacePath, log.NewLogger(log.LevelOff, io.Discard))
 
 	// perform the first load of the bundles
-	refreshedBundles := testutil.Must(c.Refresh())(t)
-
-	if !slices.Equal(refreshedBundles, []string{"foo"}) {
-		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
-	}
-
-	if len(c.List()) != 1 {
-		t.Fatalf("unexpected number of bundles: %d", len(c.List()))
-	}
+	refreshedBundles := must.Return(c.Refresh())(t)
+	assert.SlicesEqual(t, []string{"foo"}, refreshedBundles, "refresh first load")
+	must.Equal(t, 1, len(c.List()), "number of bundles")
 
 	fooBundle := testutil.MustBeOK(c.Get("foo"))(t)
-	if !maps.Equal(fooBundle.Data, map[string]any{"foo": "bar"}) {
-		t.Fatalf("unexpected bundle data: %v", fooBundle.Data)
-	}
-
-	if fooBundle.Manifest.Roots == nil {
-		t.Fatalf("unexpected bundle roots: %v", fooBundle.Manifest.Roots)
-	}
-
-	if !slices.Equal(*fooBundle.Manifest.Roots, []string{"foo"}) {
-		t.Fatalf("unexpected bundle roots: %v", *fooBundle.Manifest.Roots)
-	}
+	assert.MapsEqual(t, map[string]any{"foo": "bar"}, fooBundle.Data, "bundle data")
+	must.NotEqual(t, nil, fooBundle.Manifest.Roots, "bundle roots")
+	assert.SlicesEqual(t, []string{"foo"}, *fooBundle.Manifest.Roots, "bundle roots")
 
 	// perform the second load of the bundles, after no changes on disk
-	refreshedBundles = testutil.Must(c.Refresh())(t)
-
-	if !slices.Equal(refreshedBundles, []string{}) {
-		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
-	}
+	refreshedBundles = must.Return(c.Refresh())(t)
+	assert.SlicesEqual(t, []string{}, refreshedBundles, "refresh no changes")
 
 	// add a new unrelated file
-	testutil.MustWriteFile(t, filepath.Join(workspacePath, "foo", "foo.rego"), []byte(`package wow`))
+	must.WriteFile(t, filepath.Join(workspacePath, "foo", "foo.rego"), []byte(`package wow`))
 
 	// perform the third load of the bundles, after adding a new unrelated file
-	refreshedBundles = testutil.Must(c.Refresh())(t)
-	if !slices.Equal(refreshedBundles, []string{}) {
-		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
-	}
-
+	refreshedBundles = must.Return(c.Refresh())(t)
+	assert.SlicesEqual(t, []string{}, refreshedBundles, "refresh unrelated file")
 	// update the data in the bundle
-	testutil.MustWriteFile(t, filepath.Join(workspacePath, "foo", "data.json"), []byte(`{"foo": "baz"}`))
+	must.WriteFile(t, filepath.Join(workspacePath, "foo", "data.json"), []byte(`{"foo": "baz"}`))
 
-	refreshedBundles = testutil.Must(c.Refresh())(t)
-	if !slices.Equal(refreshedBundles, []string{"foo"}) {
-		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
-	}
+	refreshedBundles = must.Return(c.Refresh())(t)
+	assert.SlicesEqual(t, []string{"foo"}, refreshedBundles, "refresh updated bundle")
 
 	fooBundle = testutil.MustBeOK(c.Get("foo"))(t)
-	if !maps.Equal(fooBundle.Data, map[string]any{"foo": "baz"}) {
-		t.Fatalf("unexpected bundle data: %v", fooBundle.Data)
-	}
+	assert.MapsEqual(t, map[string]any{"foo": "baz"}, fooBundle.Data, "bundle data")
 
 	// create a new bundle
-	testutil.MustMkdirAll(t, workspacePath, "bar")
-	testutil.MustWriteFile(t, filepath.Join(workspacePath, "bar", ".manifest"), []byte(`{"roots":["bar"]}`))
-	testutil.MustWriteFile(t, filepath.Join(workspacePath, "bar", "data.json"), []byte(`{"bar": true}`))
+	must.MkdirAll(t, workspacePath, "bar")
+	must.WriteFile(t, filepath.Join(workspacePath, "bar", ".manifest"), []byte(`{"roots":["bar"]}`))
+	must.WriteFile(t, filepath.Join(workspacePath, "bar", "data.json"), []byte(`{"bar": true}`))
 
-	refreshedBundles = testutil.Must(c.Refresh())(t)
-	if !slices.Equal(refreshedBundles, []string{"bar"}) {
-		t.Fatalf("unexpected refreshed bundles: %v", refreshedBundles)
-	}
+	refreshedBundles = must.Return(c.Refresh())(t)
+	assert.SlicesEqual(t, []string{"bar"}, refreshedBundles, "refresh new bundle")
 
 	barBundle := testutil.MustBeOK(c.Get("bar"))(t)
-	if !maps.Equal(barBundle.Data, map[string]any{"bar": true}) {
-		t.Fatalf("unexpected bundle data: %v", fooBundle.Data)
-	}
+	assert.MapsEqual(t, map[string]any{"bar": true}, barBundle.Data, "bundle data")
 
 	// remove the foo bundle
-	testutil.MustRemoveAll(t, workspacePath, "foo")
+	must.RemoveAll(t, workspacePath, "foo")
 
-	_ = testutil.Must(c.Refresh())(t)
-	if !slices.Equal(c.List(), []string{"bar"}) {
-		t.Fatalf("unexpected bundle list: %v", c.List())
-	}
+	_ = must.Return(c.Refresh())(t)
+	assert.SlicesEqual(t, []string{"bar"}, c.List(), "bundle list")
 }

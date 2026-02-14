@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestCheckAndWarn(t *testing.T) {
@@ -18,7 +19,7 @@ func TestCheckAndWarn(t *testing.T) {
 	localReleasesServer := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			testutil.MustWrite(t, w, `{"tag_name": "v0.2.0"}`)
+			must.Write(t, w, `{"tag_name": "v0.2.0"}`)
 
 			remoteCalls++
 		}),
@@ -37,41 +38,25 @@ func TestCheckAndWarn(t *testing.T) {
 	}
 
 	output := checkAndWarn(t, opts, w)
-	if remoteCalls != 1 {
-		t.Errorf("expected 1 remote call, got %d", remoteCalls)
-	}
+	assert.Equal(t, 1, remoteCalls, "remote calls")
 
 	expectedOutput := `A new version of Regal is available (v0.2.0). You are running v0.1.0.
 See https://github.com/open-policy-agent/regal/releases/tag/v0.2.0 for the latest release.`
 
-	if !strings.Contains(output, expectedOutput) {
-		t.Fatalf("expected output to contain\n%s,\ngot\n%s", expectedOutput, output)
-	}
+	assert.StringContains(t, output, expectedOutput, "output")
 
 	// run the function again and check that the state is loaded from disk
 	output = checkAndWarn(t, opts, w)
-	if remoteCalls != 1 {
-		t.Errorf("expected remote to only be called once, got %d", remoteCalls)
-	}
-
-	// the same output is expected based on the data on disk
-	if !strings.Contains(output, expectedOutput) {
-		t.Fatalf("expected output to contain\n%s,\ngot\n%s", expectedOutput, output)
-	}
+	assert.Equal(t, 1, remoteCalls, "remote calls")
+	assert.StringContains(t, output, expectedOutput, "output") // output expected based on the data on disk
 
 	// update the time to sometime in the future
 	opts.CurrentTime = opts.CurrentTime.Add(4 * 24 * time.Hour)
 
 	// run the function again and check that the state is loaded from the remote again
 	output = checkAndWarn(t, opts, w)
-	if remoteCalls != 2 {
-		t.Errorf("expected remote to be called again, got %d", remoteCalls)
-	}
-
-	// the same output is expected again
-	if !strings.Contains(output, expectedOutput) {
-		t.Fatalf("expected output to contain\n%s,\ngot\n%s", expectedOutput, output)
-	}
+	assert.Equal(t, 2, remoteCalls, "remote calls")
+	assert.StringContains(t, output, expectedOutput, "output") // same output expected again
 
 	// if the version is not a semver, then there should be no update warning
 	opts.CurrentVersion = "not-semver"
@@ -82,31 +67,20 @@ See https://github.com/open-policy-agent/regal/releases/tag/v0.2.0 for the lates
 	}
 
 	// contains debug message when debug is enabled
-	if !strings.Contains(output, "Skipping version check: invalid semver") {
-		t.Fatalf("expected debug message for invalid semver when debug=true, got\n%s", output)
-	}
+	assert.StringContains(t, output, "Skipping version check: invalid semver", "debug=true, message expected")
 
 	// debug disabled, no output at all
 	opts.Debug = false
-	if output = checkAndWarn(t, opts, w); output != "" {
-		t.Fatalf("expected no output when debug=false and invalid semver, got\n%s", output)
-	}
-
-	opts.Debug = true
+	must.Equal(t, "", checkAndWarn(t, opts, w), "debug=false, expected no output")
 
 	// if the version is greater than the latest version, then there should be no output
 	opts.CurrentVersion = "v0.3.0"
-
 	opts.Debug = false
-	if output = checkAndWarn(t, opts, w); output != "" {
-		t.Fatalf("expected no output, got\n%s", output)
-	}
+	must.Equal(t, "", checkAndWarn(t, opts, w), "expected no output")
 
 	// if the version is the same as the latest version, then there should be no output
 	opts.CurrentVersion = "v0.2.0"
-	if output = checkAndWarn(t, opts, w); output != "" {
-		t.Fatalf("expected no output, got\n%s", output)
-	}
+	must.Equal(t, "", checkAndWarn(t, opts, w), "expected no output")
 }
 
 func checkAndWarn(t *testing.T, opts Options, bb *bytes.Buffer) string {

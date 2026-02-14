@@ -143,11 +143,11 @@ func fix(args []string, params *fixParams) (err error) {
 		WithDebugMode(params.debug)
 
 	if customRulesDir != "" {
-		l = l.WithCustomRules([]string{customRulesDir})
+		l = l.WithCustomRulesPaths(customRulesDir)
 	}
 
 	if params.rules.isSet {
-		l = l.WithCustomRules(params.rules.v)
+		l = l.WithCustomRulesPaths(params.rules.v...)
 	}
 
 	if params.ignoreFiles.isSet {

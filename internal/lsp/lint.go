@@ -195,7 +195,7 @@ func updateFileDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
 	}
 
 	if opts.CustomRulesPath != "" {
-		regalInstance = regalInstance.WithCustomRules([]string{opts.CustomRulesPath})
+		regalInstance = regalInstance.WithCustomRulesPaths(opts.CustomRulesPath)
 	}
 
 	rpt, err := regalInstance.Lint(ctx)
@@ -246,7 +246,7 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (e
 	}
 
 	if opts.CustomRulesPath != "" {
-		regalInstance = regalInstance.WithCustomRules([]string{opts.CustomRulesPath})
+		regalInstance = regalInstance.WithCustomRulesPaths(opts.CustomRulesPath)
 	}
 
 	if opts.AggregateReportOnly {

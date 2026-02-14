@@ -20,7 +20,7 @@ func (*withCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	with := *((*ast.With)(ptr))
 
 	write.ObjectStart(stream, with.Location)
-	write.Val(stream, strTarget, with.Target)
-	write.Val(stream, strValue, with.Value)
+	write.Val(stream, "target", with.Target)
+	write.Val(stream, "value", with.Value)
 	write.ObjectEnd(stream)
 }

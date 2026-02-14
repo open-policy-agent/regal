@@ -23,9 +23,8 @@ func TestParse(t *testing.T) {
 				Command:   "example",
 				Arguments: []any{"target"},
 			},
-			ParseOptions:     ParseOptions{TargetArgIndex: 0},
-			ExpectedTarget:   "target",
-			ExpectedLocation: nil,
+			ParseOptions:   ParseOptions{TargetArgIndex: 0},
+			ExpectedTarget: "target",
 		},
 		"extract target and location": {
 			ExecuteCommandParams: types.ExecuteCommandParams{
@@ -104,7 +103,6 @@ func TestParse_Errors(t *testing.T) {
 			t.Parallel()
 
 			_, err := Parse(tc.ExecuteCommandParams, tc.ParseOptions)
-
 			testutil.ErrMustContain(err, tc.ExpectedError)(t)
 		})
 	}

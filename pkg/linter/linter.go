@@ -142,6 +142,8 @@ func (l Linter) WithAddedBundle(b *bundle.Bundle) Linter {
 }
 
 // WithCustomRules adds custom rules for evaluation, from the Rego (and data) files provided at paths.
+//
+// Deprecated: use WithCustomRulesPaths instead.
 func (l Linter) WithCustomRules(paths []string) Linter {
 	for _, path := range paths {
 		if rio.IsDir(path) {
@@ -159,6 +161,19 @@ func (l Linter) WithCustomRules(paths []string) Linter {
 	}
 
 	return l.notPrepared()
+}
+
+// WithCustomRulesPaths adds custom rules for evaluation, from the Rego (and data) files provided at paths.
+// Empty strings are ignored.
+func (l Linter) WithCustomRulesPaths(paths ...string) Linter {
+	nonEmpty := paths[:0]
+	for _, path := range paths {
+		if path != "" {
+			nonEmpty = append(nonEmpty, path)
+		}
+	}
+
+	return l.WithCustomRules(nonEmpty)
 }
 
 // WithCustomRulesFromFS adds custom rules for evaluation from a filesystem implementing the fs.FS interface.

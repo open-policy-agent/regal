@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
 
@@ -14,19 +16,11 @@ func TestProcessBuiltinUpdateExitsOnMissingFile(t *testing.T) {
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 	ls.loadedConfig = &config.Config{}
 
-	if err := ls.processHoverContentUpdate(t.Context(), "file://missing.rego"); err != nil {
-		t.Fatal(err)
-	}
+	must.Equal(t, nil, ls.processHoverContentUpdate(t.Context(), "file://missing.rego"))
+	assert.Equal(t, 0, len(ls.cache.GetAllBuiltInPositions()), "builtin positions cached")
 
-	if l := len(ls.cache.GetAllBuiltInPositions()); l != 0 {
-		t.Errorf("expected builtin positions to be empty, got %d items", l)
-	}
-
-	if contents, ok := ls.cache.GetFileContents("file://missing.rego"); ok {
-		t.Errorf("expected file contents to be empty, got %s", contents)
-	}
-
-	if len(ls.cache.GetAllFiles()) != 0 {
-		t.Errorf("expected files to be empty, got %v", ls.cache.GetAllFiles())
-	}
+	contents, ok := ls.cache.GetFileContents("file://missing.rego")
+	assert.False(t, ok, "file contents")
+	assert.Equal(t, "", contents, "file contents")
+	assert.Equal(t, 0, len(ls.cache.GetAllFiles()), "cached files")
 }

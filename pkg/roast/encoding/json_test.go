@@ -54,8 +54,7 @@ test_foo if {
 		t.Fatal(err)
 	}
 
-	_, err = JSON().Marshal(module)
-	if err != nil {
+	if _, err = JSON().Marshal(module); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -67,9 +66,7 @@ func TestJSONRoundTripBigNumber(t *testing.T) {
 	module := ast.MustParseModule("package p\n\nn := 1e400")
 
 	var modMap map[string]any
-
-	err := JSONRoundTrip(module, &modMap)
-	if err != nil {
+	if err := JSONRoundTrip(module, &modMap); err != nil {
 		t.Fatalf("failed to marshal module: %v", err)
 	}
 }

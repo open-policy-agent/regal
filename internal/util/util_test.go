@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestFindClosestMatchingRoot(t *testing.T) {
@@ -36,10 +36,9 @@ func TestFindClosestMatchingRoot(t *testing.T) {
 			expected: "/c/b",
 		},
 		{
-			name:     "no matching root",
-			roots:    []string{"/a/b/c"},
-			path:     "/d",
-			expected: "",
+			name:  "no matching root",
+			roots: []string{"/a/b/c"},
+			path:  "/d",
 		},
 		// Windows-style path tests
 		{
@@ -61,10 +60,9 @@ func TestFindClosestMatchingRoot(t *testing.T) {
 			expected: `C:\c\b`,
 		},
 		{
-			name:     "windows no matching root",
-			roots:    []string{`C:\a\b\c`},
-			path:     `C:\d`,
-			expected: "",
+			name:  "windows no matching root",
+			roots: []string{`C:\a\b\c`},
+			path:  `C:\d`,
 		},
 		{
 			name:     "windows with drive letters",
@@ -74,44 +72,23 @@ func TestFindClosestMatchingRoot(t *testing.T) {
 		},
 		// Mixed separator tests (shouldn't happen in practice)
 		{
-			name:     "unix path with windows roots (no match expected)",
-			roots:    []string{`C:\a\b`, `C:\a`},
-			path:     "/a/b/c",
-			expected: "",
+			name:  "unix path with windows roots (no match expected)",
+			roots: []string{`C:\a\b`, `C:\a`},
+			path:  "/a/b/c",
 		},
 		{
-			name:     "windows path with unix roots (no match expected)",
-			roots:    []string{"/a/b", "/a"},
-			path:     `C:\a\b\c`,
-			expected: "",
+			name:  "windows path with unix roots (no match expected)",
+			roots: []string{"/a/b", "/a"},
+			path:  `C:\a\b\c`,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-
-			got := FindClosestMatchingRoot(test.path, test.roots)
-			if got != test.expected {
-				t.Fatalf("expected %v, got %v", test.expected, got)
-			}
+			must.Equal(t, test.expected, FindClosestMatchingRoot(test.path, test.roots))
 		})
 	}
-}
-
-func BenchmarkStringRepeatMake(b *testing.B) {
-	for b.Loop() {
-		_ = stringRepeatMake("test", 1000)
-	}
-}
-
-func stringRepeatMake(s string, n int) []*ast.Term {
-	sl := make([]*ast.Term, n)
-	for i := range s {
-		sl[i] = &ast.Term{Value: ast.String("test")}
-	}
-
-	return sl
 }
 
 // Without pre-allocating, this is more than twice as slow and results in 5 allocs/op.
@@ -177,10 +154,7 @@ func TestLineContents(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-
-			if got := LineContents(src, test.line); string(got) != test.expected {
-				t.Fatalf("expected %q, got %q", test.expected, string(got))
-			}
+			must.Equal(t, test.expected, string(LineContents(src, test.line)), "line contents")
 		})
 	}
 }

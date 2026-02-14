@@ -13,6 +13,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -89,7 +90,7 @@ allow := true
       level: ignore
 `
 
-	testutil.MustWriteFile(t, filepath.Join(tempDir, ".regal", "config.yaml"), []byte(newConfigContents))
+	must.WriteFile(t, filepath.Join(tempDir, ".regal", "config.yaml"), []byte(newConfigContents))
 
 	// validate that the client received a new, empty diagnostics notification for the file
 	timeout.Reset(determineTimeout())
@@ -205,7 +206,7 @@ rules:
       level: error
 `
 
-	testutil.MustWriteFile(t, filepath.Join(tempDir, ".regal", "config.yaml"), []byte(configContents2))
+	must.WriteFile(t, filepath.Join(tempDir, ".regal", "config.yaml"), []byte(configContents2))
 	timeout.Reset(determineTimeout())
 
 	for success := false; !success; {

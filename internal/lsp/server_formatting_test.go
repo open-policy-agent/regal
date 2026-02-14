@@ -10,7 +10,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestFormatting(t *testing.T) {
@@ -33,22 +33,13 @@ func TestFormatting(t *testing.T) {
 	// Simple as possible — opa fmt should just remove a newline
 	ls.cache.SetFileContents(mainRegoURI, "package main\n\n")
 
-	res := testutil.Must(ls.handleTextDocumentFormatting(ctx, types.DocumentFormattingParams{
+	res := must.Return(ls.handleTextDocumentFormatting(ctx, types.DocumentFormattingParams{
 		TextDocument: types.TextDocumentIdentifier{URI: mainRegoURI},
 		Options:      types.FormattingOptions{},
 	}))(t)
 
-	edits := testutil.MustBe[[]types.TextEdit](t, res)
-	if len(edits) != 1 {
-		t.Fatalf("expected 1 edit, got %d", len(edits))
-	}
-
-	expectRange := types.RangeBetween(1, 0, 2, 0)
-	if edits[0].Range != expectRange {
-		t.Fatalf("expected range to be %v, got %v", expectRange, edits[0].Range)
-	}
-
-	if edits[0].NewText != "" {
-		t.Fatalf("expected new text to be empty, got %s", edits[0].NewText)
-	}
+	edits := must.Be[[]types.TextEdit](t, res)
+	must.Equal(t, 1, len(edits), "num edits")
+	must.Equal(t, types.RangeBetween(1, 0, 2, 0), edits[0].Range, "edit range")
+	must.Equal(t, "", edits[0].NewText, "edit new text")
 }

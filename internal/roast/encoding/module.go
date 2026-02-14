@@ -27,20 +27,20 @@ func (*moduleCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 			stream.Attachment = util.Filter(mod.Annotations, notDocumentOrRuleScope)
 		}
 
-		encutil.Val(stream, strPackage, mod.Package)
+		encutil.Val(stream, "package", mod.Package)
 		stream.Attachment = nil
 	}
 
 	if len(mod.Imports) > 0 {
-		encutil.ValsArrayAttr(stream, strImports, mod.Imports)
+		encutil.ValsArrayAttr(stream, "imports", mod.Imports)
 	}
 
 	if len(mod.Rules) > 0 {
-		encutil.ValsArrayAttr(stream, strRules, mod.Rules)
+		encutil.ValsArrayAttr(stream, "rules", mod.Rules)
 	}
 
 	if len(mod.Comments) > 0 {
-		encutil.ValsArrayAttr(stream, strComments, mod.Comments)
+		encutil.ValsArrayAttr(stream, "comments", mod.Comments)
 	}
 
 	encutil.ObjectEnd(stream)

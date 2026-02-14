@@ -15,6 +15,8 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/mode"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
@@ -203,9 +205,7 @@ func TestLintRuleNamingConventionFromCustomCategory(t *testing.T) {
 	}
 
 	for _, violation := range rep.Violations {
-		if !slices.Contains(expectedViolations, violation.Description) {
-			t.Errorf("unexpected violation: %s", violation.Description)
-		}
+		assert.True(t, slices.Contains(expectedViolations, violation.Description), "missing %s", violation.Description)
 	}
 }
 
@@ -265,9 +265,7 @@ func TestLintAggregateIgnoreDirective(t *testing.T) {
 	testutil.AssertOnlyViolations(t, rep, "no-defined-entrypoint", "unresolved-import")
 
 	// ensure that it's the file without the ignore directive that has the violation
-	if !strings.HasSuffix(rep.Violations[1].Location.File, "second.rego") {
-		t.Errorf("expected violation in second.rego, got %q", rep.Violations[1].Location.File)
-	}
+	assert.True(t, strings.HasSuffix(rep.Violations[1].Location.File, "second.rego"))
 }
 
 func TestTestRegalBundledBundle(t *testing.T) {
@@ -662,7 +660,7 @@ func cwd(rel string) string {
 
 func readProvidedConfig(t *testing.T) config.Config {
 	t.Helper()
-	return testutil.Must(config.FromPath(cwd("../bundle/regal/config/provided/data.yaml")))(t)
+	return must.Return(config.FromPath(cwd("../bundle/regal/config/provided/data.yaml")))(t)
 }
 
 // use for skipping tests on simple conditions, such as OS or build mode.

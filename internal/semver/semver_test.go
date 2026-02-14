@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/regal/internal/semver"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 type (
@@ -78,10 +80,7 @@ func TestCompareEqual(t *testing.T) {
 	for _, v := range equalFixtures {
 		a := semver.MustParse(v)
 		o := a
-
-		if a.Compare(o) != 0 {
-			t.Errorf("Expected %s to be equal to %s", a, o)
-		}
+		assert.Equal(t, 0, a.Compare(o), "expected equal")
 	}
 }
 
@@ -92,13 +91,8 @@ func TestCompare(t *testing.T) {
 		gt := semver.MustParse(v.greater)
 		lt := semver.MustParse(v.lesser)
 
-		if gt.Compare(lt) <= 0 {
-			t.Errorf("%s should be greater than %s", gt, lt)
-		}
-
-		if lt.Compare(gt) > 0 {
-			t.Errorf("%s should not be greater than %s", lt, gt)
-		}
+		assert.True(t, gt.Compare(lt) > 0, "%s should be greater than %s", gt, lt)
+		assert.True(t, lt.Compare(gt) <= 0, "%s should be less than %s", lt, gt)
 	}
 }
 
@@ -115,9 +109,8 @@ func TestBadInput(t *testing.T) {
 		"0.88.0+11_e4e5dcabb",
 	}
 	for _, b := range bad {
-		if _, err := semver.Parse(b); err == nil {
-			t.Error("Improperly accepted value: ", b)
-		}
+		_, err := semver.Parse(b)
+		assert.NotNil(t, err, "improperly accepted value: %s", b)
 	}
 }
 
@@ -132,13 +125,8 @@ func BenchmarkCompare(b *testing.B) {
 
 	for b.Loop() {
 		for _, v := range versionFixtures {
-			if v.greater.Compare(v.lesser) <= 0 {
-				b.Fatalf("%s should be greater than %s", v.greater, v.lesser)
-			}
-
-			if v.lesser.Compare(v.greater) > 0 {
-				b.Fatalf("%s should not be greater than %s", v.lesser, v.greater)
-			}
+			assert.True(b, v.greater.Compare(v.lesser) > 0)
+			assert.True(b, v.lesser.Compare(v.greater) <= 0)
 		}
 	}
 }
@@ -173,27 +161,16 @@ func BenchmarkAppendText(b *testing.B) {
 	v := semver.MustParse("1.2.3-alpha.1+build.123")
 
 	for b.Loop() {
-		_, err := v.AppendText(nil)
-		if err != nil {
-			b.Fatal(err)
-		}
+		must.Return(v.AppendText(nil))(b)
 	}
 }
 
 func BenchmarkAppendTextPreAllocated(b *testing.B) {
-	v, err := semver.Parse("1.2.3-alpha.1+build.123")
-	if err != nil {
-		b.Fatal(err)
-	}
-
+	smv := semver.MustParse("1.2.3-alpha.1+build.123")
 	buf := make([]byte, 0, 32)
 
 	for b.Loop() {
-		if buf, err = v.AppendText(buf); err != nil {
-			b.Fatal(err)
-		}
-
-		if string(buf) != "1.2.3-alpha.1+build.123" {
+		if buf = must.Return(smv.AppendText(buf))(b); string(buf) != "1.2.3-alpha.1+build.123" {
 			b.Fatal("unexpected version string")
 		}
 

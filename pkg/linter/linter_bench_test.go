@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/regal/bundle"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/report"
@@ -17,9 +18,9 @@ func BenchmarkRegalLintingItself(b *testing.B) {
 	for b.Loop() {
 		linter := NewLinter().
 			WithInputPaths([]string{"../../bundle"}).
-			WithUserConfig(testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b))
+			WithUserConfig(must.Return(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b))
 
-		testutil.AssertNumViolations(b, 0, testutil.Must(linter.Lint(b.Context()))(b))
+		testutil.AssertNumViolations(b, 0, must.Return(linter.Lint(b.Context()))(b))
 	}
 }
 
@@ -61,7 +62,7 @@ func BenchmarkRegalNoEnabledRulesPrepareOnce(b *testing.B) {
 // meaning you do NOT want to do this more than occasionally. You may however find it helpful to use this with
 // a single, or handful of rules to get a better idea of how long they take to run, and relative to each other.
 func BenchmarkEachRule(b *testing.B) {
-	config := testutil.Must(config.WithDefaultsFromBundle(bundle.Loaded(), nil))(b)
+	config := must.Return(config.WithDefaultsFromBundle(bundle.Loaded(), nil))(b)
 	linter := bundleLinter(b, false).WithDisableAll(true).MustPrepare(b.Context())
 
 	for _, category := range config.Rules {
@@ -84,7 +85,7 @@ func bundleLinter(b *testing.B, withConfig bool) Linter {
 	linter := NewLinter().WithInputPaths([]string{"../../bundle"})
 
 	if withConfig {
-		config := testutil.Must(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
+		config := must.Return(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
 		linter = linter.WithUserConfig(config)
 	}
 
@@ -96,7 +97,7 @@ func benchmarkLint(b *testing.B, linter Linter) {
 
 	var rep report.Report
 	for b.Loop() {
-		rep = testutil.Must(linter.Lint(b.Context()))(b)
+		rep = must.Return(linter.Lint(b.Context()))(b)
 	}
 
 	testutil.AssertNumViolations(b, 0, rep)

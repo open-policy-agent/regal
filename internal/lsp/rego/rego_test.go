@@ -7,13 +7,12 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/parse"
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestAllRuleHeadLocations(t *testing.T) {
 	t.Parallel()
 
-	qc := query.NewCache()
 	contents := `package p
 
 	default allow := false
@@ -24,52 +23,30 @@ func TestAllRuleHeadLocations(t *testing.T) {
 	foo.bar[x] if x := 1
 	foo.bar[x] if x := 2`
 
-	pq := testutil.Must(qc.GetOrSet(t.Context(), inmem.New(), query.RuleHeadLocations))(t)
+	pq := must.Return(query.NewCache().GetOrSet(t.Context(), inmem.New(), query.RuleHeadLocations))(t)
 	module := parse.MustParseModule(contents)
-	ruleHeads := testutil.Must(AllRuleHeadLocations(t.Context(), pq, "p.rego", contents, module))(t)
+	ruleHeads := must.Return(AllRuleHeadLocations(t.Context(), pq, "p.rego", contents, module))(t)
 
-	if len(ruleHeads) != 2 {
-		t.Fatalf("expected 2 code lenses, got %d", len(ruleHeads))
-	}
-
-	if len(ruleHeads["data.p.allow"]) != 3 {
-		t.Fatalf("expected 3 allow rule heads, got %d", len(ruleHeads["data.p.allow"]))
-	}
-
-	if len(ruleHeads["data.p.foo.bar"]) != 2 {
-		t.Fatalf("expected 2 foo.bar rule heads, got %d", len(ruleHeads["data.p.foo.bar"]))
-	}
+	must.Equal(t, 2, len(ruleHeads), "rules with heads")
+	must.Equal(t, 3, len(ruleHeads["data.p.allow"]), "allow rule heads")
+	must.Equal(t, 2, len(ruleHeads["data.p.foo.bar"]), "foo.bar rule heads")
 }
 
 func TestAllKeywords(t *testing.T) {
 	t.Parallel()
 
-	qc := query.NewCache()
-
 	contents := `package p
 
 	import data.foo
 
-	my_set contains "x" if true
-	`
+	my_set contains "x" if true`
 
-	pq := testutil.Must(qc.GetOrSet(t.Context(), inmem.New(), query.Keywords))(t)
-	keywords := testutil.Must(AllKeywords(t.Context(), pq, "p.rego", contents, parse.MustParseModule(contents)))(t)
+	pq := must.Return(query.NewCache().GetOrSet(t.Context(), inmem.New(), query.Keywords))(t)
+	keywords := must.Return(AllKeywords(t.Context(), pq, "p.rego", contents, parse.MustParseModule(contents)))(t)
 
 	// this is "lines with keywords", not number of keywords
-	if len(keywords) != 3 {
-		t.Fatalf("expected 1 keyword, got %d", len(keywords))
-	}
-
-	if len(keywords["1"]) != 1 {
-		t.Fatalf("expected 1 keywords on line 1, got %d", len(keywords["1"]))
-	}
-
-	if len(keywords["3"]) != 1 {
-		t.Fatalf("expected 1 keywords on line 3, got %d", len(keywords["1"]))
-	}
-
-	if len(keywords["5"]) != 2 {
-		t.Fatalf("expected 2 keywords on line 5, got %d", len(keywords["1"]))
-	}
+	must.Equal(t, 3, len(keywords), "lines with keywords")
+	must.Equal(t, 1, len(keywords["1"]), "line 1 keywords")
+	must.Equal(t, 1, len(keywords["3"]), "line 3 keywords")
+	must.Equal(t, 2, len(keywords["5"]), "line 5 keywords")
 }

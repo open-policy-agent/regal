@@ -20,9 +20,9 @@ func (*everyCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	every := *((*ast.Every)(ptr))
 
 	write.ObjectStart(stream, every.Location)
-	write.Val(stream, strKey, every.Key)
-	write.Val(stream, strValue, every.Value)
-	write.Val(stream, strDomain, every.Domain)
-	write.Val(stream, strBody, every.Body)
+	write.Val(stream, "key", every.Key)
+	write.Val(stream, "value", every.Value)
+	write.Val(stream, "domain", every.Domain)
+	write.Val(stream, "body", every.Body)
 	write.ObjectEnd(stream)
 }

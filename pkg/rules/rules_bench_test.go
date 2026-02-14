@@ -5,7 +5,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/rules"
 )
@@ -39,5 +39,5 @@ func bundleDirPaths(b *testing.B) []string {
 	bundle := []string{"../../bundle"}
 	ignore := []string{}
 
-	return testutil.Must(config.FilterIgnoredPaths(bundle, ignore, true, ""))(b)
+	return must.Return(config.FilterIgnoredPaths(bundle, ignore, true, ""))(b)
 }

@@ -23,23 +23,23 @@ func (*ruleCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	write.ObjectStart(stream, rule.Location)
 
 	if len(rule.Annotations) > 0 {
-		write.ValsArrayAttr(stream, strAnnotations, rule.Annotations)
+		write.ValsArrayAttr(stream, "annotations", rule.Annotations)
 	}
 
 	if rule.Default {
-		write.Bool(stream, strDefault, rule.Default)
+		write.Bool(stream, "default", rule.Default)
 	}
 
 	if rule.Head != nil {
-		write.Val(stream, strHead, rule.Head)
+		write.Val(stream, "head", rule.Head)
 	}
 
 	if !rast.IsBodyGenerated(&rule) {
-		write.Val(stream, strBody, rule.Body)
+		write.Val(stream, "body", rule.Body)
 	}
 
 	if rule.Else != nil {
-		write.Val(stream, strElse, rule.Else)
+		write.Val(stream, "else", rule.Else)
 	}
 
 	write.ObjectEnd(stream)

@@ -1,7 +1,6 @@
 package lsp
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -10,7 +9,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/parse"
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/report"
 )
@@ -48,8 +48,6 @@ p = true { 1 == }
 				Code:  "rego-parse-error",
 				Range: types.RangeBetween(2, 13, 2, 13),
 			}},
-			expectModule:  false,
-			expectSuccess: false,
 		},
 		"empty file": {
 			fileURI:     "file:///empty.rego",
@@ -59,16 +57,12 @@ p = true { 1 == }
 				Code:  "rego-parse-error",
 				Range: types.RangeBetween(0, 0, 0, 0),
 			}},
-			expectModule:  false,
-			expectSuccess: false,
 		},
 		"parse error due to version": {
 			fileURI: "file:///valid.rego",
 			content: `package test
 allow if { 1 == 1 }
 `,
-			expectModule:  false,
-			expectSuccess: false,
 			expectedParseErrors: []types.Diagnostic{{
 				Code:  "rego-parse-error",
 				Range: types.RangeBetween(1, 0, 1, 0),
@@ -102,41 +96,28 @@ allow[msg] { 1 == 1; msg := "hello" }
 			c := cache.NewCache()
 			c.SetFileContents(testData.fileURI, testData.content)
 
-			success := testutil.Must(updateParse(t.Context(), updateParseOpts{
+			success := must.Return(updateParse(t.Context(), updateParseOpts{
 				Cache:            c,
 				Store:            NewRegalStore(),
 				FileURI:          testData.fileURI,
 				Builtins:         ast.BuiltinMap,
 				RegoVersion:      testData.regoVersion,
-				WorkspaceRootURI: "",
 				ClientIdentifier: clients.IdentifierGeneric,
 			}))(t)
 
-			if success != testData.expectSuccess {
-				t.Fatalf("expected success to be %v, got %v", testData.expectSuccess, success)
-			}
+			must.Equal(t, testData.expectSuccess, success, "success")
 
 			if _, ok := c.GetModule(testData.fileURI); testData.expectModule && !ok {
 				t.Fatalf("expected module to be set, but it was not")
 			}
 
 			diags, _ := c.GetParseErrors(testData.fileURI)
-			if len(testData.expectedParseErrors) != len(diags) {
-				t.Fatalf("expected %v parse errors, got %v", len(testData.expectedParseErrors), len(diags))
-			}
+			must.Equal(t, len(testData.expectedParseErrors), len(diags), "number of parse errors")
 
 			for i, diag := range testData.expectedParseErrors {
-				if diag.Code != diags[i].Code {
-					t.Errorf("expected diagnostic code to be %v, got %v", diag.Code, diags[i].Code)
-				}
-
-				if diag.Range.Start.Line != diags[i].Range.Start.Line {
-					t.Errorf("expected diagnostic start line to be %v, got %v", diag.Range.Start.Line, diags[i].Range.Start.Line)
-				}
-
-				if diag.Range.End.Line != diags[i].Range.End.Line {
-					t.Errorf("expected diagnostic end line to be %v, got %v", diag.Range.End.Line, diags[i].Range.End.Line)
-				}
+				assert.Equal(t, diag.Code, diags[i].Code, "diagnostic code")
+				assert.Equal(t, diag.Range.Start.Line, diags[i].Range.Start.Line, "diagnostic start line")
+				assert.Equal(t, diag.Range.End.Line, diags[i].Range.End.Line, "diagnostic end line")
 			}
 		})
 	}
@@ -151,7 +132,6 @@ func TestConvertReportToDiagnostics(t *testing.T) {
 		Category:    "mock_category",
 		Title:       "mock_title",
 		Location:    report.Location{File: "file1"},
-		IsAggregate: false,
 	}
 	violation2 := report.Violation{
 		Level:       "warning",
@@ -165,47 +145,36 @@ func TestConvertReportToDiagnostics(t *testing.T) {
 	rpt := &report.Report{Violations: []report.Violation{violation1, violation2}}
 
 	expectedFileDiags := map[string][]types.Diagnostic{
-		"file1": {
-			{
-				Severity: new(uint(2)),
-				Range:    getRangeForViolation(violation1),
-				Message:  "Mock Error",
-				Source:   new("regal/mock_category"),
-				Code:     "mock_title",
-				CodeDescription: &types.CodeDescription{
-					Href: "https://www.openpolicyagent.org/projects/regal/rules/mock_category/mock_title",
-				},
+		"file1": {{
+			Severity: new(uint(2)),
+			Range:    getRangeForViolation(violation1),
+			Message:  "Mock Error",
+			Source:   new("regal/mock_category"),
+			Code:     "mock_title",
+			CodeDescription: &types.CodeDescription{
+				Href: "https://www.openpolicyagent.org/projects/regal/rules/mock_category/mock_title",
 			},
-		},
-		"workspaceRootURI": {
-			{
-				Severity: new(uint(3)),
-				Range:    getRangeForViolation(violation2),
-				Message:  "Mock Warning",
-				Source:   new("regal/mock_category"),
-				Code:     "mock_title",
-				CodeDescription: &types.CodeDescription{
-					Href: "https://www.openpolicyagent.org/projects/regal/rules/mock_category/mock_title",
-				},
+		}},
+		"workspaceRootURI": {{
+			Severity: new(uint(3)),
+			Range:    getRangeForViolation(violation2),
+			Message:  "Mock Warning",
+			Source:   new("regal/mock_category"),
+			Code:     "mock_title",
+			CodeDescription: &types.CodeDescription{
+				Href: "https://www.openpolicyagent.org/projects/regal/rules/mock_category/mock_title",
 			},
-		},
+		}},
 	}
 
-	fileDiags := convertReportToDiagnostics(rpt, "workspaceRootURI")
-
-	if !reflect.DeepEqual(fileDiags, expectedFileDiags) {
-		t.Errorf("Expected file diagnostics: %v, got: %v", expectedFileDiags, fileDiags)
-	}
+	assert.DeepEqual(t, expectedFileDiags, convertReportToDiagnostics(rpt, "workspaceRootURI"), "file diagnostics")
 }
 
 func TestLintWithConfigIgnoreWildcards(t *testing.T) {
 	t.Parallel()
 
-	conf := &config.Config{
-		Rules: map[string]config.Category{
-			"idiomatic": {"directory-package-mismatch": config.Rule{Level: "ignore"}},
-		},
-	}
+	rule := map[string]config.Category{"idiomatic": {"directory-package-mismatch": config.Rule{Level: "ignore"}}}
+	conf := &config.Config{Rules: rule}
 
 	contents := "package p\n\ncamelCase := 1\n"
 	fileURI := "file:///workspace/ignore/p.rego"
@@ -223,16 +192,12 @@ func TestLintWithConfigIgnoreWildcards(t *testing.T) {
 		UpdateForRules:   []string{"prefer-snake-case"},
 	}
 
-	testutil.NoErr(updateFileDiagnostics(t.Context(), opts))(t)
+	must.Equal(t, nil, updateFileDiagnostics(t.Context(), opts))
 
 	diagnostics, _ := state.GetFileDiagnostics(fileURI)
-	if len(diagnostics) != 1 {
-		t.Fatalf("Expected one diagnostic item, got %v", diagnostics)
-	}
 
-	if diagnostics[0].Code != "prefer-snake-case" {
-		t.Errorf("Expected diagnostic code to be prefer-snake-case, got %v", diagnostics[0].Code)
-	}
+	must.Equal(t, 1, len(diagnostics), "number of diagnostics")
+	assert.Equal(t, "prefer-snake-case", diagnostics[0].Code, "diagnostic code")
 
 	// Clear the diagnostic and update the config with a wildcard ignore
 	// for any file in the ignore directory.
@@ -244,10 +209,9 @@ func TestLintWithConfigIgnoreWildcards(t *testing.T) {
 			Ignore: &config.Ignore{Files: []string{"ignore/**"}},
 		},
 	}
-
 	opts.UpdateForRules = []string{"prefer-snake-case"}
 
-	testutil.NoErr(updateFileDiagnostics(t.Context(), opts))(t)
+	must.Equal(t, nil, updateFileDiagnostics(t.Context(), opts))
 
 	if diagnostics, _ := state.GetFileDiagnostics(fileURI); len(diagnostics) != 0 {
 		t.Fatalf("Expected no diagnostics, got %v", diagnostics)

@@ -22,11 +22,11 @@ func (*exprCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	write.ObjectStart(stream, expr.Location)
 
 	if expr.Negated {
-		write.Bool(stream, strNegated, expr.Negated)
+		write.Bool(stream, "negated", expr.Negated)
 	}
 
 	if expr.Generated {
-		write.Bool(stream, strGenerated, expr.Generated)
+		write.Bool(stream, "generated", expr.Generated)
 	}
 
 	if stream.Attachment != nil {
@@ -37,11 +37,11 @@ func (*exprCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	}
 
 	if len(expr.With) > 0 {
-		write.ValsArrayAttr(stream, strWith, expr.With)
+		write.ValsArrayAttr(stream, "with", expr.With)
 	}
 
 	if expr.Terms != nil {
-		stream.WriteObjectField(strTerms)
+		stream.WriteObjectField("terms")
 
 		switch t := expr.Terms.(type) {
 		case *ast.Term:

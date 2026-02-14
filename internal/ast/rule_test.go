@@ -6,6 +6,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestGetRuleDetail(t *testing.T) {
@@ -26,13 +28,9 @@ func TestGetRuleDetail(t *testing.T) {
 			t.Parallel()
 
 			mod := parse.MustParseModule("package example\n" + tc.input)
-			if len(mod.Rules) != 1 {
-				t.Fatalf("Expected 1 rule, got %d", len(mod.Rules))
-			}
 
-			if result := GetRuleDetail(mod.Rules[0], bis); result != tc.expected {
-				t.Errorf("Expected %s, got %s", tc.expected, result)
-			}
+			must.Equal(t, 1, len(mod.Rules), "number of rules in module")
+			assert.Equal(t, tc.expected, GetRuleDetail(mod.Rules[0], bis))
 		})
 	}
 }
@@ -50,10 +48,7 @@ func TestSimplifyType(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
 			t.Parallel()
-
-			if result := simplifyType(tc.input); result != tc.expected {
-				t.Errorf("Expected %s, got %s", tc.expected, result)
-			}
+			assert.Equal(t, tc.expected, simplifyType(tc.input))
 		})
 	}
 }

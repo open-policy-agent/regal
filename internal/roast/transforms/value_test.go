@@ -6,7 +6,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
@@ -17,8 +17,8 @@ func TestRoastAndOPAInterfaceToValueSameOutput(t *testing.T) {
 	t.Parallel()
 
 	inputMap := inputMap(t)
-	roastValue := testutil.Must(AnyToValue(inputMap))(t)
-	opaValue := testutil.Must(ast.InterfaceToValue(inputMap))(t)
+	roastValue := must.Return(AnyToValue(inputMap))(t)
+	opaValue := must.Return(ast.InterfaceToValue(inputMap))(t)
 
 	if roastValue.Compare(opaValue) != 0 {
 		t.Fatal("values are not equal")
@@ -53,8 +53,8 @@ func BenchmarkOPAInterfaceToValue(b *testing.B) {
 func inputMap(tb testing.TB) map[string]any {
 	tb.Helper()
 
-	content := string(testutil.Must(testData.ReadFile("testdata/ast.rego"))(tb))
-	module := testutil.Must(ast.ParseModuleWithOpts("ast.rego", content, ast.ParserOptions{ProcessAnnotation: true}))(tb)
+	content := string(must.Return(testData.ReadFile("testdata/ast.rego"))(tb))
+	module := must.Return(ast.ParseModuleWithOpts("ast.rego", content, ast.ParserOptions{ProcessAnnotation: true}))(tb)
 
-	return testutil.Must(encoding.JSONRoundTripTo[map[string]any](module))(tb)
+	return must.Return(encoding.JSONRoundTripTo[map[string]any](module))(tb)
 }

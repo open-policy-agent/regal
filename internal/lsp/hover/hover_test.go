@@ -6,7 +6,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/types"
 
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestCreateHoverContent(t *testing.T) {
@@ -46,11 +47,6 @@ func TestCreateHoverContent(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		file := testutil.MustReadFile(t, c.testdata)
-		hoverContent := CreateHoverContent(c.builtin)
-
-		if file != hoverContent {
-			t.Errorf("Expected %s, got %s", file, hoverContent)
-		}
+		assert.Equal(t, must.ReadFile(t, c.testdata), CreateHoverContent(c.builtin))
 	}
 }

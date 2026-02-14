@@ -20,6 +20,6 @@ func (*someDeclCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	some := *((*ast.SomeDecl)(ptr))
 
 	write.ObjectStart(stream, some.Location)
-	write.ValsArrayAttr(stream, strSymbols, some.Symbols)
+	write.ValsArrayAttr(stream, "symbols", some.Symbols)
 	write.ObjectEnd(stream)
 }

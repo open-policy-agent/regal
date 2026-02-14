@@ -905,7 +905,7 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
 func (l *LanguageServer) loadEnabledRulesFromConfig(ctx context.Context, cfg config.Config) error {
 	lint := linter.NewLinter().WithUserConfig(cfg)
 	if customRulesPath := l.getCustomRulesPath(); customRulesPath != "" {
-		lint = lint.WithCustomRules([]string{customRulesPath})
+		lint = lint.WithCustomRulesPaths(customRulesPath)
 	}
 
 	regular, aggregate, err := lint.DetermineEnabledRules(ctx)

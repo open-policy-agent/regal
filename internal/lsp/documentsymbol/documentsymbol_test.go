@@ -9,6 +9,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/types/symbols"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestDocumentSymbols(t *testing.T) {
@@ -51,54 +53,29 @@ func TestDocumentSymbols(t *testing.T) {
 		t.Run(tc.title, func(t *testing.T) {
 			t.Parallel()
 
-			module, err := ast.ParseModule("test.rego", tc.policy)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			bis := rego.BuiltinsForDefaultCapabilities()
-			syms := documentsymbol.All(tc.policy, module, bis)
+			syms := documentsymbol.All(tc.policy, ast.MustParseModule(tc.policy), bis)
 
 			pkg := syms[0]
-			if pkg.Name != tc.expected.Name {
-				t.Errorf("Expected %s, got %s", tc.expected.Name, pkg.Name)
-			}
 
-			if pkg.Kind != tc.expected.Kind {
-				t.Errorf("Expected %d, got %d", tc.expected.Kind, pkg.Kind)
-			}
-
-			if pkg.Range != tc.expected.Range {
-				t.Errorf("Expected %v, got %v", tc.expected.Range, pkg.Range)
-			}
-
-			if pkg.Detail != tc.expected.Detail {
-				t.Errorf("Expected %v, got %v", tc.expected.Detail, pkg.Detail)
-			}
+			assert.Equal(t, tc.expected.Name, pkg.Name, "name")
+			assert.Equal(t, tc.expected.Kind, pkg.Kind, "kind")
+			assert.Equal(t, tc.expected.Range, pkg.Range, "range")
+			assert.Equal(t, tc.expected.Detail, pkg.Detail, "detail")
 
 			if pkg.Children != nil {
-				if tc.expected.Children == nil {
-					t.Fatalf("Expected no children, got %v", pkg.Children)
-				}
+				must.NotEqual(t, nil, tc.expected.Children, "expected children")
 
 				for i, child := range *pkg.Children {
 					expectedChild := (*tc.expected.Children)[i]
 
-					if child.Name != expectedChild.Name {
-						t.Errorf("Expected %s, got %s", child.Name, expectedChild.Name)
-					}
-
-					if child.Kind != expectedChild.Kind {
-						t.Errorf("Expected %d, got %d", expectedChild.Kind, child.Kind)
-					}
-
-					if child.Range != expectedChild.Range {
-						t.Errorf("Expected %v, got %v", expectedChild.Range, child.Range)
-					}
+					assert.Equal(t, expectedChild.Name, child.Name, "name")
+					assert.Equal(t, expectedChild.Kind, child.Kind, "kind")
+					assert.Equal(t, expectedChild.Range, child.Range, "range")
 
 					if child.Detail != expectedChild.Detail {
 						if expectedChild.Detail == nil && child.Detail != nil {
-							t.Errorf("Expected detail to be nilgot %v", child.Detail)
+							t.Errorf("Expected detail to be nil, got %v", child.Detail)
 						} else if *child.Detail != *expectedChild.Detail {
 							t.Errorf("Expected %s, got %s", *expectedChild.Detail, *child.Detail)
 						}

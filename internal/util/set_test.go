@@ -1,169 +1,97 @@
-package util
+package util_test
 
 import (
-	"slices"
 	"testing"
+
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 func TestNewSet(t *testing.T) {
 	t.Parallel()
 
-	s := NewSet(1, 2, 3)
-
-	if got, expected := s.Size(), 3; got != expected {
-		t.Fatalf("unexpected size, got: %v, want: %v", got, expected)
-	}
-
-	if got, expected := s.Contains(1, 2, 3), true; got != expected {
-		t.Fatalf("unexpected Contains result, got: %v, want: %v", got, expected)
-	}
-
-	if got, expected := s.Contains(4), false; got != expected {
-		t.Fatalf("unexpected Contains result for missing element, got: %v, want: %v", got, expected)
-	}
+	s := util.NewSet(1, 2, 3)
+	must.Equal(t, 3, s.Size(), "size of set")
+	assert.True(t, s.Contains(1, 2, 3), "set should contain initial elements")
+	assert.False(t, s.Contains(4), "set should not contain missing element")
 }
 
 func TestAdd(t *testing.T) {
 	t.Parallel()
 
-	s := NewSet[int]()
-	s.Add(10)
+	s := util.NewSet[int]()
 
-	if got, expected := s.Contains(10), true; got != expected {
-		t.Fatalf("unexpected Contains result after Add, got: %v, want: %v", got, expected)
-	}
+	s.Add(10)
+	assert.True(t, s.Contains(10), "set should contain added element")
 
 	s.Add(20, 30, 40)
-
-	if got, expected := s.Contains(20, 30, 40), true; got != expected {
-		t.Fatalf("unexpected Contains result after adding multiple elements, got: %v, want: %v", got, expected)
-	}
+	assert.True(t, s.Contains(20, 30, 40), "set should contain added elements")
 
 	initialSize := s.Size()
 	s.Add(10, 20)
-
-	if got, expected := s.Size(), initialSize; got != expected {
-		t.Fatalf("size changed after adding duplicate elements, got: %v, want: %v", got, expected)
-	}
+	assert.Equal(t, initialSize, s.Size(), "size should not change when adding duplicate elements")
 }
 
 func TestRemove(t *testing.T) {
 	t.Parallel()
 
-	s := NewSet(1, 2, 3, 4, 5)
-	s.Remove(2)
+	s := util.NewSet(1, 2, 3, 4, 5)
 
-	if got, expected := s.Contains(2), false; got != expected {
-		t.Fatalf("unexpected Contains result after Remove, got: %v, want: %v", got, expected)
-	}
+	s.Remove(2)
+	assert.False(t, s.Contains(2), "set should not contain removed element")
 
 	s.Remove(1, 3, 5)
 	s.Remove(100, 200) // Removing random elements should be ok too
 
-	if got, expected := s.Contains(1, 3, 5), false; got != expected {
-		t.Fatalf("unexpected Contains result after removing multiple elements, got: %v, want: %v", got, expected)
-	}
+	assert.False(t, s.Contains(1, 3, 5), "set should not contain removed elements")
 }
 
 func TestContains(t *testing.T) {
 	t.Parallel()
 
-	s := NewSet("apple", "banana", "cherry")
+	s := util.NewSet("apple", "banana", "cherry")
 
-	if got, expected := s.Contains("banana"), true; got != expected {
-		t.Fatalf("unexpected Contains result for existing element, got: %v, want: %v", got, expected)
-	}
-
-	if got, expected := s.Contains("apple", "banana"), true; got != expected {
-		t.Fatalf("unexpected Contains result for multiple existing elements, got: %v, want: %v", got, expected)
-	}
-
-	if got, expected := s.Contains("grape"), false; got != expected {
-		t.Fatalf("unexpected Contains result for missing element, got: %v, want: %v", got, expected)
-	}
-
-	if got, expected := s.Contains("banana", "grape"), false; got != expected {
-		t.Fatalf("unexpected Contains result when at least one element is missing, got: %v, want: %v", got, expected)
-	}
+	assert.True(t, s.Contains("banana"), "set should contain 'banana'")
+	assert.True(t, s.Contains("apple", "banana"), "set should contain 'apple' and 'banana'")
+	assert.False(t, s.Contains("grape"), "set should not contain 'grape'")
+	assert.False(t, s.Contains("banana", "grape"), "set should not contain 'grape' even if it contains 'banana'")
 }
 
 func TestSize(t *testing.T) {
 	t.Parallel()
 
-	s := NewSet(1, 2, 3)
-
-	if got, expected := s.Size(), 3; got != expected {
-		t.Fatalf("unexpected size, got: %v, want: %v", got, expected)
-	}
+	s := util.NewSet(1, 2, 3)
+	must.Equal(t, 3, s.Size(), "initial size of set")
 
 	s.Add(4, 5)
-
-	if got, expected := s.Size(), 5; got != expected {
-		t.Fatalf("unexpected size after Add, got: %v, want: %v", got, expected)
-	}
+	must.Equal(t, 5, s.Size(), "size after adding elements")
 
 	s.Remove(2, 3)
-
-	if got, expected := s.Size(), 3; got != expected {
-		t.Fatalf("unexpected size after Remove, got: %v, want: %v", got, expected)
-	}
+	must.Equal(t, 3, s.Size(), "size after removing elements")
 }
 
 func TestItems(t *testing.T) {
 	t.Parallel()
 
-	s := NewSet(1, 2, 3, 4)
-	items := s.Items()
-	expected := []int{1, 2, 3, 4}
-
-	slices.Sort(items)
-	slices.Sort(expected)
-
-	if got := slices.Equal(expected, items); !got {
-		t.Fatalf("unexpected Items result, got: %v, want: %v", items, expected)
-	}
+	s := util.NewSet(1, 2, 3, 4)
+	assert.SlicesEqual(t, []int{1, 2, 3, 4}, util.Sorted(s.Items()))
 
 	s.Remove(2, 3)
-
-	expected = []int{1, 4}
-	items = s.Items()
-
-	slices.Sort(items)
-	slices.Sort(expected)
-
-	if got := slices.Equal(expected, items); !got {
-		t.Fatalf("unexpected Items result after Remove, got: %v, want: %v", items, expected)
-	}
+	assert.SlicesEqual(t, []int{1, 4}, util.Sorted(s.Items()))
 }
 
 func TestEmptySet(t *testing.T) {
 	t.Parallel()
 
-	s := NewSet[int]()
-
-	if got, expected := s.Size(), 0; got != expected {
-		t.Fatalf("unexpected size for empty set, got: %v, want: %v", got, expected)
-	}
-
-	if got := len(s.Items()); got != 0 {
-		t.Fatalf("unexpected Items result for empty set, got: %v, want: %v", got, 0)
-	}
+	s := util.NewSet[int]()
+	assert.Equal(t, 0, s.Size(), "size of empty set should be 0")
+	assert.Equal(t, 0, len(s.Items()), "Items of empty set should be empty")
 }
 
 func TestDiff(t *testing.T) {
 	t.Parallel()
 
-	a := NewSet(1, 2, 3, 4, 5)
-	b := NewSet(3, 4, 5, 6, 7)
-
-	diffSet := a.Diff(b)
-	expected := []int{1, 2}
-
-	items := diffSet.Items()
-	slices.Sort(items)
-	slices.Sort(expected)
-
-	if got := slices.Equal(expected, items); !got {
-		t.Fatalf("unexpected Diff result, got: %v, want: %v", items, expected)
-	}
+	diff := util.NewSet(1, 2, 3, 4, 5).Diff(util.NewSet(3, 4, 5, 6, 7))
+	assert.SlicesEqual(t, []int{1, 2}, util.Sorted(diff.Items()))
 }

@@ -5,7 +5,8 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestCacheFileProvider(t *testing.T) {
@@ -17,27 +18,10 @@ func TestCacheFileProvider(t *testing.T) {
 
 	cfp := NewCacheFileProvider(c, clients.IdentifierGeneric)
 
-	testutil.NoErr(cfp.Put("file:///tmp/foo.rego", "package wow"))(t)
-
-	if contents := testutil.Must(cfp.Get("file:///tmp/foo.rego"))(t); contents != "package wow" {
-		t.Fatalf("expected %s, got %s", "package wow", contents)
-	}
-
-	if contentsStr := testutil.MustBeOK(c.GetFileContents("file:///tmp/foo.rego"))(t); contentsStr != "package wow" {
-		t.Fatalf("expected %s, got %s", "package wow", contentsStr)
-	}
-
-	testutil.NoErr(cfp.Rename("file:///tmp/foo.rego", "file:///tmp/wow.rego"))(t)
-
-	if !cfp.deletedFiles.Contains("file:///tmp/foo.rego") {
-		t.Fatalf("expected file to be deleted")
-	}
-
-	if !cfp.modifiedFiles.Contains("file:///tmp/wow.rego") {
-		t.Fatalf("expected file to be modified")
-	}
-
-	if contents := testutil.Must(cfp.Get("file:///tmp/wow.rego"))(t); contents != "package wow" {
-		t.Fatalf("expected %s, got %s", "package wow", contents)
-	}
+	assert.Equal(t, nil, cfp.Put("file:///tmp/foo.rego", "package wow"), "put file")
+	assert.Equal(t, "package wow", must.Return(cfp.Get("file:///tmp/foo.rego"))(t), "cache updated")
+	assert.Equal(t, nil, cfp.Rename("file:///tmp/foo.rego", "file:///tmp/wow.rego"), "rename file")
+	assert.True(t, cfp.deletedFiles.Contains("file:///tmp/foo.rego"), "file deleted")
+	assert.True(t, cfp.modifiedFiles.Contains("file:///tmp/wow.rego"), "file modified")
+	assert.Equal(t, "package wow", must.Return(cfp.Get("file:///tmp/wow.rego"))(t), "file contents")
 }

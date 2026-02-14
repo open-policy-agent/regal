@@ -7,6 +7,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/rules"
 )
 
@@ -119,11 +121,9 @@ func TestRegoVersionFromVersionsMap(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-
-			got := rules.RegoVersionFromMap(tc.VersionsMap, filepath.FromSlash(tc.Filename), ast.RegoUndefined)
-			if got != tc.Expected {
-				t.Errorf("Expected %v, got %v", tc.Expected, got)
-			}
+			assert.Equal(t, tc.Expected, rules.RegoVersionFromMap(
+				tc.VersionsMap, filepath.FromSlash(tc.Filename), ast.RegoUndefined,
+			))
 		})
 	}
 }
@@ -149,12 +149,6 @@ allow[msg] { msg := "hello" }
 `,
 	}
 
-	input, err := rules.InputFromMap(files, versionsMap)
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-
-	if len(input.Modules) != 2 {
-		t.Fatalf("Expected 2 modules, got %d", len(input.Modules))
-	}
+	input := must.Return(rules.InputFromMap(files, versionsMap))(t)
+	must.Equal(t, 2, len(input.Modules))
 }

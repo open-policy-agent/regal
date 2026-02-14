@@ -5,17 +5,15 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
 func TestParseModule(t *testing.T) {
 	t.Parallel()
 
-	parsed := testutil.Must(Module("test.rego", `package p`))(t)
-
-	if exp, got := "data.p", parsed.Package.Path.String(); exp != got {
-		t.Errorf("expected %q, got %q", exp, got)
-	}
+	assert.Equal(t, "data.p", must.Return(Module("test.rego", `package p`))(t).Package.Path.String())
 }
 
 func TestModuleUnknownVersionWithOpts(t *testing.T) {

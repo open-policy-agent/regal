@@ -6,6 +6,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestTemplateStringMarshalling(t *testing.T) {
@@ -21,20 +23,12 @@ func TestTemplateStringMarshalling(t *testing.T) {
 			},
 		},
 	}
-
 	stream := jsoniter.ConfigFastest.BorrowStream(nil)
 	stream.WriteVal(templateStr)
 
-	var m map[string]any
-	if err := jsoniter.ConfigFastest.Unmarshal(stream.Buffer(), &m); err != nil {
-		t.Fatalf("unexpected error during unmarshalling: %v", err)
-	}
-
-	// Back to JSON, with sorted keys for comparison
-	bs, err := jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(m)
-	if err != nil {
-		t.Fatalf("unexpected error during marshalling: %v", err)
-	}
+	// From JSON and back to JSON, with sorted keys for comparison
+	m := must.Unmarshal[map[string]any](t, stream.Buffer())
+	bs := must.Return(jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(m))(t)
 
 	expected := `{"multi_line":true,` +
 		`"parts":[` +
@@ -42,7 +36,5 @@ func TestTemplateStringMarshalling(t *testing.T) {
 		`{"interpolated":true,"location":"10:6:10:9","terms":{"location":"10:6:10:9","type":"var","value":"bar"}}` +
 		`]}`
 
-	if string(bs) != expected {
-		t.Fatalf("expected marshalled template string to be:\n%s\nbut got:\n%s", expected, string(bs))
-	}
+	must.Equal(t, expected, string(bs), "template string encoding")
 }
