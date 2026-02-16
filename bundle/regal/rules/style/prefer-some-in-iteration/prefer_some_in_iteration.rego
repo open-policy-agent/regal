@@ -58,7 +58,7 @@ _invalid_some_location(rule, location) if {
 
 	value.location == location
 
-	_invalid_some_context(rule, array.concat([node], path))
+	_invalid_some_context(rule, array.flatten([node, path]))
 }
 
 # don't recommend `some .. in` if iteration occurs inside of arrays, objects, or sets

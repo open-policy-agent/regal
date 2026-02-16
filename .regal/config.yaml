@@ -28,6 +28,9 @@ rules:
       level: error
       only-scalars: true
       include-interpolated: true
+  idiomatic:
+    use-array-flatten:
+      flag-wrapped-concat: true
   style:
     line-length:
       level: error

@@ -34,10 +34,11 @@ _pkg_path_values := without_test_suffix if {
 	config.rules.idiomatic["directory-package-mismatch"]["exclude-test-suffix"] == true
 
 	name := regal.last(ast.package_path)
+
 	endswith(name, "_test")
 
-	without_test_suffix := array.concat(
+	without_test_suffix := array.flatten([
 		array.slice(ast.package_path, 0, count(ast.package_path) - 1),
-		[trim_suffix(name, "_test")],
-	)
+		trim_suffix(name, "_test"),
+	])
 } else := ast.package_path
