@@ -382,7 +382,7 @@ fetch_rq_caps if {
 	}
 
 	{
-	rq.write(cap.content, {"format": "raw", "file_path": cap.local}) |
+	rq.write(concat("" ,[cap.content, "\n"]), {"format": "raw", "file_path": cap.local}) |
 		some cap in new_caps
 	}
 }
