@@ -101,6 +101,8 @@ rules:
       level: error
     single-item-in:
       level: error
+    use-array-flatten:
+      level: error
     use-contains:
       level: error
     use-if:
@@ -108,6 +110,8 @@ rules:
     use-in-operator:
       level: error
     use-object-keys:
+      level: error
+    use-object-union-n:
       level: error
     use-some-for-output-vars:
       level: error

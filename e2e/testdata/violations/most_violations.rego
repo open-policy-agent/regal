@@ -171,6 +171,10 @@ prefer_strings_count := count(indexof_n("foobarbaz", "a"))
 
 use_object_keys := {k | some k; input.object[k]}
 
+use_array_flatten if array.concat([1], array.concat([2], [3]))
+
+use_object_union_n if object.union(a, object.union(b, c))
+
 ### Style ###
 
 # avoid-get-and-list-prefix
