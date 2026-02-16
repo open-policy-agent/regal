@@ -7,6 +7,9 @@ import (
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestLocation(t *testing.T) {
@@ -32,11 +35,7 @@ func TestLocation(t *testing.T) {
 
 			stream := jsoniter.ConfigFastest.BorrowStream(nil)
 			stream.WriteVal(tc.location)
-
-			if string(stream.Buffer()) != fmt.Sprintf("%q", tc.expected) {
-				t.Fatalf("expected %s but got %s", tc.expected, string(stream.Buffer()))
-			}
-
+			assert.Equal(t, fmt.Sprintf("%q", tc.expected), string(stream.Buffer()), "location encoding")
 			jsoniter.ConfigFastest.ReturnStream(stream)
 		})
 	}
@@ -47,11 +46,8 @@ func TestLocationHeadValue(t *testing.T) {
 	// e.g. the end column would be presented as before the start column.
 	t.Parallel()
 
-	out, err := jsoniter.ConfigFastest.MarshalIndent(ast.MustParseModule("package foo.bar\n\nrule := true"), "", "  ")
-	if err != nil {
-		t.Fatalf("failed to marshal module: %v", err)
-	}
-
+	mod := ast.MustParseModule("package foo.bar\n\nrule := true")
+	out := must.Return(jsoniter.ConfigFastest.MarshalIndent(mod, "", "  "))(t)
 	expect := `{
   "package": {
     "location": "1:1:1:8",
@@ -94,7 +90,5 @@ func TestLocationHeadValue(t *testing.T) {
     }
   ]
 }`
-	if string(out) != expect {
-		t.Fatalf("expected %s but got %s", expect, out)
-	}
+	assert.Equal(t, expect, string(out), "module encoding")
 }

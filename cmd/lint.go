@@ -196,7 +196,7 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 	}
 
 	if params.rules.isSet {
-		regal = regal.WithCustomRules(params.rules.v)
+		regal = regal.WithCustomRulesPaths(params.rules.v...)
 	}
 
 	if params.ignoreFiles.isSet {
@@ -225,7 +225,7 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 			}
 
 			if rulesDir := filepath.Join(regalPath, "rules"); !params.rules.isSet && rio.IsDir(rulesDir) {
-				regal = regal.WithCustomRules([]string{rulesDir})
+				regal = regal.WithCustomRulesPaths(rulesDir)
 			}
 		}
 	}

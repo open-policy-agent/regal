@@ -14,11 +14,11 @@ import (
 	"github.com/open-policy-agent/opa/v1/util/test"
 
 	"github.com/open-policy-agent/regal/internal/io"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
 )
-
-const levelError = "error"
 
 func TestFindRegalDirectory(t *testing.T) {
 	t.Parallel()
@@ -26,16 +26,15 @@ func TestFindRegalDirectory(t *testing.T) {
 	fs := map[string]string{filepath.FromSlash("/foo/bar/baz/p.rego"): ""}
 
 	test.WithTempFS(fs, func(root string) {
-		testutil.MustMkdirAll(t, root, ".regal")
-		testutil.Must(FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz")))(t)
+		must.MkdirAll(t, root, ".regal")
+		must.Return(FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz")))(t)
 	})
 
 	fs = map[string]string{filepath.FromSlash("/foo/bar/baz/p.rego"): "", filepath.FromSlash("/foo/bar/bax.json"): ""}
 
 	test.WithTempFS(fs, func(root string) {
-		if _, err := FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz")); err == nil {
-			t.Errorf("expected no config file to be found")
-		}
+		_, err := FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz"))
+		assert.NotNil(t, err, "expected no config file found")
 	})
 }
 
@@ -142,15 +141,11 @@ project:
 	}
 
 	test.WithTempFS(fs, func(root string) {
-		locations := testutil.Must(FindBundleRootDirectories(root))(t)
-		if len(locations) != 5 {
-			t.Errorf("expected 5 locations, got %d", len(locations))
-		}
+		locations := must.Return(FindBundleRootDirectories(root))(t)
+		assert.Equal(t, 5, len(locations), "locations")
 
 		expected := util.Map([]string{"", ".regal/rules", "baz", "bundle", "foo/bar"}, util.FilepathJoiner(root))
-		if !slices.Equal(expected, locations) {
-			t.Errorf("expected\n%s\ngot\n%s", strings.Join(expected, "\n"), strings.Join(locations, "\n"))
-		}
+		assert.SlicesEqual(t, expected, locations, "bundle root directories")
 	})
 }
 
@@ -172,15 +167,11 @@ project:
 	}
 
 	test.WithTempFS(fs, func(root string) {
-		locations := testutil.Must(FindBundleRootDirectories(root))(t)
-		if len(locations) != 4 {
-			t.Errorf("expected 5 locations, got %d", len(locations))
-		}
+		locations := must.Return(FindBundleRootDirectories(root))(t)
+		assert.Equal(t, 4, len(locations), "locations")
 
 		expected := util.Map([]string{"", "baz", "bundle", "foo/bar"}, util.FilepathJoiner(root))
-		if !slices.Equal(expected, locations) {
-			t.Errorf("expected\n%s\ngot\n%s", strings.Join(expected, "\n"), strings.Join(locations, "\n"))
-		}
+		assert.SlicesEqual(t, expected, locations, "bundle root directories")
 	})
 }
 
@@ -189,16 +180,12 @@ func TestMarshalConfig(t *testing.T) {
 
 	conf := Config{
 		// ignore is empty and so should not be marshalled
-		Ignore: Ignore{
-			Files: []string{},
-		},
+		Ignore: Ignore{Files: []string{}},
 		Rules: map[string]Category{
 			"testing": {
 				"foo": Rule{
-					Level: "error",
-					Ignore: &Ignore{
-						Files: []string{"foo.rego"},
-					},
+					Level:  "error",
+					Ignore: &Ignore{Files: []string{"foo.rego"}},
 					Extra: ExtraAttributes{
 						"bar":    "baz",
 						"ignore": "this should be removed by the marshaller",
@@ -208,8 +195,7 @@ func TestMarshalConfig(t *testing.T) {
 		},
 	}
 
-	bs := testutil.Must(yaml.Marshal(conf))(t)
-
+	bs := must.Return(yaml.Marshal(conf))(t)
 	expect := `rules:
     testing:
         foo:
@@ -220,9 +206,7 @@ func TestMarshalConfig(t *testing.T) {
             level: error
 `
 
-	if string(bs) != expect {
-		t.Errorf("expected:\n%sgot:\n%s", expect, string(bs))
-	}
+	assert.Equal(t, expect, string(bs), "marshalled config")
 }
 
 func TestUnmarshalMarshalConfigWithDefaultRuleConfigs(t *testing.T) {
@@ -239,38 +223,21 @@ rules:
       level: ignore
   testing:
     print-or-trace-call:
-      level: error
-`)
+      level: error`)
 
 	originalConfig := testutil.MustUnmarshalYAML[Config](t, bs)
 
-	if originalConfig.Defaults.Global.Level != "ignore" {
-		t.Errorf("expected global default to be level ignore")
-	}
-
-	if _, unexpected := originalConfig.Rules["bugs"]["default"]; unexpected {
-		t.Errorf("erroneous rule parsed, bugs.default should not exist")
-	}
-
-	if originalConfig.Defaults.Categories["bugs"].Level != levelError {
-		t.Errorf("expected bugs default to be level error")
-	}
-
-	if originalConfig.Rules["testing"]["print-or-trace-call"].Level != levelError {
-		t.Errorf("expected for testing.print-or-trace-call to be level error")
-	}
+	assert.KeyMissing(t, originalConfig.Rules["bugs"], "default")
+	assert.Equal(t, "ignore", originalConfig.Defaults.Global.Level, "global default level")
+	assert.Equal(t, "error", originalConfig.Defaults.Categories["bugs"].Level, "bugs default level")
+	assert.Equal(t, "error", originalConfig.Rules["testing"]["print-or-trace-call"].Level, "print-or-trace-call level")
 
 	originalConfig.Capabilities = nil
 
-	roundTrippedConfig := testutil.MustUnmarshalYAML[Config](t, testutil.Must(yaml.Marshal(originalConfig))(t))
+	roundTrippedConfig := testutil.MustUnmarshalYAML[Config](t, must.Return(yaml.Marshal(originalConfig))(t))
 
-	if roundTrippedConfig.Defaults.Global.Level != "ignore" {
-		t.Errorf("expected global default to be level ignore")
-	}
-
-	if roundTrippedConfig.Defaults.Categories["bugs"].Level != levelError {
-		t.Errorf("expected bugs default to be level error")
-	}
+	assert.Equal(t, "ignore", roundTrippedConfig.Defaults.Global.Level, "global default level post round trip")
+	assert.Equal(t, "error", roundTrippedConfig.Defaults.Categories["bugs"].Level, "bugs default level post round trip")
 }
 
 func TestUnmarshalConfig(t *testing.T) {
@@ -299,53 +266,28 @@ capabilities:
           type: object
   minus:
     builtins:
-      - name: http.send
-`)
+      - name: http.send`)
 
 	conf := testutil.MustUnmarshalYAML[Config](t, bs)
+	fooRule := conf.Rules["testing"]["foo"]
 
-	if conf.Rules["testing"]["foo"].Level != "error" {
-		t.Errorf("expected level to be error")
-	}
+	assert.Equal(t, "error", fooRule.Level, "rule level")
+	must.NotEqual(t, nil, fooRule.Ignore, "rule attribute")
 
-	if conf.Rules["testing"]["foo"].Ignore == nil {
-		t.Errorf("expected ignore attribute to be set")
-	}
+	assert.Equal(t, 1, len(fooRule.Ignore.Files), "rule ignore files")
+	assert.Equal(t, "foo.rego", fooRule.Ignore.Files[0], "rule ignore file")
 
-	if len(conf.Rules["testing"]["foo"].Ignore.Files) != 1 {
-		t.Errorf("expected ignore files to be set")
-	}
+	assert.Equal(t, "baz", fooRule.Extra["bar"], "extra attribute")
+	assert.Equal(t, nil, fooRule.Extra["ignore"], "extra attribute 'ignore'")
+	assert.Equal(t, nil, fooRule.Extra["level"], "extra attribute 'level'")
 
-	if conf.Rules["testing"]["foo"].Ignore.Files[0] != "foo.rego" {
-		t.Errorf("expected ignore files to contain foo.rego")
-	}
-
-	if conf.Rules["testing"]["foo"].Extra["bar"] != "baz" {
-		t.Errorf("expected extra attribute 'bar' to be baz")
-	}
-
-	if conf.Rules["testing"]["foo"].Extra["ignore"] != nil {
-		t.Errorf("expected extra attribute 'ignore' to be removed")
-	}
-
-	if conf.Rules["testing"]["foo"].Extra["level"] != nil {
-		t.Errorf("expected extra attribute 'level' to be removed")
-	}
-
-	if exp, got := 183, len(conf.Capabilities.Builtins); exp != got {
-		t.Errorf("expected %d builtins, got %d", exp, got)
-	}
+	assert.Equal(t, 183, len(conf.Capabilities.Builtins), "number of builtins in capabilities set")
 
 	expBuiltins := util.NewSet("regex.match", "ldap.query")
 	actBuiltins := util.NewSetFromKeys(conf.Capabilities.Builtins)
 
-	if !expBuiltins.Equal(expBuiltins.Intersect(actBuiltins)) {
-		t.Errorf("expected builtins %s in capabilities set", expBuiltins)
-	}
-
-	if actBuiltins.Contains("http.send") {
-		t.Errorf("expected builtin http.send to be removed from capabilities set")
-	}
+	assert.True(t, expBuiltins.Equal(expBuiltins.Intersect(actBuiltins)), "expected builtins %s", expBuiltins)
+	assert.False(t, actBuiltins.Contains("http.send"), "http.send should be removed")
 }
 
 func TestUnmarshalConfigWithBuiltinsFile(t *testing.T) {
@@ -354,18 +296,12 @@ func TestUnmarshalConfigWithBuiltinsFile(t *testing.T) {
 	bs := []byte(`rules: {}
 capabilities:
   from:
-    file: "./fixtures/caps.json"
-`)
+    file: "./fixtures/caps.json"`)
 
 	conf := testutil.MustUnmarshalYAML[Config](t, bs)
 
-	if exp, got := 1, len(conf.Capabilities.Builtins); exp != got {
-		t.Errorf("expected %d builtins, got %d", exp, got)
-	}
-
-	if !slices.Contains(outil.Keys(conf.Capabilities.Builtins), "wow") {
-		t.Errorf("expected builtin 'wow' to be found")
-	}
+	assert.Equal(t, 1, len(conf.Capabilities.Builtins), "number of builtins in capabilities set")
+	assert.True(t, slices.Contains(outil.Keys(conf.Capabilities.Builtins), "wow"), "builtin 'wow' not found")
 }
 
 func TestUnmarshalConfigDefaultCapabilities(t *testing.T) {
@@ -374,9 +310,7 @@ func TestUnmarshalConfigDefaultCapabilities(t *testing.T) {
 	conf := testutil.MustUnmarshalYAML[Config](t, []byte("rules: {}\n"))
 	caps := io.Capabilities()
 
-	if exp, got := len(caps.Builtins), len(conf.Capabilities.Builtins); exp != got {
-		t.Errorf("expected %d builtins, got %d", exp, got)
-	}
+	assert.Equal(t, len(caps.Builtins), len(conf.Capabilities.Builtins), "number of builtins")
 
 	// choose the first built-ins to check for to keep the test fast
 	expectedBuiltins := []string{caps.Builtins[0].Name, caps.Builtins[1].Name}
@@ -428,28 +362,16 @@ func TestUnmarshalProjectRootsAsStringOrObject(t *testing.T) {
 `)
 
 	conf := testutil.MustUnmarshalYAML[Config](t, bs)
-	version1 := 1
-	expRoots := []Root{{Path: "foo/bar"}, {Path: "baz"}, {Path: "bar/baz"}, {Path: "v1", RegoVersion: &version1}}
+	expRoots := []Root{{Path: "foo/bar"}, {Path: "baz"}, {Path: "bar/baz"}, {Path: "v1", RegoVersion: new(1)}}
 	roots := *conf.Project.Roots
 
-	if len(roots) != len(expRoots) {
-		t.Errorf("expected %d roots, got %d", len(expRoots), len(roots))
-	}
+	assert.Equal(t, len(expRoots), len(roots), "number of project roots")
 
 	for i, expRoot := range expRoots {
-		if roots[i].Path != expRoot.Path {
-			t.Errorf("expected root path %v, got %v", expRoot.Path, roots[i].Path)
-		}
+		assert.Equal(t, expRoot.Path, roots[i].Path, "root path")
 
 		if expRoot.RegoVersion != nil {
-			if roots[i].RegoVersion == nil {
-				t.Errorf("expected root %v to have a rego version", expRoot.Path)
-			} else if *roots[i].RegoVersion != *expRoot.RegoVersion {
-				t.Errorf(
-					"expected root %v rego version %v, got %v",
-					expRoot.Path, *expRoot.RegoVersion, *roots[i].RegoVersion,
-				)
-			}
+			assert.DereferenceEqual(t, *expRoot.RegoVersion, roots[i].RegoVersion, "root rego version")
 		}
 	}
 }
@@ -493,10 +415,8 @@ func TestAllRegoVersions(t *testing.T) {
 			}
 
 			test.WithTempFS(testData.FS, func(root string) {
-				versions := testutil.Must(AllRegoVersions(root, conf))(t)
-				if !maps.Equal(versions, testData.Expected) {
-					t.Errorf("expected %v, got %v", testData.Expected, versions)
-				}
+				versions := must.Return(AllRegoVersions(root, conf))(t)
+				assert.True(t, maps.Equal(versions, testData.Expected))
 			})
 		})
 	}

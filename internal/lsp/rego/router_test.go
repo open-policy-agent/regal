@@ -15,6 +15,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
@@ -38,11 +40,9 @@ func TestRouteTextDocumentCodeAction(t *testing.T) {
 
 	mgr := rego.NewRegoRouter(t.Context(), nil, query.NewCache(), providers(regalContext(), "", ""))
 	req := request("textDocument/codeAction", codeActionParams(t, "file:///workspace/p.rego", 0, 0, 0, 10))
-	rsp := testutil.Must(mgr.Handle(t.Context(), nil, req))(t)
+	rsp := must.Return(mgr.Handle(t.Context(), nil, req))(t)
 
-	if len(testutil.MustBe[[]types.CodeAction](t, rsp)) == 0 {
-		t.Fatal("expected at least one code action, got none")
-	}
+	must.NotEqual(t, 0, len(must.Be[[]types.CodeAction](t, rsp)), "code actions count")
 }
 
 func TestRouteTextDocumentDocumentLink(t *testing.T) {
@@ -58,12 +58,10 @@ func TestRouteTextDocumentDocumentLink(t *testing.T) {
 		},
 	}}, inmem.OptRoundTripOnWrite(false))
 	mgr := rego.NewRegoRouter(t.Context(), stg, query.NewCache(), providers(regalContext(), "", ""))
-	rsp := testutil.Must(mgr.Handle(t.Context(), nil, request("textDocument/documentLink", linkParams(t, doc.uri))))(t)
-	res := testutil.MustBe[[]types.DocumentLink](t, rsp)
+	rsp := must.Return(mgr.Handle(t.Context(), nil, request("textDocument/documentLink", linkParams(t, doc.uri))))(t)
+	res := must.Be[[]types.DocumentLink](t, rsp)
 
-	if len(res) == 0 {
-		t.Fatal("expected at least one document link, got none")
-	}
+	must.NotEqual(t, 0, len(res), "document link count")
 }
 
 func TestRouteTextDocumentDocumentHighlight(t *testing.T) {
@@ -82,12 +80,10 @@ func TestRouteTextDocumentDocumentHighlight(t *testing.T) {
 		},
 	})
 	prm := docPositionParams(t, doc.uri, types.Position{Line: 0, Character: 4})
-	rsp := testutil.Must(mgr.Handle(t.Context(), nil, request("textDocument/documentHighlight", prm)))(t)
-	res := testutil.MustBe[[]types.DocumentHighlight](t, rsp)
+	rsp := must.Return(mgr.Handle(t.Context(), nil, request("textDocument/documentHighlight", prm)))(t)
+	res := must.Be[[]types.DocumentHighlight](t, rsp)
 
-	if len(res) == 0 {
-		t.Fatal("expected at least one document link, got none")
-	}
+	must.NotEqual(t, 0, len(res), "document highlight count")
 }
 
 func TestRouteIgnoredDocument(t *testing.T) {
@@ -97,12 +93,10 @@ func TestRouteIgnoredDocument(t *testing.T) {
 		t.Context(), nil, query.NewCache(), providers(regalContext(), "", "file:///workspace/ignored.rego"),
 	)
 	req := request("textDocument/codeAction", codeActionParams(t, "file:///workspace/ignored.rego", 0, 0, 0, 10))
-	rsp := testutil.Must(mgr.Handle(t.Context(), nil, req))(t)
-	res := testutil.MustBe[[]types.CodeAction](t, rsp)
+	rsp := must.Return(mgr.Handle(t.Context(), nil, req))(t)
+	res := must.Be[[]types.CodeAction](t, rsp)
 
-	if len(res) != 0 {
-		t.Fatal("expected empty response, got code actions")
-	}
+	must.Equal(t, 0, len(res), "code actions count ignored document")
 }
 
 func TestTextDocumentSignatureHelp(t *testing.T) {
@@ -158,50 +152,24 @@ allow if concat(",", "a", "b") == "b,a"`)
 
 			mgr := rego.NewRegoRouter(ctx, store, query.NewCache(), providers(regalContext(), doc.content, ""))
 			req := request("textDocument/signatureHelp", docPositionParams(t, doc.uri, tc.position))
-			rsp := testutil.Must(mgr.Handle(ctx, nil, req))(t)
+			rsp := must.Return(mgr.Handle(ctx, nil, req))(t)
 
-			signatureHelp := testutil.MustBe[*types.SignatureHelp](t, rsp)
-			if len(signatureHelp.Signatures) == 0 {
-				t.Error("expected at least one signature")
-			}
-
-			if signatureHelp.ActiveSignature == nil {
-				t.Error("expected ActiveSignature to be set")
-			} else if *signatureHelp.ActiveSignature != 0 {
-				t.Errorf("expected ActiveSignature to be 0, got %d", *signatureHelp.ActiveSignature)
-			}
-
-			if signatureHelp.ActiveParameter == nil {
-				t.Error("expected ActiveParameter to be set")
-			} else if *signatureHelp.ActiveParameter != 0 {
-				t.Errorf("expected ActiveParameter to be 0, got %d", *signatureHelp.ActiveParameter)
-			}
+			signatureHelp := must.Be[*types.SignatureHelp](t, rsp)
+			assert.True(t, len(signatureHelp.Signatures) > 0, "expected at least one signature")
+			assert.DereferenceEqual(t, 0, signatureHelp.ActiveSignature, "activeSignature")
+			assert.DereferenceEqual(t, 0, signatureHelp.ActiveParameter, "activeParameter")
 
 			sig := signatureHelp.Signatures[0]
 
-			if sig.Label != tc.expectedLabel {
-				t.Errorf("expected signature label to be '%s', got '%s'", tc.expectedLabel, sig.Label)
-			}
-
-			if sig.Documentation != tc.expectedDoc {
-				t.Errorf("expected documentation to be '%s', got '%s'", tc.expectedDoc, sig.Documentation)
-			}
-
-			if len(sig.Parameters) != len(tc.expectedParams) {
-				t.Fatalf("expected %d parameters, got %d", len(tc.expectedParams), len(sig.Parameters))
-			}
+			assert.Equal(t, tc.expectedLabel, sig.Label, "label")
+			assert.Equal(t, tc.expectedDoc, sig.Documentation, "documentation")
+			assert.Equal(t, len(tc.expectedParams), len(sig.Parameters), "number of parameters")
 
 			for i, expectedParam := range tc.expectedParams {
-				if sig.Parameters[i].Label != expectedParam {
-					t.Errorf("expected parameter %d label to be '%s', got '%s'", i, expectedParam, sig.Parameters[i].Label)
-				}
+				assert.Equal(t, expectedParam, sig.Parameters[i].Label, "parameter label")
 			}
 
-			if sig.ActiveParameter == nil {
-				t.Error("expected signature ActiveParameter to be set")
-			} else if *sig.ActiveParameter != 0 {
-				t.Errorf("expected signature ActiveParameter to be 0, got %d", *sig.ActiveParameter)
-			}
+			assert.DereferenceEqual(t, 0, sig.ActiveParameter, "activeParameter")
 		})
 	}
 }
@@ -218,16 +186,10 @@ func TestRouteCompletionItemResolve(t *testing.T) {
 		"label": "count",
 		"data":  map[string]any{"resolver": "builtins"},
 	}))
-	rsp := testutil.Must(mgr.Handle(t.Context(), nil, req))(t)
-	cmi := testutil.MustBe[types.CompletionItem](t, rsp)
+	cmi := must.Be[types.CompletionItem](t, must.Return(mgr.Handle(t.Context(), nil, req))(t))
 
-	if cmi.Documentation == nil {
-		t.Fatal("expected documentation to be set, got nil")
-	}
-
-	if cmi.Documentation.Kind != "markdown" {
-		t.Errorf("expected documentation kind to be 'markdown', got '%s'", cmi.Documentation.Kind)
-	}
+	must.NotEqual(t, nil, cmi.Documentation, "documentation is set")
+	must.Equal(t, "markdown", cmi.Documentation.Kind, "documentation kind")
 }
 
 func docPositionParams(t *testing.T, uri string, position types.Position) *json.RawMessage {

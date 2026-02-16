@@ -171,8 +171,7 @@ func Find(path string) (*os.File, error) {
 	if regalDirError == nil {
 		expectedConfigFilePath := filepath.Join(regalDir.Name(), configFileName)
 
-		_, err := os.Stat(expectedConfigFilePath)
-		if err != nil && os.IsNotExist(err) {
+		if _, err := os.Stat(expectedConfigFilePath); err != nil && os.IsNotExist(err) {
 			return nil, errors.New("config file was not found in .regal directory")
 		} else if err != nil {
 			return nil, fmt.Errorf("failed to stat .regal config file: %w", err)

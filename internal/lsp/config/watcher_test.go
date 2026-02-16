@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -16,17 +17,14 @@ func TestWatcher(t *testing.T) {
 
 	tempDir := testutil.TempDirectoryOf(t, map[string]string{"config.yaml": "---\nfoo: bar\n"})
 	watcher := NewWatcher(&WatcherOpts{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	configFilePath := filepath.Join(tempDir, "config.yaml")
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	go func() {
-		if err := watcher.Start(ctx); err != nil {
-			t.Errorf("failed to start watcher: %v", err)
-		}
+		must.Equal(t, nil, watcher.Start(ctx))
 	}()
-
-	configFilePath := filepath.Join(tempDir, "config.yaml")
 
 	watcher.Watch(configFilePath)
 
@@ -37,7 +35,7 @@ func TestWatcher(t *testing.T) {
 	}
 
 	newConfigFileContents := "---\nfoo: baz\n"
-	testutil.MustWriteFile(t, configFilePath, []byte(newConfigFileContents))
+	must.WriteFile(t, configFilePath, []byte(newConfigFileContents))
 
 	select {
 	case <-watcher.Reload:
@@ -45,9 +43,7 @@ func TestWatcher(t *testing.T) {
 		t.Fatal("timeout waiting for config event")
 	}
 
-	if err := os.Rename(configFilePath, configFilePath+".new"); err != nil {
-		t.Fatal(err)
-	}
+	must.Equal(t, nil, os.Rename(configFilePath, configFilePath+".new"))
 
 	select {
 	case <-watcher.Drop:

@@ -83,6 +83,19 @@ func MapValues[K comparable, V, R any](m map[K]V, f func(V) R) map[K]R {
 	return mapped
 }
 
+func FilterInPlace[T any](s []T, f func(T) bool) []T {
+	n := 0
+
+	for i := range s {
+		if f(s[i]) {
+			s[n] = s[i]
+			n++
+		}
+	}
+
+	return s[:n]
+}
+
 // Filter returns a new slice containing only the elements of s that
 // satisfy the predicate f. This function runs each element of s through
 // f twice in order to allocate exactly what is needed. This is commonly
@@ -284,12 +297,12 @@ func AnySliceTo[T any](in []any) ([]T, error) {
 	out := make([]T, 0, len(in))
 
 	for _, item := range in {
-		casted, ok := item.(T)
+		asserted, ok := item.(T)
 		if !ok {
-			return nil, fmt.Errorf("expected %T, got %T", casted, item)
+			return nil, fmt.Errorf("expected %T, got %T", asserted, item)
 		}
 
-		out = append(out, casted)
+		out = append(out, asserted)
 	}
 
 	return out, nil

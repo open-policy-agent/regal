@@ -11,7 +11,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
@@ -76,12 +76,7 @@ allow if {
 
 				return func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
 					if req.Method == "workspace/applyEdit" {
-						requestData, err := encoding.JSONUnmarshalTo[types.ApplyWorkspaceEditParams](*req.Params)
-						if err != nil {
-							t.Fatalf("failed to unmarshal applyEdit params: %s", err)
-						}
-
-						receivedMessages <- requestData
+						receivedMessages <- must.Return(encoding.JSONUnmarshalTo[types.ApplyWorkspaceEditParams](*req.Params))(t)
 
 						return map[string]any{"applied": true}, nil
 					}
@@ -107,7 +102,7 @@ allow if {
 
 			// Create command arguments with proper JSON marshaling for Windows backslash escapes
 			commandArgs := types.CommandArgs{Target: mainRegoURI}
-			argsJSON := testutil.Must(encoding.JSON().Marshal(commandArgs))(t)
+			argsJSON := must.Return(encoding.JSON().Marshal(commandArgs))(t)
 
 			executeParams := types.ExecuteCommandParams{
 				Command:   "regal.fix.opa-fmt",
@@ -117,35 +112,23 @@ allow if {
 			var executeResponse any
 
 			// simulates a manual fmt request from the client
-			testutil.NoErr(connClient.Call(ctx, "workspace/executeCommand", executeParams, &executeResponse))(t)
+			must.Equal(t, nil, connClient.Call(ctx, "workspace/executeCommand", executeParams, &executeResponse))
 
 			timeout := time.NewTimer(determineTimeout())
 			defer timeout.Stop()
 
 			select {
 			case applyEditParams := <-receivedMessages:
-				if applyEditParams.Label != "Format using opa fmt" {
-					t.Fatalf("expected label 'Format using opa fmt', got %s", applyEditParams.Label)
-				}
-
-				if len(applyEditParams.Edit.DocumentChanges) != 1 {
-					t.Fatalf("expected 1 document change, got %d", len(applyEditParams.Edit.DocumentChanges))
-				}
+				must.Equal(t, "Format using opa fmt", applyEditParams.Label, "edit label")
+				must.Equal(t, 1, len(applyEditParams.Edit.DocumentChanges), "number of document changes")
 
 				docChange := applyEditParams.Edit.DocumentChanges[0]
-				if docChange.TextDocument.URI != mainRegoURI {
-					t.Fatalf("expected URI %s, got %s", mainRegoURI, docChange.TextDocument.URI)
-				}
-
-				if len(docChange.Edits) != len(tc.expectedEdits) {
-					t.Fatalf("expected %d edits, got %d", len(tc.expectedEdits), len(docChange.Edits))
-				}
+				must.Equal(t, mainRegoURI, docChange.TextDocument.URI, "document URI")
+				must.Equal(t, len(tc.expectedEdits), len(docChange.Edits), "number of edits")
 
 				for i, expected := range tc.expectedEdits {
-					actual := docChange.Edits[i]
-					if actual.Range != expected.Range || actual.NewText != expected.NewText {
-						t.Fatalf("edit %d mismatch:\nexpected: %v\nactual:   %v", i, expected, actual)
-					}
+					must.Equal(t, expected.Range, docChange.Edits[i].Range, "edit range")
+					must.Equal(t, expected.NewText, docChange.Edits[i].NewText, "edit new text")
 				}
 
 			case <-timeout.C:
@@ -230,8 +213,7 @@ allow if {
 	}
 
 	var executeResponse any
-
-	testutil.NoErr(connClient.Call(ctx, "workspace/executeCommand", executeParams, &executeResponse))(t)
+	must.Equal(t, nil, connClient.Call(ctx, "workspace/executeCommand", executeParams, &executeResponse))
 
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
@@ -242,32 +224,15 @@ allow if {
 			t.Fatal("expected notification to contain 'stages' field")
 		}
 
-		stages, ok := notification["stages"].([]any)
-		if !ok {
-			t.Fatalf("expected 'stages' to be a slice, got %T", notification["stages"])
-		}
+		stages := must.Be[[]any](t, notification["stages"])
+		must.NotEqual(t, 0, len(stages), "expected at least one compilation stage")
 
-		if len(stages) == 0 {
-			t.Fatal("expected at least one compilation stage")
+		firstStage := must.Be[map[string]any](t, stages[0])
+		for _, field := range []string{"name", "output", "error"} {
+			if _, ok := firstStage[field]; !ok {
+				t.Fatalf("expected stage to have '%s' field", field)
+			}
 		}
-
-		firstStage, ok := stages[0].(map[string]any)
-		if !ok {
-			t.Fatalf("expected first stage to be a map, got %T", stages[0])
-		}
-
-		if _, ok := firstStage["name"]; !ok {
-			t.Fatal("expected stage to have 'name' field")
-		}
-
-		if _, ok := firstStage["output"]; !ok {
-			t.Fatal("expected stage to have 'output' field")
-		}
-
-		if _, ok := firstStage["error"]; !ok {
-			t.Fatal("expected stage to have 'error' field")
-		}
-
 	case <-timeout.C:
 		t.Fatal("timeout waiting for regal/showExplorerResult notification")
 	}

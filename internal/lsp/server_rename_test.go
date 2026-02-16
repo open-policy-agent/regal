@@ -8,7 +8,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
 
@@ -16,7 +17,7 @@ func TestLanguageServerFixRenameParams(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	testutil.MustMkdirAll(t, tmpDir, "workspace", "foo", "bar")
+	must.MkdirAll(t, tmpDir, "workspace", "foo", "bar")
 
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
@@ -34,36 +35,22 @@ func TestLanguageServerFixRenameParams(t *testing.T) {
 	fileURI := uri.FromRelativePath(ls.client.Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 
-	params := testutil.Must(ls.fixRenameParams("fix my file!", fileURI))(t)
+	params := must.Return(ls.fixRenameParams("fix my file!", fileURI))(t)
+	must.Equal(t, "fix my file!", params.Label, "label")
 
-	if params.Label != "fix my file!" {
-		t.Fatalf("expected label to be 'Fix my file!', got %s", params.Label)
-	}
+	change := must.Be[types.RenameFile](t, params.Edit.DocumentChanges[0])
+	must.Equal(t, "rename", change.Kind, "change kind")
+	must.Equal(t, fileURI, change.OldURI, "old URI")
 
-	change := testutil.MustBe[types.RenameFile](t, params.Edit.DocumentChanges[0])
-
-	if change.Kind != "rename" {
-		t.Fatalf("expected kind to be 'rename', got %s", change.Kind)
-	}
-
-	if change.OldURI != fileURI {
-		t.Fatalf("expected old URI to be %s, got %s", fileURI, change.OldURI)
-	}
-
-	expectedNewURI := uri.FromPath(
-		clients.IdentifierGeneric,
-		filepath.Join(tmpDir, "workspace", "authz", "main", "rules", "policy.rego"),
-	)
-	if change.NewURI != expectedNewURI {
-		t.Fatalf("expected new URI to be '%s', got %s", expectedNewURI, change.NewURI)
-	}
+	path := filepath.Join(tmpDir, "workspace", "authz", "main", "rules", "policy.rego")
+	must.Equal(t, uri.FromPath(clients.IdentifierGeneric, path), change.NewURI, "new URI")
 }
 
 func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	testutil.MustMkdirAll(t, tmpDir, "workspace", "foo", "bar")
+	must.MkdirAll(t, tmpDir, "workspace", "foo", "bar")
 
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
@@ -87,60 +74,39 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 	ls.cache.SetFileContents(conflictingFileURI, "package authz.main.rules") // existing content irrelevant here
 
-	params := testutil.Must(ls.fixRenameParams("fix my file!", fileURI))(t)
-
-	if params.Label != "fix my file!" {
-		t.Fatalf("expected label to be 'Fix my file!', got %s", params.Label)
-	}
-
-	if len(params.Edit.DocumentChanges) != 3 {
-		t.Fatalf("expected 3 document change, got %d", len(params.Edit.DocumentChanges))
-	}
+	params := must.Return(ls.fixRenameParams("fix my file!", fileURI))(t)
+	must.Equal(t, "fix my file!", params.Label, "label")
+	must.Equal(t, 3, len(params.Edit.DocumentChanges), "number of document changes")
 
 	// check the rename
-	change := testutil.MustBe[types.RenameFile](t, params.Edit.DocumentChanges[0])
+	change := must.Be[types.RenameFile](t, params.Edit.DocumentChanges[0])
+	must.Equal(t, "rename", change.Kind, "change kind")
+	must.Equal(t, fileURI, change.OldURI, "old URI")
 
-	if change.Kind != "rename" {
-		t.Fatalf("expected kind to be 'rename', got %s", change.Kind)
-	}
-
-	if change.OldURI != fileURI {
-		t.Fatalf("expected old URI to be %s, got %s", fileURI, change.OldURI)
-	}
-
-	expectedNewURI := uri.FromPath(
-		clients.IdentifierGeneric,
-		filepath.Join(tmpDir, "workspace", "authz", "main", "rules", "policy_1.rego"),
-	)
-	if change.NewURI != expectedNewURI {
-		t.Fatalf("expected new URI to be %s, got %s", expectedNewURI, change.NewURI)
-	}
+	path := filepath.Join(tmpDir, "workspace", "authz", "main", "rules", "policy_1.rego")
+	must.Equal(t, uri.FromPath(clients.IdentifierGeneric, path), change.NewURI, "new URI")
 
 	// check the deletes
-	deleteChange1 := testutil.MustBe[types.DeleteFile](t, params.Edit.DocumentChanges[1])
+	deleteChange1 := must.Be[types.DeleteFile](t, params.Edit.DocumentChanges[1])
 
 	expectedDeletedURI1 := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace", "foo", "bar"))
-	if deleteChange1.URI != expectedDeletedURI1 {
-		t.Fatalf("expected delete URI to be %s, got %s", expectedDeletedURI1, deleteChange1.URI)
-	}
+	must.Equal(t, expectedDeletedURI1, deleteChange1.URI, "delete URI")
 
-	deleteChange2 := testutil.MustBe[types.DeleteFile](t, params.Edit.DocumentChanges[2])
+	deleteChange2 := must.Be[types.DeleteFile](t, params.Edit.DocumentChanges[2])
 
 	expectedDeletedURI2 := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace", "foo"))
-	if deleteChange2.URI != expectedDeletedURI2 {
-		t.Fatalf("expected delete URI to be %s, got %s", expectedDeletedURI2, deleteChange2.URI)
-	}
+	must.Equal(t, expectedDeletedURI2, deleteChange2.URI, "delete URI")
 }
 
 func TestLanguageServerFixRenameParamsWhenTargetOutsideRoot(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	testutil.MustMkdirAll(t, tmpDir, "workspace", "foo", "bar")
+	must.MkdirAll(t, tmpDir, "workspace", "foo", "bar")
 
 	// this will have regal find a root in the parent dir, which means the file
 	// is moved relative to a dir above the workspace.
-	testutil.MustWriteFile(t, filepath.Join(tmpDir, ".regal.yaml"), []byte{})
+	must.WriteFile(t, filepath.Join(tmpDir, ".regal.yaml"), []byte{})
 
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
@@ -161,5 +127,5 @@ func TestLanguageServerFixRenameParamsWhenTargetOutsideRoot(t *testing.T) {
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 
 	_, err := ls.fixRenameParams("fix my file!", fileURI)
-	testutil.ErrMustContain(err, "cannot move file out of workspace root")(t)
+	assert.StringContains(t, err.Error(), "cannot move file out of workspace root")
 }

@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/regal/internal/lsp/foldingrange"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestTokenFoldingRanges(t *testing.T) {
@@ -25,40 +27,22 @@ rule if {
 }`
 
 	foldingRanges := foldingrange.TokenRanges(policy)
-
-	if len(foldingRanges) != 3 {
-		t.Fatalf("Expected 3 folding ranges, got %d", len(foldingRanges))
-	}
+	must.Equal(t, 3, len(foldingRanges), "number of folding ranges")
 
 	arr := foldingRanges[0]
-
-	if arr.StartLine != 3 || *arr.StartCharacter != 9 {
-		t.Errorf("Expected start line 3 and start character 9, got %d and %d", arr.StartLine, *arr.StartCharacter)
-	}
-
-	if arr.EndLine != 6 {
-		t.Errorf("Expected end line 6, got %d", arr.EndLine)
-	}
+	assert.Equal(t, 3, arr.StartLine, "start line")
+	assert.DereferenceEqual(t, 9, arr.StartCharacter, "start character")
+	assert.Equal(t, 6, arr.EndLine, "end line")
 
 	parens := foldingRanges[1]
-
-	if parens.StartLine != 8 || *parens.StartCharacter != 9 {
-		t.Errorf("Expected start line 8 and start character 9, got %d and %d", parens.StartLine, *parens.StartCharacter)
-	}
-
-	if parens.EndLine != 11 {
-		t.Errorf("Expected end line 11, got %d", parens.EndLine)
-	}
+	assert.Equal(t, 8, parens.StartLine, "start line")
+	assert.DereferenceEqual(t, 9, parens.StartCharacter, "start character")
+	assert.Equal(t, 11, parens.EndLine, "end line")
 
 	rule := foldingRanges[2]
-
-	if rule.StartLine != 2 || *rule.StartCharacter != 9 {
-		t.Errorf("Expected start line 2 and start character 9, got %d and %d", rule.StartLine, *rule.StartCharacter)
-	}
-
-	if rule.EndLine != 12 {
-		t.Errorf("Expected end line 12, got %d", rule.EndLine)
-	}
+	assert.Equal(t, 2, rule.StartLine, "start line")
+	assert.DereferenceEqual(t, 9, rule.StartCharacter, "start character")
+	assert.Equal(t, 12, rule.EndLine, "end line")
 }
 
 func TestTokenInvalidFoldingRanges(t *testing.T) {
@@ -68,9 +52,5 @@ func TestTokenInvalidFoldingRanges(t *testing.T) {
 
 arr := ]]`
 
-	foldingRanges := foldingrange.TokenRanges(policy)
-
-	if len(foldingRanges) != 0 {
-		t.Fatalf("Expected no folding ranges, got %d", len(foldingRanges))
-	}
+	must.Equal(t, 0, len(foldingrange.TokenRanges(policy)), "number of folding ranges")
 }

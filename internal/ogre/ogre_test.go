@@ -10,7 +10,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/ogre"
 	"github.com/open-policy-agent/regal/internal/parse"
-	"github.com/open-policy-agent/regal/internal/testutil"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
@@ -34,7 +34,7 @@ func TestEval(t *testing.T) {
 	t.Parallel()
 
 	resultHandler := func(result ast.Value) error {
-		violations, ok := rast.GetValue[ast.Set](testutil.MustBe[ast.Object](t, result), "violations")
+		violations, ok := rast.GetValue[ast.Set](must.Be[ast.Object](t, result), "violations")
 		if !ok {
 			return errors.New("expected violations in result")
 		}
@@ -46,23 +46,21 @@ func TestEval(t *testing.T) {
 		return nil
 	}
 
-	q := testutil.Must(ogre.New(lintQuery).
+	q := must.Return(ogre.New(lintQuery).
 		WithPrintHook(topdown.NewPrintHook(t.Output())).
 		WithStore(ogre.NewStoreFromObject(t.Context(), mockData(t))).
 		Prepare(t.Context()))(t)
 
 	policy := "package foo\n\nx = 1"
-	input := testutil.Must(transform.ToAST("p.rego", policy, parse.MustParseModule(policy), false))(t)
+	input := must.Return(transform.ToAST("p.rego", policy, parse.MustParseModule(policy), false))(t)
 
-	if err := q.Evaluator().WithResultHandler(resultHandler).WithInput(input).Eval(t.Context()); err != nil {
-		t.Fatal(err)
-	}
+	must.Equal(t, nil, q.Evaluator().WithResultHandler(resultHandler).WithInput(input).Eval(t.Context()))
 }
 
 func mockData(t *testing.T) ast.Object {
 	t.Helper()
 
-	conf := testutil.Must(config.FromPath("../../bundle/regal/config/provided/data.yaml"))(t)
+	conf := must.Return(config.FromPath("../../bundle/regal/config/provided/data.yaml"))(t)
 
 	return ast.NewObject(
 		rast.Item("eval", ast.ObjectTerm(

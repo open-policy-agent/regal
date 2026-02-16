@@ -10,6 +10,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -56,7 +58,7 @@ allow if concat(",", "a", "b") == "b,a"`
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			result := testutil.Must(ls.Handle(t.Context(), nil, &jsonrpc2.Request{
+			result := must.Return(ls.Handle(t.Context(), nil, &jsonrpc2.Request{
 				Method: "textDocument/signatureHelp",
 				Params: testutil.ToJSONRawMessage(t, types.SignatureHelpParams{
 					TextDocument: types.TextDocumentIdentifier{URI: mainRegoURI},
@@ -64,49 +66,23 @@ allow if concat(",", "a", "b") == "b,a"`
 				}),
 			}))(t)
 
-			signatureHelp := testutil.MustBe[*types.SignatureHelp](t, result)
+			signatureHelp := must.Be[*types.SignatureHelp](t, result)
 
-			if len(signatureHelp.Signatures) == 0 {
-				t.Error("expected at least one signature")
-			}
-
-			if signatureHelp.ActiveSignature == nil {
-				t.Error("expected ActiveSignature to be set")
-			} else if *signatureHelp.ActiveSignature != 0 {
-				t.Errorf("expected ActiveSignature to be 0, got %d", *signatureHelp.ActiveSignature)
-			}
-
-			if signatureHelp.ActiveParameter == nil {
-				t.Error("expected ActiveParameter to be set")
-			} else if *signatureHelp.ActiveParameter != 0 {
-				t.Errorf("expected ActiveParameter to be 0, got %d", *signatureHelp.ActiveParameter)
-			}
+			assert.True(t, len(signatureHelp.Signatures) > 0, "at least one signature")
+			assert.DereferenceEqual(t, 0, signatureHelp.ActiveSignature, "activeSignature")
+			assert.DereferenceEqual(t, 0, signatureHelp.ActiveParameter, "activeParameter")
 
 			sig := signatureHelp.Signatures[0]
 
-			if sig.Label != tc.expectedLabel {
-				t.Errorf("expected signature label to be '%s', got '%s'", tc.expectedLabel, sig.Label)
-			}
-
-			if sig.Documentation != tc.expectedDoc {
-				t.Errorf("expected documentation to be '%s', got '%s'", tc.expectedDoc, sig.Documentation)
-			}
-
-			if len(sig.Parameters) != len(tc.expectedParams) {
-				t.Fatalf("expected %d parameters, got %d", len(tc.expectedParams), len(sig.Parameters))
-			}
+			assert.Equal(t, tc.expectedLabel, sig.Label, "label")
+			assert.Equal(t, tc.expectedDoc, sig.Documentation, "documentation")
+			assert.Equal(t, len(tc.expectedParams), len(sig.Parameters), "number of parameters")
 
 			for i, expectedParam := range tc.expectedParams {
-				if sig.Parameters[i].Label != expectedParam {
-					t.Errorf("expected parameter %d label to be '%s', got '%s'", i, expectedParam, sig.Parameters[i].Label)
-				}
+				assert.Equal(t, expectedParam, sig.Parameters[i].Label, "parameter label")
 			}
 
-			if sig.ActiveParameter == nil {
-				t.Error("expected signature ActiveParameter to be set")
-			} else if *sig.ActiveParameter != 0 {
-				t.Errorf("expected signature ActiveParameter to be 0, got %d", *sig.ActiveParameter)
-			}
+			assert.DereferenceEqual(t, 0, sig.ActiveParameter, "activeParameter")
 		})
 	}
 }

@@ -6,6 +6,8 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 // TestSendFileDiagnosticsEmptyArrays replicates the scenario from
@@ -21,27 +23,20 @@ func TestSendFileDiagnosticsEmptyArrays(t *testing.T) {
 		expectedDiagnostics []types.Diagnostic
 	}{
 		"lint errors only": {
-			parseErrors:         []types.Diagnostic{},
 			lintErrors:          []types.Diagnostic{{Message: "lint error"}},
 			fileInCache:         true,
 			expectedDiagnostics: []types.Diagnostic{{Message: "lint error"}},
 		},
 		"parse errors only": {
 			parseErrors:         []types.Diagnostic{{Message: "parse error"}},
-			lintErrors:          []types.Diagnostic{},
 			fileInCache:         true,
 			expectedDiagnostics: []types.Diagnostic{{Message: "parse error"}},
 		},
 		"both empty in cache": {
-			parseErrors:         []types.Diagnostic{},
-			lintErrors:          []types.Diagnostic{},
-			fileInCache:         true,
-			expectedDiagnostics: []types.Diagnostic{},
+			fileInCache: true,
 		},
 		"file deleted from cache": {
 			// file deleted, and so nothing in the cache
-			fileInCache:         false,
-			expectedDiagnostics: []types.Diagnostic{},
 		},
 	}
 
@@ -64,17 +59,9 @@ func TestSendFileDiagnosticsEmptyArrays(t *testing.T) {
 
 			select {
 			case diag := <-receivedDiagnostics:
-				if diag.URI != fileURI {
-					t.Fatalf("expected URI %s, got %s", fileURI, diag.URI)
-				}
-
-				if len(tc.expectedDiagnostics) == 0 && diag.Items == nil {
-					t.Errorf("expected empty array [], got nil")
-				}
-
-				if len(diag.Items) != len(tc.expectedDiagnostics) {
-					t.Errorf("expected %d diagnostics, got %d", len(tc.expectedDiagnostics), len(diag.Items))
-				}
+				must.Equal(t, fileURI, diag.URI, "diagnostic URI")
+				assert.NotNil(t, diag.Items, "items never nil")
+				assert.Equal(t, len(tc.expectedDiagnostics), len(diag.Items), "number of diagnostics")
 
 				for i, expected := range tc.expectedDiagnostics {
 					if i < len(diag.Items) && diag.Items[i].Message != expected.Message {

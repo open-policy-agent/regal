@@ -1,31 +1,20 @@
 package hints
 
 import (
-	"slices"
 	"testing"
 
 	"github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/internal/test/assert"
+	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
 func TestHints(t *testing.T) {
 	t.Parallel()
 
-	mod := `package foo
+	_, err := parse.Module("test.rego", "package foo\n\nincomplete")
+	must.NotEqual(t, nil, err, "expected error")
 
-incomplete`
+	hints := must.Return(GetForError(err))(t)
 
-	_, err := parse.Module("test.rego", mod)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-
-	hints, err := GetForError(err)
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-
-	expectedHints := []string{"rego-parse-error/var-cannot-be-used-for-rule-name"}
-	if !slices.Equal(hints, expectedHints) {
-		t.Fatalf("expected\n%v but got\n%v", expectedHints, hints)
-	}
+	assert.SlicesEqual(t, []string{"rego-parse-error/var-cannot-be-used-for-rule-name"}, hints, "hints")
 }

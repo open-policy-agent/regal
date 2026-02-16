@@ -22,8 +22,8 @@ func (*termCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	write.ObjectStart(stream, term.Location)
 
 	if term.Value != nil {
-		write.String(stream, strType, ast.ValueName(term.Value))
-		write.Val(stream, strValue, term.Value)
+		write.String(stream, "type", ast.ValueName(term.Value))
+		write.Val(stream, "value", term.Value)
 	}
 
 	write.ObjectEnd(stream)
