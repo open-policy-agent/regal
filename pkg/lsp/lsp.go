@@ -25,7 +25,10 @@ type Handle struct {
 // New opens a new language server session on the provided websocket connection `ws`.
 // Use the `*config.Config` argument to control the LSP session's config.
 func New(ctx context.Context, ws *websocket.Conn, c *config.Config) (*Handle, error) {
-	opts := lsp.LanguageServerOptions{Logger: log.NewLogger(log.LevelOff, os.Stderr)}
+	opts := lsp.LanguageServerOptions{
+		Logger:       log.NewLogger(log.LevelOff, os.Stderr),
+		FeatureFlags: lsp.DefaultServerFeatureFlags(),
+	}
 	if os.Getenv("REGAL_DEBUG") != "" {
 		opts.Logger.SetLevel(log.LevelDebug)
 	}

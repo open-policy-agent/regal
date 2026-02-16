@@ -45,6 +45,33 @@
             }
           }
         },
+        "server": {
+          "type": "object",
+          "description": "LSP server config and state",
+          "properties": {
+            "feature_flags": {
+              "type": "object",
+              "description": "Feature flags state",
+              "properties": {
+                "debug_provider": {
+                  "type": "boolean",
+                  "description": "If the server is configured to operate as a debug provider"
+                },
+                "explorer_provider": {
+                  "type": "boolean",
+                  "description": "If the server is configured to operate as an explorer provider"
+                },
+                "inline_eval_provider": {
+                  "type": "boolean",
+                  "description": "If the server is configured to operate as an inline eval provider"
+                }
+              },
+              "required": [
+                "feature_flags"
+              ]
+            }
+          }
+        },
         "environment": {
           "type": "object",
           "description": "Environment properties for the LSP client",
@@ -62,11 +89,17 @@
               "description": "Base URI for Regal's local web server server"
             },
             "input_dot_json_path": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "description": "Path to the input.json file, if found"
             },
             "input_dot_json": {
-              "type": ["object", "null"],
+              "type": [
+                "object",
+                "null"
+              ],
               "description": "Content of the input.json file, if found"
             },
             "path_separator": {
@@ -122,6 +155,7 @@
       "type": "object",
       "required": [
         "client",
+        "server",
         "environment",
         "file"
       ]

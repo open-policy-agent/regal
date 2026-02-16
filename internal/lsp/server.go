@@ -94,6 +94,16 @@ var (
 	fixRedundantExistence     = &fixes.RedundantExistenceCheck{}
 )
 
+// DefaultServerFeatureFlags returns the default feature flags with all
+// custom features enabled.
+func DefaultServerFeatureFlags() *types.ServerFeatureFlags {
+	return &types.ServerFeatureFlags{
+		ExplorerProvider:         true,
+		InlineEvaluationProvider: true,
+		DebugProvider:            true,
+	}
+}
+
 type LanguageServerOptions struct {
 	// Logger is the logger to use for the language server.
 	Logger *log.Logger
@@ -104,10 +114,15 @@ type LanguageServerOptions struct {
 	// changes or when running in extremely slow environments like GHA with
 	// the go race detector on. TODO, work out why this is required.
 	WorkspaceDiagnosticsPoll time.Duration
+
+	// FeatureFlags defines which custom features are enabled.
+	// If not provided, DefaultServerFeatureFlags() will be used.
+	FeatureFlags *types.ServerFeatureFlags
 }
 
 type LanguageServer struct {
-	log *log.Logger
+	log          *log.Logger
+	featureFlags types.ServerFeatureFlags
 
 	regoStore storage.Store
 	conn      *jsonrpc2.Conn
@@ -182,12 +197,19 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 	qc := query.NewCache()
 	store := NewRegalStore()
 
+	// Use provided feature flags, or defaults if not set
+	featureFlags := opts.FeatureFlags
+	if featureFlags == nil {
+		featureFlags = DefaultServerFeatureFlags()
+	}
+
 	ls := &LanguageServer{
 		cache:                       c,
 		queryCache:                  qc,
 		loadedConfig:                cfg,
 		regoStore:                   store,
 		log:                         opts.Logger,
+		featureFlags:                *featureFlags,
 		lintFileJobs:                make(chan lintFileJob, 10),
 		lintWorkspaceJobs:           make(chan lintWorkspaceJob, 10),
 		builtinsPositionJobs:        make(chan lintFileJob, 10),
@@ -567,29 +589,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 			return
 		case params := <-l.commandRequest:
 			if params.Command == "regal.explorer" {
-				var explorerArgs types.ExplorerCommandArgs
-
-				if len(params.Arguments) > 0 {
-					arg, ok := params.Arguments[0].(map[string]any)
-					if !ok {
-						l.log.Message(
-							"failed to unmarshal regal.explorer command arguments, expected object, got %T",
-							params.Arguments[0],
-						)
-
-						continue
-					}
-
-					explorerArgs = types.ExplorerCommandArgs{
-						Target:      util.GetMapValue[string](arg, "target"),
-						Strict:      util.GetMapValue[bool](arg, "strict"),
-						Annotations: util.GetMapValue[bool](arg, "annotations"),
-						Print:       util.GetMapValue[bool](arg, "print"),
-						Format:      util.GetMapValue[bool](arg, "format"),
-					}
-				}
-
-				if err := l.handleExplorerCommand(ctx, explorerArgs); err != nil {
+				if err := l.handleExplorerCommand(ctx, params); err != nil {
 					l.log.Message("failed to handle explorer command: %s", err)
 				}
 
@@ -657,6 +657,18 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 			case "regal.eval":
 				err = l.handleEvalCommand(ctx, args)
 			case "regal.debug":
+				if !l.client.SupportsDebugCodeLens() {
+					l.log.Message("regal.debug command called but client does not support debug functionality")
+
+					break
+				}
+
+				if !l.featureFlags.DebugProvider {
+					l.log.Message("regal.debug command called but disabled in server")
+
+					break
+				}
+
 				if args.Target == "" || args.Query == "" {
 					l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
 
@@ -1880,6 +1892,29 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 	regoFilter := types.FileOperationFilter{Scheme: "file", Pattern: types.FileOperationPattern{Glob: "**/*.rego"}}
 	fileOpOpts := types.FileOperationRegistrationOptions{Filters: []types.FileOperationFilter{regoFilter}}
 
+	// set enabled commands based on server feature flags
+	enabledCommands := []string{
+		"regal.eval",
+		"regal.fix.opa-fmt",
+		"regal.fix.use-rego-v1",
+		"regal.fix.use-assignment-operator",
+		"regal.fix.no-whitespace-comment",
+		"regal.fix.directory-package-mismatch",
+		"regal.fix.non-raw-regex-pattern",
+		"regal.fix.prefer-equals-comparison",
+		"regal.fix.constant-condition",
+		"regal.fix.redundant-existence-check",
+		"regal.config.disable-rule",
+	}
+
+	if l.featureFlags.DebugProvider {
+		enabledCommands = append(enabledCommands, "regal.debug")
+	}
+
+	if l.featureFlags.ExplorerProvider {
+		enabledCommands = append(enabledCommands, "regal.explorer")
+	}
+
 	initializeResult := types.InitializeResult{
 		Capabilities: types.ServerCapabilities{
 			TextDocumentSyncOptions: types.TextDocumentSyncOptions{
@@ -1920,21 +1955,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			},
 			CodeActionProvider: types.CodeActionOptions{CodeActionKinds: []string{"quickfix", "source"}},
 			ExecuteCommandProvider: types.ExecuteCommandOptions{
-				Commands: []string{
-					"regal.debug",
-					"regal.eval",
-					"regal.explorer",
-					"regal.fix.opa-fmt",
-					"regal.fix.use-rego-v1",
-					"regal.fix.use-assignment-operator",
-					"regal.fix.no-whitespace-comment",
-					"regal.fix.directory-package-mismatch",
-					"regal.fix.non-raw-regex-pattern",
-					"regal.fix.prefer-equals-comparison",
-					"regal.fix.constant-condition",
-					"regal.fix.redundant-existence-check",
-					"regal.config.disable-rule",
-				},
+				Commands: enabledCommands,
 			},
 			DocumentFormattingProvider: true,
 			FoldingRangeProvider:       true,
@@ -1969,10 +1990,13 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 				},
 				Full: true,
 			},
+			// 'Experimental' is LSP terminology, we are using these to be
+			// 'custom' additions that are ready for use, but not in the base
+			// spec.
 			Experimental: &types.ExperimentalCapabilities{
-				ExplorerProvider: true,
-				EvalProvider:     true,
-				DebugProvider:    true,
+				ExplorerProvider:   l.featureFlags.ExplorerProvider,
+				InlineEvalProvider: l.featureFlags.InlineEvaluationProvider,
+				DebugProvider:      l.featureFlags.DebugProvider,
 			},
 		},
 	}
@@ -2277,6 +2301,9 @@ func (l *LanguageServer) parseOpts(fileURI string, bis map[string]*ast.Builtin) 
 func (l *LanguageServer) regalContext(fileURI string, _ *rego.Requirements) *rego.RegalContext {
 	return &rego.RegalContext{
 		Client: l.client,
+		Server: types.ServerContext{
+			FeatureFlags: l.featureFlags,
+		},
 		File: rego.File{
 			Name:        l.toRelativePath(fileURI),
 			RegoVersion: l.regoVersionForURI(fileURI).String(),
@@ -2292,7 +2319,35 @@ func (l *LanguageServer) regalContext(fileURI string, _ *rego.Requirements) *reg
 	}
 }
 
-func (l *LanguageServer) handleExplorerCommand(ctx context.Context, args types.ExplorerCommandArgs) error {
+func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types.ExecuteCommandParams) error {
+	if !l.client.SupportsExplorer() {
+		l.log.Message("regal.explorer command called but client does not support explorer functionality")
+
+		return errors.New("client does not support explorer functionality")
+	}
+
+	var args types.ExplorerCommandArgs
+
+	if len(params.Arguments) > 0 {
+		arg, ok := params.Arguments[0].(map[string]any)
+		if !ok {
+			l.log.Message(
+				"failed to unmarshal regal.explorer command arguments, expected object, got %T",
+				params.Arguments[0],
+			)
+
+			return errors.New("failed to parse explorer arguments")
+		}
+
+		args = types.ExplorerCommandArgs{
+			Target:      util.GetMapValue[string](arg, "target"),
+			Strict:      util.GetMapValue[bool](arg, "strict"),
+			Annotations: util.GetMapValue[bool](arg, "annotations"),
+			Print:       util.GetMapValue[bool](arg, "print"),
+			Format:      util.GetMapValue[bool](arg, "format"),
+		}
+	}
+
 	if args.Target == "" {
 		l.log.Message("expected command target, got empty string")
 
@@ -2506,8 +2561,7 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		target = strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
 	}
 
-	if l.client.InitOptions.EvalCodelensDisplayInline != nil &&
-		*l.client.InitOptions.EvalCodelensDisplayInline {
+	if l.featureFlags.InlineEvaluationProvider && l.client.SupportsEvalCodelensDisplayInline() {
 		responseParams := map[string]any{
 			"result": result,
 			"line":   args.Row,

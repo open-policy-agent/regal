@@ -42,7 +42,10 @@ func init() {
 				verbose = true
 			}
 
-			opts := &lsp.LanguageServerOptions{Logger: log.NewLogger(log.LevelMessage, os.Stderr)}
+			opts := &lsp.LanguageServerOptions{
+				Logger:       log.NewLogger(log.LevelMessage, os.Stderr),
+				FeatureFlags: lsp.DefaultServerFeatureFlags(),
+			}
 			ls := lsp.NewLanguageServer(ctx, opts)
 
 			conf := connection.LoggingConfig{Logger: opts.Logger, LogInbound: verbose, LogOutbound: verbose}

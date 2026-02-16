@@ -10,6 +10,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 
+	"github.com/open-policy-agent/regal/internal/lsp"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
@@ -246,6 +247,9 @@ func providers(rc *rego.RegalContext, content, ignored string) rego.Providers {
 func regalContext() *rego.RegalContext {
 	return &rego.RegalContext{
 		Client: types.Client{Identifier: clients.IdentifierVSCode},
+		Server: types.ServerContext{
+			FeatureFlags: *lsp.DefaultServerFeatureFlags(),
+		},
 		Environment: rego.Environment{
 			PathSeparator:    "/",
 			WorkspaceRootURI: "file:///workspace",

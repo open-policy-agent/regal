@@ -76,9 +76,10 @@ type (
 	}
 
 	RegalContext struct {
-		Client      types.Client `json:"client"`
-		File        File         `json:"file"`
-		Environment Environment  `json:"environment"`
+		Client      types.Client        `json:"client"`
+		Server      types.ServerContext `json:"server"`
+		File        File                `json:"file"`
+		Environment Environment         `json:"environment"`
 
 		Query *query.Prepared `json:"-"` // for now, might expose to Rego later
 	}
