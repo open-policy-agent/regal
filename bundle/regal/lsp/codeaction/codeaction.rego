@@ -137,4 +137,4 @@ rules := {
 # scope: document
 default only := ["quickfix", "source.explore"]
 
-only := input.params.context.only if count(input.params.context.only) > 0
+only := input.params.context.only if input.params.context.only != []

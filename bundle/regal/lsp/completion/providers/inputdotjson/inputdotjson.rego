@@ -56,7 +56,7 @@ _matching_input_suggestions contains [suggestion, type] if {
 _input_paths contains [$"input.{concat(".", path)}", type_name(value)] if {
 	walk(input.regal.environment.input_dot_json, [path, value])
 
-	count(path) > 0
+	path != []
 
 	# don't traverse into arrays
 	every value in path {

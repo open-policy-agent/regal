@@ -31,6 +31,12 @@ rules:
   idiomatic:
     use-array-flatten:
       flag-wrapped-concat: true
+  performance:
+    equals-over-count:
+      level: error
+      ignore:
+        files:
+          - "*_test.rego"
   style:
     line-length:
       level: error

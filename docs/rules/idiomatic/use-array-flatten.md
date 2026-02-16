@@ -87,3 +87,7 @@ rules:
       # default: false
       flag-all-concat: false
 ```
+
+## Related Resources
+
+- GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/idiomatic/use-array-flatten/use_array_flatten.rego)

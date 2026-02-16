@@ -44,13 +44,18 @@ arg_tokens.declaration contains arg if {
 # description: Extract variable references in function calls
 arg_tokens.reference contains arg if {
 	some rule in module.rules
-	count(rule.head.args) > 0
-	arg_names := {v.value | some v in rule.head.args}
-	walk(rule.body, [_, expr])
-	expr.terms[0].type == "ref"
-	some arg in array.slice(expr.terms, 1, count(expr.terms))
-	arg.type == "var"
 
+	rule.head.args
+
+	arg_names := {v.value | some v in rule.head.args}
+
+	walk(rule.body, [_, expr])
+
+	expr.terms[0].type == "ref"
+
+	some arg in array.slice(expr.terms, 1, count(expr.terms))
+
+	arg.type == "var"
 	arg.value in arg_names
 }
 

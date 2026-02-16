@@ -153,6 +153,8 @@ rules:
   performance:
     defer-assignment:
       level: error
+    equals-over-count:
+      level: ignore
     non-loop-expression:
       level: error
     walk-no-path:

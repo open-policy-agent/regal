@@ -140,7 +140,7 @@ _find_vars(value, last) := {"args": arg_vars} if {
 		arg.type == "var"
 	]
 
-	count(arg_vars) > 0
+	arg_vars != []
 }
 
 # converting to string until https://github.com/open-policy-agent/opa/issues/6736 is fixed

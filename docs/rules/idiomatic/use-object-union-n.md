@@ -45,3 +45,7 @@ rules:
       # default: false
       flag-all-union: false
 ```
+
+## Related Resources
+
+- GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/idiomatic/use-object-union-n/use_object_union_n.rego)

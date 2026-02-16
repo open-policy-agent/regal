@@ -20,7 +20,7 @@ render_for_builtin(builtin) := content if {
 }
 
 _docs_link(builtin, category) := link if {
-	count(builtin.categories) > 0
+	builtin.categories != []
 
 	link := [substring(bc, 4, -1) |
 		some bc in builtin.categories
@@ -49,9 +49,9 @@ Returns <bt>{{ .builtin.decl.result.name }}<bt> of type <bt>{{ .builtin.decl.res
 `
 
 _category(builtin) := builtin.categories[0] if {
-	count(builtin.categories) > 0
+	builtin.categories != []
 } else := substring(builtin.name, 0, i) if {
-	count(builtin.categories) == 0
+	builtin.categories == []
 	i := indexof(builtin.name, ".")
 	i != -1
 } else := builtin.name

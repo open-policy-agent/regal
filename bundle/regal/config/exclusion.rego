@@ -30,7 +30,7 @@ _patterns_compiler(patterns) := {pat |
 	some p in _leading_doublestar_pattern(trim_prefix(_internal_slashes(pattern), "/"))
 	some pat in _trailing_slash(p)
 } if {
-	count(patterns) > 0
+	patterns != []
 }
 
 # Internal slashes means that the path is relative to root,

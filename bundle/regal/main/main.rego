@@ -161,7 +161,7 @@ aggregate[input.regal.file.name][category_title] contains entry if {
 # for these cases we just return an empty map, and let the aggregator on the Go
 # side handle this case
 _mark_if_empty(entries) := {{}} if {
-	count(entries) == 0
+	entries == set()
 } else := entries
 
 # METADATA

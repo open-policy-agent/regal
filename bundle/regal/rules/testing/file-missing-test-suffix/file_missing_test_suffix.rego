@@ -13,7 +13,7 @@ import data.regal.result
 notices contains result.notice(rego.metadata.chain()) if "no_filename" in config.capabilities.special
 
 report contains violation if {
-	count(ast.tests) > 0
+	ast.tests != []
 
 	not _valid_test_file_name(input.regal.file.name)
 

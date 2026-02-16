@@ -55,12 +55,11 @@ _duplicates contains indices if {
 	}
 
 	keys := [key | some key, _ in asts]
-	vals := [val | some val in asts]
 
 	indices := [keys[index] |
-		some dups in util.find_duplicates(vals)
+		some dups in util.find_duplicates([val | some val in asts])
 		some index in dups
 	]
 
-	count(indices) > 0
+	indices != []
 }

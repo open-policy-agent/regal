@@ -7,7 +7,7 @@ import data.regal.ast
 import data.regal.result
 
 report contains violation if {
-	count(_default_rule_values) > 0
+	_default_rule_values != {}
 
 	some rule in input.rules
 

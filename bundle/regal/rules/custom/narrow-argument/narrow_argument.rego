@@ -90,7 +90,7 @@ _functions[name] contains {"rule_index": i, "args_refs": args_refs} if {
 	}
 
 	# we don't care for functions without named variable arguments
-	count(variable_args) > 0
+	variable_args != []
 
 	args_refs := {arg: ref_vals |
 		arg := ast.found.refs[ast.rule_index_strings[i]][_].value[0].value

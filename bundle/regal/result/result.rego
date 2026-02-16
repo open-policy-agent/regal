@@ -112,6 +112,7 @@ _related_resources(annotations, _, _) := annotations.related_resources
 
 _related_resources(annotations, category, title) := rr if {
 	not annotations.related_resources
+
 	rr := [{
 		"description": "documentation",
 		"ref": $"{config.docs.base_url}/{category}/{title}",
@@ -120,6 +121,7 @@ _related_resources(annotations, category, title) := rr if {
 
 _fail_annotated(metadata, details) := violation if {
 	is_object(metadata)
+
 	with_location := object.union(metadata, details)
 	category := with_location.custom.category
 	with_category := object.union(with_location, {
@@ -138,6 +140,7 @@ _fail_annotated(metadata, details) := violation if {
 
 _fail_annotated_custom(metadata, details) := violation if {
 	is_object(metadata)
+
 	with_location := object.union(metadata, details)
 	category := with_location.custom.category
 	with_category := object.union(with_location, {
@@ -173,6 +176,16 @@ _with_text(loc_obj) := loc if {
 location(x) := _with_text(util.to_location_object(x.location))
 location(x) := _with_text(util.to_location_object(x[0].location)) if is_array(x)
 location(x) := _with_text(util.to_location_object(x)) if is_string(x)
+
+# METADATA
+# description: |
+#   returns a "normalized" location object from the location value found in the AST, along
+#   with an overridden description field. This is useful for rules that want to provide a custom message,
+#   perhaps depending on the context of the violation.
+location_and_description(x, description) := object.union(
+	location(x),
+	{"description": description},
+)
 
 # METADATA
 # description: creates a location where x is the start, and y is the end (calculated from `text`)

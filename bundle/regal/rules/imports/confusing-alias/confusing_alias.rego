@@ -5,8 +5,6 @@ package regal.rules.imports["confusing-alias"]
 import data.regal.result
 
 report contains violation if {
-	count(_aliased_imports) > 0
-
 	some aliased in _aliased_imports
 	some imp in input.imports
 
