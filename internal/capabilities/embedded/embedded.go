@@ -44,7 +44,7 @@ func LoadCapabilitiesVersion(engine, version string) (*ast.Capabilities, error) 
 			continue
 		}
 
-		cont, err := FS.ReadFile("eopa/" + cv + ".json")
+		cont, err := FS.ReadFile(engine + "/" + cv + ".json")
 		if err != nil {
 			return nil, fmt.Errorf("failed to open capabilities version '%s' for engine '%s': %w", cv, engine, err)
 		}

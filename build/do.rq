@@ -40,6 +40,9 @@ embedded_caps_dir := rq.joinpath([regal_root, "internal", "capabilities", "embed
 # placed.
 eopa_caps_dir := rq.joinpath([embedded_caps_dir, "eopa"])
 
+# Directory where rq-specific JSON capabilities for embedding should be placed.
+rq_caps_dir := rq.joinpath([embedded_caps_dir, "rq"])
+
 main contains do[what] if some what in rq.args()
 
 main contains job[what] if some what in rq.args()
@@ -184,6 +187,7 @@ lint_ci if {
 
 fetch_engine_caps if {
 	fetch_eopa_caps
+	fetch_rq_caps
 }
 
 fetch_eopa_caps if {
@@ -297,6 +301,86 @@ fetch_eopa_caps if {
 	}
 
 	# Commit the retrieved content to disk.
+	{
+	rq.write(cap.content, {"format": "raw", "file_path": cap.local}) |
+		some cap in new_caps
+	}
+}
+
+fetch_rq_caps if {
+	print("fetching tags for rq repository")
+
+	rq_tags_result := rq.run(
+		[
+			"git",
+			"ls-remote",
+			"--tags",
+			"https://git.sr.ht/~charles/rq",
+		],
+		{"stdout_spec": {
+			"format": "raw",
+			"options": {
+				"raw.fs": "/",
+				"raw.rs": "[\n\r]",
+			},
+		}},
+	)
+
+	error_nonzero(rq_tags_result, "failed to fetch tags from SourceHut")
+
+	# rq did not ship capabilities files until v0.0.8.
+	known_bad_tags := {
+		"v0.0.1",
+		"v0.0.2",
+		"v0.0.3",
+		"v0.0.4",
+		"v0.0.5",
+		"v0.0.6",
+		"v0.0.7",
+	}
+
+	# rq uses -RC$number suffixes for prerelease tags. We should avoid
+	# embedding those in the Regal binary. Since rq uses tag annotations
+	# for release notes, we need to eliminate tags ending with ^{} as well.
+
+	rq_tags := {
+	t |
+		some r in rq_tags_result.stdout
+		t := r[2]
+		not known_bad_tags[t]
+		not regex.match("RC[0-9]+$", t)
+		not regex.match("\\^\\{\\}$", t)
+	}
+
+	rq_caps_tree := {p: f |
+		f := rq.tree(rq_caps_dir, {})[p]
+		f.size != 0
+		f.ext == "json"
+	}
+
+	missing_locally := {
+	{"local": p, "remote": r} |
+		t := rq_tags[_]
+		p := rq.joinpath([rq_caps_dir, sprintf("%s.json", [t])])
+
+		not rq_caps_tree[p]
+
+		r := rq.template("https://git.sr.ht/~charles/rq/blob/{{.tag}}/capabilities.json", {"tag": t})
+	}
+
+	print(sprintf("fetching %d capabilities files missing locally", [count(missing_locally)]))
+
+	new_caps := {
+	{"local": m.local, "content": c} |
+		m := missing_locally[_]
+		print("\tfetching ", m.remote)
+		resp := http.send({"url": m.remote, "method": "GET"})
+
+		{rq.error(sprintf("non-200 status code '%d' for URL '%s'", [resp.status_code, m.remote])) | resp.status_code != 200}
+
+		c := resp.raw_body
+	}
+
 	{
 	rq.write(cap.content, {"format": "raw", "file_path": cap.local}) |
 		some cap in new_caps

@@ -24,6 +24,7 @@ import (
 const (
 	engineOPA  = "opa"
 	engineEOPA = "eopa"
+	engineRq   = "rq"
 	DefaultURL = "regal:///capabilities/default"
 )
 
@@ -167,6 +168,8 @@ func lookupEmbeddedURL(parsedURL *url.URL) (*ast.Capabilities, error) {
 		return util.Wrap(ast.LoadCapabilitiesVersion(version))("failed to load capabilities")
 	case engineEOPA:
 		return util.Wrap(embedded.LoadCapabilitiesVersion(engineEOPA, version))("failed to load capabilities")
+	case engineRq:
+		return util.Wrap(embedded.LoadCapabilitiesVersion(engineRq, version))("failed to load capabilities")
 	default:
 		return nil, fmt.Errorf("engine '%s' not present in embedded capabilities database", engine)
 	}
@@ -234,16 +237,22 @@ func semverSort(stringVersions []string) {
 func List() (map[string][]string, error) {
 	opaCaps, err := ast.LoadCapabilitiesVersions()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load capabilities due to error: %w", err)
+		return nil, fmt.Errorf("failed to load OPA capabilities due to error: %w", err)
 	}
 
 	eopaCaps, err := embedded.LoadCapabilitiesVersions(engineEOPA)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load capabilities due to error: %w", err)
+		return nil, fmt.Errorf("failed to load EOPA capabilities due to error: %w", err)
+	}
+
+	rqCaps, err := embedded.LoadCapabilitiesVersions(engineRq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load rq capabilities due to error: %w", err)
 	}
 
 	semverSort(opaCaps)
 	semverSort(eopaCaps)
+	semverSort(rqCaps)
 
-	return map[string][]string{engineOPA: opaCaps, engineEOPA: eopaCaps}, nil
+	return map[string][]string{engineOPA: opaCaps, engineEOPA: eopaCaps, engineRq: rqCaps}, nil
 }
