@@ -19,6 +19,7 @@ test_code_lenses_for_module if {
 		# Ugh, why did we make enableDebugCodelens camel case 😭
 		"regal": {
 			"client": {"init_options": {"enableDebugCodelens": true}},
+			"server": {"feature_flags": {"debug_provider": true}},
 			"file": {
 				"name": "policy.rego",
 				"lines": split(policy, "\n"),

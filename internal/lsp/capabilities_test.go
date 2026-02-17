@@ -42,8 +42,8 @@ func TestInitializeExperimentalCapabilities(t *testing.T) {
 		t.Error("expected explorerProvider to be true")
 	}
 
-	if !response.Capabilities.Experimental.EvalProvider {
-		t.Error("expected evalProvider to be true")
+	if !response.Capabilities.Experimental.InlineEvalProvider {
+		t.Error("expected inlineEvalProvider to be true")
 	}
 
 	if !response.Capabilities.Experimental.DebugProvider {

@@ -62,7 +62,11 @@ func createAndInitServer(t *testing.T, ctx context.Context, tempDir string, clie
 	logger := log.NewLogger(log.LevelDebug, t.Output())
 
 	// set up the server and client connections
-	ls := NewLanguageServer(ctx, &LanguageServerOptions{Logger: logger, WorkspaceDiagnosticsPoll: pollingInterval})
+	ls := NewLanguageServer(ctx, &LanguageServerOptions{
+		Logger:                   logger,
+		WorkspaceDiagnosticsPoll: pollingInterval,
+		FeatureFlags:             DefaultServerFeatureFlags(),
+	})
 
 	go ls.StartDiagnosticsWorker(ctx)
 	go ls.StartConfigWorker(ctx)
@@ -87,7 +91,15 @@ func createAndInitServer(t *testing.T, ctx context.Context, tempDir string, clie
 		rootURI = uri.FromPath(clients.IdentifierGeneric, tempDir)
 	}
 
-	request := types.InitializeParams{RootURI: rootURI, ClientInfo: types.ClientInfo{Name: "go test"}}
+	request := types.InitializeParams{
+		RootURI:    rootURI,
+		ClientInfo: types.ClientInfo{Name: "go test"},
+		InitializationOptions: &types.InitializationOptions{
+			EnableDebugCodelens:       new(true),
+			EnableExplorer:            new(true),
+			EvalCodelensDisplayInline: new(true),
+		},
+	}
 
 	var response types.InitializeResult
 	testutil.NoErr(connClient.Call(ctx, "initialize", request, &response))(t)

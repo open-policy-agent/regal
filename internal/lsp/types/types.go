@@ -31,6 +31,9 @@ type (
 		// EvalCodelensDisplayInline, if set, will show evaluation results natively
 		// in the calling editor, rather than in an output file.
 		EvalCodelensDisplayInline *bool `json:"evalCodelensDisplayInline,omitempty"`
+		// EnableExplorer, if set, will enable the regal.explorer command
+		// and related functionality.
+		EnableExplorer *bool `json:"enableExplorer,omitempty"`
 	}
 
 	InitializeParams struct {
@@ -93,15 +96,17 @@ type (
 		Experimental               *ExperimentalCapabilities `json:"experimental,omitempty"`
 	}
 
-	// ExperimentalCapabilities contains Regal-specific experimental LSP features
-	// that are not part of the standard LSP specification.
+	// ExperimentalCapabilities contains Regal-specific custom LSP features
+	// that are not part of the base LSP specification. 'Experimental' comes
+	// from the field name in the spec, rather than their status. 'Experimental'
+	// features are more just 'custom' features we have build on the LSP.
 	ExperimentalCapabilities struct {
 		// ExplorerProvider indicates whether the server supports the regal.explorer
 		// command and regal/showExplorerResult notification.
 		ExplorerProvider bool `json:"explorerProvider"`
-		// EvalProvider indicates whether the server supports the regal.eval
-		// command and regal/showEvalResult request.
-		EvalProvider bool `json:"evalProvider"`
+		// InlineEvalProvider indicates whether the server supports the regal.eval
+		// command response being sent rather than written to file.
+		InlineEvalProvider bool `json:"inlineEvalProvider"`
 		// DebugProvider indicates whether the server supports the regal.debug
 		// command and regal/startDebugging request.
 		DebugProvider bool `json:"debugProvider"`
