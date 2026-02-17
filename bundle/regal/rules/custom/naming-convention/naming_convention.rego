@@ -13,9 +13,9 @@ report contains violation if {
 
 	not regex.match(convention.pattern, ast.package_name)
 
-	violation := _with_description(
-		result.fail(rego.metadata.chain(), result.location(input.package)),
-		_message("package", ast.package_name, convention.pattern),
+	violation := result.fail(
+		rego.metadata.chain(),
+		result.location_and_description(input.package, _message("package", ast.package_name, convention.pattern)),
 	)
 }
 
@@ -30,9 +30,9 @@ report contains violation if {
 
 	not regex.match(convention.pattern, name)
 
-	violation := _with_description(
-		result.fail(rego.metadata.chain(), result.location(rule.head)),
-		_message("rule", name, convention.pattern),
+	violation := result.fail(
+		rego.metadata.chain(),
+		result.location_and_description(rule.head, _message("rule", name, convention.pattern)),
 	)
 }
 
@@ -47,9 +47,9 @@ report contains violation if {
 
 	not regex.match(convention.pattern, name)
 
-	violation := _with_description(
-		result.fail(rego.metadata.chain(), result.location(rule.head)),
-		_message("function", name, convention.pattern),
+	violation := result.fail(
+		rego.metadata.chain(),
+		result.location_and_description(rule.head, _message("function", name, convention.pattern)),
 	)
 }
 
@@ -64,16 +64,10 @@ report contains violation if {
 
 	not regex.match(convention.pattern, var.value)
 
-	violation := _with_description(
-		result.fail(rego.metadata.chain(), result.location(var)),
-		_message("variable", var.value, convention.pattern),
+	violation := result.fail(
+		rego.metadata.chain(),
+		result.location_and_description(var, _message("variable", var.value, convention.pattern)),
 	)
 }
 
 _message(kind, name, pattern) := $`Naming convention violation: {kind} name "{name}" does not match pattern '{pattern}'`
-
-_with_description(violation, description) := json.patch(violation, [{
-	"op": "replace",
-	"path": "/description",
-	"value": description,
-}])

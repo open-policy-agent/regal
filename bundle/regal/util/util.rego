@@ -159,7 +159,7 @@ to_array(x) := [y | some y in x] if not is_array(x)
 
 # METADATA
 # description: true if s1 and s2 has any intersecting items
-intersects(s1, s2) if count(intersection({s1, s2})) > 0
+intersects(s1, s2) if intersection({s1, s2}) != set()
 
 # METADATA
 # description: returns the item contained in a single-item set

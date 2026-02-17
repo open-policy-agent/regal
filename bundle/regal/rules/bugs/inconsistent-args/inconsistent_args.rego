@@ -6,7 +6,7 @@ import data.regal.ast
 import data.regal.result
 
 report contains violation if {
-	count(ast.functions) > 0
+	ast.functions != []
 
 	# comprehension indexing
 	function_args_by_name := {name: args_list |

@@ -52,10 +52,10 @@ aggregate_report contains violation if {
 	not path in all_package_paths
 	not path in _ignored_import_paths
 
-	count([path |
+	[path |
 		some pkg_path in all_package_paths
 		pkg_path == array.slice(path, 0, count(pkg_path))
-	]) > 0
+	] != []
 
 	violation := result.fail(rego.metadata.chain(), {"location": object.union(util.to_location_no_text(location), {
 		"file": file,

@@ -26,7 +26,7 @@ _rule_annotations[rule_path] contains annotated if {
 	some rule in ast.public_rules_and_functions
 
 	rule_path := concat(".", [ast.package_name, ast.ref_static_to_string(rule.head.ref)])
-	annotated := count(object.get(rule, "annotations", [])) > 0
+	annotated := object.get(rule, "annotations", []) != []
 }
 
 _rule_locations[rule_path] := location if {

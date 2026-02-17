@@ -21,7 +21,7 @@ default result["response"] := null
 result["response"] := ranges if {
 	ranges := array.flatten([package_ranges, import_ranges, rule_ranges])
 
-	count(ranges) > 0
+	ranges != []
 }
 
 # METADATA
@@ -43,7 +43,7 @@ package_ranges := [item |
 	pkg := data.workspace.parsed[input.params.textDocument.uri].package
 	ranges := _find_ranges(pkg.path, position)
 
-	count(ranges) > 0
+	ranges != []
 
 	# Note: pkg.path[0] is currently just {"type": "var", "value": "data"}
 	# which is useless, but an issue inherited from OPA we should get rid of in RoAST
@@ -76,7 +76,7 @@ import_ranges := [item |
 	imp := find.import_at_position with input.params.position as position
 	ranges := _find_ranges(imp.path, position)
 
-	count(ranges) > 0
+	ranges != []
 
 	# import locations don't include the full text of the line, so we'll need to
 	# improvise here some, assuming properly formatted Rego
@@ -92,7 +92,7 @@ rule_ranges := [item |
 	[rule, _] := find.rule_at_position with input.params.position as position
 	ranges := _find_ranges(rule, position)
 
-	count(ranges) > 0
+	ranges != []
 
 	item := _to_selection_range(ranges)
 ]

@@ -29,7 +29,7 @@ _refs[ref] contains imported.path.location if {
 
 # METADATA
 # description: collects refs from module, if any
-aggregate contains {"package_name": ast.package_name_full, "refs": _refs} if count(_refs) > 0
+aggregate contains {"package_name": ast.package_name_full, "refs": _refs} if _refs != {}
 
 # METADATA
 # schemas:
@@ -102,7 +102,7 @@ _groups contains group if {
 
 	# only consider packages that have edges to other packages,
 	# even if only to themselves
-	count(_import_graph[pkg]) > 0
+	_import_graph[pkg] != {}
 
 	group := {m |
 		some m in graph.reachable(_import_graph, {pkg})

@@ -51,4 +51,4 @@ notices := ext_notices.promoted_notices if file_notices
 # description: determine if per-file notices should be processed or fetched from prepared state
 # scope: document
 file_notices if input.regal.file.rego_version != "v1"
-file_notices if count(config.capabilities.special.no_filename) > 0
+file_notices if config.capabilities.special.no_filename

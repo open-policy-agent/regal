@@ -16,10 +16,10 @@ import data.regal.lsp.util.range
 # entrypoint: true
 default result["response"] := []
 
-result["response"] := lenses if count(input.regal.file.parse_errors) == 0
+result["response"] := lenses if input.regal.file.parse_errors == []
 
 result["response"] := lenses if {
-	count(input.regal.file.parse_errors) > 0
+	input.regal.file.parse_errors != []
 	count(input.regal.file.lines) == input.regal.file.successful_parse_count
 }
 
