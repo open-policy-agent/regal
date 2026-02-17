@@ -314,12 +314,7 @@ function_ret_in_args(fn_name, terms) if {
 	# special case: print does not have a last argument as it's variadic
 	fn_name != "print"
 
-	rest := array.slice(terms, 1, 100)
-
-	# for now, bail out of nested calls
-	not "call" in {term.type | some term in rest}
-
-	count(rest) > count(all_functions[fn_name].decl.args)
+	terms[count(all_functions[fn_name].decl.args) + 1]
 }
 
 # METADATA

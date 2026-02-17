@@ -19,25 +19,6 @@ _find_assign_vars(value) := [value] if {
 	value.type in {"array", "object"}
 }
 
-# var declared via `some`, i.e. `some x` or `some x, y`
-_find_some_decl_vars(value) := [v |
-	some v in value
-	v.type == "var"
-]
-
-# single var declared via `some in`, i.e. `some x in y`
-_find_some_in_decl_vars(arr) := _find_nested_vars(arr[1]) if count(arr) == 3
-
-# two vars declared via `some in`, i.e. `some x, y in z`
-_find_some_in_decl_vars(arr) := vars if {
-	count(arr) == 4
-
-	vars := [v |
-		some i in [1, 2]
-		some v in _find_nested_vars(arr[i])
-	]
-}
-
 # METADATA
 # description: |
 #   find vars like input[x].foo[y] where x and y are vars
@@ -95,15 +76,21 @@ has_term_var(terms) if {
 	term.type == "var"
 }
 
-_find_vars(value, last) := {"term": find_term_vars(function_ret_args(fn_name, value))} if {
+# find "return value vars", i.e. those placed after a functions declared
+# number of args, e.g `x` in `count(x, y)`
+_find_vars(value, last) := {"term": find_term_vars(undeclared)} if {
 	last == "terms"
 	value[0].type == "ref"
 	value[0].value[0].type == "var"
 	value[0].value[0].value != "assign"
 
 	fn_name := ref_static_to_string(value[0].value)
+	undeclared_start := count(all_functions[fn_name].decl.args) + 1
 
-	function_ret_in_args(all_function_names[fn_name], value)
+	value[undeclared_start]
+	fn_name != "print"
+
+	undeclared := array.slice(value, undeclared_start, 100)
 }
 
 # `=` isn't necessarily assignment, and only considering the variable on the
@@ -117,19 +104,31 @@ _find_vars(value, last) := {"assign": _find_assign_vars(value[1])} if {
 	value[0].value[0].value in {"assign", "eq"}
 }
 
-_find_vars(value, last) := {"somein": _find_some_in_decl_vars(value[0].value)} if {
-	last == "symbols"
-	value[0].type == "call"
-}
-
-_find_vars(value, last) := {"some": _find_some_decl_vars(value)} if {
-	last == "symbols"
-	value[0].type != "call"
-}
-
 _find_vars(value, last) := {"every": _find_every_vars(value)} if {
 	last == "terms"
 	value.domain
+}
+
+_find_vars(value, last) := {"somein": vars} if {
+	last == "symbols"
+	value[0].type == "call"
+
+	arr := value[0].value
+
+	vars := array.flatten([_find_nested_vars(arr[1]), [v |
+		count(arr) == 4
+		some v in _find_nested_vars(arr[2])
+	]])
+}
+
+_find_vars(value, last) := {"some": vars} if {
+	last == "symbols"
+	value[0].type != "call"
+
+	vars := [v |
+		some v in value
+		v.type == "var"
+	]
 }
 
 _find_vars(value, last) := {"args": arg_vars} if {
@@ -196,9 +195,11 @@ _rules := data.workspace.parsed[object.get(input, ["params", "textDocument", "ur
 #   - ref
 # scope: document
 found.vars[rule_index][context] contains var if {
-	some i, rule_index in rule_index_strings
-	some expr in found.expressions[rule_index]
-	some context, vars in _find_vars(expr.terms, "terms")
+	some rule_index in rule_index_strings
+
+	terms := found.expressions[rule_index][_].terms
+
+	some context, vars in _find_vars(terms, "terms")
 	some var in vars
 }
 
@@ -217,11 +218,9 @@ found.vars[rule_index][context] contains var if {
 	rule := _rules[i].else
 	some node in ["head", "body", "else"]
 
-	walk(rule[node], [path, value])
+	walk(rule[node], [_, value])
 
-	last := {"terms", "symbols"}[regal.last(path)]
-
-	some context, vars in _find_vars(value, last)
+	some context, vars in _find_vars(value.symbols, "symbols")
 	some var in vars
 }
 
