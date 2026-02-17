@@ -15,6 +15,10 @@ package regal.lsp.semantictokens
 # description: Get the module from workspace
 module := data.workspace.parsed[input.params.textDocument.uri]
 
+# This is handling the case where the module from the parsed workspace is empty
+
+default result.response := {}
+
 # METADATA
 # entrypoint: true
 result.response := {
