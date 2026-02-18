@@ -110,6 +110,9 @@ type (
 		// DebugProvider indicates whether the server supports the regal.debug
 		// command and regal/startDebugging request.
 		DebugProvider bool `json:"debugProvider"`
+		// ServerTestingProvider indicates whether the server supports testing-related features
+		// like test location notifications via regal/testLocations.
+		ServerTestingProvider bool `json:"serverTestingProvider"`
 	}
 
 	TextDocumentPositionParams struct {

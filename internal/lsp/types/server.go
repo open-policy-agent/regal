@@ -13,4 +13,10 @@ type ServerFeatureFlags struct {
 	// DebugProvider indicates whether the server supports the regal.debug
 	// command and regal/startDebugging request.
 	DebugProvider bool `json:"debug_provider"`
+	// OPATestProvider indicates whether the server supports the running of Rego tests
+	// via LSP command.
+	OPATestProvider bool `json:"opa_test_provider"`
+	// ServerTestingProvider indicates whether the server supports testing-related features
+	// like test location notifications via regal/testLocations.
+	ServerTestingProvider bool `json:"server_testing_provider"`
 }

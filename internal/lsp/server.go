@@ -101,6 +101,7 @@ func DefaultServerFeatureFlags() *types.ServerFeatureFlags {
 		ExplorerProvider:         true,
 		InlineEvaluationProvider: true,
 		DebugProvider:            true,
+		ServerTestingProvider:    true,
 	}
 }
 
@@ -149,6 +150,7 @@ type LanguageServer struct {
 	lintFileJobs         chan lintFileJob
 	builtinsPositionJobs chan lintFileJob
 	templateFileJobs     chan lintFileJob
+	testLocationJobs     chan lintFileJob
 	prepareQueryJobs     chan struct{}
 
 	// templatingFiles tracks files currently being templated to ensure
@@ -215,6 +217,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		builtinsPositionJobs:        make(chan lintFileJob, 10),
 		commandRequest:              make(chan types.ExecuteCommandParams, 10),
 		templateFileJobs:            make(chan lintFileJob, 10),
+		testLocationJobs:            make(chan lintFileJob, 10),
 		prepareQueryJobs:            make(chan struct{}, 1),
 		templatingFiles:             concurrent.MapOf(make(map[string]bool)),
 		webServer:                   web.NewServer(opts.Logger),
@@ -349,10 +352,21 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 
 				// updateParse will not return an error when the parsing failed,
 				// but only when it was impossible to parse the file.
-				if _, err := updateParse(ctx, l.parseOpts(job.URI, l.builtinsForCurrentCapabilities())); err != nil {
+				parseSuccess, err := updateParse(ctx, l.parseOpts(job.URI, l.builtinsForCurrentCapabilities()))
+				if err != nil {
 					l.log.Message("failed to update module for %s: %s", job.URI, err)
 
 					continue
+				}
+
+				// Send test locations update after parse completes
+				if parseSuccess {
+					l.testLocationJobs <- lintFileJob{Reason: job.Reason, URI: job.URI}
+				} else {
+					// Parse failed, send empty test locations
+					if err := l.sendTestLocations(ctx, job.URI, []any{}); err != nil {
+						l.log.Message("failed to send empty test locations after parse failure: %s", err)
+					}
 				}
 
 				// lint the file and send the diagnostics
@@ -1991,9 +2005,10 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			// 'custom' additions that are ready for use, but not in the base
 			// spec.
 			Experimental: &types.ExperimentalCapabilities{
-				ExplorerProvider:   l.featureFlags.ExplorerProvider,
-				InlineEvalProvider: l.featureFlags.InlineEvaluationProvider,
-				DebugProvider:      l.featureFlags.DebugProvider,
+				ExplorerProvider:      l.featureFlags.ExplorerProvider,
+				InlineEvalProvider:    l.featureFlags.InlineEvaluationProvider,
+				DebugProvider:         l.featureFlags.DebugProvider,
+				ServerTestingProvider: l.featureFlags.ServerTestingProvider,
 			},
 		},
 	}

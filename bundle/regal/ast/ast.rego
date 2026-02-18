@@ -103,7 +103,8 @@ rules := [rule |
 tests := [rule |
 	some rule in rules
 
-	startswith(rule.head.ref[0].value, "test_")
+	some part in rule.head.ref
+	startswith(part.value, "test_")
 ]
 
 # METADATA

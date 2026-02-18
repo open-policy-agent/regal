@@ -58,6 +58,7 @@ func init() {
 
 			go ls.StartDiagnosticsWorker(ctx)
 			go ls.StartHoverWorker(ctx)
+			go ls.StartTestLocationsWorker(ctx)
 			go ls.StartCommandWorker(ctx)
 			go ls.StartConfigWorker(ctx)
 			go ls.StartWorkspaceStateWorker(ctx)

@@ -27,6 +27,7 @@ const (
 	Keywords          = "data.regal.ast.keywords"
 	RuleHeadLocations = "data.regal.ast.rule_head_locations"
 	MainEval          = "data.regal.lsp.main.eval"
+	TestLocations     = "data.regal.lsp.testlocations.result"
 )
 
 var simpleRefPattern = regexp.MustCompile(`^[a-zA-Z.]$`)
