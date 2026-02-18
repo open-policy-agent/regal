@@ -7,7 +7,7 @@ import data.regal.result
 import data.regal.util
 
 # note: not ast.package_path as we want the "data" component here
-_package_path := [part.value | some part in input.package.path]
+_package_path := [term.value | some term in input.package.path]
 
 _multivalue_rules contains path if {
 	some rule in ast.rules
@@ -93,11 +93,10 @@ aggregate_report contains violation if {
 	some file
 	negated := _aggregates[file].negated_refs[_] # regal ignore:prefer-some-in-iteration
 
-	some multivalue_ref in all_multivalue_refs
+	some [negated.resolved_path, ref_file] in all_multivalue_refs
 
 	# violations in same file handled by non-aggregate "report"
-	multivalue_ref[1] != file
-	negated.resolved_path == multivalue_ref[0]
+	ref_file != file
 
 	loc := object.union(result.location(negated.ref), {"location": {
 		"file": file,

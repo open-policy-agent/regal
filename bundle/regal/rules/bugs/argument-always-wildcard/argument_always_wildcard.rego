@@ -12,7 +12,7 @@ report contains violation if {
 
 	fn := util.any_set_item(functions)
 
-	some pos in numbers.range(0, count(fn.head.args) - 1)
+	some pos, _ in fn.head.args
 
 	every function in functions {
 		function.head.args[pos].type == "var"

@@ -26,18 +26,16 @@ _is_array_conversion(value) if {
 	body := value.value.body
 
 	count(body) == 1
+	count(body[0].terms.symbols) == 1
 
-	symbols := body[0].terms.symbols
+	symbol := body[0].terms.symbols[0]
 
-	count(symbols) == 1
-
-	symbols[0].type == "call"
-	symbols[0].value[0].type == "ref"
-	symbols[0].value[0].value[0].type == "var"
-	symbols[0].value[0].value[0].value == "internal"
-	symbols[0].value[0].value[1].value == "member_2"
-	symbols[0].value[1].type == "var"
-	symbols[0].value[1].value == var
+	symbol.type == "call"
+	symbol.value[0].type == "ref"
+	symbol.value[0].value[0].value == "internal"
+	symbol.value[0].value[1].value == "member_2"
+	symbol.value[1].type == "var"
+	symbol.value[1].value == var
 }
 
 # {s | s := arr[_]}

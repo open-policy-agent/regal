@@ -7,5 +7,6 @@ import data.regal.result
 
 report contains violation if {
 	ast.imports_has_path(ast.imports, ["rego", "v1"])
+
 	violation := result.fail(rego.metadata.chain(), result.location(input.package))
 }

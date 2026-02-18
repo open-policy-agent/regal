@@ -7,6 +7,7 @@ import data.regal.rules.idiomatic["use-strings-count"] as rule
 
 test_fail_can_use_strings_count if {
 	r := rule.report with input as ast.with_rego_v1(`x := count(indexof_n("foo", "o"))`)
+		with config.capabilities as {"builtins": {"count": {}, "indexof_n": {}}}
 
 	r == {{
 		"category": "idiomatic",

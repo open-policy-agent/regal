@@ -7,6 +7,7 @@ import data.regal.rules.idiomatic["use-object-union-n"] as rule
 
 test_fail_nested_object_union_call_nested_first_argument if {
 	r := rule.report with input as ast.policy(`r if object.union(object.union({"a": 1}, {"b": 2}), {"c": 3})`)
+		with config.capabilities as {"builtins": {"object.union": {}, "object.union_n": {}}}
 
 	r == {_violation({"location": {
 		"col": 6,
@@ -21,6 +22,7 @@ test_fail_nested_object_union_call_nested_first_argument if {
 
 test_fail_nested_object_union_call_nested_second_argument if {
 	r := rule.report with input as ast.policy(`r if object.union({"a": 1}, object.union({"b": 2}, {"c": 3}))`)
+		with config.capabilities as {"builtins": {"object.union": {}, "object.union_n": {}}}
 
 	r == {_violation({"location": {
 		"col": 6,
@@ -37,6 +39,7 @@ test_fail_nested_object_union_call_nested_both_arguments if {
 	r := rule.report with input as ast.policy(`
 		r if object.union(object.union({"a": 1}, {"b": 2}), object.union({"c": 3}, {"d": 4}))
 	`)
+		with config.capabilities as {"builtins": {"object.union": {}, "object.union_n": {}}}
 
 	r == {_violation({"location": {
 		"col": 8,
@@ -52,6 +55,7 @@ test_fail_nested_object_union_call_nested_both_arguments if {
 test_fail_all_object_union_calls if {
 	r := rule.report with input as ast.policy(`r if object.union({"a": 1}, {"b": 2})`)
 		with config.rules as {"idiomatic": {"use-object-union-n": {"flag-all-union": true}}}
+		with config.capabilities as {"builtins": {"object.union": {}, "object.union_n": {}}}
 
 	r == {_violation({
 		"description": "Prefer using `object.union_n` over `object.union`",

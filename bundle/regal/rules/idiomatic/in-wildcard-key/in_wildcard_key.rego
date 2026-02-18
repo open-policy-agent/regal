@@ -12,8 +12,6 @@ report contains violation if {
 
 	symbol := symbols[0]
 
-	symbol.value[0].value[0].type == "var"
-	symbol.value[0].value[1].type == "string"
 	symbol.value[0].value[0].value == "internal"
 	symbol.value[0].value[1].value == "member_3"
 	symbol.value[1].type == "var"

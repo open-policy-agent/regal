@@ -8,9 +8,11 @@ import data.regal.result
 report contains violation if {
 	some rule_index, i
 	ast.found.expressions[rule_index][i].terms[0].type == "ref"
-	not ast.found.expressions[rule_index][i].interpolated
 
-	terms := ast.found.expressions[rule_index][i].terms
+	expr := ast.found.expressions[rule_index][i]
+	not expr.interpolated
+
+	terms := expr.terms
 
 	terms[0].type == "ref"
 	terms[0].value[0].type == "var"

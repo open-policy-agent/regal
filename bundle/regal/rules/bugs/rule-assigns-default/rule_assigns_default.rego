@@ -13,9 +13,7 @@ report contains violation if {
 
 	not rule.default
 
-	ref := ast.ref_to_string(rule.head.ref)
-
-	_default_rule_values[ref] == rule.head.value.value
+	_default_rule_values[ast.ref_to_string(rule.head.ref)] == rule.head.value.value
 
 	violation := result.fail(rego.metadata.chain(), result.location(rule.head.value))
 }

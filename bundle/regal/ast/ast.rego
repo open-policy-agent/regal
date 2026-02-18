@@ -215,9 +215,9 @@ _exclude_arg("assign", 0, _)
 ref_value_equal(v1, v2) if {
 	count(v1) == count(v2)
 
-	every i, part in v1 {
-		part.type == v2[i].type
-		part.value == v2[i].value
+	every i, term in v1 {
+		term.type == v2[i].type
+		term.value == v2[i].value
 	}
 }
 

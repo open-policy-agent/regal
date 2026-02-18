@@ -5,12 +5,11 @@ package regal.rules.imports["ignored-import"]
 import data.regal.ast
 import data.regal.result
 
-_import_paths contains path if {
+_import_paths contains [p.value | some p in imp.path.value] if {
 	some imp in input.imports
-	path := [p.value | some p in imp.path.value]
 
-	path[0] in {"data", "input"}
-	count(path) > 1
+	imp.path.value[0].value in {"data", "input"}
+	count(imp.path.value) > 1
 }
 
 report contains violation if {

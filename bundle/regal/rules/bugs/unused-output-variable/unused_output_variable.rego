@@ -49,8 +49,5 @@ _ref_base_vars[rule_index][term.value] contains term if {
 _comprehension_term_vars[rule_index] contains var.value if {
 	some rule_index, comprehensions in ast.found.comprehensions
 	some comprehension in comprehensions
-
-	only_head := object.remove(comprehension.value, ["body"])
-
-	some var in ast.find_term_vars(only_head)
+	some var in ast.find_term_vars(object.remove(comprehension.value, ["body"]))
 }

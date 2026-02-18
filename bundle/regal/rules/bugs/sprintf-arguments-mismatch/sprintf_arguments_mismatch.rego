@@ -51,11 +51,9 @@ report contains violation if {
 # values array. this calculates the number to subtract from the total expected
 # number of values based on the number of eai's occurring more than once
 _repeated_explicit_argument_indexes(str) := sum([n |
-	some eai in _unique_explicit_arguments(str)
+	some eai in {eai | some eai in regex.find_n(`%\[\d\]`, str, -1)}
 	n := strings.count(str, eai) - 1
 ])
-
-_unique_explicit_arguments(str) := {eai | some eai in regex.find_n(`%\[\d\]`, str, -1)}
 
 _first_arg_value(_, term) := term if term.type == "string"
 

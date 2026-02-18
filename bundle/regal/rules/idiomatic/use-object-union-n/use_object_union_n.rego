@@ -55,6 +55,8 @@ nested_union_calls contains call if {
 #   optionally (when 'flag-all-union' is enabled in configuration),
 #   recommend replacing all calls to `object.union` with `object.union_n`
 all_object_union_calls contains call if {
+	"object.union" in ast.builtin_functions_called
+
 	some calls in ast.found.calls
 	some call in calls
 

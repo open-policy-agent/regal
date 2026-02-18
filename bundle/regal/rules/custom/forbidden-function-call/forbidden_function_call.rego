@@ -14,8 +14,8 @@ report contains violation if {
 	util.intersects(forbidden, ast.builtin_functions_called)
 
 	ref := ast.found.calls[_][_]
-	name := ast.ref_to_string(ref[0].value)
-	name in forbidden
+
+	ast.ref_to_string(ref[0].value) in forbidden
 
 	violation := result.fail(rego.metadata.chain(), result.location(ref))
 }

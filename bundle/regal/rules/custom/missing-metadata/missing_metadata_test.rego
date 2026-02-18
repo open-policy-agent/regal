@@ -19,8 +19,6 @@ none := false
 	aggregated := rule.aggregate with input as module
 
 	aggregated == {{
-		"file": "p.rego",
-		"package_name": "foo.bar",
 		"package_annotated": true,
 		"package_location": {
 			"col": 1,
@@ -63,6 +61,7 @@ test_fail_missing_package_metadata_report if {
 	aggs := util.with_source_files("custom/missing-metadata", [a])
 
 	r := rule.aggregate_report with input.aggregates_internal as aggs
+		with input.aggregates_internal["p1.rego"].common.package_name as "foo.bar"
 		with config.rules as {"custom": {"missing-metadata": {}}}
 
 	r == {{

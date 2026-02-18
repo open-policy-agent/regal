@@ -12,6 +12,7 @@ import data.regal.rules.idiomatic["use-array-flatten"] as rule
 
 test_fail_nested_array_concat_call_nested_first_argument if {
 	r := rule.report with input as ast.policy(`r if array.concat(array.concat([1, 2], [3, 4]), [5, 6])`)
+		with config.capabilities as {"builtins": {"array.concat": {}, "array.flatten": {}}}
 
 	r == {_violation({"location": {
 		"col": 6,
@@ -26,6 +27,7 @@ test_fail_nested_array_concat_call_nested_first_argument if {
 
 test_fail_nested_array_concat_call_nested_second_argument if {
 	r := rule.report with input as ast.policy(`r if array.concat([1, 2], array.concat([3, 4], [5, 6]))`)
+		with config.capabilities as {"builtins": {"array.concat": {}, "array.flatten": {}}}
 
 	r == {_violation({"location": {
 		"col": 6,
@@ -43,6 +45,7 @@ test_fail_array_concat_call_nested_both_arguments if {
 	r := rule.report with input as ast.policy(`
 	r if array.concat(array.concat([1, 2], [3, 4]), array.concat([5, 6], [7, 8]))
 	`)
+		with config.capabilities as {"builtins": {"array.concat": {}, "array.flatten": {}}}
 
 	r == {_violation({"location": {
 		"col": 7,
@@ -60,6 +63,7 @@ test_fail_array_concat_call_nested_two_levels if {
 	r := rule.report with input as ast.policy(`
 	r if array.concat(array.concat(array.concat([1], [2]), [3]), [4])
 	`)
+		with config.capabilities as {"builtins": {"array.concat": {}, "array.flatten": {}}}
 
 	r == {
 		_violation({"location": {
@@ -87,6 +91,7 @@ test_fail_array_concat_call_nested_two_levels if {
 
 test_success_not_nested_array_concat_call if {
 	r := rule.report with input as ast.policy(`r if array.concat([1, 2], [3, 4])`)
+		with config.capabilities as {"builtins": {"array.concat": {}, "array.flatten": {}}}
 
 	r == set()
 }
@@ -94,6 +99,7 @@ test_success_not_nested_array_concat_call if {
 test_fail_array_concat_call_with_array_literals_wrapping_arguments if {
 	r := rule.report with input as ast.policy(`r if array.concat([a], [b])`)
 		with config.rules as {"idiomatic": {"use-array-flatten": {"flag-wrapped-concat": true}}}
+		with config.capabilities as {"builtins": {"array.concat": {}, "array.flatten": {}}}
 
 	r == {_violation({
 		"description": "Prefer `array.flatten` over `array.concat` with array literals wrapping arguments",
@@ -113,6 +119,7 @@ test_fail_array_concat_call_with_array_literals_wrapping_arguments if {
 test_fail_array_concat_call_with_only_first_argument_wrapped_by_array_literal if {
 	r := rule.report with input as ast.policy(`r if array.concat([a], b)`)
 		with config.rules as {"idiomatic": {"use-array-flatten": {"flag-wrapped-concat": true}}}
+		with config.capabilities as {"builtins": {"array.concat": {}, "array.flatten": {}}}
 
 	r == {_violation({
 		"description": "Prefer `array.flatten` over `array.concat` with array literals wrapping arguments",
@@ -132,6 +139,7 @@ test_fail_array_concat_call_with_only_first_argument_wrapped_by_array_literal if
 test_fail_array_concat_call_with_only_second_argument_wrapped_by_array_literal if {
 	r := rule.report with input as ast.policy(`r if array.concat(a, [b])`)
 		with config.rules as {"idiomatic": {"use-array-flatten": {"flag-wrapped-concat": true}}}
+		with config.capabilities as {"builtins": {"array.concat": {}, "array.flatten": {}}}
 
 	r == {_violation({
 		"description": "Prefer `array.flatten` over `array.concat` with array literals wrapping arguments",
@@ -151,6 +159,7 @@ test_fail_array_concat_call_with_only_second_argument_wrapped_by_array_literal i
 test_success_array_concat_call_with_no_array_literal_arguments if {
 	r := rule.report with input as ast.policy(`r if array.concat(a, b)`)
 		with config.rules as {"idiomatic": {"use-array-flatten": {"flag-wrapped-concat": true}}}
+		with config.capabilities as {"builtins": {"array.concat": {}, "array.flatten": {}}}
 
 	r == set()
 }
@@ -158,6 +167,7 @@ test_success_array_concat_call_with_no_array_literal_arguments if {
 test_fail_all_array_concat_calls if {
 	r := rule.report with input as ast.policy("r1 if array.concat([1], [2])\nr2 if array.concat([3], [4])")
 		with config.rules as {"idiomatic": {"use-array-flatten": {"flag-all-concat": true}}}
+		with config.capabilities as {"builtins": {"array.concat": {}, "array.flatten": {}}}
 
 	r == {
 		_violation({

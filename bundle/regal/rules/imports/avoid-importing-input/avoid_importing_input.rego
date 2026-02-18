@@ -5,14 +5,13 @@ package regal.rules.imports["avoid-importing-input"]
 import data.regal.result
 
 report contains violation if {
-	some imported in input.imports
-
-	imported.path.value[0].value == "input"
+	some i
+	input.imports[i].path.value[0].value == "input"
 
 	# Allow aliasing input, eg `import input as tfplan`:
-	not _aliased_input(imported)
+	not _aliased_input(input.imports[i])
 
-	violation := result.fail(rego.metadata.chain(), result.location(imported.path.value[0]))
+	violation := result.fail(rego.metadata.chain(), result.location(input.imports[i].path.value[0]))
 }
 
 _aliased_input(imported) if {

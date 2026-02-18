@@ -14,8 +14,6 @@ aggregate contains {
 	"package_location": util.to_location_object(input.package.location),
 	"rule_annotations": _rule_annotations,
 	"rule_locations": _rule_locations,
-	"package_name": ast.package_name,
-	"file": input.regal.file.name,
 }
 
 default _package_annotated := false
@@ -25,7 +23,7 @@ _package_annotated if input.package.annotations
 _rule_annotations[rule_path] contains annotated if {
 	some rule in ast.public_rules_and_functions
 
-	rule_path := concat(".", [ast.package_name, ast.ref_static_to_string(rule.head.ref)])
+	rule_path := $"{ast.package_name}.{ast.ref_static_to_string(rule.head.ref)}"
 	annotated := object.get(rule, "annotations", []) != []
 }
 
@@ -62,12 +60,9 @@ aggregate_report contains violation if {
 
 	not _excepted_package_pattern(cfg, pkg_path)
 
-	first_item := [item[1] | some item in aggs][0]
+	[file, item] := sort(aggs)[0]
 
-	violation := result.fail(rego.metadata.chain(), {"location": object.union(first_item.package_location, {
-		"file": first_item.file,
-		"text": first_item.package_location.text,
-	})})
+	violation := result.fail(rego.metadata.chain(), {"location": object.union(item.package_location, {"file": file})})
 }
 
 # METADATA
@@ -96,17 +91,18 @@ aggregate_report contains violation if {
 # METADATA
 # schemas:
 #   - input: schema.regal.aggregate
-_package_path_aggs[item.package_name] contains [file, item] if {
-	some file
-	item := input.aggregates_internal[file]["custom/missing-metadata"][_]
+_package_path_aggs[pkg_name] contains [file, item] if {
+	some file, items in _aggregates
+	some item in items
+	pkg_name := input.aggregates_internal[file].common.package_name
 }
 
 # METADATA
 # schemas:
 #   - input: schema.regal.aggregate
 _rule_path_aggs[rule_path] contains agg if {
-	some file
-	item := input.aggregates_internal[file]["custom/missing-metadata"][_]
+	some file, items in _aggregates
+	some item in items
 	some rule_path, annotations in item.rule_annotations
 
 	agg := {
@@ -119,3 +115,8 @@ _rule_path_aggs[rule_path] contains agg if {
 _excepted_package_pattern(cfg, value) if regex.match(cfg["except-package-path-pattern"], value)
 
 _excepted_rule_pattern(cfg, value) if regex.match(cfg["except-rule-path-pattern"], value)
+
+# METADATA
+# schemas:
+#   - input: schema.regal.aggregate
+_aggregates[file] := input.aggregates_internal[file]["custom/missing-metadata"] if some file

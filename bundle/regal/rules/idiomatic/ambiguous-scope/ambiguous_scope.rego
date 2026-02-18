@@ -9,8 +9,7 @@ import data.regal.util
 report contains violation if {
 	some name, rules in _incremental_rules
 
-	# should internal rules have metadata at all? not sure, but
-	# let's loosen up the restrictions on them for the moment
+	# don't report on internal rules
 	not startswith(name, "_")
 
 	rules_with_annotations := [rule |
