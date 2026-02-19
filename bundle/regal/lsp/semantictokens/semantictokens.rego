@@ -25,6 +25,8 @@ result.response := {
 	"arg_tokens": arg_tokens,
 	"package_tokens": package_tokens,
 	"import_tokens": import_tokens,
+	"comprehension_tokens": comprehension_tokens,
+	"construct_tokens": construct_tokens,
 }
 
 # METADATA
@@ -82,3 +84,95 @@ arg_tokens.reference contains arg if {
 # METADATA
 # description: Extract package tokens - return full package path
 package_tokens := module.package.path
+
+# METADATA
+# description: Extract comprehension variable declarations from array/set/object comprehensions
+comprehension_tokens.declaration contains var if {
+	some rule in module.rules
+	walk(rule.head.value, [_, comprehension])
+	comp_vars := _comprehension_vars(comprehension)
+	some var in comp_vars
+}
+
+# METADATA
+# description: Extract comprehension variable references
+comprehension_tokens.reference contains var if {
+	some rule in module.rules
+	walk(rule, [_, comprehension])
+
+	comprehension.type in ["arraycomprehension", "setcomprehension", "objectcomprehension"]
+	comp_vars := _comprehension_vars(comprehension)
+
+	var := _differentiate_comprehensions(comprehension)
+	var.type == "var"
+	var.value in {v.value | some v in comp_vars}
+}
+
+# METADATA
+# description: Extract variable declarations from every and some constructs
+construct_tokens.declaration contains var if {
+	some rule in module.rules
+	walk(rule.body, [_, term])
+	term.terms.symbols
+	some symbol in term.terms.symbols
+	symbol.type == "call"
+
+	some var in array.slice(symbol.value, 1, count(symbol.value) - 1)
+	var.type == "var"
+}
+
+# METADATA
+# description: Extract variable references in every and some constructs
+construct_tokens.reference contains var if {
+	some rule in module.rules
+	walk(rule.body, [_, construct_term])
+
+	declared_vars := _get_construct_vars(construct_term)
+
+	walk(rule.body, [_, expr])
+	some var in expr.terms
+	var.type == "var"
+	var.value in declared_vars
+}
+
+# Helper function to get declared variables in a comprehension
+_comprehension_vars(comprehension) := comp_vars if {
+	comprehension.type in ["arraycomprehension", "setcomprehension", "objectcomprehension"]
+	comp_vars := {v |
+		some term in comprehension.value.body
+		term.terms.symbols
+		some symbol in term.terms.symbols
+		some v in array.slice(symbol.value, 1, count(symbol.value) - 1)
+		v.type == "var"
+	}
+}
+
+# Helper to get variables from every/some constructs
+_get_construct_vars(terms) := vars if {
+	# Every construct
+	terms.key
+	terms.value
+	vars := {terms.key.value, terms.value.value}
+} else := vars if {
+	# Some construct
+	terms.symbols
+	vars := {v.value |
+		some symbol in terms.symbols
+		some v in array.slice(symbol.value, 1, count(symbol.value) - 1)
+		v.type == "var"
+	}
+} else := vars if {
+	# Every construct only enumerating values
+	terms.key == null
+	terms.value
+	vars := {terms.value.value}
+} else := set()
+
+# Helper to get variables from every/some constructs
+_differentiate_comprehensions(comprehension) := value if {
+	comprehension.type in ["arraycomprehension", "setcomprehension"]
+	value := comprehension.value.term
+} else := value if {
+	comprehension.type == "objectcomprehension"
+	value := comprehension.value.key
+} else := set()

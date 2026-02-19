@@ -3,6 +3,7 @@ package semantictokens
 import (
 	"context"
 	"fmt"
+	"os"
 	"slices"
 
 	"strconv"
@@ -43,13 +44,21 @@ type ArgTokenCategory struct {
 
 // Represents the structured result from the Rego query
 type SemanticTokensResult struct {
-	ArgTokens     ArgTokenCategory `json:"arg_tokens"`
-	PackageTokens []ASTLocation    `json:"package_tokens"`
-	ImportTokens  []ASTLocation    `json:"import_tokens"`
+	ArgTokens           ArgTokenCategory `json:"arg_tokens"`
+	PackageTokens       []ASTLocation    `json:"package_tokens"`
+	ImportTokens        []ASTLocation    `json:"import_tokens"`
+	ComprehensionTokens ArgTokenCategory `json:"comprehension_tokens"`
+	ConstructTokens     ArgTokenCategory `json:"construct_tokens"`
+	DebugInfo           interface{}      `json:"debug_info"`
 }
 
 func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticTokens, error) {
 	tokens := make([]Token, 0)
+
+	// Debug output
+	fmt.Fprintf(os.Stderr, "DEBUG: Comprehension debug info: %+v\n", result.DebugInfo)
+	fmt.Fprintf(os.Stderr, "DEBUG: Comprehension declarations: %d\n", len(result.ComprehensionTokens.Declaration))
+	fmt.Fprintf(os.Stderr, "DEBUG: Comprehension references: %d\n", len(result.ComprehensionTokens.Reference))
 
 	for _, pkgToken := range result.PackageTokens[1:] {
 
@@ -80,6 +89,58 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 		token, err := extractTokens(varToken, TokenTypeVariable, ModifierReference)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create reference token: %w", err)
+		}
+		tokens = append(tokens, token)
+	}
+
+	// Process comprehension variable declarations
+	for _, compToken := range result.ComprehensionTokens.Declaration {
+		if compToken.Location == "" {
+			continue
+		}
+
+		token, err := extractTokens(compToken, TokenTypeVariable, ModifierDeclaration)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create comprehension declaration token: %w", err)
+		}
+		tokens = append(tokens, token)
+	}
+
+	// Process comprehension variable references
+	for _, compToken := range result.ComprehensionTokens.Reference {
+		if compToken.Location == "" {
+			continue
+		}
+
+		token, err := extractTokens(compToken, TokenTypeVariable, ModifierReference)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create comprehension reference token: %w", err)
+		}
+		tokens = append(tokens, token)
+	}
+
+	// Process construct variable declarations
+	for _, constructToken := range result.ConstructTokens.Declaration {
+		if constructToken.Location == "" {
+			continue
+		}
+
+		token, err := extractTokens(constructToken, TokenTypeVariable, ModifierDeclaration)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create construct declaration token: %w", err)
+		}
+		tokens = append(tokens, token)
+	}
+
+	// Process construct variable references
+	for _, constructToken := range result.ConstructTokens.Reference {
+		if constructToken.Location == "" {
+			continue
+		}
+
+		token, err := extractTokens(constructToken, TokenTypeVariable, ModifierReference)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create construct reference token: %w", err)
 		}
 		tokens = append(tokens, token)
 	}
