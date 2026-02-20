@@ -55,7 +55,7 @@ rules:
     var-shadows-builtin:
       level: error
     zero-arity-function:
-      level: error
+      level: ignore
   custom:
     chained-rule-body:
       level: ignore
