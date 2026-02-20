@@ -368,7 +368,7 @@ fetch_rq_caps if {
 		r := rq.template("https://git.sr.ht/~charles/rq/blob/{{.tag}}/capabilities.json", {"tag": t})
 	}
 
-	print(sprintf("fetching %d capabilities files missing locally", [count(missing_locally)]))
+print("fetching", count(missing_locally), "capabilities files missing locally")
 
 	new_caps := {
 	{"local": m.local, "content": c} |
