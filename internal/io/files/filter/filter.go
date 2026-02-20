@@ -54,5 +54,5 @@ func RegoTests(path string, info os.DirEntry) bool {
 }
 
 func NotRego(path string, _ os.DirEntry) bool {
-	return !strings.HasSuffix(path, ".rego")
+	return !strings.HasSuffix(path, ".rego") && !strings.HasSuffix(path, ".rq")
 }
