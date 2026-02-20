@@ -56,7 +56,7 @@ test_all_cases_are_as_expected if {
 }
 
 exclude(pattern, file) if {
-	some p in config._patterns_compiler([pattern])
+	some p in config.patterns_compiler([pattern])
 	glob.match(p, ["/"], file)
 }
 
@@ -72,14 +72,13 @@ test_excluded_file_default if {
 }
 
 test_excluded_file_with_ignore if {
-	config.excluded_file("test", "test-case", "p.rego") with data.eval.params as params({})
-		with config.merged_config as object.union(rules_config_error, rules_config_ignore_delta)
-}
+	compiled := config.patterns_compiler(config_ignore.ignore.files) with config.merged_config as object.union(
+		rules_config_error,
+		rules_config_ignore_delta,
+	)
 
-test_ignored_globally if config.ignored_globally("p.rego") with config.merged_config as config_ignore
-
-test_excluded_file_cli_flag if {
-	config.ignored_globally("p.rego") with data.eval.params as params({"ignore_files": ["p.rego"]})
+	config.excluded_file("test", "test-case", "p.rego") with data.regal.util as "obnoxious formatter"
+		with data.internal.prepared.ignore_patterns.files.test["test-case"] as compiled
 }
 
 test_excluded_file_cli_overrides_config if {

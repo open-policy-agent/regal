@@ -34,17 +34,18 @@ allow := true
 `
 
 	module := regal.parse_module("p.rego", policy)
-	blocks := ast.comment_blocks(module.comments) with input as module
+	blocks := ast.comment_blocks(ast.comments_decoded) with input as module
+
 	blocks == [
 		[
-			{"location": "3:1:5:15", "text": "IE1FVEFEQVRB"},
-			{"location": "4:1:4:13", "text": "IHRpdGxlOiBmb28="},
-			{"location": "5:1:5:15", "text": "IGJhcjogaW52YWxpZA=="},
+			{"location": {"col": 1, "end": {"col": 15, "row": 5}, "row": 3, "text": "# METADATA"}, "text": " METADATA"},
+			{"location": {"col": 1, "end": {"col": 13, "row": 4}, "row": 4, "text": "# title: foo"}, "text": " title: foo"},
+			{"location": {"col": 1, "end": {"col": 15, "row": 5}, "row": 5, "text": "# bar: invalid"}, "text": " bar: invalid"},
 		],
-		[{"location": "8:1:8:15", "text": "IG5vdCBtZXRhZGF0YQ=="}],
+		[{"location": {"col": 1, "end": {"col": 15, "row": 8}, "row": 8, "text": "# not metadata"}, "text": " not metadata"}],
 		[
-			{"location": "10:1:10:10", "text": "IGFub3RoZXI="},
-			{"location": "11:1:11:8", "text": "IGJsb2Nr"},
+			{"location": {"col": 1, "end": {"col": 10, "row": 10}, "row": 10, "text": "# another"}, "text": " another"},
+			{"location": {"col": 1, "end": {"col": 8, "row": 11}, "row": 11, "text": "# block"}, "text": " block"},
 		],
 	]
 }

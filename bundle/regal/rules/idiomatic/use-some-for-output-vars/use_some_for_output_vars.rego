@@ -33,9 +33,10 @@ _var_in_comprehension_body(path, value, rule) if {
 
 	node.type in {"arraycomprehension", "objectcomprehension", "setcomprehension"}
 
-	some v in ast.find_vars(node.value.body)
-	v.type == "var"
-	v.value == value
+	walk(node.value.body, [_, term])
+
+	term.type == "var"
+	term.value == value
 }
 
 _var_in_ref_head_declared(path, rule_index, value) if {

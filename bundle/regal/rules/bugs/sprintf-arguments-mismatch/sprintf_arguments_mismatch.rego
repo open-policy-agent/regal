@@ -60,12 +60,12 @@ _first_arg_value(_, term) := term if term.type == "string"
 _first_arg_value(rule_index, term) := found if {
 	term.type == "var"
 
-	trow := util.to_location_object(term.location).row
+	trow := to_number(util.substring_to(term.location, 0, ":"))
 
 	found := [rhs |
 		some expr in ast.found.expressions[rule_index]
 
-		util.to_location_object(expr.location).row < trow
+		to_number(util.substring_to(expr.location, 0, ":")) < trow
 
 		[lhs, rhs] := ast.assignment_terms(expr.terms)
 		lhs.type == "var"

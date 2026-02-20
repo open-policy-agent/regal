@@ -4,14 +4,13 @@ package regal.rules.style["detached-metadata"]
 
 import data.regal.ast
 import data.regal.result
-import data.regal.util
 
 report contains violation if {
 	some i, block in ast.comments.blocks
 
 	regex.match(`^\s*METADATA`, block[0].text)
 
-	last_row := util.to_location_object(regal.last(block).location).row
+	last_row := regal.last(block).location.row
 
 	# no need to +1 the index here as rows start counting from 1
 	trim_space(input.regal.file.lines[last_row]) == ""
@@ -28,7 +27,7 @@ _allow_detached(last_row, i, blocks, lines) if {
 
 	regex.match(`^\s*METADATA`, next_block_start.text)
 
-	next_block_row := util.to_location_object(next_block_start.location).row
+	next_block_row := next_block_start.location.row
 	lines_between := array.slice(lines, last_row, next_block_row - 1)
 
 	every line in lines_between {
