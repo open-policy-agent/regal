@@ -11,7 +11,10 @@ report contains violation if {
 
 	value := ast.found.refs[_][_].value
 
-	contains(ast.ref_to_string(value), "._")
+	some term in value
+
+	term.type == "string"
+	startswith(term.value, "_")
 
 	violation := result.fail(rego.metadata.chain(), result.ranged_from_ref(value))
 }
@@ -21,7 +24,10 @@ report contains violation if {
 
 	value := input.imports[_].path.value
 
-	contains(ast.ref_to_string(value), "._")
+	some term in value
+
+	term.type == "string"
+	startswith(term.value, "_")
 
 	violation := result.fail(rego.metadata.chain(), result.ranged_from_ref(value))
 }

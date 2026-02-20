@@ -12,16 +12,16 @@ report contains violation if {
 	# will flag multiple rules with the same name
 	not startswith(trim_prefix(rule1.head.ref[0].value, "todo_"), "test_")
 
-	cur_name := ast.ref_static_to_string(rule1.head.ref)
+	cur_name := ast.rule_names_ordered[i]
 
 	some j, rule2 in input.rules
 
 	j > i
 
-	nxt_name := ast.ref_static_to_string(rule2.head.ref)
+	nxt_name := ast.rule_names_ordered[j]
 	cur_name == nxt_name
 
-	previous_name := ast.ref_static_to_string(input.rules[j - 1].head.ref)
+	previous_name := ast.rule_names_ordered[j - 1]
 	previous_name != nxt_name
 
 	violation := result.fail(rego.metadata.chain(), result.location(rule2))

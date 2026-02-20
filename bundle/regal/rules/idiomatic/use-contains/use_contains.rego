@@ -31,7 +31,7 @@ report contains violation if {
 	rule.head.key
 	not rule.head.value
 
-	text := split(util.to_location_object(rule.location).text, "\n")[0]
+	text := util.substring_to(util.to_location_object(rule.location).text, 0, "\n")
 
 	not contains(text, " contains ")
 

@@ -17,7 +17,11 @@ report contains violation if {
 
 	some ref in ast.found.refs[rule_index]
 
-	vars_in_ref := ast.find_ref_vars(ref)
+	vars_in_ref := [term |
+		some term in array.slice(ref.value, 1, 100)
+
+		term.type == "var"
+	]
 	vars_in_ref != []
 
 	# we don't need the location of each var, but using the first

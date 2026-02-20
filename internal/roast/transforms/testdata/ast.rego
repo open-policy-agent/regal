@@ -427,11 +427,6 @@ assignment_terms(expr) := [expr.terms[1], expr.terms[2]] if is_assignment(expr)
 rule_head_locations[name] contains {"row": loc.row, "col": loc.col} if {
 	some rule in input.rules
 
-	name := concat(".", [
-		"data",
-		package_name,
-		ref_static_to_string(rule.head.ref),
-	])
-
+	name := $"data.{package_name}.{ref_static_to_string(rule.head.ref)}"
 	loc := util.to_location_object(rule.head.location)
 }

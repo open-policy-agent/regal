@@ -49,7 +49,7 @@ _eval_lenses contains {
 		"arguments": [json.marshal({
 			"target": input.params.textDocument.uri,
 			"path": ast.ref_to_string(_module.package.path),
-			"row": util.to_location_object(_module.package.location).row,
+			"row": _module_loc.row,
 		})],
 	},
 }
@@ -72,7 +72,7 @@ _debug_lenses contains lens if {
 			"arguments": [json.marshal({
 				"target": input.params.textDocument.uri,
 				"path": ast.ref_to_string(_module.package.path),
-				"row": util.to_location_object(_module.package.location).row,
+				"row": _module_loc.row,
 			})],
 		},
 	}
@@ -112,3 +112,5 @@ _unconditional_constant(rule) if {
 	not rule.body
 	ast.is_constant(rule.head.value)
 }
+
+_module_loc := util.to_location_object(_module.package.location)

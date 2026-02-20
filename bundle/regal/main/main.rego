@@ -51,8 +51,15 @@ lint.aggregate.violations := aggregate_report if "aggregate" in input.regal.oper
 # description: prepared state for linting, after Rego preparation step
 lint.prepared := prepared.prepare if "prepare" in input.regal.operations
 
-_file_name_relative_to_root(filename, "/") := trim_prefix(filename, "/")
-_file_name_relative_to_root(filename, root) := trim_prefix(filename, concat("", [root, "/"])) if root != "/"
+_filename_relative_to_root := trim_prefix(input.regal.file.name, "/") if config.path_prefix == "/"
+_filename_relative_to_root := trim_prefix(input.regal.file.name, concat("", [config.path_prefix, "/"])) if {
+	config.path_prefix != "/"
+}
+
+_globally_ignored if {
+	some compiled in data.internal.prepared.ignore_patterns.global
+	glob.match(compiled, ["/"], _filename_relative_to_root)
+}
 
 # METADATA
 # description: |
@@ -66,13 +73,12 @@ enabled_rules[category][title] if {
 }
 
 _rules_to_run[category] contains title if {
-	relative_filename := _file_name_relative_to_root(input.regal.file.name, config.path_prefix)
-	not config.ignored_globally(relative_filename)
+	not _globally_ignored
 
 	some category, title
 	prepared.rules_to_run[category][title]
 
-	not config.excluded_file(category, title, relative_filename)
+	not config.excluded_file(category, title, _filename_relative_to_root)
 }
 
 # METADATA
@@ -114,7 +120,7 @@ report contains violation if {
 # Check custom rules
 report contains violation if {
 	file_name_relative_to_root := trim_prefix(input.regal.file.name, concat("", [config.path_prefix, "/"]))
-	not config.ignored_globally(file_name_relative_to_root)
+	not _globally_ignored
 
 	some category, title
 	violation := data.custom.regal.rules[category][title].report[_]
@@ -135,20 +141,20 @@ aggregate[input.regal.file.name].common contains {
 # METADATA
 # description: collects aggregates in bundled rules
 # scope: rule
-aggregate[input.regal.file.name][category_title] contains entry if {
+aggregate[input.regal.file.name][key] contains entry if {
 	some category, title
 	_rules_to_run[category][title]
 
-	some entry in _mark_if_empty(data.regal.rules[category][title].aggregate)
+	key := prepared.aggregate_keys[category][title]
 
-	category_title := concat("/", [category, title])
+	some entry in _mark_if_empty(data.regal.rules[category][title].aggregate)
 }
 
 # METADATA
 # description: collects aggregates in custom rules
 # scope: rule
 aggregate[input.regal.file.name][category_title] contains entry if {
-	not config.ignored_globally(input.regal.file.name)
+	not _globally_ignored
 
 	some category, title
 
@@ -238,11 +244,11 @@ _format_aggregate(aggregate, filename) := object.union(aggregate, {"aggregate_so
 }
 
 _ignored(violation, directives) if {
-	ignored_rules := directives[util.to_location_object(violation.location).row]
+	ignored_rules := directives[violation.location.row]
 	violation.title in ignored_rules
 }
 
 _ignored(violation, directives) if {
-	ignored_rules := directives[util.to_location_object(violation.location).row + 1]
+	ignored_rules := directives[violation.location.row + 1]
 	violation.title in ignored_rules
 }

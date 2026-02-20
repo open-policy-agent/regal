@@ -63,7 +63,7 @@ _loop_start_points[rule_index][loc.row] contains var if {
 	some var in ast.found.vars[rule_index].assign
 
 	loc := util.to_location_object(var.location)
-	loc.row == util.to_location_object(term[0].location).row
+	loc.row == to_number(util.substring_to(term[0].location, 0, ":"))
 	# no need to ignore vars here in comprehensions, since we are only looking
 	# for top level wildcards in the final term.
 }
