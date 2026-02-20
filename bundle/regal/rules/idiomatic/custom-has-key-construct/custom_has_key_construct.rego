@@ -22,7 +22,7 @@ report contains violation if {
 	terms[0].value[0].type == "var"
 	terms[0].value[0].value == "eq"
 
-	[_, ref] := _normalize_eq_terms(terms)
+	ref := _normalize_eq_terms(terms)
 
 	ref.value[0].type == "var"
 
@@ -35,13 +35,12 @@ report contains violation if {
 	violation := result.fail(rego.metadata.chain(), result.location(rule.head))
 }
 
-# normalize var to always always be on the left hand side
-_normalize_eq_terms(terms) := [terms[1], terms[2]] if {
+_normalize_eq_terms(terms) := terms[2] if {
 	ast.is_wildcard(terms[1])
 	terms[2].type == "ref"
 }
 
-_normalize_eq_terms(terms) := [terms[2], terms[1]] if {
+_normalize_eq_terms(terms) := terms[1] if {
 	terms[1].type == "ref"
 	ast.is_wildcard(terms[2])
 }

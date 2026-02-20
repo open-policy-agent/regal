@@ -9,7 +9,6 @@ report contains violation if {
 	terms := input.rules[_].body[_].terms
 
 	terms[0].type == "ref"
-	terms[0].value[0].type == "var"
 	terms[0].value[0].value in {"eq", "equal"}
 
 	nl_terms := _non_loop_term(terms)

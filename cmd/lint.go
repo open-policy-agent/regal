@@ -189,14 +189,11 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 		WithDebugMode(params.debug).
 		WithProfiling(params.profile).
 		WithInstrumentation(params.instrument).
+		WithCustomRulesPaths(params.rules.v...).
 		WithInputPaths(args)
 
 	if params.enablePrint {
 		regal = regal.WithPrintHook(topdown.NewPrintHook(os.Stderr))
-	}
-
-	if params.rules.isSet {
-		regal = regal.WithCustomRulesPaths(params.rules.v...)
 	}
 
 	if params.ignoreFiles.isSet {

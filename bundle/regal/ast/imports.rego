@@ -37,7 +37,7 @@ resolved_imports[identifier] := paths[0] if {
 
 		_imported_identifier(imp) == identifier
 
-		path := [part.value | some part in imp.path.value]
+		path := [term.value | some term in imp.path.value]
 	]
 }
 

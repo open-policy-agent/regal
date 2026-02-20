@@ -915,10 +915,7 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
 // config. These take some time to compute and only change when config changes,
 // so we can store them on the server to speed up diagnostic runs.
 func (l *LanguageServer) loadEnabledRulesFromConfig(ctx context.Context, cfg config.Config) error {
-	lint := linter.NewLinter().WithUserConfig(cfg)
-	if customRulesPath := l.getCustomRulesPath(); customRulesPath != "" {
-		lint = lint.WithCustomRulesPaths(customRulesPath)
-	}
+	lint := linter.NewLinter().WithUserConfig(cfg).WithCustomRulesPaths(l.getCustomRulesPath())
 
 	regular, aggregate, err := lint.DetermineEnabledRules(ctx)
 	if err != nil {

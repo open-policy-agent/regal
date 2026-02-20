@@ -11,16 +11,13 @@ report contains violation if {
 
 	annotation.entrypoint == true
 
-	some i, part in rule.head.ref
+	some i, term in rule.head.ref
 
-	_any_internal(i, part)
+	startswith(term.value, "_")
+	true in {
+		i == 0,
+		term.type == "string",
+	}
 
-	violation := result.fail(rego.metadata.chain(), result.location(part))
-}
-
-_any_internal(0, part) if startswith(part.value, "_")
-
-_any_internal(_, part) if {
-	part.type == "string"
-	startswith(part.value, "_")
+	violation := result.fail(rego.metadata.chain(), result.location(term))
 }

@@ -83,6 +83,8 @@ wrapped_concat_calls contains call if {
 #  optionally (when 'flag-all-concat' is enabled in configuration),
 #  recommend replacing all calls to `array.concat` with `array.flatten`
 all_concat_calls contains call if {
+	"array.concat" in ast.builtin_functions_called
+
 	some calls in ast.found.calls
 	some call in calls
 

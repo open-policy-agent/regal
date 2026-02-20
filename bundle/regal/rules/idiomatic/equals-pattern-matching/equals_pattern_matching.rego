@@ -17,19 +17,17 @@ report contains violation if {
 	not fn.body
 	not fn.else
 
-	arg_var_names := {arg.value |
-		some arg in fn.head.args
-		arg.type == "var"
-	}
-
 	val := fn.head.value
 	val.type == "call"
 	val.value[0].type == "ref"
-	val.value[0].value[0].type == "var"
 	val.value[0].value[0].value == "equal"
 
-	terms := _normalize_eq_terms(val.value, ast.scalar_types)
-	terms[0].value in arg_var_names
+	term := _normalize_eq_terms(val.value, ast.scalar_types)
+
+	some arg in fn.head.args
+
+	arg.type == "var"
+	term.value == arg.value
 
 	violation := result.fail(rego.metadata.chain(), result.location(fn))
 }
@@ -56,24 +54,23 @@ report contains violation if {
 	expr.terms[0].value[0].type == "var"
 	expr.terms[0].value[0].value == "equal"
 
-	terms := _normalize_eq_terms(expr.terms, ast.scalar_types)
-	arg_var_names := {arg.value |
-		some arg in fn.head.args
-		arg.type == "var"
-	}
+	term := _normalize_eq_terms(expr.terms, ast.scalar_types)
 
-	terms[0].value in arg_var_names
+	some arg in fn.head.args
+
+	arg.type == "var"
+	term.value == arg.value
 
 	violation := result.fail(rego.metadata.chain(), result.location(fn))
 }
 
 # normalize var to always always be on the left hand side
-_normalize_eq_terms(terms, scalar_types) := [terms[1], terms[2]] if {
+_normalize_eq_terms(terms, scalar_types) := terms[1] if {
 	not ast.is_wildcard(terms[1])
 	terms[2].type in scalar_types
 }
 
-_normalize_eq_terms(terms, scalar_types) := [terms[2], terms[1]] if {
+_normalize_eq_terms(terms, scalar_types) := terms[2] if {
 	terms[1].type in scalar_types
 	not ast.is_wildcard(terms[2])
 }

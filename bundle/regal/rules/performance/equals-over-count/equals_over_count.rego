@@ -1,5 +1,5 @@
 # METADATA
-# description: Add description of rule here!
+# description: Prefer direct use of `==`/`!=` over `count` to check for empty collections
 package regal.rules.performance["equals-over-count"]
 
 import data.regal.ast
@@ -17,5 +17,5 @@ report contains violation if {
 	call[1].value[0].value[0].value == "count"
 	call[2].value == 0
 
-	violation := result.fail(rego.metadata.chain(), result.location(call))
+	violation := result.fail(rego.metadata.chain(), result.ranged_location_between(call[1], call[2]))
 }

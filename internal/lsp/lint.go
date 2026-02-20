@@ -188,14 +188,11 @@ func updateFileDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
 		WithCollectQuery(true).     // needed to get the aggregateData for this file
 		WithExportAggregates(true). // needed to get the aggregateData out so we can update the cache
 		WithInputModules(&input).
+		WithCustomRulesPaths(opts.CustomRulesPath).
 		WithPathPrefix(opts.WorkspaceRootURI)
 
 	if opts.RegalConfig != nil {
 		regalInstance = regalInstance.WithUserConfig(*opts.RegalConfig)
-	}
-
-	if opts.CustomRulesPath != "" {
-		regalInstance = regalInstance.WithCustomRulesPaths(opts.CustomRulesPath)
 	}
 
 	rpt, err := regalInstance.Lint(ctx)
@@ -239,14 +236,11 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (e
 
 	regalInstance := linter.NewLinter().
 		WithPathPrefix(opts.WorkspaceRootURI).
-		WithExportAggregates(opts.OverwriteAggregates) // aggregates need only be exported if used to overwrite
+		WithExportAggregates(opts.OverwriteAggregates). // aggregates need only be exported if used to overwrite
+		WithCustomRulesPaths(opts.CustomRulesPath)
 
 	if opts.RegalConfig != nil {
 		regalInstance = regalInstance.WithUserConfig(*opts.RegalConfig)
-	}
-
-	if opts.CustomRulesPath != "" {
-		regalInstance = regalInstance.WithCustomRulesPaths(opts.CustomRulesPath)
 	}
 
 	if opts.AggregateReportOnly {

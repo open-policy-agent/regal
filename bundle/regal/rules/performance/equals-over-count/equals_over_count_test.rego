@@ -5,22 +5,28 @@ import data.regal.config
 
 import data.regal.rules.performance["equals-over-count"] as rule
 
-test_fail_count_equals_zero if {
-	r := rule.report with input as ast.policy("r if count(input.rules) == 0")
+test_fail_count_equals_zero[text] if {
+	some text in [
+		"r if count(input.rules) == 0",
+		"r if count(input.rules) != 0",
+		"r if count(input.rules) >  0",
+	]
+
+	r := rule.report with input as ast.policy(text)
 
 	r == {{
 		"category": "performance",
-		"description": "Add description of rule here!",
+		"description": "Prefer direct use of `==`/`!=` over `count` to check for empty collections",
 		"level": "error",
 		"location": {
-			"col": 25,
+			"col": 6,
 			"end": {
-				"col": 27,
+				"col": 29,
 				"row": 3,
 			},
 			"file": "policy.rego",
 			"row": 3,
-			"text": "r if count(input.rules) == 0",
+			"text": text,
 		},
 		"related_resources": [{
 			"description": "documentation",
@@ -28,4 +34,16 @@ test_fail_count_equals_zero if {
 		}],
 		"title": "equals-over-count",
 	}}
+}
+
+test_success_count_not_compared_to_zero[text] if {
+	some text in [
+		"r if count(input.rules) == 1",
+		"r if count(input.rules) != 2",
+		"r if count(input.rules) <  1",
+	]
+
+	r := rule.report with input as ast.policy(text)
+
+	r == set()
 }

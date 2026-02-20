@@ -125,6 +125,14 @@ report contains violation if {
 }
 
 # METADATA
+# description: collect common data used by aggregate rules
+aggregate[input.regal.file.name].common contains {
+	"package_name": ast.package_name,
+	"package_name_full": ast.package_name_full,
+	"lines": input.regal.file.lines,
+}
+
+# METADATA
 # description: collects aggregates in bundled rules
 # scope: rule
 aggregate[input.regal.file.name][category_title] contains entry if {

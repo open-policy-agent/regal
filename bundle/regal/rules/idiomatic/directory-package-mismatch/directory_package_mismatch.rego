@@ -16,12 +16,13 @@ notices contains result.notice(rego.metadata.chain()) if "no_filename" in config
 report contains violation if {
 	parts := split(input.regal.file.abs, input.regal.environment.path_separator)
 	file_path_values := array.slice(parts, 0, count(parts) - 1)
+	num_file_path_values := count(file_path_values)
 
 	# get the last n components from file path, where n == count(_pkg_path_values)
 	file_path_length_matched := array.slice(
 		file_path_values,
-		count(file_path_values) - count(_pkg_path_values),
-		count(file_path_values),
+		num_file_path_values - count(_pkg_path_values),
+		num_file_path_values,
 	)
 
 	file_path_length_matched != _pkg_path_values

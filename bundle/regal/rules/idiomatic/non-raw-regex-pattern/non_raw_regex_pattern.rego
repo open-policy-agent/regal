@@ -12,7 +12,6 @@ report contains violation if {
 
 	value := ast.found.calls[_][_]
 
-	value[0].value[0].type == "var"
 	value[0].value[0].value == "regex"
 
 	# The name following "regex.", e.g. "match"
