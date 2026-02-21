@@ -9,11 +9,11 @@ import data.regal.result
 report contains violation if {
 	_default_rule_values != {}
 
-	some rule in input.rules
+	some i, rule in input.rules
 
 	not rule.default
 
-	_default_rule_values[ast.ref_to_string(rule.head.ref)] == rule.head.value.value
+	_default_rule_values[ast.rule_names_ordered[i]] == rule.head.value.value
 
 	violation := result.fail(rego.metadata.chain(), result.location(rule.head.value))
 }

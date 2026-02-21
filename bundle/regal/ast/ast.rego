@@ -134,7 +134,7 @@ function_arg_names(rule) := [arg.value | some arg in rule.head.args]
 
 # METADATA
 # description: all the rule and function names in the input AST
-rule_and_function_names contains ref_static_to_string(rule.head.ref) if some rule in input.rules
+rule_and_function_names contains name if some name in rule_names_ordered
 
 # METADATA
 # description: all identifiers in the input AST (rule and function names, plus imported names)
@@ -142,7 +142,15 @@ identifiers := rule_and_function_names | imported_identifiers
 
 # METADATA
 # description: all rule names in the input AST (excluding functions)
-rule_names contains ref_static_to_string(rule.head.ref) if some rule in rules
+rule_names contains name if {
+	some i, name in rule_names_ordered
+
+	not input.rules[i].head.args
+}
+
+# METADATA
+# description: all rule and function names in the input AST indexed by position
+rule_names_ordered := [ref_static_to_string(rule.head.ref) | some rule in input.rules]
 
 # METADATA
 # description: |
@@ -189,24 +197,17 @@ function_calls[rule_index] contains call if {
 	some ref in found.calls[rule_index]
 
 	name := ref_to_string(ref[0].value)
-	args := [arg |
-		some i, arg in array.slice(ref, 1, 100)
-
-		not _exclude_arg(name, i, arg.type)
-	]
-
 	call := {
 		"name": name,
 		"location": ref[0].location,
-		"args": args,
+		"args": [arg |
+			some i, arg in array.slice(ref, 1, 100)
+
+			arg.type != "call"
+			["assign", 0] != [name, i]
+		],
 	}
 }
-
-# exclude arg if:
-# - first "arg" of assign is the variable to assign to
-# - call - covered elsewhere
-_exclude_arg(_, _, "call")
-_exclude_arg("assign", 0, _)
 
 # METADATA
 # description: |
@@ -284,10 +285,10 @@ ref_static_to_string(ref) := ref_to_string(array.slice(ref, 0, first_non_static)
 static_ref(ref) if not _non_static_ref(ref)
 
 # optimized inverse of static_ref benefitting from early exit
-# 128 is used only as a reasonable (well...) upper limit for a ref, but the
+# 100 is used only as a reasonable (well...) upper limit for a ref, but the
 # slice will be capped at the length of the ref anyway (avoids count)
 # regal ignore:narrow-argument
-_non_static_ref(ref) if array.slice(ref.value, 1, 128)[_].type in {"call", "var", "ref", "templatestring"}
+_non_static_ref(ref) if array.slice(ref.value, 1, 100)[_].type in {"call", "var", "ref", "templatestring"}
 
 # METADATA
 # description: provides a set of names of all built-in functions called in the input policy
@@ -398,8 +399,8 @@ assignment_terms(terms) := [terms[1], terms[2]] if is_assignment(terms[0])
 #   For a given rule head name, this rule contains a list of locations where
 #   there is a rule head with that name.
 rule_head_locations[name] contains {"row": loc.row, "col": loc.col} if {
-	some rule in input.rules
+	some i, rule in input.rules
 
-	name := concat(".", ["data", package_name, ref_static_to_string(rule.head.ref)])
+	name := $"data.{package_name}.{rule_names_ordered[i]}"
 	loc := util.to_location_object(rule.head.location)
 }

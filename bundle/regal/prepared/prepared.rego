@@ -32,6 +32,27 @@ prepare.notices[category][title] contains notice if {
 }
 
 # METADATA
+# description: store keys for aggregate rules to avoid repeating it for each input file
+prepare.aggregate_keys[category][title] := concat("/", [category, title]) if {
+	some category, title
+	prepare.rules_to_run[category][title]
+}
+
+# METADATA
+# description: compile ignore patterns found for rules in config
+prepare.ignore_patterns.files[category][title] contains compiled if {
+	some category, titles in prepare.rules_to_run
+	some title in titles
+	some compiled in config.patterns_compiler(config.rules[category][title].ignore.files)
+}
+
+# METADATA
+# description: compile global ignore patterns found in config and params
+prepare.ignore_patterns.global := config.patterns_compiler(data.eval.params.ignore_files) if {
+	data.eval.params.ignore_files
+} else := config.patterns_compiler(config.merged_config.ignore.files)
+
+# METADATA
 # description: once prepared, rules_to_run fetched from storage
 # scope: document
 default rules_to_run := {}
@@ -52,3 +73,10 @@ notices := ext_notices.promoted_notices if file_notices
 # scope: document
 file_notices if input.regal.file.rego_version != "v1"
 file_notices if config.capabilities.special.no_filename
+
+# METADATA
+# description: once prepared, aggregate_keys fetched from storage
+# scope: document
+default aggregate_keys := {}
+
+aggregate_keys := data.internal.prepared.aggregate_keys
