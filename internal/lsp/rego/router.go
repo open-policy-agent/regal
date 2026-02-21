@@ -261,7 +261,7 @@ func semanticTokensHandler(ctx context.Context, rctx *RegalContext, req *jsonrpc
 		return nil, err
 	}
 
-	result, err := QueryEval[types.SemanticTokensParams, map[string]any](
+	result, err := QueryEval[types.SemanticTokensParams, semantictokens.SemanticTokensResult](
 		ctx,
 		rctx.Query,
 		NewInput(req.Method, rctx, params))
