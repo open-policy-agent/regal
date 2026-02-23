@@ -3,10 +3,6 @@
 package regal.util
 
 # METADATA
-# description: returns true if string is snake_case formatted
-is_snake_case(str) if str == lower(str)
-
-# METADATA
 # description: |
 #   returns a set of sets containing all indices of duplicates in the array,
 #   so e.g. [1, 1, 2, 3, 3, 3] would return {{0, 1}, {3, 4, 5}} and so on
@@ -42,6 +38,10 @@ keys_to_numbers(obj) := {num: v |
 }
 
 # METADATA
+# description: returns a substring cut off at stop_str, or the whole string if not found
+substring_to(text, start, stop_str) := substring(text, start, indexof(text, stop_str))
+
+# METADATA
 # description: convert location string to location object
 # scope: document
 to_location_object(loc) := {
@@ -53,8 +53,6 @@ to_location_object(loc) := {
 		"col": end_col,
 	},
 } if {
-	is_string(loc)
-
 	[r, c, er, ec] := split(loc, ":")
 
 	row := to_number(r)
@@ -63,9 +61,7 @@ to_location_object(loc) := {
 	end_col := to_number(ec)
 
 	text := _location_to_text(row, col, end_row, end_col)
-}
-
-to_location_object(loc) := loc if is_object(loc)
+} else := loc
 
 # METADATA
 # description: convert location string to location object, without the 'text' attribute
@@ -108,8 +104,15 @@ _location_to_text(row, col, end_row, end_col) := text if {
 	])
 }
 
-_cut_col(0, 1, line, col, end_col) := substring(line, col - 1, end_col - 1)
-_cut_col(0, len, line, _, _) := line if len > 1
+_cut_col(i, len, line, col, end_col) := substring(line, col - 1, end_col - 1) if {
+	i == 0
+	len == 1
+}
+
+_cut_col(i, len, line, _, _) := line if {
+	i == 0
+	len > 1
+}
 
 _cut_col(i, len, line, _, end_col) := substring(line, 0, end_col) if {
 	i == len

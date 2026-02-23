@@ -4,7 +4,6 @@ package regal.rules.style["prefer-snake-case"]
 
 import data.regal.ast
 import data.regal.result
-import data.regal.util
 
 report contains violation if {
 	ast.package_name != lower(ast.package_name)
@@ -27,7 +26,7 @@ report contains violation if {
 report contains violation if {
 	var := ast.found.vars[_][_][_]
 
-	not util.is_snake_case(var.value)
+	var.value != lower(var.value)
 
 	violation := result.fail(rego.metadata.chain(), result.location(var))
 }

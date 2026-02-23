@@ -62,8 +62,8 @@ _rule_body_brackets(lines) if {
 _comment_in_body(rule_row, comments, lines) if {
 	some comment in comments
 
-	comment_location := util.to_location_object(comment.location)
+	comment_row := to_number(util.substring_to(comment.location, 0, ":"))
 
-	comment_location.row > rule_row
-	comment_location.row < rule_row + count(lines)
+	comment_row > rule_row
+	comment_row < rule_row + count(lines)
 }

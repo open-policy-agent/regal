@@ -6,7 +6,14 @@ import data.regal.util
 # description: all comments in the input AST with their `text` attribute base64 decoded
 comments_decoded := [decoded |
 	some comment in input.comments
-	decoded := object.union(comment, {"text": base64.decode(comment.text)})
+
+	text_decoded := base64.decode(comment.text)
+	decoded := object.union_n([
+		comment,
+		{"text": text_decoded},
+		{"location": util.to_location_no_text(comment.location)},
+		{"location": {"text": $"#{text_decoded}"}},
+	])
 ]
 
 # METADATA
@@ -44,8 +51,7 @@ ignore_directives[row] := rules if {
 
 	contains(comment.text, "regal ignore:")
 
-	loc := util.to_location_object(comment.location)
-	row := loc.row + 1
+	row := comment.location.row + 1
 
 	rules := regex.split(`,\s*`, trim_space(regex.replace(comment.text, `^.*regal ignore:\s*(\S+)`, "$1")))
 }
@@ -55,17 +61,14 @@ ignore_directives[row] := rules if {
 #   returns an array of partitions, i.e. arrays containing all comments
 #   grouped by their "blocks". only comments on the same column as the
 #   one before is considered to be part of a block.
-comment_blocks(comments) := blocks if {
+comment_blocks(comments_decoded) := blocks if {
 	row_partitions := [partition |
-		rows := [row |
-			some comment in comments
-			row := util.to_location_object(comment.location).row
-		]
+		rows := [comment.location.row | some comment in comments_decoded]
 		breaks := _splits(rows)
 
 		some j, k in breaks
 		partition := array.slice(
-			comments,
+			comments_decoded,
 			breaks[j - 1] + 1,
 			k + 1,
 		)
@@ -75,11 +78,11 @@ comment_blocks(comments) := blocks if {
 		some row_partition in row_partitions
 		some block in {col: partition |
 			some comment in row_partition
-			col := util.to_location_object(comment.location).col
 
+			col := comment.location.col # regal ignore:comprehension-term-assignment
 			partition := [c |
 				some c in row_partition
-				util.to_location_object(c.location).col == col
+				c.location.col == col
 			]
 		}
 	]

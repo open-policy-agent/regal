@@ -12,9 +12,9 @@ import data.regal.util
 # METADATA
 # description: reports any location where a rule name repeats the package name
 report contains violation if {
-	some rule in input.rules
+	some i, rule in input.rules
 
-	strings.any_prefix_match(ast.ref_static_to_string(rule.head.ref), _possible_offending_prefixes)
+	strings.any_prefix_match(ast.rule_names_ordered[i], _possible_offending_prefixes)
 
 	violation := result.fail(rego.metadata.chain(), result.location(rule.head.ref[0]))
 }
