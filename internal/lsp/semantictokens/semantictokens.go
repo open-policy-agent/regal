@@ -3,7 +3,6 @@ package semantictokens
 import (
 	"context"
 	"fmt"
-	"os"
 	"slices"
 
 	"strconv"
@@ -54,11 +53,6 @@ type SemanticTokensResult struct {
 
 func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticTokens, error) {
 	tokens := make([]Token, 0)
-
-	// Debug output
-	fmt.Fprintf(os.Stderr, "DEBUG: Comprehension debug info: %+v\n", result.DebugInfo)
-	fmt.Fprintf(os.Stderr, "DEBUG: Comprehension declarations: %d\n", len(result.ComprehensionTokens.Declaration))
-	fmt.Fprintf(os.Stderr, "DEBUG: Comprehension references: %d\n", len(result.ComprehensionTokens.Reference))
 
 	for _, pkgToken := range result.PackageTokens[1:] {
 

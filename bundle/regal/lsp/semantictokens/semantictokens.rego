@@ -95,7 +95,7 @@ comprehension_tokens.declaration contains var if {
 }
 
 # METADATA
-# description: Extract comprehension variable references
+# description: Extract comprehension variable references in the output
 comprehension_tokens.reference contains var if {
 	some rule in module.rules
 	walk(rule, [_, comprehension])
@@ -103,7 +103,23 @@ comprehension_tokens.reference contains var if {
 	comprehension.type in ["arraycomprehension", "setcomprehension", "objectcomprehension"]
 	comp_vars := _comprehension_vars(comprehension)
 
-	var := _differentiate_comprehensions(comprehension)
+	output_vars := {_get_comprehension_key(comprehension), _get_comprehension_value(comprehension)}
+	some var in output_vars
+	var.type == "var"
+	var.value in {v.value | some v in comp_vars}
+}
+
+# METADATA
+# description: Extract comprehension variable references in the body
+comprehension_tokens.reference contains var if {
+	some rule in module.rules
+	walk(rule, [_, comprehension])
+
+	comprehension.type in ["arraycomprehension", "setcomprehension", "objectcomprehension"]
+	comp_vars := _comprehension_vars(comprehension)
+
+	walk(comprehension.value.body, [_, expr])
+	some var in expr.terms
 	var.type == "var"
 	var.value in {v.value | some v in comp_vars}
 }
@@ -113,26 +129,30 @@ comprehension_tokens.reference contains var if {
 construct_tokens.declaration contains var if {
 	some rule in module.rules
 	walk(rule.body, [_, term])
-	term.terms.symbols
-	some symbol in term.terms.symbols
-	symbol.type == "call"
 
-	some var in array.slice(symbol.value, 1, count(symbol.value) - 1)
-	var.type == "var"
+	declared_vars := _get_construct_vars(term.terms)
+
+	some var in declared_vars
 }
 
 # METADATA
 # description: Extract variable references in every and some constructs
 construct_tokens.reference contains var if {
 	some rule in module.rules
-	walk(rule.body, [_, construct_term])
 
-	declared_vars := _get_construct_vars(construct_term)
+	walk(rule.body, [_, declare_term])
+	declared_vars := _get_construct_vars(declare_term)
+	declared_vars != set()
+	declared_var_names := {v.value | some v in declared_vars}
 
-	walk(rule.body, [_, expr])
+	walk(rule.body, [_, ref_term])
+	values := _get_construct_reference_context(ref_term)
+	values != []
+
+	walk(values, [_, expr])
 	some var in expr.terms
 	var.type == "var"
-	var.value in declared_vars
+	var.value in declared_var_names
 }
 
 # Helper function to get declared variables in a comprehension
@@ -149,30 +169,45 @@ _comprehension_vars(comprehension) := comp_vars if {
 
 # Helper to get variables from every/some constructs
 _get_construct_vars(terms) := vars if {
-	# Every construct
+	terms.domain
 	terms.key
 	terms.value
-	vars := {terms.key.value, terms.value.value}
+	vars := {terms.key, terms.value}
 } else := vars if {
-	# Some construct
 	terms.symbols
-	vars := {v.value |
+	not terms.body
+	vars := {v |
 		some symbol in terms.symbols
 		some v in array.slice(symbol.value, 1, count(symbol.value) - 1)
 		v.type == "var"
 	}
 } else := vars if {
-	# Every construct only enumerating values
+	terms.domain
 	terms.key == null
 	terms.value
-	vars := {terms.value.value}
+	vars := {terms.value}
 } else := set()
 
-# Helper to get variables from every/some constructs
-_differentiate_comprehensions(comprehension) := value if {
+# Helper to get the reference context based on construct type
+_get_construct_reference_context(construct_terms) := values if {
+	values := construct_terms.body
+} else := values if {
+	not construct_terms.symbols
+	is_array(construct_terms.terms)
+	values := [{"terms": construct_terms.terms}]
+} else := []
+
+# Helper to get variables from differing comprehensions
+_get_comprehension_value(comprehension) := value if {
 	comprehension.type in ["arraycomprehension", "setcomprehension"]
 	value := comprehension.value.term
 } else := value if {
+	comprehension.type == "objectcomprehension"
+	value := comprehension.value.value
+} else := set()
+
+# Helper to get variables from differing comprehensions
+_get_comprehension_key(comprehension) := value if {
 	comprehension.type == "objectcomprehension"
 	value := comprehension.value.key
 } else := set()

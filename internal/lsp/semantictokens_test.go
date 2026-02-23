@@ -100,6 +100,91 @@ test_function(param1) := result if {
 				{DeltaLine: 5, DeltaCol: 15, Length: 6, Type: 1, Modifier: 2},
 			},
 		},
+		"comprehensions": {
+			policy: `package regal.woo
+
+array_comprehensions := [x |  
+    some i, x in [1, 2, 3]    
+    i == 2                    
+]
+
+set_comprehensions := {x |    
+    some i, x in [1, 2, 3]    
+    i == 2                    
+}
+
+object_comprehensions := {k: v |  
+    some k, v in [1, 2, 3]       
+    v == 2                        
+}`,
+			expectedTokens: []semanticTokenInstance{
+				{DeltaLine: 0, DeltaCol: 8, Length: 5, Type: 0, Modifier: 0},
+				{DeltaLine: 0, DeltaCol: 6, Length: 3, Type: 0, Modifier: 0},
+				{DeltaLine: 2, DeltaCol: 25, Length: 1, Type: 1, Modifier: 2},
+				{DeltaLine: 1, DeltaCol: 9, Length: 1, Type: 1, Modifier: 1},
+				{DeltaLine: 0, DeltaCol: 3, Length: 1, Type: 1, Modifier: 1},
+				{DeltaLine: 1, DeltaCol: 4, Length: 1, Type: 1, Modifier: 2},
+				{DeltaLine: 3, DeltaCol: 23, Length: 1, Type: 1, Modifier: 2},
+				{DeltaLine: 1, DeltaCol: 9, Length: 1, Type: 1, Modifier: 1},
+				{DeltaLine: 0, DeltaCol: 3, Length: 1, Type: 1, Modifier: 1},
+				{DeltaLine: 1, DeltaCol: 4, Length: 1, Type: 1, Modifier: 2},
+				{DeltaLine: 3, DeltaCol: 26, Length: 1, Type: 1, Modifier: 2},
+				{DeltaLine: 0, DeltaCol: 3, Length: 1, Type: 1, Modifier: 2},
+				{DeltaLine: 1, DeltaCol: 9, Length: 1, Type: 1, Modifier: 1},
+				{DeltaLine: 0, DeltaCol: 3, Length: 1, Type: 1, Modifier: 1},
+				{DeltaLine: 1, DeltaCol: 4, Length: 1, Type: 1, Modifier: 2},
+			},
+		},
+		"every constructs": {
+			policy: `package regal.woo
+
+every_two_vars_construct if {
+    every k, v in input.object {  
+        is_string(k)             
+        v > 0                    
+    }
+}
+
+every_one_var_construct if {
+    every k in input.object {  
+        is_string(k)                                
+    }
+}`,
+			expectedTokens: []semanticTokenInstance{
+				{DeltaLine: 0, DeltaCol: 8, Length: 5, Type: 0, Modifier: 0},
+				{DeltaLine: 0, DeltaCol: 6, Length: 3, Type: 0, Modifier: 0},
+				{DeltaLine: 3, DeltaCol: 10, Length: 1, Type: 1, Modifier: 1},
+				{DeltaLine: 0, DeltaCol: 3, Length: 1, Type: 1, Modifier: 1},
+				{DeltaLine: 1, DeltaCol: 18, Length: 1, Type: 1, Modifier: 2},
+				{DeltaLine: 1, DeltaCol: 8, Length: 1, Type: 1, Modifier: 2},
+				{DeltaLine: 5, DeltaCol: 10, Length: 1, Type: 1, Modifier: 1},
+				{DeltaLine: 1, DeltaCol: 18, Length: 1, Type: 1, Modifier: 2},
+			},
+		},
+		"some constructs": {
+			policy: `package regal.woo
+
+some_two_vars_construct if {
+    some i, item in input.array   
+    i < 10                        
+    item > 0                        
+}
+
+some_one_var_construct if {
+    some i in input.array   
+    i < 10                                              
+}`,
+			expectedTokens: []semanticTokenInstance{
+				{DeltaLine: 0, DeltaCol: 8, Length: 5, Type: 0, Modifier: 0},
+				{DeltaLine: 0, DeltaCol: 6, Length: 3, Type: 0, Modifier: 0},
+				{DeltaLine: 3, DeltaCol: 9, Length: 1, Type: 1, Modifier: 1},
+				{DeltaLine: 0, DeltaCol: 3, Length: 4, Type: 1, Modifier: 1},
+				{DeltaLine: 1, DeltaCol: 4, Length: 1, Type: 1, Modifier: 2},
+				{DeltaLine: 1, DeltaCol: 4, Length: 4, Type: 1, Modifier: 2},
+				{DeltaLine: 4, DeltaCol: 9, Length: 1, Type: 1, Modifier: 1},
+				{DeltaLine: 1, DeltaCol: 4, Length: 1, Type: 1, Modifier: 2},
+			},
+		},
 	}
 
 	for testName, tc := range testCases {
@@ -161,13 +246,13 @@ func generateLargePolicy(numFunctions int) string {
 	policy.WriteString("package regal.woo\n\n")
 
 	for i := range numFunctions {
-		policy.WriteString(fmt.Sprintf(`test_function_%d(param1, param2) := result if {
+		fmt.Fprintf(&policy, `test_function_%d(param1, param2) := result if {
 	calc1 := param1 * %d
 	calc2 := param2 + %d
 	result := calc1 + calc2
 }
 
-`, i, i+1, i+10))
+`, i, i+1, i+10)
 	}
 
 	return policy.String()
