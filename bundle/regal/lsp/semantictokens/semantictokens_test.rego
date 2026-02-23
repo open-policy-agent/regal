@@ -58,6 +58,86 @@ test_function(param1, param2) := result if {
 	{"location": "3:19:3:22", "type": "string", "value": "ast"} in tokens
 }
 
+test_comprehensions if {
+	policy := `package regal.woo
+
+array_comprehensions := [x |  
+	some i, x in [1, 2, 3]    
+	i == 2                    
+]
+
+set_comprehensions := {x |    
+	some i, x in [1, 2, 3]    
+	i == 2                    
+}
+
+object_comprehensions := {k: v |  
+	some k, v in [1, 2, 3]       
+	v == 2                        
+}`
+	tokens := semantictokens.comprehension_tokens with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
+
+	{"location": "14:7:14:8", "type": "var", "value": "k"} in tokens.declaration
+	{"location": "14:10:14:11", "type": "var", "value": "v"} in tokens.declaration
+	{"location": "4:10:4:11", "type": "var", "value": "x"} in tokens.declaration
+	{"location": "4:7:4:8", "type": "var", "value": "i"} in tokens.declaration
+	{"location": "9:7:9:8", "type": "var", "value": "i"} in tokens.declaration
+	{"location": "9:10:9:11", "type": "var", "value": "x"} in tokens.declaration
+
+	{"location": "3:26:3:27", "type": "var", "value": "x"} in tokens.reference
+	{"location": "5:2:5:3", "type": "var", "value": "i"} in tokens.reference
+	{"location": "8:24:8:25", "type": "var", "value": "x"} in tokens.reference
+	{"location": "10:2:10:3", "type": "var", "value": "i"} in tokens.reference
+	{"location": "13:27:13:28", "type": "var", "value": "k"} in tokens.reference
+	{"location": "13:30:13:31", "type": "var", "value": "v"} in tokens.reference
+	{"location": "15:2:15:3", "type": "var", "value": "v"} in tokens.reference
+}
+
+test_constructs if {
+	policy := `package regal.woo
+	
+every_two_vars_construct if {
+	every k, v in input.object {  
+		is_string(k)             
+		v > 0                    
+	}
+}
+
+some_two_vars_construct if {
+	some i, item in input.array   
+	i < 10                        
+	item > 0                        
+}
+
+every_one_var_construct if {
+	every k in input.object {  
+		is_string(k)                                
+	}
+}
+
+some_one_var_construct if {
+	some i in input.array   
+	i < 10                                              
+}`
+	tokens := semantictokens.construct_tokens with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
+
+	{"location": "4:11:4:12", "type": "var", "value": "v"} in tokens.declaration
+	{"location": "4:8:4:9", "type": "var", "value": "k"} in tokens.declaration
+	{"location": "11:10:11:14", "type": "var", "value": "item"} in tokens.declaration
+	{"location": "11:7:11:8", "type": "var", "value": "i"} in tokens.declaration
+	{"location": "17:8:17:9", "type": "var", "value": "k"} in tokens.declaration
+	{"location": "23:7:23:8", "type": "var", "value": "i"} in tokens.declaration
+
+	{"location": "5:13:5:14", "type": "var", "value": "k"} in tokens.reference
+	{"location": "6:3:6:4", "type": "var", "value": "v"} in tokens.reference
+	{"location": "12:2:12:3", "type": "var", "value": "i"} in tokens.reference
+	{"location": "13:2:13:6", "type": "var", "value": "item"} in tokens.reference
+	{"location": "18:13:18:14", "type": "var", "value": "k"} in tokens.reference
+	{"location": "24:2:24:3", "type": "var", "value": "i"} in tokens.reference
+}
+
 test_arg_tokens_no_variables if {
 	policy := `package regal.woo
 
