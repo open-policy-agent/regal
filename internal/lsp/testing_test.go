@@ -81,8 +81,8 @@ test_bar if {
 			t.Fatalf("expected locations to be array, got %T", requestData["locations"])
 		}
 
-		if len(locations) != 4 {
-			t.Fatalf("expected 4 test locations, got %d", len(locations))
+		if exp, got := 2, len(locations); exp != got {
+			t.Fatalf("expected %d test locations, got %d", exp, len(locations))
 		}
 
 	case <-timeout.C:

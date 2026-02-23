@@ -1,6 +1,5 @@
 package regal.lsp.testlocations_test
 
-import data.regal.ast
 import data.regal.lsp.testlocations
 
 test_multiple_test_rules if {
@@ -22,31 +21,8 @@ test_2 if true
 
 	{
 		{
-			"kind": "package_test",
 			"package": "data.foo_test",
-			"location": {
-				"col": 1,
-				"row": 1,
-				"end": {"col": 8, "row": 1},
-				"file": "file://foo_test.rego",
-				"text": "package foo_test",
-			},
-		},
-		{
-			"kind": "file_test",
-			"package": "data.foo_test",
-			"location": {
-				"col": 1,
-				"row": 1,
-				"end": {"col": 8, "row": 1},
-				"file": "file://foo_test.rego",
-				"text": "package foo_test",
-			},
-		},
-		{
-			"kind": "single_test",
-			"package": "data.foo_test",
-			"test": "test_1",
+			"name": "test_1",
 			"location": {
 				"col": 1,
 				"row": 3,
@@ -56,9 +32,8 @@ test_2 if true
 			},
 		},
 		{
-			"kind": "single_test",
 			"package": "data.foo_test",
-			"test": "test_2",
+			"name": "test_2",
 			"location": {
 				"col": 1,
 				"row": 7,
@@ -68,9 +43,8 @@ test_2 if true
 			},
 		},
 		{
-			"kind": "single_test",
 			"package": "data.foo_test",
-			"test": "test_3",
+			"name": "test_3",
 			"location": {
 				"col": 3,
 				"row": 9,
@@ -98,42 +72,17 @@ test_foo if true
 
 	result := testlocations.result with input as regal.parse_module("file://foo.rego", policy)
 
-	{
-		{
-			"kind": "file_test",
-			"package": "data.foo",
-			"location": {
-				"col": 1,
-				"row": 1,
-				"end": {"col": 8, "row": 1},
-				"file": "file://foo.rego",
-				"text": "package foo",
-			},
+	{{
+		"package": "data.foo",
+		"name": "test_foo",
+		"location": {
+			"col": 1,
+			"row": 3,
+			"end": {"col": 9, "row": 3},
+			"file": "file://foo.rego",
+			"text": "test_foo if true",
 		},
-		{
-			"kind": "package_test",
-			"package": "data.foo",
-			"location": {
-				"col": 1,
-				"row": 1,
-				"end": {"col": 8, "row": 1},
-				"file": "file://foo.rego",
-				"text": "package foo",
-			},
-		},
-		{
-			"kind": "single_test",
-			"package": "data.foo",
-			"test": "test_foo",
-			"location": {
-				"col": 1,
-				"row": 3,
-				"end": {"col": 9, "row": 3},
-				"file": "file://foo.rego",
-				"text": "test_foo if true",
-			},
-		},
-	} == result
+	}} == result
 }
 
 test_funny_test_names_package if {
@@ -152,31 +101,8 @@ foo.bar.test_me.baz if {
 
 	{
 		{
-			"kind": "file_test",
 			"package": "data.foo",
-			"location": {
-				"col": 1,
-				"row": 1,
-				"end": {"col": 8, "row": 1},
-				"file": "file://foo.rego",
-				"text": "package foo",
-			},
-		},
-		{
-			"kind": "package_test",
-			"package": "data.foo",
-			"location": {
-				"col": 1,
-				"row": 1,
-				"end": {"col": 8, "row": 1},
-				"file": "file://foo.rego",
-				"text": "package foo",
-			},
-		},
-		{
-			"kind": "single_test",
-			"package": "data.foo",
-			"test": "foo.bar.test_me",
+			"name": "foo.bar.test_me",
 			"location": {
 				"col": 1,
 				"row": 3,
@@ -186,9 +112,8 @@ foo.bar.test_me.baz if {
 			},
 		},
 		{
-			"kind": "single_test",
 			"package": "data.foo",
-			"test": "foo.bar.test_me.baz",
+			"name": "foo.bar.test_me.baz",
 			"location": {
 				"col": 1,
 				"row": 7,

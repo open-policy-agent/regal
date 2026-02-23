@@ -8,7 +8,7 @@
 <!-- markdownlint-disable MD041 -->
 
 [![Build Status](https://github.com/open-policy-agent/regal/workflows/Build/badge.svg)](https://github.com/open-policy-agent/regal/actions)
-![OPA v1.13.1](https://www.openpolicyagent.org/badge/v1.13.1)
+![OPA v1.13.1-0.20260224105757-9b2143cdf99c](https://www.openpolicyagent.org/badge/v1.13.1-0.20260224105757-9b2143cdf99c)
 [![codecov](https://codecov.io/github/open-policy-agent/regal/graph/badge.svg?token=EQK01YF3X3)](https://codecov.io/github/StyraInc/regal)
 [![Downloads](https://img.shields.io/github/downloads/open-policy-agent/regal/total.svg)](https://github.com/open-policy-agent/regal/releases)
 

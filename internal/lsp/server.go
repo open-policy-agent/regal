@@ -101,7 +101,7 @@ func DefaultServerFeatureFlags() *types.ServerFeatureFlags {
 		ExplorerProvider:         true,
 		InlineEvaluationProvider: true,
 		DebugProvider:            true,
-		ServerTestingProvider:    true,
+		OPATestProvider:          true,
 	}
 }
 
@@ -143,7 +143,8 @@ type LanguageServer struct {
 	bundleCache *bundles.Cache
 	queryCache  *query.Cache
 
-	regoRouter *rego.RegoRouter
+	regoRouter      *rego.RegoRouter
+	testingCompiler *ast.Compiler
 
 	commandRequest       chan types.ExecuteCommandParams
 	lintWorkspaceJobs    chan lintWorkspaceJob
@@ -224,6 +225,9 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		loadedBuiltins:              concurrent.MapOf(make(map[string]map[string]*ast.Builtin)),
 		workspaceDiagnosticsPoll:    opts.WorkspaceDiagnosticsPoll,
 		loadedConfigAllRegoVersions: concurrent.MapOf(make(map[string]ast.RegoVersion)),
+		testingCompiler: compile.NewCompilerWithRegalBuiltins().
+			WithEnablePrintStatements(true).
+			WithUseTypeCheckAnnotations(true),
 	}
 
 	ls.regoRouter = rego.NewRegoRouter(ctx, store, qc, rego.Providers{
@@ -293,6 +297,8 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return handler.WithParams(req, l.handleWorkspaceExecuteCommand)
 	case "workspace/symbol":
 		return l.handleWorkspaceSymbol()
+	case "regal/runTests":
+		return handler.WithContextAndParams(ctx, req, l.handleRunTests)
 	case "shutdown":
 		// no-op as we wait for the exit signal before closing channel
 		return emptyStruct, nil
@@ -2005,10 +2011,10 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			// 'custom' additions that are ready for use, but not in the base
 			// spec.
 			Experimental: &types.ExperimentalCapabilities{
-				ExplorerProvider:      l.featureFlags.ExplorerProvider,
-				InlineEvalProvider:    l.featureFlags.InlineEvaluationProvider,
-				DebugProvider:         l.featureFlags.DebugProvider,
-				ServerTestingProvider: l.featureFlags.ServerTestingProvider,
+				ExplorerProvider:   l.featureFlags.ExplorerProvider,
+				InlineEvalProvider: l.featureFlags.InlineEvaluationProvider,
+				DebugProvider:      l.featureFlags.DebugProvider,
+				OPATestProvider:    l.featureFlags.OPATestProvider,
 			},
 		},
 	}

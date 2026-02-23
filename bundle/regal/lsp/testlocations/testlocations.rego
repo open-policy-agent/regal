@@ -1,34 +1,24 @@
+# METADATA
+# description: |
+#   This returns a set of test_ rule locations in a given module.
+#   Used by the regal/testLocations method in the LSP to have clients know
+#   where tests are.
 package regal.lsp.testlocations
 
 import data.regal.ast
-import data.regal.result
+import data.regal.result as rs
 
-result contains test if {
-	some test in _single_tests
-}
-
+# METADATA
+# description: |
+#   result contains a list of locations. A location is test name, package and
+#   the location (which has start and end char range too).
 result contains object.union(loc, {
 	"package": _package_ref_string,
-	"kind": kind,
-}) if {
-	count(_single_tests) > 0
-
-	# package_test is run all tests in package, file_test, is run all in file
-	some kind in {"package_test", "file_test"}
-
-	some test in ast.tests
-
-	loc := result.location(input.package)
-}
-
-_single_tests contains object.union(loc, {
-	"package": _package_ref_string,
-	"kind": "single_test",
-	"test": ast.ref_static_to_string(test.head.ref),
+	"name": ast.ref_static_to_string(test.head.ref),
 }) if {
 	some test in ast.tests
 
-	loc := result.location(test.head)
+	loc := rs.location(test.head)
 }
 
 _package_ref_string := ast.ref_to_string(input.package.path)
