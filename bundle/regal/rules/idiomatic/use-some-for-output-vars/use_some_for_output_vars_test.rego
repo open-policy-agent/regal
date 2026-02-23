@@ -149,6 +149,17 @@ test_success_some_iteration if {
 	}`) == set()
 }
 
+# verify fix for https://github.com/open-policy-agent/regal/issues/1876
+test_success_var_in_ref_as_rule_value_declared if {
+	r := rule.report with input as ast.policy(`
+	aliased_imports contains input.imports[x] if {
+		some x
+		input.imports[x].alias
+	}`)
+
+	r == set()
+}
+
 test_success_not_an_output_var if {
 	r := rule.report with input as ast.policy(`
 		i := 0

@@ -13,6 +13,7 @@ report contains violation if {
 	not startswith(term.value, "$")
 	not term.value in ast.imported_identifiers
 	not term.value in ast.rule_names
+	not true in {true | some v in ast.found.vars[rule_index].some; v.value == term.value}
 
 	rule := input.rules[to_number(rule_index)]
 
@@ -20,7 +21,7 @@ report contains violation if {
 
 	walk(rule, [path, term.location])
 
-	not _var_in_ref_head_declared(path, rule_index, term.value)
+	not _var_in_ref_head_declared(path[0], rule_index, term.value)
 	not _var_in_comprehension_body(path, term.value, rule)
 
 	violation := result.fail(rego.metadata.chain(), result.location(term))
@@ -39,8 +40,4 @@ _var_in_comprehension_body(path, value, rule) if {
 	term.value == value
 }
 
-_var_in_ref_head_declared(path, rule_index, value) if {
-	path[0] == "head"
-	path[1] == "ref"
-	ast.found.vars[rule_index]["some"][_].value == value
-}
+_var_in_ref_head_declared("head", rule_index, value) if ast.found.vars[rule_index]["some"][_].value == value
