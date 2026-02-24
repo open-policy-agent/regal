@@ -101,6 +101,7 @@ func DefaultServerFeatureFlags() *types.ServerFeatureFlags {
 		ExplorerProvider:         true,
 		InlineEvaluationProvider: true,
 		DebugProvider:            true,
+		OPATestProvider:          true,
 	}
 }
 
@@ -142,13 +143,15 @@ type LanguageServer struct {
 	bundleCache *bundles.Cache
 	queryCache  *query.Cache
 
-	regoRouter *rego.RegoRouter
+	regoRouter      *rego.RegoRouter
+	testingCompiler *ast.Compiler
 
 	commandRequest       chan types.ExecuteCommandParams
 	lintWorkspaceJobs    chan lintWorkspaceJob
 	lintFileJobs         chan lintFileJob
 	builtinsPositionJobs chan lintFileJob
 	templateFileJobs     chan lintFileJob
+	testLocationJobs     chan lintFileJob
 	prepareQueryJobs     chan struct{}
 
 	// templatingFiles tracks files currently being templated to ensure
@@ -215,12 +218,16 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		builtinsPositionJobs:        make(chan lintFileJob, 10),
 		commandRequest:              make(chan types.ExecuteCommandParams, 10),
 		templateFileJobs:            make(chan lintFileJob, 10),
+		testLocationJobs:            make(chan lintFileJob, 10),
 		prepareQueryJobs:            make(chan struct{}, 1),
 		templatingFiles:             concurrent.MapOf(make(map[string]bool)),
 		webServer:                   web.NewServer(opts.Logger),
 		loadedBuiltins:              concurrent.MapOf(make(map[string]map[string]*ast.Builtin)),
 		workspaceDiagnosticsPoll:    opts.WorkspaceDiagnosticsPoll,
 		loadedConfigAllRegoVersions: concurrent.MapOf(make(map[string]ast.RegoVersion)),
+		testingCompiler: compile.NewCompilerWithRegalBuiltins().
+			WithEnablePrintStatements(true).
+			WithUseTypeCheckAnnotations(true),
 	}
 
 	ls.regoRouter = rego.NewRegoRouter(ctx, store, qc, rego.Providers{
@@ -290,6 +297,8 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return handler.WithParams(req, l.handleWorkspaceExecuteCommand)
 	case "workspace/symbol":
 		return l.handleWorkspaceSymbol()
+	case "regal/runTests":
+		return handler.WithContextAndParams(ctx, req, l.handleRunTests)
 	case "shutdown":
 		// no-op as we wait for the exit signal before closing channel
 		return emptyStruct, nil
@@ -349,10 +358,21 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 
 				// updateParse will not return an error when the parsing failed,
 				// but only when it was impossible to parse the file.
-				if _, err := updateParse(ctx, l.parseOpts(job.URI, l.builtinsForCurrentCapabilities())); err != nil {
+				parseSuccess, err := updateParse(ctx, l.parseOpts(job.URI, l.builtinsForCurrentCapabilities()))
+				if err != nil {
 					l.log.Message("failed to update module for %s: %s", job.URI, err)
 
 					continue
+				}
+
+				// Send test locations update after parse completes
+				if parseSuccess {
+					l.testLocationJobs <- lintFileJob{Reason: job.Reason, URI: job.URI}
+				} else {
+					// Parse failed, send empty test locations
+					if err := l.sendTestLocations(ctx, job.URI, []any{}); err != nil {
+						l.log.Message("failed to send empty test locations after parse failure: %s", err)
+					}
 				}
 
 				// lint the file and send the diagnostics
@@ -1994,6 +2014,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 				ExplorerProvider:   l.featureFlags.ExplorerProvider,
 				InlineEvalProvider: l.featureFlags.InlineEvaluationProvider,
 				DebugProvider:      l.featureFlags.DebugProvider,
+				OPATestProvider:    l.featureFlags.OPATestProvider,
 			},
 		},
 	}
