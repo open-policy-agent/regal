@@ -8,18 +8,13 @@ import data.regal.result
 # METADATA
 # description: check rule bodies for redundant existence checks
 report contains violation if {
-	some rule_index, rule in input.rules
-	some expr_index, expr in _exprs[rule_index]
+	some rule_index, expr_index
+	expr := _static_ref_exprs[rule_index][expr_index]
 
-	expr.terms.type == "ref"
+	some adjacent in [-1, 1]
+	some term in _exprs[rule_index][expr_index + adjacent].terms
 
-	not expr.with
-
-	not rule.body[expr_index + 1].negated
-	ast.static_ref(expr.terms)
-
-	some term in rule.body[expr_index + 1].terms
-
+	term.type == "ref"
 	ast.is_terms_subset(expr.terms.value, term.value)
 
 	violation := result.fail(rego.metadata.chain(), result.ranged_from_ref(expr.terms.value))
@@ -34,15 +29,17 @@ report contains violation if {
 #  quite unlikely that existence checks are found there
 report contains violation if {
 	some func in ast.functions
+
+	arg_vars := {term.value |
+		some term in func.head.args
+		term.type == "var"
+	}
+
 	some expr in func.body
 
 	not expr.negated
 	expr.terms.type == "var"
-
-	some arg in func.head.args
-
-	arg.type == "var"
-	arg.value == expr.terms.value
+	expr.terms.value in arg_vars
 
 	violation := result.fail(rego.metadata.chain(), result.location(expr.terms))
 }
@@ -50,21 +47,33 @@ report contains violation if {
 # METADATA
 # description: check for redundant existence checks in rule head assignment
 report contains violation if {
-	some rule_index, rule in input.rules
+	some rule_index
+	input.rules[rule_index].head.value.type == "ref"
 
-	rule.head.value.type == "ref"
+	head := input.rules[rule_index].head
 
 	some expr in _exprs[rule_index]
 
-	not expr.negated
 	expr.terms.type == "ref"
-	ast.is_terms_subset(expr.terms.value, rule.head.value.value)
+	ast.is_terms_subset(expr.terms.value, head.value.value)
 
 	violation := result.fail(rego.metadata.chain(), result.ranged_from_ref(expr.terms.value))
 }
 
 # all top-level expressions in module
 _exprs[rule_index][expr_index] := expr if {
-	some rule_index, rule in input.rules
-	some expr_index, expr in rule.body
+	some rule_index, expr_index
+	input.rules[rule_index].body[expr_index]
+
+	expr := input.rules[rule_index].body[expr_index]
+	not expr.with
+	not expr.negated
+}
+
+_static_ref_exprs[rule_index][expr_index] := expr if {
+	some rule_index, expr_index
+	_exprs[rule_index][expr_index].terms.type == "ref"
+
+	expr := _exprs[rule_index][expr_index]
+	ast.static_ref(expr.terms)
 }
