@@ -79,3 +79,14 @@ func ObjectEnd(stream *jsoniter.Stream) {
 	stream.SetBuffer(bytes.TrimRight(stream.Buffer(), ",\n "))
 	stream.WriteObjectEnd()
 }
+
+func Term(stream *jsoniter.Stream, term *ast.Term) {
+	ObjectStart(stream, term.Location)
+
+	if term.Value != nil {
+		String(stream, "type", ast.ValueName(term.Value))
+		Val(stream, "value", term.Value)
+	}
+
+	ObjectEnd(stream)
+}

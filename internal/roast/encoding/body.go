@@ -17,7 +17,5 @@ func (*bodyCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*bodyCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	body := *((*ast.Body)(ptr))
-
-	write.ValsArray(stream, body)
+	write.ValsArray(stream, *((*ast.Body)(ptr)))
 }

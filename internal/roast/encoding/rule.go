@@ -35,7 +35,7 @@ func (*ruleCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	}
 
 	if !rast.IsBodyGenerated(&rule) {
-		write.Val(stream, "body", rule.Body)
+		write.ValsArrayAttr(stream, "body", rule.Body)
 	}
 
 	if rule.Else != nil {

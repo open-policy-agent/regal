@@ -22,6 +22,6 @@ func (*objectComprehensionCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Str
 	write.ObjectStart(stream, nil)
 	write.Val(stream, "key", oc.Key)
 	write.Val(stream, "value", oc.Value)
-	write.Val(stream, "body", oc.Body)
+	write.ValsArrayAttr(stream, "body", oc.Body)
 	write.ObjectEnd(stream)
 }
