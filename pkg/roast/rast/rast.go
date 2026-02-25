@@ -206,16 +206,21 @@ func StructToValue(input any) ast.Value {
 
 		value := v.Field(i)
 
-		if strings.Contains(tag, ",") {
-			parts := strings.Split(tag, ",")
-			tag = parts[0]
+		if comma := strings.Index(tag, ","); comma != -1 {
+			rest := tag[comma+1:]
+			tag = tag[:comma]
 
-			if slices.Contains(parts[1:], "omitempty") && value.IsZero() {
+			if strings.Contains(rest, "omitempty") && value.IsZero() {
 				continue
 			}
 		}
 
-		kvs = append(kvs, ast.Item(ast.InternedTerm(tag), ast.NewTerm(toAstValue(value.Interface()))))
+		iface := value.Interface()
+		if vi, ok := iface.(*ast.Term); ok {
+			kvs = append(kvs, ast.Item(ast.InternedTerm(tag), vi))
+		} else {
+			kvs = append(kvs, ast.Item(ast.InternedTerm(tag), ast.NewTerm(toAstValue(iface))))
+		}
 	}
 
 	return ast.NewObject(kvs...)
@@ -224,6 +229,10 @@ func StructToValue(input any) ast.Value {
 func toAstValue(v any) ast.Value {
 	if v == nil {
 		return ast.NullValue
+	}
+
+	if av, ok := v.(ast.Value); ok {
+		return av
 	}
 
 	rv := reflect.ValueOf(v)
