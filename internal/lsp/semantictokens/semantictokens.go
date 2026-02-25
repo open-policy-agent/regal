@@ -47,7 +47,8 @@ type SemanticTokensResult struct {
 	PackageTokens       []ASTLocation    `json:"package_tokens"`
 	ImportTokens        []ASTLocation    `json:"import_tokens"`
 	ComprehensionTokens ArgTokenCategory `json:"comprehension_tokens"`
-	ConstructTokens     ArgTokenCategory `json:"construct_tokens"`
+	EveryTokens         ArgTokenCategory `json:"Every_tokens"`
+	SomeTokens          ArgTokenCategory `json:"Some_tokens"`
 	DebugInfo           interface{}      `json:"debug_info"`
 }
 
@@ -113,8 +114,8 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 		tokens = append(tokens, token)
 	}
 
-	// Process construct variable declarations
-	for _, constructToken := range result.ConstructTokens.Declaration {
+	// Process every variable declarations
+	for _, constructToken := range result.EveryTokens.Declaration {
 		if constructToken.Location == "" {
 			continue
 		}
@@ -126,8 +127,34 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 		tokens = append(tokens, token)
 	}
 
-	// Process construct variable references
-	for _, constructToken := range result.ConstructTokens.Reference {
+	// Process every variable references
+	for _, constructToken := range result.EveryTokens.Reference {
+		if constructToken.Location == "" {
+			continue
+		}
+
+		token, err := extractTokens(constructToken, TokenTypeVariable, ModifierReference)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create construct reference token: %w", err)
+		}
+		tokens = append(tokens, token)
+	}
+
+	// Process every variable declarations
+	for _, constructToken := range result.SomeTokens.Declaration {
+		if constructToken.Location == "" {
+			continue
+		}
+
+		token, err := extractTokens(constructToken, TokenTypeVariable, ModifierDeclaration)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create construct declaration token: %w", err)
+		}
+		tokens = append(tokens, token)
+	}
+
+	// Process every variable references
+	for _, constructToken := range result.SomeTokens.Reference {
 		if constructToken.Location == "" {
 			continue
 		}

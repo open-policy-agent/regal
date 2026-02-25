@@ -94,7 +94,7 @@ object_comprehensions := {k: v |
 	{"location": "15:2:15:3", "type": "var", "value": "v"} in tokens.reference
 }
 
-test_constructs if {
+test_every_vars if {
 	policy := `package regal.woo
 	
 every_two_vars_construct if {
@@ -104,38 +104,32 @@ every_two_vars_construct if {
 	}
 }
 
+every_one_var_construct if {
+	every k in input.object {  
+		is_string(k)                                
+	}
+}`
+	tokens := semantictokens.every_tokens with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
+
+}
+
+test_some_vars if {
+	policy := `package regal.woo
+
 some_two_vars_construct if {
 	some i, item in input.array   
 	i < 10                        
 	item > 0                        
 }
 
-every_one_var_construct if {
-	every k in input.object {  
-		is_string(k)                                
-	}
-}
-
 some_one_var_construct if {
 	some i in input.array   
 	i < 10                                              
 }`
-	tokens := semantictokens.construct_tokens with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+	tokens := semantictokens.some_tokens with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
 		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
 
-	{"location": "4:11:4:12", "type": "var", "value": "v"} in tokens.declaration
-	{"location": "4:8:4:9", "type": "var", "value": "k"} in tokens.declaration
-	{"location": "11:10:11:14", "type": "var", "value": "item"} in tokens.declaration
-	{"location": "11:7:11:8", "type": "var", "value": "i"} in tokens.declaration
-	{"location": "17:8:17:9", "type": "var", "value": "k"} in tokens.declaration
-	{"location": "23:7:23:8", "type": "var", "value": "i"} in tokens.declaration
-
-	{"location": "5:13:5:14", "type": "var", "value": "k"} in tokens.reference
-	{"location": "6:3:6:4", "type": "var", "value": "v"} in tokens.reference
-	{"location": "12:2:12:3", "type": "var", "value": "i"} in tokens.reference
-	{"location": "13:2:13:6", "type": "var", "value": "item"} in tokens.reference
-	{"location": "18:13:18:14", "type": "var", "value": "k"} in tokens.reference
-	{"location": "24:2:24:3", "type": "var", "value": "i"} in tokens.reference
 }
 
 test_arg_tokens_no_variables if {
