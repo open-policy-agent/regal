@@ -107,7 +107,7 @@ func TestModuleToValueTemplateString(t *testing.T) {
 	}
 }
 
-// BenchmarkModuleToValue/ToValue-16         	   25171	     46355 ns/op	   65489 B/op	    1802 allocs/op
+// BenchmarkModuleToValue/ToValue-16         	  27673	         40987 ns/op	   64705 B/op	    1740 allocs/op
 // BenchmarkModuleToValue/RoundTrip-16       	   10000	    119018 ns/op	  166038 B/op	    3924 allocs/op
 func BenchmarkModuleToValue(b *testing.B) {
 	policy := `# METADATA

@@ -19,12 +19,8 @@ func TestAnnotationsOnPackage(t *testing.T) {
 	t.Parallel()
 
 	module := ast.Module{
-		Package: pkg,
-		Annotations: []*ast.Annotations{{
-			Location: &ast.Location{Row: 1, Col: 1},
-			Scope:    "package",
-			Title:    "foo",
-		}},
+		Package:     pkg,
+		Annotations: []*ast.Annotations{{Location: &ast.Location{Row: 1, Col: 1}, Scope: "package", Title: "foo"}},
 	}
 	roast := must.Return(jsoniter.ConfigFastest.MarshalIndent(module, "", "  "))(t)
 
@@ -62,15 +58,10 @@ func TestAnnotationsOnPackageBothPackageAndSubpackagesScope(t *testing.T) {
 
 	module := ast.Module{
 		Package: pkg,
-		Annotations: []*ast.Annotations{{
-			Location: &ast.Location{Row: 1, Col: 1},
-			Scope:    "package",
-			Title:    "foo",
-		}, {
-			Location: &ast.Location{Row: 3, Col: 1},
-			Scope:    "subpackages",
-			Title:    "bar",
-		}},
+		Annotations: []*ast.Annotations{
+			{Location: &ast.Location{Row: 1, Col: 1}, Scope: "package", Title: "foo"},
+			{Location: &ast.Location{Row: 3, Col: 1}, Scope: "subpackages", Title: "bar"},
+		},
 	}
 	roast := must.Return(jsoniter.ConfigFastest.MarshalIndent(module, "", "  "))(t)
 
@@ -109,19 +100,11 @@ func TestRuleAndDocumentScopedAnnotationsOnPackageAreDropped(t *testing.T) {
 
 	module := ast.Module{
 		Package: pkg,
-		Annotations: []*ast.Annotations{{
-			Location: &ast.Location{Row: 1, Col: 1},
-			Scope:    "package",
-			Title:    "foo",
-		}, {
-			Location: &ast.Location{Row: 3, Col: 1},
-			Scope:    "rule",
-			Title:    "bar",
-		}, {
-			Location: &ast.Location{Row: 4, Col: 1},
-			Scope:    "document",
-			Title:    "baz",
-		}},
+		Annotations: []*ast.Annotations{
+			{Location: &ast.Location{Row: 1, Col: 1}, Scope: "package", Title: "foo"},
+			{Location: &ast.Location{Row: 3, Col: 1}, Scope: "rule", Title: "bar"},
+			{Location: &ast.Location{Row: 4, Col: 1}, Scope: "document", Title: "baz"},
+		},
 	}
 	roast := must.Return(jsoniter.ConfigFastest.MarshalIndent(module, "", "  "))(t)
 
@@ -163,7 +146,7 @@ func TestSerializedModuleSize(t *testing.T) {
 	must.Equal(t, 85981, len(roast), "serialized module size")
 }
 
-// 285329 ns/op	  125555 B/op	    3094 allocs/op
+// 234775 ns/op	  112048 B/op	    2715 allocs/op
 func BenchmarkSerializeModule(b *testing.B) {
 	policy := mustReadTestFile(b, "testdata/policy.rego")
 	module := ast.MustParseModuleWithOpts(string(policy), ast.ParserOptions{ProcessAnnotation: true})

@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
@@ -12,7 +13,7 @@ type objectable interface {
 }
 
 func mapToObject[T objectable](items map[string]T) ast.Object {
-	obj := ast.NewObject()
+	obj := ast.NewObjectWithCapacity(len(items))
 	for name, item := range items {
 		obj.Insert(ast.InternedTerm(name), ast.NewTerm(item.toObject()))
 	}
@@ -25,7 +26,13 @@ func (c Config) ToValue() ast.Value {
 }
 
 func (c Config) toObject() ast.Object {
-	obj := ast.NewObject()
+	obj := ast.NewObjectWithCapacity(min(1, len(c.Rules)) +
+		util.BoolToInt(c.Capabilities != nil) +
+		util.BoolToInt(!c.Features.IsZero()) +
+		min(1, len(c.Ignore.Files)) +
+		util.BoolToInt(c.Project != nil) +
+		util.BoolToInt(c.CapabilitiesURL != ""),
+	)
 
 	if len(c.Rules) > 0 {
 		obj.Insert(ast.InternedTerm("rules"), ast.NewTerm(mapToObject(c.Rules)))

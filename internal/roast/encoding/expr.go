@@ -45,7 +45,7 @@ func (*exprCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 
 		switch t := expr.Terms.(type) {
 		case *ast.Term:
-			stream.WriteVal(t)
+			write.Term(stream, t)
 		case []*ast.Term:
 			write.ValsArray(stream, t)
 		case *ast.SomeDecl:

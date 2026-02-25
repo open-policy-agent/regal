@@ -1,6 +1,7 @@
 package module
 
 import (
+	"bytes"
 	"encoding/base64"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -10,10 +11,16 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
 
+var metadataBytes = []byte(" METADATA")
+
 // ToValue converts an AST module to RoAST value representation.
 // This is much more efficient than using a JSON encode/decode round trip.
 func ToValue(mod *ast.Module) (ast.Value, error) {
-	value := ast.NewObject()
+	value := ast.NewObjectWithCapacity(1 +
+		min(1, len(mod.Imports)) +
+		min(1, len(mod.Rules)) +
+		min(1, len(mod.Comments)),
+	)
 
 	if mod.Package != nil {
 		value.Insert(ast.InternedTerm("package"), ast.NewTerm(packageToValue(mod.Package, mod.Annotations)))
@@ -23,7 +30,7 @@ func ToValue(mod *ast.Module) (ast.Value, error) {
 		imports := make([]*ast.Term, len(mod.Imports))
 
 		for i, imp := range mod.Imports {
-			impObj := objectWithLocation(imp.Location)
+			impObj := objectWithLocationAndCap(imp.Location, 1+min(1, len(imp.Alias)))
 			impObj.Insert(ast.InternedTerm("path"), termToObjectLoc(imp.Path, true))
 
 			if imp.Alias != "" {
@@ -44,7 +51,11 @@ func ToValue(mod *ast.Module) (ast.Value, error) {
 		comments := make([]*ast.Term, len(mod.Comments))
 
 		for i, comment := range mod.Comments {
-			encoded := base64.StdEncoding.EncodeToString(comment.Text)
+			encoded := "IE1FVEFEQVRB" // " METADATA"
+			if !bytes.Equal(comment.Text, metadataBytes) {
+				encoded = base64.StdEncoding.EncodeToString(comment.Text)
+			}
+
 			comments[i] = ast.ObjectTerm(item("text", ast.InternedTerm(encoded)), locationItem(comment.Location))
 		}
 
@@ -55,7 +66,7 @@ func ToValue(mod *ast.Module) (ast.Value, error) {
 }
 
 func packageToValue(pkg *ast.Package, annotations []*ast.Annotations) ast.Value {
-	value := objectWithLocation(pkg.Location)
+	value := objectWithLocationAndCap(pkg.Location, 1+min(1, len(pkg.Path)+min(1, len(annotations))))
 
 	if pkg.Path != nil {
 		value.Insert(ast.InternedTerm("path"), pathArray(pkg.Path))
@@ -106,14 +117,14 @@ func termToObjectLoc(term *ast.Term, includeLocation bool) *ast.Term {
 		if term.Location != nil && includeLocation {
 			return ast.ObjectTerm(
 				item("type", ast.InternedTerm(ast.ValueName(term.Value))),
-				item("value", termValueTerm(term.Value)), // TODO: Interning
+				item("value", termValueTerm(term.Value)),
 				locationItem(term.Location),
 			)
 		}
 
 		return ast.ObjectTerm(
 			item("type", ast.InternedTerm(ast.ValueName(term.Value))),
-			item("value", termValueTerm(term.Value)), // TODO: Interning
+			item("value", termValueTerm(term.Value)),
 		)
 	}
 
@@ -189,7 +200,7 @@ func termValueTerm(val ast.Value) *ast.Term {
 			case *ast.Term:
 				parts = append(parts, termToObject(p))
 			case *ast.Expr:
-				exprObj := objectWithLocation(p.Location)
+				exprObj := objectWithLocationAndCap(p.Location, 2)
 				if p.Terms != nil {
 					switch t := p.Terms.(type) {
 					case *ast.Term:
@@ -224,7 +235,16 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 		return nil
 	}
 
-	obj := objectWithLocation(a.Location)
+	preAlloc := 0
+	if a.Entrypoint {
+		preAlloc++
+	}
+
+	preAlloc += min(1, len(a.Scope)) + min(1, len(a.Title)) + min(1, len(a.Description)) +
+		min(1, len(a.Organizations)) + min(1, len(a.RelatedResources)) + min(1, len(a.Authors)) +
+		min(1, len(a.Schemas)) + min(1, len(a.Custom))
+
+	obj := objectWithLocationAndCap(a.Location, preAlloc)
 
 	if a.Scope != "" {
 		obj.Insert(ast.InternedTerm("scope"), ast.InternedTerm(a.Scope))
@@ -266,7 +286,7 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 		as := make([]*ast.Term, 0, len(a.Authors))
 
 		for _, author := range a.Authors {
-			aObj := ast.NewObject()
+			aObj := ast.NewObjectWithCapacity(min(1, len(author.Name)) + min(1, len(author.Email)))
 			if author.Name != "" {
 				aObj.Insert(ast.InternedTerm("name"), ast.InternedTerm(author.Name))
 			}
@@ -285,7 +305,12 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 		ss := make([]*ast.Term, 0, len(a.Schemas))
 
 		for _, s := range a.Schemas {
-			sObj := ast.NewObject()
+			preAlloc := 0
+			if s.Definition != nil {
+				preAlloc++
+			}
+
+			sObj := ast.NewObjectWithCapacity(preAlloc + min(1, len(s.Path)) + min(1, len(s.Schema)))
 			if len(s.Path) > 0 {
 				sObj.Insert(ast.InternedTerm("path"), ast.NewTerm(refToArray(s.Path)))
 			}
@@ -336,7 +361,13 @@ func refToArray(ref ast.Ref) *ast.Array {
 }
 
 func ruleToObject(rule *ast.Rule) *ast.Term {
-	obj := objectWithLocation(rule.Location)
+	generated := rast.IsBodyGenerated(rule)
+	preAlloc := util.BoolToInt(rule.Default) +
+		util.BoolToInt(rule.Head != nil) +
+		util.BoolToInt(!generated) +
+		util.BoolToInt(rule.Else != nil)
+
+	obj := objectWithLocationAndCap(rule.Location, preAlloc+min(1, len(rule.Annotations)))
 
 	if len(rule.Annotations) > 0 {
 		annotations := make([]*ast.Term, 0, len(rule.Annotations))
@@ -358,7 +389,7 @@ func ruleToObject(rule *ast.Rule) *ast.Term {
 		obj.Insert(ast.InternedTerm("head"), headToObject(rule.Head))
 	}
 
-	if !rast.IsBodyGenerated(rule) {
+	if !generated {
 		obj.Insert(ast.InternedTerm("body"), bodyToArray(rule.Body))
 	}
 
@@ -370,7 +401,13 @@ func ruleToObject(rule *ast.Rule) *ast.Term {
 }
 
 func headToObject(head *ast.Head) *ast.Term {
-	obj := objectWithLocation(head.Location)
+	preAlloc := util.BoolToInt(head.Reference != nil) +
+		util.BoolToInt(len(head.Args) > 0) +
+		util.BoolToInt(head.Assign) +
+		util.BoolToInt(head.Key != nil) +
+		util.BoolToInt(head.Value != nil)
+
+	obj := objectWithLocationAndCap(head.Location, preAlloc)
 
 	if head.Reference != nil {
 		obj.Insert(ast.InternedTerm("ref"), termValueTerm(head.Reference))
@@ -421,7 +458,12 @@ func bodyToArray(body ast.Body) *ast.Term {
 	exprs := make([]*ast.Term, len(body))
 
 	for i, expr := range body {
-		exprObj := objectWithLocation(expr.Location)
+		preAlloc := util.BoolToInt(expr.Negated) +
+			util.BoolToInt(expr.Generated) +
+			util.BoolToInt(len(expr.With) > 0) +
+			util.BoolToInt(expr.Terms != nil)
+
+		exprObj := objectWithLocationAndCap(expr.Location, preAlloc)
 
 		if expr.Negated {
 			exprObj.Insert(ast.InternedTerm("negated"), ast.InternedTerm(true))
@@ -442,15 +484,12 @@ func bodyToArray(body ast.Body) *ast.Term {
 			case []*ast.Term:
 				insert(exprObj, "terms", ast.ArrayTerm(util.Map(t, termToObject)...))
 			case *ast.SomeDecl:
-				terms := objectWithLocation(t.Location)
+				terms := objectWithLocationAndCap(t.Location, 1)
 				insert(terms, "symbols", ast.ArrayTerm(util.Map(t.Symbols, termToObject)...))
 				insert(exprObj, "terms", ast.NewTerm(terms))
 			case *ast.Every:
-				terms := objectWithLocation(t.Location)
-				if t.Key == nil {
-					// This is only to replicate roast encoding — we probably shouldn't do this
-					insert(terms, "key", ast.InternedNullTerm)
-				} else {
+				terms := objectWithLocationAndCap(t.Location, 5)
+				if t.Key != nil {
 					insert(terms, "key", termToObject(t.Key))
 				}
 
@@ -467,12 +506,15 @@ func bodyToArray(body ast.Body) *ast.Term {
 	return ast.ArrayTerm(exprs...)
 }
 
-func objectWithLocation(loc *ast.Location) ast.Object {
+func objectWithLocationAndCap(loc *ast.Location, c int) ast.Object {
 	if loc == nil {
-		return ast.NewObject()
+		return ast.NewObjectWithCapacity(c)
 	}
 
-	return ast.NewObject(locationItem(loc))
+	obj := ast.NewObjectWithCapacity(c + 1)
+	obj.Insert(ast.InternedTerm("location"), ast.InternedTerm(outil.ByteSliceToString(rast.AppendLocation(nil, loc))))
+
+	return obj
 }
 
 func item(key string, value *ast.Term) [2]*ast.Term {

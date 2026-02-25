@@ -7,6 +7,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
 type objectCodec struct{}
@@ -42,9 +44,9 @@ func (*objectCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 		}
 
 		stream.WriteArrayStart()
-		stream.WriteVal(node.key)
+		write.Term(stream, node.key)
 		stream.WriteMore()
-		stream.WriteVal(node.value)
+		write.Term(stream, node.value)
 		stream.WriteArrayEnd()
 	}
 

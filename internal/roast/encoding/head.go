@@ -22,7 +22,7 @@ func (*headCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	write.ObjectStart(stream, head.Location)
 
 	if head.Reference != nil {
-		write.Val(stream, "ref", head.Reference)
+		write.ValsArrayAttr(stream, "ref", head.Reference)
 	}
 
 	if len(head.Args) > 0 {
@@ -34,7 +34,8 @@ func (*headCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	}
 
 	if head.Key != nil {
-		write.Val(stream, "key", head.Key)
+		stream.WriteObjectField("key")
+		write.Term(stream, head.Key)
 	}
 
 	if head.Value != nil {
@@ -45,7 +46,12 @@ func (*headCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 			}
 		}
 
-		write.Val(stream, "value", head.Value)
+		if head.Key != nil {
+			stream.WriteMore()
+		}
+
+		stream.WriteObjectField("value")
+		write.Term(stream, head.Value)
 	}
 
 	write.ObjectEnd(stream)

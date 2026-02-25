@@ -19,7 +19,5 @@ func (*refCodec) IsEmpty(ptr unsafe.Pointer) bool {
 }
 
 func (*refCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	ref := *((*ast.Ref)(ptr))
-
-	write.ValsArray(stream, ref)
+	write.ValsArray(stream, *((*ast.Ref)(ptr)))
 }

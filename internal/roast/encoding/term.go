@@ -17,14 +17,5 @@ func (*termCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*termCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	term := *((*ast.Term)(ptr))
-
-	write.ObjectStart(stream, term.Location)
-
-	if term.Value != nil {
-		write.String(stream, "type", ast.ValueName(term.Value))
-		write.Val(stream, "value", term.Value)
-	}
-
-	write.ObjectEnd(stream)
+	write.Term(stream, (*ast.Term)(ptr))
 }
