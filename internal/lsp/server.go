@@ -2150,10 +2150,21 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 			return nil
 		}
 
-		if _, err = updateParse(ctx, l.parseOpts(fileURI, l.builtinsForCurrentCapabilities())); err != nil {
+		parseSuccess, err := updateParse(ctx, l.parseOpts(fileURI, l.builtinsForCurrentCapabilities()))
+		if err != nil {
 			failed = append(failed, fileLoadFailure{URI: fileURI, Error: fmt.Errorf("failed to update parse: %w", err)})
 
 			return nil // continue processing other files
+		}
+
+		if parseSuccess {
+			l.testLocationJobs <- lintFileJob{Reason: "server initialized", URI: fileURI}
+		} else {
+			// this is covering the case where the client starts and the state
+			// is different (the client remembers test locations and state).
+			if err := l.sendTestLocations(ctx, fileURI, []any{}); err != nil {
+				l.log.Message("failed to send empty test locations after parse failure: %s", err)
+			}
 		}
 
 		changedOrNewURIs = append(changedOrNewURIs, fileURI)
@@ -2221,6 +2232,12 @@ func (l *LanguageServer) handleWorkspaceDidChangeWatchedFiles(
 }
 
 func (l *LanguageServer) sendFileDiagnostics(ctx context.Context, fileURI string) {
+	if l.conn == nil {
+		l.log.Debug("sendFileDiagnostics called with no connection: %s", fileURI)
+
+		return
+	}
+
 	// first, set the diagnostics for the file to the current parse errors
 	fileDiags, _ := l.cache.GetParseErrors(fileURI)
 	if len(fileDiags) == 0 {
