@@ -18,17 +18,11 @@ func TestStructToValue(t *testing.T) {
 		Field3 bool   `json:"field3"`
 	}
 
-	input := testStruct{
-		Field1: "value1",
-		Field2: 0, // This should be omitted due to omitempty
-		Field3: true,
-	}
-	expected := ast.NewObject(
-		rast.Item("field1", ast.InternedTerm("value1")),
-		rast.Item("field3", ast.InternedTerm(true)),
-	)
+	// Field2 should be omitted due to omitempty
+	got := rast.StructToValue(testStruct{Field1: "value1", Field2: 0, Field3: true})
+	exp := ast.NewObject(rast.Item("field1", ast.InternedTerm("value1")), rast.Item("field3", ast.InternedTerm(true)))
 
-	assert.Equal(t, 0, rast.StructToValue(input).Compare(expected))
+	assert.Equal(t, 0, got.Compare(exp))
 }
 
 func TestStructToValueNested(t *testing.T) {
@@ -43,13 +37,39 @@ func TestStructToValueNested(t *testing.T) {
 		Field2 nestedStruct `json:"field2"`
 	}
 
-	input := testStruct{Field1: "value1", Field2: nestedStruct{NestedField: new(42)}}
-	expected := ast.NewObject(
+	got := rast.StructToValue(testStruct{Field1: "value1", Field2: nestedStruct{NestedField: new(42)}})
+	exp := ast.NewObject(
 		rast.Item("field1", ast.InternedTerm("value1")),
 		rast.Item("field2", ast.ObjectTerm(rast.Item("nested_field", ast.InternedTerm(42)))),
 	)
 
-	assert.Equal(t, 0, rast.StructToValue(input).Compare(expected))
+	assert.Equal(t, 0, got.Compare(exp))
+}
+
+func TestStructToValueWithASTValueField(t *testing.T) {
+	t.Parallel()
+
+	type testStruct struct {
+		Field ast.Value `json:"field"`
+	}
+
+	got := rast.StructToValue(testStruct{Field: ast.NewObject(rast.Item("key", ast.InternedTerm("value")))})
+	exp := ast.NewObject(rast.Item("field", ast.ObjectTerm(rast.Item("key", ast.InternedTerm("value")))))
+
+	assert.Equal(t, 0, got.Compare(exp))
+}
+
+func TestStructToValueTagWithTrailingComma(t *testing.T) {
+	t.Parallel()
+
+	type testStruct struct {
+		Field string `json:"field,"`
+	}
+
+	got := rast.StructToValue(testStruct{Field: "value"})
+	exp := ast.NewObject(rast.Item("field", ast.InternedTerm("value")))
+
+	assert.Equal(t, 0, got.Compare(exp))
 }
 
 // ast.ParseBody-12               114549    9125 ns/op    9604 B/op      96 allocs/op
