@@ -4,6 +4,8 @@
 #     - declarations of function args in text documents
 #     - variable references that are used in function calls
 #     - variable references that are used in expressions
+#     - variables declarations and references in comprehensions
+#     - variables declarations and references in every/some keyword domains
 # related_resources:
 #   - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_semanticTokens
 # schemas:
@@ -11,70 +13,29 @@
 #   - input.params: schema.regal.lsp.semantictokens
 package regal.lsp.semantictokens
 
+import data.regal.lsp.semantictokens.vars.comprehensions
+import data.regal.lsp.semantictokens.vars.every_expr
+import data.regal.lsp.semantictokens.vars.function_args
+import data.regal.lsp.semantictokens.vars.imports
+import data.regal.lsp.semantictokens.vars.packages
+import data.regal.lsp.semantictokens.vars.some_expr
+
 # METADATA
 # description: Get the module from workspace
 module := data.workspace.parsed[input.params.textDocument.uri]
 
+# This is handling the case where the module from the parsed workspace is empty
+default result["response"] := {}
+
 # METADATA
 # entrypoint: true
-result.response := {
-	"arg_tokens": arg_tokens,
-	"package_tokens": package_tokens,
-	"import_tokens": import_tokens,
+result["response"] := {
+	"packages": packages.result,
+	"imports": imports.result,
+	"vars": {
+		"function_args": function_args.result,
+		"comprehensions": comprehensions.result,
+		"every_expr": every_expr.result,
+		"some_expr": some_expr.result,
+	},
 }
-
-# METADATA
-# description: Extract import tokens - return only last term of the path
-import_tokens contains last_term if {
-	some import_statement in module.imports
-	import_path := import_statement.path.value
-
-	last_term := import_path[count(import_path) - 1]
-}
-
-# METADATA
-# description: Extract function argument declarations
-arg_tokens.declaration contains arg if {
-	some rule in module.rules
-	some arg in rule.head.args
-	arg.type == "var"
-}
-
-# METADATA
-# description: Extract variable references in function calls
-arg_tokens.reference contains arg if {
-	some rule in module.rules
-
-	rule.head.args
-
-	arg_names := {v.value | some v in rule.head.args}
-
-	walk(rule.body, [_, expr])
-
-	expr.terms[0].type == "ref"
-
-	some arg in array.slice(expr.terms, 1, count(expr.terms))
-
-	arg.type == "var"
-	arg.value in arg_names
-}
-
-# METADATA
-# description: Extract variable references in call expressions
-arg_tokens.reference contains arg if {
-	some rule in module.rules
-	arg_names := {v.value | some v in rule.head.args}
-	walk(rule.body, [_, expr])
-
-	some term in expr.terms
-	term.type == "call"
-
-	some arg in term.value
-	arg.type == "var"
-
-	arg.value in arg_names
-}
-
-# METADATA
-# description: Extract package tokens - return full package path
-package_tokens := module.package.path
