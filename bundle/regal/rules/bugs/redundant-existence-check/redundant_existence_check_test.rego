@@ -16,7 +16,16 @@ test_fail_redundant_existence_check if {
 		"category": "bugs",
 		"description": "Redundant existence check",
 		"level": "error",
-		"location": {"col": 3, "file": "policy.rego", "row": 7, "text": "\t\tinput.foo", "end": {"col": 12, "row": 7}},
+		"location": {
+			"col": 3,
+			"file": "policy.rego",
+			"row": 7,
+			"text": "\t\tinput.foo",
+			"end": {
+				"col": 12,
+				"row": 7,
+			},
+		},
 		"related_resources": [{
 			"description": "documentation",
 			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-existence-check", "bugs"),
@@ -36,7 +45,16 @@ test_fail_redundant_existence_check_subset if {
 		"category": "bugs",
 		"description": "Redundant existence check",
 		"level": "error",
-		"location": {"col": 3, "file": "policy.rego", "row": 7, "text": "\t\tinput.foo", "end": {"col": 12, "row": 7}},
+		"location": {
+			"col": 3,
+			"file": "policy.rego",
+			"row": 7,
+			"text": "\t\tinput.foo",
+			"end": {
+				"col": 12,
+				"row": 7,
+			},
+		},
 		"related_resources": [{
 			"description": "documentation",
 			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-existence-check", "bugs"),
@@ -75,7 +93,16 @@ test_fail_redundant_existence_check_head_assignment_of_ref if {
 		"category": "bugs",
 		"description": "Redundant existence check",
 		"level": "error",
-		"location": {"col": 3, "file": "policy.rego", "row": 7, "text": "\t\tinput.foo", "end": {"col": 12, "row": 7}},
+		"location": {
+			"col": 3,
+			"file": "policy.rego",
+			"row": 7,
+			"text": "\t\tinput.foo",
+			"end": {
+				"col": 12,
+				"row": 7,
+			},
+		},
 		"related_resources": [{
 			"description": "documentation",
 			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-existence-check", "bugs"),
@@ -94,7 +121,45 @@ test_fail_redundant_existence_check_function_arg if {
 		"category": "bugs",
 		"description": "Redundant existence check",
 		"level": "error",
-		"location": {"col": 3, "end": {"col": 6, "row": 7}, "file": "policy.rego", "row": 7, "text": "\t\tfoo"},
+		"location": {
+			"col": 3,
+			"end": {
+				"col": 6,
+				"row": 7,
+			},
+			"file": "policy.rego",
+			"row": 7,
+			"text": "\t\tfoo",
+		},
+		"related_resources": [{
+			"description": "documentation",
+			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-existence-check", "bugs"),
+		}],
+		"title": "redundant-existence-check",
+	}}
+}
+
+test_fail_redundant_existence_check_function_arg_reference_after_use if {
+	r := rule.report with input as ast.with_rego_v1(`
+	fun(foo) if {
+		foo.type == "object"
+		foo.type
+	}`)
+
+	r == {{
+		"category": "bugs",
+		"description": "Redundant existence check",
+		"level": "error",
+		"location": {
+			"col": 3,
+			"end": {
+				"col": 11,
+				"row": 8,
+			},
+			"file": "policy.rego",
+			"row": 8,
+			"text": "\t\tfoo.type",
+		},
 		"related_resources": [{
 			"description": "documentation",
 			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-existence-check", "bugs"),
