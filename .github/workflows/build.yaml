@@ -10,6 +10,8 @@ on:
       - main
   pull_request:
   workflow_dispatch:
+  # needed for checks in merge queue
+  merge_group:
 
 permissions: read-all
 
