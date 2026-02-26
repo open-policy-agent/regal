@@ -22,13 +22,16 @@ update_badges() {
     exit 1
   fi
 
+  # Extract base version (remove pre-release suffix for badge text)
+  BASE_VERSION=$(echo "$OPA_VERSION" | sed 's/-.*$//')
+
   # Create a temporary file for badges
   badges_tmpfile=$(mktemp)
 
   # Read the badges file and update the OPA badge line
   while IFS= read -r line; do
-    if [[ $line =~ ^\!\[OPA\ v[0-9]+\.[0-9]+\.[0-9]+\] ]]; then
-      echo "![OPA $OPA_VERSION](https://www.openpolicyagent.org/badge/$OPA_VERSION)" >> "$badges_tmpfile"
+    if [[ $line =~ ^\!\[OPA\ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+      echo "![OPA $BASE_VERSION](https://www.openpolicyagent.org/badge/$BASE_VERSION)" >> "$badges_tmpfile"
     else
       echo "$line" >> "$badges_tmpfile"
     fi
