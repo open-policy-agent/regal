@@ -2415,7 +2415,7 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 
 		for _, cs := range compileResults {
 			stage := types.ExplorerStageResult{
-				Name:  cs.Stage,
+				Name:  string(cs.Stage),
 				Error: cs.Error != "",
 			}
 
@@ -2482,7 +2482,7 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 			continue
 		}
 
-		stageName := strings.ReplaceAll(cs.Stage, " ", "_")
+		stageName := strings.ReplaceAll(string(cs.Stage), " ", "_")
 		filename := filepath.Join(tmpDir, fmt.Sprintf("%02d_%s_%s.txt", i, baseName, stageName))
 
 		if err := os.WriteFile(filename, []byte(output), 0o600); err != nil {
