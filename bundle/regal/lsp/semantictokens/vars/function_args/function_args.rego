@@ -1,8 +1,18 @@
-package regal.lsp.semantictokens
+# METADATA
+# description: |
+#   Helper package for semantictokens that returns function argument references and declarations
+# schemas:
+#   - input:        schema.regal.lsp.common
+#   - input.params: schema.regal.lsp.semantictokens
+package regal.lsp.semantictokens.vars.function_args
+
+# METADATA
+# description: Get the module from workspace
+module := data.workspace.parsed[input.params.textDocument.uri]
 
 # METADATA
 # description: Extract function argument declarations
-arg_tokens.declaration contains arg if {
+result.declaration contains arg if {
 	some rule in module.rules
 	some arg in rule.head.args
 	arg.type == "var"
@@ -10,7 +20,7 @@ arg_tokens.declaration contains arg if {
 
 # METADATA
 # description: Extract variable references in function calls
-arg_tokens.reference contains arg if {
+result.reference contains arg if {
 	some rule in module.rules
 
 	rule.head.args
@@ -29,7 +39,7 @@ arg_tokens.reference contains arg if {
 
 # METADATA
 # description: Extract variable references in call expressions
-arg_tokens.reference contains arg if {
+result.reference contains arg if {
 	some rule in module.rules
 	arg_names := {v.value | some v in rule.head.args}
 	walk(rule.body, [_, expr])

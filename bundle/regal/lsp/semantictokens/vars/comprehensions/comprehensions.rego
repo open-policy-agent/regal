@@ -1,25 +1,37 @@
-package regal.lsp.semantictokens
+# METADATA
+# description: |
+#   Helper package for semantictokens that returns variable references and declarations in comprehensions
+# schemas:
+#   - input:        schema.regal.lsp.common
+#   - input.params: schema.regal.lsp.semantictokens
+package regal.lsp.semantictokens.vars.comprehensions
 
 import data.regal.ast
 
 # METADATA
 # description: Extract comprehension variable declarations from array/set/object comprehensions
-comprehension_tokens.declaration contains var if {
-	some comprehension in ast.found.comprehensions[_]
+result.declaration contains var if {
+	comprehensions := [c |
+		c := ast.found.comprehensions[_][_]
+	]
+	some comprehension in comprehensions
 	comp_vars := _comprehension_vars(comprehension)
 	some var in comp_vars
 }
 
 # METADATA
 # description: Extract comprehension variable references in the output
-comprehension_tokens.reference contains var if {
-	some comprehension in ast.found.comprehensions[_]
+result.reference contains var if {
+	comprehensions := [c |
+		c := ast.found.comprehensions[_][_]
+	]
+	some comprehension in comprehensions
 	comp_vars := _comprehension_vars(comprehension)
 
 	output_vars := array.flatten([
 		_get_comprehension_key(comprehension),
 		_get_comprehension_value(comprehension),
-		_get_comprehension_vars(comprehension),
+		_get_comprehension_vars(comprehension.value.body),
 	])
 	some var in output_vars
 	var.type == "var"
@@ -54,8 +66,8 @@ _get_comprehension_key(comprehension) := value if {
 } else := set()
 
 # Helper to get variables from differing comprehensions
-_get_comprehension_vars(comprehension) := [value |
-	some expr in comprehension.value.body
+_get_comprehension_vars(body) := [value |
+	some expr in body
 	not expr.terms.symbols
 	some value in expr.terms
 	value.type == "var"

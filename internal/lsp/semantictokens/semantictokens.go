@@ -41,22 +41,26 @@ type ArgTokenCategory struct {
 	Reference   []ASTLocation `json:"reference,omitempty"`
 }
 
+// Represents the vars section containing different token categories
+type VarsSection struct {
+	ArgTokens           ArgTokenCategory `json:"function_args"`
+	ComprehensionTokens ArgTokenCategory `json:"comprehensions"`
+	EveryTokens         ArgTokenCategory `json:"every_expr"`
+	SomeTokens          ArgTokenCategory `json:"some_expr"`
+}
+
 // Represents the structured result from the Rego query
 type SemanticTokensResult struct {
-	ArgTokens           ArgTokenCategory `json:"arg_tokens"`
-	PackageTokens       []ASTLocation    `json:"package_tokens"`
-	ImportTokens        []ASTLocation    `json:"import_tokens"`
-	ComprehensionTokens ArgTokenCategory `json:"comprehension_tokens"`
-	EveryTokens         ArgTokenCategory `json:"Every_tokens"`
-	SomeTokens          ArgTokenCategory `json:"Some_tokens"`
-	DebugInfo           interface{}      `json:"debug_info"`
+	PackageTokens []ASTLocation `json:"packages"`
+	ImportTokens  []ASTLocation `json:"imports"`
+	Vars          VarsSection   `json:"vars"`
+	DebugInfo     interface{}   `json:"debug_info"`
 }
 
 func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticTokens, error) {
 	tokens := make([]Token, 0)
 
-	for _, pkgToken := range result.PackageTokens[1:] {
-
+	for _, pkgToken := range result.PackageTokens {
 		token, err := extractTokens(pkgToken, TokenTypePackage, 0)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create package token: %w", err)
@@ -64,7 +68,7 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 		tokens = append(tokens, token)
 	}
 
-	for _, varToken := range result.ArgTokens.Declaration {
+	for _, varToken := range result.Vars.ArgTokens.Declaration {
 		if varToken.Location == "" {
 			continue
 		}
@@ -76,7 +80,7 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 		tokens = append(tokens, token)
 	}
 
-	for _, varToken := range result.ArgTokens.Reference {
+	for _, varToken := range result.Vars.ArgTokens.Reference {
 		if varToken.Location == "" {
 			continue
 		}
@@ -89,7 +93,7 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 	}
 
 	// Process comprehension variable declarations
-	for _, compToken := range result.ComprehensionTokens.Declaration {
+	for _, compToken := range result.Vars.ComprehensionTokens.Declaration {
 		if compToken.Location == "" {
 			continue
 		}
@@ -102,7 +106,7 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 	}
 
 	// Process comprehension variable references
-	for _, compToken := range result.ComprehensionTokens.Reference {
+	for _, compToken := range result.Vars.ComprehensionTokens.Reference {
 		if compToken.Location == "" {
 			continue
 		}
@@ -115,7 +119,7 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 	}
 
 	// Process every variable declarations
-	for _, constructToken := range result.EveryTokens.Declaration {
+	for _, constructToken := range result.Vars.EveryTokens.Declaration {
 		if constructToken.Location == "" {
 			continue
 		}
@@ -128,7 +132,7 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 	}
 
 	// Process every variable references
-	for _, constructToken := range result.EveryTokens.Reference {
+	for _, constructToken := range result.Vars.EveryTokens.Reference {
 		if constructToken.Location == "" {
 			continue
 		}
@@ -141,7 +145,7 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 	}
 
 	// Process every variable declarations
-	for _, constructToken := range result.SomeTokens.Declaration {
+	for _, constructToken := range result.Vars.SomeTokens.Declaration {
 		if constructToken.Location == "" {
 			continue
 		}
@@ -154,7 +158,7 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 	}
 
 	// Process every variable references
-	for _, constructToken := range result.SomeTokens.Reference {
+	for _, constructToken := range result.Vars.SomeTokens.Reference {
 		if constructToken.Location == "" {
 			continue
 		}
