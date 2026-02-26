@@ -3,6 +3,7 @@ package lsp
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/open-policy-agent/opa/v1/runtime/info"
@@ -32,7 +33,7 @@ func (l *LanguageServer) handleRunTests(
 		return nil, fmt.Errorf("failed to create runtime info: %w", err)
 	}
 
-	filter := fmt.Sprintf("%s.%s$", params.Package, params.Name)
+	filter := fmt.Sprintf("%s.%s$", regexp.QuoteMeta(params.Package), regexp.QuoteMeta(params.Name))
 
 	runner := tester.NewRunner().
 		SetCompiler(l.testingCompiler).
