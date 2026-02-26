@@ -1993,20 +1993,24 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			DocumentHighlightProvider:  true,
 			SelectionRangeProvider:     true,
 			LinkedEditingRangeProvider: true,
-			SemanticTokensProvider: types.SemanticTokensOptions{
-				Legend: types.SemanticTokensLegend{
-					TokenTypes: []string{
-						"namespace",
-						"variable",
-						"namespace",
-					},
-					TokenModifiers: []string{
-						"declaration",
-						"reference",
-					},
-				},
-				Full: true,
-			},
+			// FEATURE FLAG: Removing semanttic token functionality temporarily for this release.
+			// More highlighting features coming soon!
+			//
+			// SemanticTokensProvider: types.SemanticTokensOptions{
+			// 	Legend: types.SemanticTokensLegend{
+			// 		TokenTypes: []string{
+			// 			"namespace",
+			// 			"variable",
+			// 			"namespace",
+			// 		},
+			// 		TokenModifiers: []string{
+			// 			"declaration",
+			// 			"reference",
+			// 		},
+			// 	},
+			// 	Full: true,
+			// },
+			//
 			// 'Experimental' is LSP terminology, we are using these to be
 			// 'custom' additions that are ready for use, but not in the base
 			// spec.
