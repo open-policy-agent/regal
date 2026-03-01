@@ -219,14 +219,14 @@ fetch_eopa_caps if {
 	#	],
 	#	...
 
-	print("fetching tags for enterprise-opa repository")
+	print("fetching tags for eopa repository")
 
 	eopa_tags_result := rq.run(
 		[
 			"git",
 			"ls-remote",
 			"--tags",
-			"https://github.com/styrainc/enterprise-opa",
+			"https://github.com/open-policy-agent/eopa",
 		],
 		{"stdout_spec": {
 			"format": "raw",
@@ -283,7 +283,7 @@ fetch_eopa_caps if {
 		not eopa_caps_tree[p]
 
 		# construct the URL to fetch the content from
-		r := rq.template("https://raw.githubusercontent.com/StyraInc/enterprise-opa/main/capabilities/{{.tag}}.json", {"tag": t})
+		r := rq.template("https://raw.githubusercontent.com/open-policy-agent/eopa/main/capabilities/{{.tag}}.json", {"tag": t})
 	}
 
 	print(sprintf("fetching %d capabilities files missing locally", [count(missing_locally)]))

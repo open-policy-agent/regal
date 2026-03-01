@@ -51,6 +51,12 @@ linters:
         - whyNoLint # not all nolint comments need explanations
         - hugeParam # investigate later, but some of these breaks API signatures
         - unnamedResult
+    gosec:
+      excludes:
+        # taint analysis. not relevant as Regal assumes trusted user
+        - G703
+        - G704
+        - G706
     govet:
       disable:
         - shadow
