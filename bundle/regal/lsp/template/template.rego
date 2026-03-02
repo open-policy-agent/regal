@@ -7,13 +7,14 @@ package regal.lsp.template
 render_for_builtin(builtin) := content if {
 	category := _category(builtin)
 	builtin_safe := _to_safe_builtin(builtin)
+	args := concat(", ", [arg.name | some arg in builtin_safe.decl.args])
 
 	content := replace(
 		strings.render_template(_builtin_template, {
 			"builtin": builtin_safe,
 			"category": category,
 			"link": _docs_link(builtin_safe, category),
-			"snippet": _example_snippet(builtin_safe),
+			"snippet": $"```rego\n{builtin_safe.decl.result.name} := {builtin_safe.name}({args})\n```",
 		}),
 		"<bt>", "`",
 	)
@@ -22,7 +23,7 @@ render_for_builtin(builtin) := content if {
 _docs_link(builtin, category) := link if {
 	builtin.categories != []
 
-	link := [substring(bc, 4, -1) |
+	link := [trim_prefix(bc, "url=") |
 		some bc in builtin.categories
 		startswith(bc, "url=")
 	][0]
@@ -56,15 +57,6 @@ _category(builtin) := builtin.categories[0] if {
 	i != -1
 } else := builtin.name
 
-_example_snippet(builtin) := snippet if {
-	args := [arg.name | some arg in builtin.decl.args]
-	snippet := sprintf("```rego\n%s := %s(%s)\n```", [
-		builtin.decl.result.name,
-		builtin.name,
-		concat(", ", args),
-	])
-}
-
 # here to work around the **extremely** annoying behavior of strings.render_template
 # where missing keys are treated as fatal errors instead of giving template authors a
 # chance to handle this: https://github.com/open-policy-agent/opa/issues/7931
@@ -83,10 +75,8 @@ _to_safe_builtin(builtin) := safe if {
 	}
 
 	merged := object.union(safe_attributes, builtin)
-	safe := object.union(merged, {"decl": {"args": _safe_args(merged.decl.args)}})
+	safe := object.union(merged, {"decl": {"args": [_to_safe_arg(i, arg) | some i, arg in merged.decl.args]}})
 }
-
-_safe_args(args) := [_to_safe_arg(i, arg) | some i, arg in args]
 
 _to_safe_arg(i, arg) := arg if {
 	_safe_arg(arg)

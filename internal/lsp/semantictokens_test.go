@@ -161,13 +161,13 @@ func generateLargePolicy(numFunctions int) string {
 	policy.WriteString("package regal.woo\n\n")
 
 	for i := range numFunctions {
-		policy.WriteString(fmt.Sprintf(`test_function_%d(param1, param2) := result if {
+		fmt.Fprintf(&policy, `test_function_%d(param1, param2) := result if {
 	calc1 := param1 * %d
 	calc2 := param2 + %d
 	result := calc1 + calc2
 }
 
-`, i, i+1, i+10))
+`, i, i+1, i+10)
 	}
 
 	return policy.String()
