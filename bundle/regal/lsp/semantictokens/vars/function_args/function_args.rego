@@ -6,6 +6,8 @@
 #   - input.params: schema.regal.lsp.semantictokens
 package regal.lsp.semantictokens.vars.function_args
 
+import data.regal.ast
+
 # METADATA
 # description: Get the module from workspace
 module := data.workspace.parsed[input.params.textDocument.uri]
@@ -25,7 +27,7 @@ result.reference contains arg if {
 
 	rule.head.args
 
-	arg_names := {v.value | some v in rule.head.args}
+	arg_names := ast.function_arg_names(rule)
 
 	walk(rule.body, [_, expr])
 

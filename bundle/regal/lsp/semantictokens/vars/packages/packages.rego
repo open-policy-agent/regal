@@ -15,5 +15,5 @@ module := data.workspace.parsed[input.params.textDocument.uri]
 result contains last_term if {
 	package_path := module.package.path
 
-	last_term := package_path[count(package_path) - 1]
+	last_term := regal.last(package_path)
 }

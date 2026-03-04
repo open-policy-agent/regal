@@ -15,21 +15,24 @@ module := data.workspace.parsed[input.params.textDocument.uri]
 # METADATA
 # description: Extract variable declarations from every keyword domains
 result.declaration contains var if {
-	some rule_index in ast.rule_index_strings
-	some var in ast.found.vars[rule_index]["every"]
+	some rule_index
+	declared_vars := ast.found.vars[rule_index]["every"]
+	some var in declared_vars
 }
 
 # METADATA
 # description: Extract variable references in every keyword domains
 result.reference contains var if {
-	some rule_index in ast.rule_index_strings
+	some rule_index
 
 	declared_vars := ast.found.vars[rule_index]["every"]
 
 	declared_var_names := {v.value | some v in declared_vars}
 
-	walk(module.rules[to_number(rule_index)].body, [_, term])
-	some var in term.terms
+	some every_terms in ast.found.every[rule_index]
+	walk(every_terms.body, [_, expr])
+
+	some var in expr.terms
 	var.type == "var"
 	var.value in declared_var_names
 	not var in declared_vars

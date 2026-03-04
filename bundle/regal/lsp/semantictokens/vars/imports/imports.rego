@@ -16,5 +16,5 @@ result contains last_term if {
 	some import_statement in module.imports
 	import_path := import_statement.path.value
 
-	last_term := import_path[count(import_path) - 1]
+	last_term := regal.last(import_path)
 }

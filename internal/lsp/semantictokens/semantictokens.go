@@ -2,6 +2,7 @@ package semantictokens
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 
@@ -32,7 +33,49 @@ type Token struct {
 
 // Represents location data from the AST
 type ASTLocation struct {
-	Location string `json:"location"`
+	Location LocationInfo `json:"location"`
+}
+
+type LocationInfo struct {
+	Line        uint
+	StartColumn uint
+	EndColumn   uint
+	Length      uint
+}
+
+func (loc *ASTLocation) UnmarshalJSON(data []byte) error {
+	var location struct {
+		Location string
+	}
+	if err := json.Unmarshal(data, &location); err != nil {
+		return err
+	}
+
+	parts := strings.Split(location.Location, ":")
+
+	row, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return err
+	}
+
+	startcol, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return err
+	}
+
+	endcol, err := strconv.Atoi(parts[3])
+	if err != nil {
+		return err
+	}
+
+	loc.Location = LocationInfo{
+		Line:        uint(row),
+		StartColumn: uint(startcol),
+		EndColumn:   uint(endcol),
+		Length:      uint(endcol - startcol),
+	}
+
+	return nil
 }
 
 // Represents different token categories
@@ -60,7 +103,31 @@ type SemanticTokensResult struct {
 func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticTokens, error) {
 	tokens := make([]Token, 0)
 
-	for _, pkgToken := range result.PackageTokens {
+	packageTokens, err := processPackageTokens(result.PackageTokens)
+	if err != nil {
+		return nil, err
+	}
+	tokens = append(tokens, packageTokens...)
+
+	varTokens, err := processVariableTokens(result.Vars)
+	if err != nil {
+		return nil, err
+	}
+	tokens = append(tokens, varTokens...)
+
+	importTokens, err := processImportTokens(result.ImportTokens)
+	if err != nil {
+		return nil, err
+	}
+	tokens = append(tokens, importTokens...)
+
+	return encodeTokens(tokens), nil
+}
+
+func processPackageTokens(packageTokens []ASTLocation) ([]Token, error) {
+	tokens := make([]Token, 0)
+
+	for _, pkgToken := range packageTokens {
 		token, err := extractTokens(pkgToken, TokenTypePackage, 0)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create package token: %w", err)
@@ -68,113 +135,65 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 		tokens = append(tokens, token)
 	}
 
-	for _, varToken := range result.Vars.ArgTokens.Declaration {
-		if varToken.Location == "" {
-			continue
-		}
+	return tokens, nil
+}
 
-		token, err := extractTokens(varToken, TokenTypeVariable, ModifierDeclaration)
+func processVariableTokens(vars VarsSection) ([]Token, error) {
+	tokens := make([]Token, 0)
+
+	argTokens, err := processTokenCategory(vars.ArgTokens, "function argument")
+	if err != nil {
+		return nil, err
+	}
+	tokens = append(tokens, argTokens...)
+
+	compTokens, err := processTokenCategory(vars.ComprehensionTokens, "comprehension")
+	if err != nil {
+		return nil, err
+	}
+	tokens = append(tokens, compTokens...)
+
+	everyTokens, err := processTokenCategory(vars.EveryTokens, "every construct")
+	if err != nil {
+		return nil, err
+	}
+	tokens = append(tokens, everyTokens...)
+
+	someTokens, err := processTokenCategory(vars.SomeTokens, "some construct")
+	if err != nil {
+		return nil, err
+	}
+	tokens = append(tokens, someTokens...)
+
+	return tokens, nil
+}
+
+func processTokenCategory(category ArgTokenCategory, categoryName string) ([]Token, error) {
+	tokens := make([]Token, 0)
+
+	for _, declToken := range category.Declaration {
+		token, err := extractTokens(declToken, TokenTypeVariable, ModifierDeclaration)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create declaration token: %w", err)
+			return nil, fmt.Errorf("failed to create %s declaration token: %w", categoryName, err)
 		}
 		tokens = append(tokens, token)
 	}
 
-	for _, varToken := range result.Vars.ArgTokens.Reference {
-		if varToken.Location == "" {
-			continue
-		}
-
-		token, err := extractTokens(varToken, TokenTypeVariable, ModifierReference)
+	for _, refToken := range category.Reference {
+		token, err := extractTokens(refToken, TokenTypeVariable, ModifierReference)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create reference token: %w", err)
+			return nil, fmt.Errorf("failed to create %s reference token: %w", categoryName, err)
 		}
 		tokens = append(tokens, token)
 	}
 
-	// Process comprehension variable declarations
-	for _, compToken := range result.Vars.ComprehensionTokens.Declaration {
-		if compToken.Location == "" {
-			continue
-		}
+	return tokens, nil
+}
 
-		token, err := extractTokens(compToken, TokenTypeVariable, ModifierDeclaration)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create comprehension declaration token: %w", err)
-		}
-		tokens = append(tokens, token)
-	}
+func processImportTokens(importTokens []ASTLocation) ([]Token, error) {
+	tokens := make([]Token, 0)
 
-	// Process comprehension variable references
-	for _, compToken := range result.Vars.ComprehensionTokens.Reference {
-		if compToken.Location == "" {
-			continue
-		}
-
-		token, err := extractTokens(compToken, TokenTypeVariable, ModifierReference)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create comprehension reference token: %w", err)
-		}
-		tokens = append(tokens, token)
-	}
-
-	// Process every variable declarations
-	for _, constructToken := range result.Vars.EveryTokens.Declaration {
-		if constructToken.Location == "" {
-			continue
-		}
-
-		token, err := extractTokens(constructToken, TokenTypeVariable, ModifierDeclaration)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create construct declaration token: %w", err)
-		}
-		tokens = append(tokens, token)
-	}
-
-	// Process every variable references
-	for _, constructToken := range result.Vars.EveryTokens.Reference {
-		if constructToken.Location == "" {
-			continue
-		}
-
-		token, err := extractTokens(constructToken, TokenTypeVariable, ModifierReference)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create construct reference token: %w", err)
-		}
-		tokens = append(tokens, token)
-	}
-
-	// Process every variable declarations
-	for _, constructToken := range result.Vars.SomeTokens.Declaration {
-		if constructToken.Location == "" {
-			continue
-		}
-
-		token, err := extractTokens(constructToken, TokenTypeVariable, ModifierDeclaration)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create construct declaration token: %w", err)
-		}
-		tokens = append(tokens, token)
-	}
-
-	// Process every variable references
-	for _, constructToken := range result.Vars.SomeTokens.Reference {
-		if constructToken.Location == "" {
-			continue
-		}
-
-		token, err := extractTokens(constructToken, TokenTypeVariable, ModifierReference)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create construct reference token: %w", err)
-		}
-		tokens = append(tokens, token)
-	}
-
-	for _, importToken := range result.ImportTokens {
-		if importToken.Location == "" {
-			continue
-		}
-
+	for _, importToken := range importTokens {
 		token, err := extractTokens(importToken, TokenTypeImport, 0)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create import token: %w", err)
@@ -182,32 +201,14 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 		tokens = append(tokens, token)
 	}
 
-	return encodeTokens(tokens), nil
+	return tokens, nil
 }
 
 func extractTokens(astLoc ASTLocation, tokenType uint, modifiers uint) (Token, error) {
-	rowStr, rest, _ := strings.Cut(astLoc.Location, ":")
-	colStr, _, _ := strings.Cut(rest, ":")
-
-	row, err := strconv.Atoi(rowStr)
-	if err != nil {
-		return Token{}, fmt.Errorf("failed to parse row: %w", err)
-	}
-
-	col, err := strconv.Atoi(colStr)
-	if err != nil {
-		return Token{}, fmt.Errorf("failed to parse column: %w", err)
-	}
-
-	length, err := getTokenLengthFromLocation(astLoc.Location)
-	if err != nil {
-		return Token{}, fmt.Errorf("failed to get token length: %w", err)
-	}
-
 	return Token{
-		Line:      uint(row - 1),
-		Col:       uint(col - 1),
-		Length:    length,
+		Line:      astLoc.Location.Line - 1,
+		Col:       astLoc.Location.StartColumn - 1,
+		Length:    astLoc.Location.Length,
 		Type:      tokenType,
 		Modifiers: modifiers,
 	}, nil
@@ -252,20 +253,4 @@ func encodeTokens(tokens []Token) *types.SemanticTokens {
 	}
 
 	return &types.SemanticTokens{Data: data}
-}
-
-func getTokenLengthFromLocation(locationStr string) (uint, error) {
-	parts := strings.Split(locationStr, ":")
-
-	startCol, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse start column: %w", err)
-	}
-
-	endCol, err := strconv.Atoi(parts[3])
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse end column: %w", err)
-	}
-
-	return uint(endCol - startCol), nil
 }
