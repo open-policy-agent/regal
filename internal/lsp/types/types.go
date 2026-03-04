@@ -34,6 +34,9 @@ type (
 		// EnableExplorer, if set, will enable the regal.explorer command
 		// and related functionality.
 		EnableExplorer *bool `json:"enableExplorer,omitempty"`
+		// EnableServerTesting, if set, will enable test location notifications
+		// via the regal/testLocations and test running handler.
+		EnableServerTesting *bool `json:"enableServerTesting,omitempty"`
 	}
 
 	InitializeParams struct {

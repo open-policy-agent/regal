@@ -85,6 +85,12 @@ func (c Client) SupportsEvalCodelensDisplayInline() bool {
 		*c.InitOptions.EvalCodelensDisplayInline
 }
 
+func (c Client) SupportsOPATestProvider() bool {
+	return c.InitOptions != nil &&
+		c.InitOptions.EnableServerTesting != nil &&
+		*c.InitOptions.EnableServerTesting
+}
+
 // ServerContext is a type which is used to contain things from the server's
 // state that is needed in RegalContext.
 type ServerContext struct {

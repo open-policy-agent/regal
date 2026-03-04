@@ -146,6 +146,9 @@ type LanguageServer struct {
 	regoRouter      *rego.RegoRouter
 	testingCompiler *ast.Compiler
 
+	// initializationGate blocks workers until the initialized notification is received
+	initializationGate chan struct{}
+
 	commandRequest       chan types.ExecuteCommandParams
 	lintWorkspaceJobs    chan lintWorkspaceJob
 	lintFileJobs         chan lintFileJob
@@ -213,6 +216,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		regoStore:                   store,
 		log:                         opts.Logger,
 		featureFlags:                *featureFlags,
+		initializationGate:          make(chan struct{}),
 		lintFileJobs:                make(chan lintFileJob, 10),
 		lintWorkspaceJobs:           make(chan lintWorkspaceJob, 10),
 		builtinsPositionJobs:        make(chan lintFileJob, 10),
@@ -260,13 +264,13 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	case "initialize":
 		return handler.WithContextAndParams(ctx, req, l.handleInitialize)
 	case "initialized":
-		return l.handleInitialized()
+		return l.handleInitialized(ctx)
 	case "textDocument/definition":
 		return handler.WithParams(req, l.handleTextDocumentDefinition)
 	case "textDocument/diagnostic":
 		return l.handleTextDocumentDiagnostic()
 	case "textDocument/didOpen":
-		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentDidOpen)
+		return handler.WithParams(req, l.handleTextDocumentDidOpen)
 	case "textDocument/didClose":
 		return handler.WithParams(req, l.handleTextDocumentDidClose)
 	case "textDocument/didSave":
@@ -365,13 +369,15 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 					continue
 				}
 
-				// Send test locations update after parse completes
-				if parseSuccess {
-					l.testLocationJobs <- lintFileJob{Reason: job.Reason, URI: job.URI}
-				} else {
-					// Parse failed, send empty test locations
-					if err := l.sendTestLocations(ctx, job.URI, []any{}); err != nil {
-						l.log.Message("failed to send empty test locations after parse failure: %s", err)
+				// Send test locations update after parse completes (if client supports it)
+				if l.client.SupportsOPATestProvider() {
+					if parseSuccess {
+						l.testLocationJobs <- lintFileJob{Reason: job.Reason, URI: job.URI}
+					} else {
+						// Parse failed, send empty test locations
+						if err := l.sendTestLocations(ctx, job.URI, []any{}); err != nil {
+							l.log.Message("failed to send empty test locations after parse failure: %s", err)
+						}
 					}
 				}
 
@@ -1516,12 +1522,11 @@ func (l *LanguageServer) handleTextDocumentDefinition(params types.DefinitionPar
 }
 
 func (l *LanguageServer) handleTextDocumentDidOpen(
-	ctx context.Context,
 	params types.DidOpenTextDocumentParams,
 ) (any, error) {
 	// then we have started the server, and not yet received a suitable root to use.
 	if l.workspaceRootURI == "" {
-		err := l.updateRootURI(ctx,
+		err := l.updateRootURI(
 			// get the URI of the file's immediate parent
 			l.fromPath(filepath.Dir(uri.ToPath(params.TextDocument.URI))),
 		)
@@ -2034,7 +2039,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 	}
 
 	if params.RootURI != "" {
-		err := l.updateRootURI(ctx, params.RootURI)
+		err := l.updateRootURI(params.RootURI)
 		if err != nil {
 			l.log.Message("failed to set rootURI: %w", err)
 		}
@@ -2044,7 +2049,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			l.log.Message("cannot operate with more than one workspace folder, using: %s", (*params.WorkspaceFolders)[0].URI)
 		}
 
-		err := l.updateRootURI(ctx, (*params.WorkspaceFolders)[0].URI)
+		err := l.updateRootURI((*params.WorkspaceFolders)[0].URI)
 		if err != nil {
 			l.log.Message("failed to set rootURI to workspace folder: %w", err)
 		}
@@ -2053,7 +2058,7 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 	return initializeResult, nil
 }
 
-func (l *LanguageServer) updateRootURI(ctx context.Context, rootURI string) error {
+func (l *LanguageServer) updateRootURI(rootURI string) error {
 	// rootURI not expected to have a trailing slash, remove if present for
 	// consistency
 	normalizedRootURI := strings.TrimSuffix(rootURI, string(os.PathSeparator))
@@ -2105,19 +2110,6 @@ func (l *LanguageServer) updateRootURI(ctx context.Context, rootURI string) erro
 		l.log.Message("no config file found for workspace")
 	}
 
-	_, failed, err := l.loadWorkspaceContents(ctx, false)
-	for _, f := range failed {
-		l.log.Message("failed to load file %s: %s", f.URI, f.Error)
-	}
-
-	if err != nil {
-		l.log.Message("failed to load workspace contents: %s", err)
-	}
-
-	// 'OverwriteAggregates' is set to populate the cache's initial aggregate state.
-	// Subsequent runs of lintWorkspaceJobs will not set this and use the cached state.
-	l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "server initialize", OverwriteAggregates: true}
-
 	return nil
 }
 
@@ -2161,13 +2153,15 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 			return nil // continue processing other files
 		}
 
-		if parseSuccess {
-			l.testLocationJobs <- lintFileJob{Reason: "server initialized", URI: fileURI}
-		} else {
-			// this is covering the case where the client starts and the state
-			// is different (the client remembers test locations and state).
-			if err := l.sendTestLocations(ctx, fileURI, []any{}); err != nil {
-				l.log.Message("failed to send empty test locations after parse failure: %s", err)
+		if l.client.SupportsOPATestProvider() {
+			if parseSuccess {
+				l.testLocationJobs <- lintFileJob{Reason: "server initialized", URI: fileURI}
+			} else {
+				// this is covering the case where the client starts and the state
+				// is different (the client remembers test locations and state).
+				if err := l.sendTestLocations(ctx, fileURI, []any{}); err != nil {
+					l.log.Message("failed to send empty test locations after parse failure: %s", err)
+				}
 			}
 		}
 
@@ -2187,12 +2181,33 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 	return changedOrNewURIs, failed, nil
 }
 
-func (l *LanguageServer) handleInitialized() (any, error) {
-	// if running without config, then we should send the diagnostic request now
-	// otherwise it'll happen when the config is loaded
-	if !l.configWatcher.IsWatching() {
-		l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "server initialized"}
-	}
+func (l *LanguageServer) handleInitialized(ctx context.Context) (any, error) {
+	// Signal workers that initialization handshake is complete
+	close(l.initializationGate)
+
+	// Load workspace contents and start jobs asynchronously
+	// This allows us to respond to the client immediately while workspace
+	// loading happens in the background
+	go func() {
+		_, failed, err := l.loadWorkspaceContents(ctx, false)
+		for _, f := range failed {
+			l.log.Message("failed to load file %s: %s", f.URI, f.Error)
+		}
+
+		if err != nil {
+			l.log.Message("failed to load workspace contents: %s", err)
+		}
+
+		// 'OverwriteAggregates' is set to populate the cache's initial aggregate state.
+		// Subsequent runs of lintWorkspaceJobs will not set this and use the cached state.
+		l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "server initialize", OverwriteAggregates: true}
+
+		// if running without config, then we should send the diagnostic request now
+		// otherwise it'll happen when the config is loaded
+		if !l.configWatcher.IsWatching() {
+			l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "server initialized"}
+		}
+	}()
 
 	return emptyStruct, nil
 }
