@@ -9,13 +9,14 @@ import data.regal.result
 # target: package
 report contains violation if {
 	some convention in config.rules.custom["naming-convention"].conventions
+
 	"package" in convention.targets
 
-	not regex.match(convention.pattern, ast.package_name)
+	not _convention_matched(ast.package_name, convention)
 
 	violation := result.fail(
 		rego.metadata.chain(),
-		result.location_and_description(input.package, _message("package", ast.package_name, convention.pattern)),
+		result.location_and_description(input.package, _message("package", ast.package_name)),
 	)
 }
 
@@ -28,11 +29,11 @@ report contains violation if {
 
 	name := ast.ref_to_string(rule.head.ref)
 
-	not regex.match(convention.pattern, name)
+	not _convention_matched(name, convention)
 
 	violation := result.fail(
 		rego.metadata.chain(),
-		result.location_and_description(rule.head, _message("rule", name, convention.pattern)),
+		result.location_and_description(rule.head, _message("rule", name)),
 	)
 }
 
@@ -45,11 +46,11 @@ report contains violation if {
 
 	name := ast.ref_to_string(rule.head.ref)
 
-	not regex.match(convention.pattern, name)
+	not _convention_matched(name, convention)
 
 	violation := result.fail(
 		rego.metadata.chain(),
-		result.location_and_description(rule.head, _message("function", name, convention.pattern)),
+		result.location_and_description(rule.head, _message("function", name)),
 	)
 }
 
@@ -62,12 +63,19 @@ report contains violation if {
 
 	var := ast.found.vars[_][_][_]
 
-	not regex.match(convention.pattern, var.value)
+	not startswith(var.value, "$")
+	not _convention_matched(var.value, convention)
 
 	violation := result.fail(
 		rego.metadata.chain(),
-		result.location_and_description(var, _message("variable", var.value, convention.pattern)),
+		result.location_and_description(var, _message("variable", var.value)),
 	)
 }
 
-_message(kind, name, pattern) := $`Naming convention violation: {kind} name "{name}" does not match pattern '{pattern}'`
+_message(kind, name) := $`Naming violation: {kind} name "{name}" does not match configured convention`
+
+_convention_matched(name, convention) if {
+	name in convention.names
+} else if {
+	regex.match(convention.pattern, name)
+}

@@ -19,10 +19,10 @@ notices contains result.notice(rego.metadata.chain()) if not "sprintf" in object
 #   compare it to the number of items in the array (if known), and flag when the numbers
 #   don't match
 report contains violation if {
-	some rule_index, fn
-	ast.function_calls[rule_index][fn].name == "sprintf"
+	some rule_index, fun
+	ast.function_calls[rule_index][fun].name == "sprintf"
 
-	fn.args[1].type == "array" # can only check static arrays, not vars
+	fun.args[1].type == "array" # can only check static arrays, not vars
 
 	# this could come either from a term directly (the common case):
 	#     sprintf("%d", [1])
@@ -33,9 +33,9 @@ report contains violation if {
 	# this rule can definitely miss more advanced things, like re-assignemt from
 	# another variable. tbh, that's a waste of time. what we should make sure is
 	# to not report anything erroneously.
-	format_term := _first_arg_value(rule_index, fn.args[0])
+	format_term := _first_arg_value(rule_index, fun.args[0])
 
-	values_in_arr := count(fn.args[1].value)
+	values_in_arr := count(fun.args[1].value)
 	str_no_escape := replace(format_term.value, "%%", "") # don't include '%%' as it's used to "escape" %
 	num_patterns := strings.count(str_no_escape, "%")
 	num_paddings := strings.count(str_no_escape, "%-*s") # these require 2 arguments to be provided
@@ -43,7 +43,7 @@ report contains violation if {
 
 	values_in_str != values_in_arr
 
-	violation := result.fail(rego.metadata.chain(), result.ranged_location_between(fn.args[0], regal.last(fn.args)))
+	violation := result.fail(rego.metadata.chain(), result.ranged_location_between(fun.args[0], regal.last(fun.args)))
 }
 
 # see: https://pkg.go.dev/fmt#hdr-Explicit_argument_indexes
@@ -51,8 +51,8 @@ report contains violation if {
 # values array. this calculates the number to subtract from the total expected
 # number of values based on the number of eai's occurring more than once
 _repeated_explicit_argument_indexes(str) := sum([n |
-	some eai in {eai | some eai in regex.find_n(`%\[\d\]`, str, -1)}
-	n := strings.count(str, eai) - 1
+	some exp_arg_idx in {exp_arg_idx | some exp_arg_idx in regex.find_n(`%\[\d\]`, str, -1)}
+	n := strings.count(str, exp_arg_idx) - 1
 ])
 
 _first_arg_value(_, term) := term if term.type == "string"
@@ -60,12 +60,12 @@ _first_arg_value(_, term) := term if term.type == "string"
 _first_arg_value(rule_index, term) := found if {
 	term.type == "var"
 
-	trow := to_number(util.substring_to(term.location, 0, ":"))
+	row := to_number(util.substring_to(term.location, 0, ":"))
 
 	found := [rhs |
 		some expr in ast.found.expressions[rule_index]
 
-		to_number(util.substring_to(expr.location, 0, ":")) < trow
+		to_number(util.substring_to(expr.location, 0, ":")) < row
 
 		[lhs, rhs] := ast.assignment_terms(expr.terms)
 		lhs.type == "var"

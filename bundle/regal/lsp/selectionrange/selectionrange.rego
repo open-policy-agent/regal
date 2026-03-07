@@ -109,9 +109,9 @@ _find_ranges(node, position) := array.reverse([{"range": value_range} |
 
 # the SelectionRange object is recursive, so we need to reach for tricks here!
 _to_selection_range(ranges) := json.patch(ranges[0], [patch |
-	some i, r in array.slice(ranges, 1, count(ranges))
+	some i, arr in array.slice(ranges, 1, count(ranges))
 
-	patch := {"op": "add", "path": util.repeat("/parent", i + 1), "value": r}
+	patch := {"op": "add", "path": util.repeat("/parent", i + 1), "value": arr}
 ])
 
 _estimated_import_range(imp) := import_range if {

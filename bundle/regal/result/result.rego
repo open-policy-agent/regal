@@ -30,8 +30,8 @@ import data.regal.util
 #  no longer used, but kept for compatibility reasons.
 ## regal ignore:argument-always-wildcard
 aggregate(_, aggregate_data) := {
-	"aggregate_source": {"package_path": [part.value |
-		some i, part in input.package.path
+	"aggregate_source": {"package_path": [term.value |
+		some i, term in input.package.path
 		i > 0
 	]},
 	"aggregate_data": aggregate_data,
@@ -110,10 +110,10 @@ notice(metadata) := result if {
 # regal ignore:narrow-argument
 _related_resources(annotations, _, _) := annotations.related_resources
 
-_related_resources(annotations, category, title) := rr if {
+_related_resources(annotations, category, title) := arr if {
 	not annotations.related_resources
 
-	rr := [{
+	arr := [{
 		"description": "documentation",
 		"ref": $"{config.docs.base_url}/{category}/{title}",
 	}]
@@ -151,9 +151,9 @@ _fail_annotated_custom(metadata, details) := violation if {
 	violation := object.remove(with_category, ["custom", "scope", "schemas"])
 }
 
-_resource_urls(related_resources, category) := [r |
+_resource_urls(related_resources, category) := [obj |
 	some item in related_resources
-	r := object.union(item, {"ref": config.docs.resolve_url(item.ref, category)})
+	obj := object.union(item, {"ref": config.docs.resolve_url(item.ref, category)})
 ]
 
 # Note that the `text` attribute always returns the entire line and *not*
@@ -173,30 +173,30 @@ _with_text(loc_obj) := loc if {
 #   new code should most often use one of the ranged_ location functions instead, as
 #   that will also include an `"end"` location attribute
 # scope: document
-location(x) := _with_text(util.to_location_object(x.location))
-location(x) := _with_text(util.to_location_object(x[0].location)) if is_array(x)
-location(x) := _with_text(util.to_location_object(x)) if is_string(x)
+location(node) := _with_text(util.to_location_object(node.location))
+location(node) := _with_text(util.to_location_object(node[0].location)) if is_array(node)
+location(node) := _with_text(util.to_location_object(node)) if is_string(node)
 
 # METADATA
 # description: |
 #   returns a "normalized" location object from the location value found in the AST, along
 #   with an overridden description field. This is useful for rules that want to provide a custom message,
 #   perhaps depending on the context of the violation.
-location_and_description(x, description) := object.union(
-	location(x),
+location_and_description(node, description) := object.union(
+	location(node),
 	{"description": description},
 )
 
 # METADATA
-# description: creates a location where x is the start, and y is the end (calculated from `text`)
-ranged_location_between(x, y) := object.union(
-	location(x),
-	{"location": {"end": location(y).location.end}},
+# description: creates a location combining the start and end locations (calculated from `text`)
+ranged_location_between(start, end) := object.union(
+	location(start),
+	{"location": {"end": location(end).location.end}},
 )
 
 # METADATA
 # description: creates a location where the first term location is the start, and the last term location is the end
-ranged_from_ref(ref) := ranged_location_between(ref[0], regal.last(ref))
+ranged_from_ref(terms) := ranged_location_between(terms[0], regal.last(terms))
 
 # METADATA
 # description: |

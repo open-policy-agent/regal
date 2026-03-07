@@ -10,9 +10,9 @@ import data.regal.util
 report contains violation if {
 	some name, functions in _function_groups
 
-	fn := util.any_set_item(functions)
+	fun := util.any_set_item(functions)
 
-	some pos, _ in fn.head.args
+	some pos, _ in fun.head.args
 
 	every function in functions {
 		function.head.args[pos].type == "var"
@@ -21,13 +21,13 @@ report contains violation if {
 
 	not _function_name_excepted(name)
 
-	violation := result.fail(rego.metadata.chain(), result.location(fn.head.args[pos]))
+	violation := result.fail(rego.metadata.chain(), result.location(fun.head.args[pos]))
 }
 
-_function_groups[name] contains fn if {
-	some fn in ast.functions
+_function_groups[name] contains fun if {
+	some fun in ast.functions
 
-	name := ast.ref_to_string(fn.head.ref)
+	name := ast.ref_to_string(fun.head.ref)
 }
 
 _function_name_excepted(name) if {

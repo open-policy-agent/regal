@@ -67,9 +67,9 @@ _invalid_some_location(rule, location) if {
 
 # don't recommend `some .. in` if iteration occurs inside of arrays, objects, or sets
 _invalid_some_context(rule, path) if {
-	some p in util.all_paths(path)
+	some arr in util.all_paths(path)
 
-	node := object.get(rule, p, false)
+	node := object.get(rule, arr, false)
 
 	_impossible_some(node)
 }
@@ -80,9 +80,9 @@ _invalid_some_context(rule, path) if {
 # not _directly_ replaceable by `some .. in`, so we'll leave it
 # be here
 _invalid_some_context(rule, path) if {
-	some p in util.all_paths(path)
+	some arr in util.all_paths(path)
 
-	node := object.get(rule, p, [])
+	node := object.get(rule, arr, [])
 
 	node.terms[0].type == "ref"
 	node.terms[0].value[0].type == "var"

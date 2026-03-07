@@ -14,11 +14,11 @@ result["response"] := signature
 # scope: document
 default signature := null
 
-signature := s if {
+signature := obj if {
 	func_info := _function_at_position(input.regal.file.lines, input.params.position)
 	builtin_info := data.workspace.builtins[func_info.name]
 
-	s := {
+	obj := {
 		"signatures": [{
 			"label": _build_function_label(builtin_info.decl, func_info.name),
 			# some builtins had a space at the start
@@ -33,7 +33,7 @@ signature := s if {
 
 default _function_at_position(_, _) := {}
 
-_function_at_position(lines, position) := func if {
+_function_at_position(lines, position) := function if {
 	content := concat("\n", lines)
 	text := _text_up_to_position(lines, content, position)
 
@@ -41,7 +41,7 @@ _function_at_position(lines, position) := func if {
 	result := regex.find_all_string_submatch_n(`([a-zA-Z_][a-zA-Z0-9_.]*)\(([^)]*)$`, text, -1)
 	last_match := regal.last(result)
 
-	func := {"name": last_match[1], "active_param": strings.count(last_match[2], ",") + 1}
+	function := {"name": last_match[1], "active_param": strings.count(last_match[2], ",") + 1}
 }
 
 # when position is after the last line
@@ -66,9 +66,9 @@ _text_up_to_position(lines, _, position) := concat("\n", all_lines) if {
 	])
 }
 
-_build_function_label(decl, func_name) := label if {
-	param_labels := concat(", ", [_param_label(arg) | some arg in decl.args])
-	label := sprintf("%s(%s) -> %s", [func_name, param_labels, decl.result.type])
+_build_function_label(declaration, func_name) := label if {
+	param_labels := concat(", ", [_param_label(arg) | some arg in declaration.args])
+	label := sprintf("%s(%s) -> %s", [func_name, param_labels, declaration.result.type])
 }
 
 _build_parameters(args) := [param |

@@ -7,11 +7,11 @@ package regal.util
 #   returns a set of sets containing all indices of duplicates in the array,
 #   so e.g. [1, 1, 2, 3, 3, 3] would return {{0, 1}, {3, 4, 5}} and so on
 find_duplicates(arr) := {indices |
-	some i, x in arr
+	some i, item in arr
 
 	indices := {j |
-		some j, y in arr
-		x == y
+		some j, other in arr
+		item == other
 	}
 
 	count(indices) > 1
@@ -19,23 +19,20 @@ find_duplicates(arr) := {indices |
 
 # METADATA
 # description: returns true if array has duplicates of item
-has_duplicates(arr, item) if count([x |
-	some x in arr
-	x == item
+has_duplicates(arr, item) if count([1 |
+	some other in arr
+	other == item
 ]) > 1
 
 # METADATA
 # description: |
 #   returns an array of arrays built from all parts of the provided path array,
 #   so e.g. [1, 2, 3] would return [[1], [1, 2], [1, 2, 3]]
-all_paths(path) := [array.slice(path, 0, len) | some len in numbers.range(1, count(path))]
+all_paths(arr) := [array.slice(arr, 0, n) | some n in numbers.range(1, count(arr))]
 
 # METADATA
 # description: attempts to turn any key in provided object into numeric form
-keys_to_numbers(obj) := {num: v |
-	some k, v in obj
-	num := to_number(k)
-}
+keys_to_numbers(obj) := {to_number(key): val | some key, val in obj}
 
 # METADATA
 # description: returns a substring cut off at stop_str, or the whole string if not found
@@ -53,12 +50,12 @@ to_location_object(loc) := {
 		"col": end_col,
 	},
 } if {
-	[r, c, er, ec] := split(loc, ":")
+	[row_str, col_str, end_row_str, end_col_str] := split(loc, ":")
 
-	row := to_number(r)
-	col := to_number(c)
-	end_row := to_number(er)
-	end_col := to_number(ec)
+	row := to_number(row_str)
+	col := to_number(col_str)
+	end_row := to_number(end_row_str)
+	end_col := to_number(end_col_str)
 
 	text := _location_to_text(row, col, end_row, end_col)
 } else := loc
@@ -67,16 +64,16 @@ to_location_object(loc) := {
 # description: convert location string to location object, without the 'text' attribute
 # scope: document
 to_location_no_text(loc) := {
-	"row": to_number(r),
-	"col": to_number(c),
+	"row": to_number(row_str),
+	"col": to_number(col_str),
 	"end": {
-		"row": to_number(er),
-		"col": to_number(ec),
+		"row": to_number(end_row_str),
+		"col": to_number(end_col_str),
 	},
 } if {
 	is_string(loc)
 
-	[r, c, er, ec] := split(loc, ":")
+	[row_str, col_str, end_row_str, end_col_str] := split(loc, ":")
 }
 
 # METADATA
@@ -95,12 +92,12 @@ _location_to_text(row, col, end_row, end_col) := text if {
 	row != end_row
 
 	lines := array.slice(input.regal.file.lines, row - 1, end_row)
-	text := concat("\n", [new |
+	text := concat("\n", [line_cut |
 		len := count(lines) - 1
 
 		some i, line in lines
 
-		new := _cut_col(i, len, line, col, end_col)
+		line_cut := _cut_col(i, len, line, col, end_col)
 	])
 }
 
@@ -125,21 +122,21 @@ _cut_col(i, len, line, _, end_col) := substring(line, 0, end_col) if {
 # scope: document
 default point_in_range(_, _) := false
 
-point_in_range(p, range) if {
-	p[0] >= range[0][0]
-	p[0] <= range[1][0]
-	p[1] >= range[0][1]
-	p[1] <= range[1][1]
+point_in_range(point, range) if {
+	point[0] >= range[0][0]
+	point[0] <= range[1][0]
+	point[1] >= range[0][1]
+	point[1] <= range[1][1]
 }
 
-point_in_range(p, range) if {
-	p[0] > range[0][0]
-	p[0] < range[1][0]
+point_in_range(point, range) if {
+	point[0] > range[0][0]
+	point[0] < range[1][0]
 }
 
 # METADATA
 # description: short-hand helper to prepare values for pretty-printing
-json_pretty(value) := json.marshal_with_options(value, {
+json_pretty(val) := json.marshal_with_options(val, {
 	"indent": "  ",
 	"pretty": true,
 })
@@ -149,27 +146,27 @@ json_pretty(value) := json.marshal_with_options(value, {
 rest(arr) := array.slice(arr, 1, count(arr))
 
 # METADATA
-# description: converts x to set if array, returns x if set
+# description: converts coll to set if array, returns coll if set
 # scope: document
-to_set(x) := x if is_set(x)
-to_set(x) := {y | some y in x} if not is_set(x)
+to_set(coll) := coll if is_set(coll)
+to_set(coll) := {item | some item in coll} if not is_set(coll)
 
 # METADATA
-# description: converts x to array if set, returns x if array
+# description: converts coll to array if set, returns coll if array
 # scope: document
-to_array(x) := x if is_array(x)
-to_array(x) := [y | some y in x] if not is_array(x)
+to_array(coll) := coll if is_array(coll)
+to_array(coll) := [item | some item in coll] if not is_array(coll)
 
 # METADATA
-# description: true if s1 and s2 has any intersecting items
-intersects(s1, s2) if intersection({s1, s2}) != set()
+# description: true if set and other has any intersecting items
+intersects(set, other) if intersection({set, other}) != set()
 
 # METADATA
 # description: returns the item contained in a single-item set
-single_set_item(s) := item if {
-	count(s) == 1
+single_set_item(set) := item if {
+	count(set) == 1
 
-	some item in s
+	some item in set
 }
 
 # @anderseknert looked into the different implementations and sort was still the fastest
@@ -179,11 +176,14 @@ single_set_item(s) := item if {
 # | sort(s)[0]            | 9,184  | 7,816 | 133       |
 # METADATA
 # description: returns any item of a set
-any_set_item(s) := sort(s)[0]
+any_set_item(set) := sort(set)[0]
 
 # METADATA
 # description: returns last index of item, or undefined (*not* -1) if missing
-last_indexof(arr, item) := regal.last([i | some i, x in arr; x == item])
+last_indexof(arr, item) := regal.last([i |
+	some i, other in arr
+	other == item
+])
 
 # METADATA
 # description: |
@@ -195,12 +195,11 @@ longest_prefix(coll) := [] if {
 } else := prefix if {
 	arr := to_array(coll)
 	end := min([count(seq) | some seq in arr]) - 1
-	rng := numbers.range(0, end)
 
 	# collect indices where items differ
 	# we only care about the first diff, but no way to exit early with that value
-	dif := [n |
-		some n in rng
+	diff := [n |
+		some n in numbers.range(0, end)
 
 		first := arr[0][n]
 
@@ -208,11 +207,11 @@ longest_prefix(coll) := [] if {
 		sub[n] != first
 	]
 
-	prefix := array.slice(arr[0], 0, _longest_dif(dif, end))
+	prefix := array.slice(arr[0], 0, _longest_diff(diff, end))
 }
 
-_longest_dif(diff, len) := len + 1 if diff == []
-_longest_dif(diff, _) := diff[0] if diff != []
+_longest_diff(diff, len) := len + 1 if diff == []
+_longest_diff(diff, _) := diff[0] if diff != []
 
 # METADATA
 # description: |
@@ -229,8 +228,8 @@ parse_bool("False") := false
 parse_bool("FALSE") := false
 
 # METADATA
-# description: creates a string where s is repeated n times
-repeat(s, n) := replace(sprintf("%-*s", [n, " "]), " ", s)
+# description: creates a string where str is repeated n times
+repeat(str, n) := replace(sprintf("%-*s", [n, " "]), " ", str)
 
 # METADATA
 # description: |

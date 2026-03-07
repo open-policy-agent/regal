@@ -28,8 +28,8 @@ result["response"] := lenses if {
 # METADATA
 # description: contains code lenses determined for module
 lenses := array.concat(
-	[l | some l in _eval_lenses],
-	[l | some l in _debug_lenses],
+	util.to_array(_eval_lenses),
+	util.to_array(_debug_lenses),
 )
 
 # METADATA
@@ -61,10 +61,10 @@ _eval_lenses contains _rule_lens(input.params.textDocument.uri, rule, "regal.eva
 	not rule.head.args
 }
 
-_debug_lenses contains lens if {
+_debug_lenses contains obj if {
 	debug_supported
 
-	lens := {
+	obj := {
 		"range": range.from_location(result.location(_module.package).location),
 		"command": {
 			"title": "Debug",
@@ -78,7 +78,7 @@ _debug_lenses contains lens if {
 	}
 }
 
-_debug_lenses contains lens if {
+_debug_lenses contains obj if {
 	debug_supported
 
 	some rule in _module.rules
@@ -89,7 +89,7 @@ _debug_lenses contains lens if {
 	# no need to add a debug lens for a rule like `pi := 3.14`
 	not _unconditional_constant(rule)
 
-	lens := _rule_lens(input.params.textDocument.uri, rule, "regal.debug", "Debug")
+	obj := _rule_lens(input.params.textDocument.uri, rule, "regal.debug", "Debug")
 }
 
 _rule_lens(file_uri, rule, command, title) := {

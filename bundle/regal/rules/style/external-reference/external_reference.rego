@@ -49,8 +49,8 @@ _named_vars(arg) := {var.value | some var in ast.find_term_vars(arg)} if arg.typ
 #   note: this doesn't check for built-in calls or calls to function
 #   defined in the same package, as those are already covered by
 #   "fn_namespaces" in the report rule
-_function_call_ctx(fn, path) if {
-	object.get(fn, array.slice(path, 0, count(path) - 4), false).type == "call"
+_function_call_ctx(fun, path) if {
+	object.get(fun, array.slice(path, 0, count(path) - 4), false).type == "call"
 } else if {
 	terms_path := array.slice(path, 0, util.last_indexof(path, "terms") + 2)
 	next_term_path := array.flatten([
@@ -60,5 +60,5 @@ _function_call_ctx(fn, path) if {
 
 	# ["body", 0, "terms", 1]
 
-	object.get(fn, next_term_path, null) != null
+	object.get(fun, next_term_path, null) != null
 }

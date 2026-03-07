@@ -51,9 +51,7 @@ _var_value_used_in_expression(value, expr) if {
 }
 
 _var_value_used_in_expression(value, expr) if {
-	some w in expr.with
-
-	walk(w, [_, node])
+	walk(expr.with, [_, node])
 
 	node.type == "var"
 	node.value == value

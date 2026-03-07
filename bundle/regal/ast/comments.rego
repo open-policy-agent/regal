@@ -80,23 +80,23 @@ comment_blocks(comments_decoded) := blocks if {
 			some comment in row_partition
 
 			col := comment.location.col # regal ignore:comprehension-term-assignment
-			partition := [c |
-				some c in row_partition
-				c.location.col == col
+			partition := [partition_comment |
+				some partition_comment in row_partition
+				partition_comment.location.col == col
 			]
 		}
 	]
 }
 
-_splits(xs) := array.flatten([
+_splits(rows) := array.flatten([
 	# -1 ++ [ all indices where there's a step larger than one ] ++ length of xs
 	# the -1 is because we're adding +1 in array.slice
 	-1,
 	[i |
 		some i in numbers.range(0, n - 1)
-		xs[i + 1] != xs[i] + 1
+		rows[i + 1] != rows[i] + 1
 	],
 	n,
 ]) if {
-	n := count(xs)
+	n := count(rows)
 }

@@ -33,34 +33,34 @@ from_location(location) := {
 #     ref: https://www.openpolicyagent.org/projects/regal/custom-rules/roast#compact-location-format
 parse(location_string) := {
 	"start": {
-		"line": to_number(r) - 1,
-		"character": to_number(c) - 1,
+		"line": to_number(parts[0]) - 1,
+		"character": to_number(parts[1]) - 1,
 	},
 	"end": {
-		"line": to_number(er) - 1,
-		"character": to_number(ec) - 1,
+		"line": to_number(parts[2]) - 1,
+		"character": to_number(parts[3]) - 1,
 	},
 } if {
-	[r, c, er, ec] := split(location_string, ":")
+	parts := split(location_string, ":")
 }
 
 # METADATA
-# description: checks if a given position 'pos' is found within range 'rng'
+# description: checks if a given position 'pos' is found within 'range'
 # scope: document
-contains_position(rng, pos) if {
-	pos.line > rng.start.line
-	pos.line < rng.end.line
+contains_position(range, pos) if {
+	pos.line > range.start.line
+	pos.line < range.end.line
 } else if {
-	pos.line == rng.start.line
-	pos.line < rng.end.line
-	pos.character >= rng.start.character
+	pos.line == range.start.line
+	pos.line < range.end.line
+	pos.character >= range.start.character
 } else if {
-	pos.line > rng.start.line
-	pos.line == rng.end.line
-	pos.character <= rng.end.character
+	pos.line > range.start.line
+	pos.line == range.end.line
+	pos.character <= range.end.character
 } else if {
-	pos.line == rng.start.line
-	pos.line == rng.end.line
-	pos.character >= rng.start.character
-	pos.character <= rng.end.character
+	pos.line == range.start.line
+	pos.line == range.end.line
+	pos.character >= range.start.character
+	pos.character <= range.end.character
 }

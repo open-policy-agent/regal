@@ -7,12 +7,12 @@ import data.regal.result
 
 report contains violation if {
 	head := input.rules[_].head
-	rhv := head.value
+	term := head.value
 
-	rhv.type == "call"
-	rhv.value[0].type == "ref"
+	term.type == "call"
+	term.value[0].type == "ref"
 
-	ref_name := rhv.value[0].value[0].value
+	ref_name := term.value[0].value[0].value
 
 	config.capabilities.builtins[ref_name].decl.result == "boolean"
 

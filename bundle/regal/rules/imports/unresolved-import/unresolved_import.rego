@@ -16,7 +16,7 @@ aggregate contains entry if {
 		_import.path.value[0].value == "data"
 		len := count(_import.path.value)
 		len > 1
-		path := [part.value | some part in array.slice(_import.path.value, 1, len)]
+		path := [term.value | some term in array.slice(_import.path.value, 1, len)]
 
 		# Special case for custom rules, where we don't want to flag e.g. `import data.regal.ast`
 		# as unknown, even though it's not a package included in evaluation.
@@ -71,14 +71,14 @@ _custom_regal_package_and_import(pkg_path, "regal") if {
 # but if we have a rule like foo.bar.baz
 # we'll want to include both foo.bar and foo.bar.baz
 _to_paths(pkg_path, ref) := util.all_paths(_to_path(pkg_path, ref)) if count(ref) < 3
-_to_paths(pkg_path, ref) := [_to_path(pkg_path, p) | some p in util.all_paths(ref)] if count(ref) > 2
+_to_paths(pkg_path, ref) := [_to_path(pkg_path, terms) | some terms in util.all_paths(ref)] if count(ref) > 2
 
-_to_path(pkg_path, ref) := array.flatten([pkg_path, ref[0].value, [_to_string(part) |
-	some part in array.slice(ref, 1, 100)
+_to_path(pkg_path, terms) := array.flatten([pkg_path, terms[0].value, [_to_string(term) |
+	some term in array.slice(terms, 1, 100)
 ]])
 
-_to_string(part) := part.value if part.type == "string"
-_to_string(part) := "**" if part.type == "var"
+_to_string(term) := term.value if term.type == "string"
+_to_string(term) := "**" if term.type == "var"
 
 _except_imports contains split(trim_prefix(str, "data."), ".") if {
 	some str in config.rules.imports["unresolved-import"]["except-imports"]

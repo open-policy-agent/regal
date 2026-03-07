@@ -102,9 +102,9 @@ rules := [rule |
 # description: all the test rules in the input AST
 tests := [rule |
 	some rule in rules
+	some term in rule.head.ref
 
-	some part in rule.head.ref
-	startswith(part.value, "test_")
+	startswith(term.value, "test_")
 ]
 
 # METADATA
@@ -212,59 +212,59 @@ function_calls[rule_index] contains call if {
 
 # METADATA
 # description: |
-#   true if both ref values (or "paths") are equal in type
+#   true if both ref values (terms) are equal in type
 #   and value for each path component, ignoring locations
-ref_value_equal(v1, v2) if {
-	count(v1) == count(v2)
+ref_value_equal(terms, other) if {
+	count(terms) == count(other)
 
-	every i, term in v1 {
-		term.type == v2[i].type
-		term.value == v2[i].value
+	every i, term in terms {
+		term.type == other[i].type
+		term.value == other[i].value
 	}
 }
 
 # METADATA
 # description: |
-#   returns a new ref value made by extending terms1 with terms2,
-#   where the first term of terms2 transformed to string
-extend_ref_terms(terms1, terms2) := array.flatten([
-	terms1,
-	object.union(terms2[0], {"type": "string"}),
-	array.slice(terms2, 1, 100),
+#   returns a new terms array made by extending terms with other,
+#   where the first term of other transformed to string
+extend_ref_terms(terms, other) := array.flatten([
+	terms,
+	object.union(other[0], {"type": "string"}),
+	array.slice(other, 1, 100),
 ])
 
 # METADATA
 # description: |
-#   true if all terms in `terms1` are also present in `terms2`
+#   true if all terms in `terms` are also present in `other`
 #   regardless of length, and ignoring locations
-is_terms_subset(terms1, terms2) if {
-	count(terms1) <= count(terms2)
+is_terms_subset(terms, other) if {
+	count(terms) <= count(other)
 
-	every i, term in terms1 {
-		term.type == terms2[i].type
-		term.value == terms2[i].value
+	every i, term in terms {
+		term.type == other[i].type
+		term.value == other[i].value
 	}
 }
 
 # METADATA
 # description: returns the "path" string of any given ref value
-ref_to_string(ref) := concat("", array.flatten([ref[0].value, [_format_part(part) |
-	some part in array.slice(ref, 1, 100)
+ref_to_string(ref) := concat("", array.flatten([ref[0].value, [_format_term(term) |
+	some term in array.slice(ref, 1, 100)
 
-	not part.type in {"call", "ref", "templatestring"}
+	not term.type in {"call", "ref", "templatestring"}
 ]]))
 
-_format_part(part) := concat("", [".", part.value]) if {
-	part.type == "string"
-	regex.match(`^[a-zA-Z_][a-zA-Z1-9_]*$`, part.value)
+_format_term(term) := concat("", [".", term.value]) if {
+	term.type == "string"
+	regex.match(`^[a-zA-Z_][a-zA-Z1-9_]*$`, term.value)
 } else := sprintf(
 	{
 		"string": `["%v"]`,
 		"var": `[%v]`,
 		"number": `[%d]`,
 		"boolean": `[%v]`,
-	}[part.type],
-	[part.value],
+	}[term.type],
+	[term.value],
 )
 
 # METADATA
@@ -275,9 +275,9 @@ _format_part(part) := concat("", [".", part.value]) if {
 #   foo.bar[baz] -> foo.bar
 ref_static_to_string(ref) := ref_to_string(array.slice(ref, 0, first_non_static)) if {
 	first_non_static := [i |
-		some i, part in ref
+		some i, term in ref
 		i > 0
-		part.type in {"call", "var", "ref", "templatestring"}
+		term.type in {"call", "var", "ref", "templatestring"}
 	][0]
 } else := ref_to_string(ref)
 
@@ -369,11 +369,11 @@ is_chained_rule_body(rule, lines) if {
 # description: answers whether variable of `name` is found anywhere in provided rule `head`
 # scope: document
 var_in_head(head, name) if {
-	some part in ["key", "value"]
-	has_named_var(head[part], name)
+	some type in ["key", "value"]
+	has_named_var(head[type], name)
 } else if {
-	some part in array.slice(head.ref, 1, 100)
-	has_named_var(part, name)
+	some term in array.slice(head.ref, 1, 100)
+	has_named_var(term, name)
 }
 
 # METADATA

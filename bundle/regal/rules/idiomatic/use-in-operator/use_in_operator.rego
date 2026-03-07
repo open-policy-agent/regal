@@ -11,15 +11,15 @@ report contains violation if {
 	terms[0].type == "ref"
 	terms[0].value[0].value in {"eq", "equal"}
 
-	nl_terms := _non_loop_term(terms)
-	count(nl_terms) == 1
+	non_loop_terms := _non_loop_term(terms)
+	count(non_loop_terms) == 1
 
-	nlt := nl_terms[0]
-	_static_term(nlt.term)
+	head := non_loop_terms[0]
+	_static_term(head.term)
 
 	# Use the non-loop term position to determine the
 	# location of the loop term (3 is the count of terms)
-	violation := result.fail(rego.metadata.chain(), result.location(terms[3 - nlt.pos]))
+	violation := result.fail(rego.metadata.chain(), result.location(terms[3 - head.pos]))
 }
 
 _non_loop_term(terms) := [{"pos": i + 1, "term": term} |

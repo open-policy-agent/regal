@@ -96,13 +96,11 @@ _functions[name] contains {"rule_index": i, "args_refs": args_refs} if {
 		arg := ast.found.refs[ast.rule_index_strings[i]][_].value[0].value
 		arg in variable_args
 		ref_vals := {vals |
-			some g
-			ast.found.refs[ast.rule_index_strings[i]][g].value[0].value == arg
+			some j
+			ast.found.refs[ast.rule_index_strings[i]][j].value[0].value == arg
 
-			ref := ast.found.refs[ast.rule_index_strings[i]][g].value
-			vals := [part.value |
-				some part in array.slice(ref, 0, _first_var_pos(ref))
-			]
+			ref := ast.found.refs[ast.rule_index_strings[i]][j].value
+			vals := [term.value | some term in array.slice(ref, 0, _first_var_pos(ref))]
 		}
 	}
 
@@ -111,8 +109,8 @@ _functions[name] contains {"rule_index": i, "args_refs": args_refs} if {
 
 _first_var_pos(ref) := pos if {
 	pos := [i |
-		some i, part in ref
-		part.type == "var"
+		some i, term in ref
+		term.type == "var"
 		i > 0
 	][0]
 } else := count(ref) + 1

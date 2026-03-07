@@ -46,12 +46,13 @@ resolved_imports[identifier] := paths[0] if {
 #   returns true if provided path (like ["data", "foo", "bar"]) is in the
 #   list of imports (which is commonly ast.imports)
 imports_has_path(imports, path) if {
-	pv := imports[_].path.value
+	n := count(path)
+	terms := imports[_].path.value
 
-	count(pv) == count(path)
+	count(terms) == n
 
-	every i, part in path {
-		part == pv[i].value
+	every i, term in path {
+		term == terms[i].value
 	}
 }
 
@@ -62,11 +63,7 @@ imports_has_path(imports, path) if {
 imports_keyword(imports, keyword) if {
 	capabilities.is_opa_v1
 	input.regal.file.rego_version != "v0"
-} else if {
-	pv := imports[_].path.value
-
-	_has_keyword([p.value | some p in pv], keyword)
-}
+} else if _has_keyword([term.value | term := imports[_].path.value[_]], keyword)
 
 _imported_identifier(imp) := imp.alias
 _imported_identifier(imp) := regal.last(imp.path.value).value if not imp.alias

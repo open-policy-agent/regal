@@ -7,8 +7,8 @@ import data.regal.result
 import data.regal.util
 
 report contains violation if {
-	some rule_index, sps in _loop_start_points
-	first_loop_row := min(object.keys(sps))
+	some rule_index, start_points in _loop_start_points
+	first_loop_row := min(object.keys(start_points))
 
 	some row, expr
 	_exprs[rule_index][row][expr]

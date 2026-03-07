@@ -47,7 +47,7 @@ arg_tokens.reference contains arg if {
 
 	rule.head.args
 
-	arg_names := {v.value | some v in rule.head.args}
+	arg_names := {term.value | some term in rule.head.args}
 
 	walk(rule.body, [_, expr])
 
@@ -63,7 +63,7 @@ arg_tokens.reference contains arg if {
 # description: Extract variable references in call expressions
 arg_tokens.reference contains arg if {
 	some rule in module.rules
-	arg_names := {v.value | some v in rule.head.args}
+	arg_names := {term.value | some term in rule.head.args}
 	walk(rule.body, [_, expr])
 
 	some term in expr.terms

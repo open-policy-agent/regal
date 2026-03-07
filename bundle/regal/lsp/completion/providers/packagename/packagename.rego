@@ -15,11 +15,11 @@ items contains item if {
 	startswith(line, "package ")
 	input.params.position.character > 7
 
-	ps := input.regal.environment.path_separator
+	path_sep := input.regal.environment.path_separator
 
 	abs_dir := _base(input.params.textDocument.uri)
 	rel_dir := trim_prefix(abs_dir, input.regal.environment.workspace_root_path)
-	fix_dir := replace(replace(trim_prefix(rel_dir, ps), ".", "_"), ps, ".")
+	fix_dir := replace(replace(trim_prefix(rel_dir, path_sep), ".", "_"), path_sep, ".")
 
 	word := location.ref_at(line, input.params.position.character + 1)
 
@@ -36,50 +36,50 @@ items contains item if {
 	}
 }
 
-_base(uri) := base if {
-	path := trim_prefix(uri, "file://")
-	base := substring(path, 0, regal.last(indexof_n(path, input.regal.environment.path_separator)))
+_base(uri) := str if {
+	end := trim_prefix(uri, "file://")
+	str := substring(end, 0, regal.last(indexof_n(end, input.regal.environment.path_separator)))
 }
 
-_suggestions(dir, text) := [path |
+_suggestions(dir, text) := [str |
 	parts := split(dir, ".")
 	len_p := count(parts)
 
 	some n in numbers.range(0, len_p)
 
-	formatted_parts := [p |
-		some index, part in array.slice(parts, n, len_p)
-		p := _format_part(part, _needs_quoting(part))
+	formatted_parts := [formatted |
+		some index, str in array.slice(parts, n, len_p)
+		formatted := _format_part(str, _needs_quoting(str))
 	]
 
-	path := concat("", [p |
-		some index, part in formatted_parts
-		p := _delimit_part(part, array.slice(formatted_parts, index + 1, index + 2))
+	str := concat("", [delimited |
+		some index, str in formatted_parts
+		delimited := _delimit_part(str, array.slice(formatted_parts, index + 1, index + 2))
 	])
 
-	path != ""
+	str != ""
 
 	# it's not valid Rego to have a hypenated first part
-	not startswith(path, `["`)
+	not startswith(str, `["`)
 
-	startswith(path, text)
+	startswith(str, text)
 ]
 
 # matches anything with a non alphanumeric character or underscore anywhere in
 # the part. E.g. "foo@bar", "@foo-bar" etc.
-_needs_quoting(part) := regex.match(`[^a-zA-Z0-9_]`, part)
+_needs_quoting(str) := regex.match(`[^a-zA-Z0-9_]`, str)
 
-_format_part(part, false) := part
-_format_part(part, true) := $`["{part}"]`
+_format_part(str, false) := str
+_format_part(str, true) := $`["{str}"]`
 
-_delimit_part(part, next_part) := $"{part}." if {
-	next_part != []
-	not startswith(next_part[0], "[")
+_delimit_part(str, next) := $"{str}." if {
+	next != []
+	not startswith(next[0], "[")
 }
 
-_delimit_part(part, next_part) := part if {
-	next_part != []
-	startswith(next_part[0], "[")
+_delimit_part(str, next) := str if {
+	next != []
+	startswith(next[0], "[")
 }
 
-_delimit_part(part, []) := part
+_delimit_part(str, []) := str
