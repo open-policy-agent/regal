@@ -583,8 +583,8 @@ type (
 	}
 
 	SemanticTokens struct {
-		ResultID *string `json:"resultId,omitempty"`
-		Data     []uint  `json:"data"`
+		ResultID *string  `json:"resultId,omitempty"`
+		Data     []uint32 `json:"data"`
 	}
 
 	SemanticTokensParams struct {

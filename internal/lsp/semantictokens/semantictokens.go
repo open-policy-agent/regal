@@ -24,11 +24,11 @@ const (
 )
 
 type Token struct {
-	Line      uint
-	Col       uint
-	Length    uint
-	Type      uint
-	Modifiers uint
+	Line      uint32
+	Col       uint32
+	Length    uint32
+	Type      uint32
+	Modifiers uint32
 }
 
 // Represents location data from the AST
@@ -37,10 +37,10 @@ type ASTLocation struct {
 }
 
 type LocationInfo struct {
-	Line        uint
-	StartColumn uint
-	EndColumn   uint
-	Length      uint
+	Line        uint32
+	StartColumn uint32
+	EndColumn   uint32
+	Length      uint32
 }
 
 func (loc *ASTLocation) UnmarshalJSON(data []byte) error {
@@ -69,10 +69,10 @@ func (loc *ASTLocation) UnmarshalJSON(data []byte) error {
 	}
 
 	loc.Location = LocationInfo{
-		Line:        uint(row),
-		StartColumn: uint(startcol),
-		EndColumn:   uint(endcol),
-		Length:      uint(endcol - startcol),
+		Line:        uint32(row),
+		StartColumn: uint32(startcol),
+		EndColumn:   uint32(endcol),
+		Length:      uint32(endcol - startcol),
 	}
 
 	return nil
@@ -204,7 +204,7 @@ func processImportTokens(importTokens []ASTLocation) ([]Token, error) {
 	return tokens, nil
 }
 
-func extractTokens(astLoc ASTLocation, tokenType uint, modifiers uint) (Token, error) {
+func extractTokens(astLoc ASTLocation, tokenType uint32, modifiers uint32) (Token, error) {
 	return Token{
 		Line:      astLoc.Location.Line - 1,
 		Col:       astLoc.Location.StartColumn - 1,
@@ -216,7 +216,7 @@ func extractTokens(astLoc ASTLocation, tokenType uint, modifiers uint) (Token, e
 
 func encodeTokens(tokens []Token) *types.SemanticTokens {
 	if len(tokens) == 0 {
-		return &types.SemanticTokens{Data: []uint{}}
+		return &types.SemanticTokens{Data: []uint32{}}
 	}
 
 	// Sort tokens by position (line first, then column)
@@ -227,9 +227,9 @@ func encodeTokens(tokens []Token) *types.SemanticTokens {
 		return int(a.Col) - int(b.Col)
 	})
 
-	data := make([]uint, 0, len(tokens)*5)
+	data := make([]uint32, 0, len(tokens)*5)
 
-	var prevLine, prevCol uint
+	var prevLine, prevCol uint32
 
 	for _, tok := range tokens {
 		deltaLine := tok.Line - prevLine

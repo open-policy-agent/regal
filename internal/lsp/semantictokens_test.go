@@ -208,14 +208,14 @@ some_one_var_construct if {
 // semanticTokenInstance adds structure to uint data stream in the SemanticToken
 // return type making it more readable for error messages and comparisons in tests
 type semanticTokenInstance struct {
-	DeltaLine uint
-	DeltaCol  uint
-	Length    uint
-	Type      uint
-	Modifier  uint
+	DeltaLine uint32
+	DeltaCol  uint32
+	Length    uint32
+	Type      uint32
+	Modifier  uint32
 }
 
-func uintsToTestTokens(data []uint) []semanticTokenInstance {
+func uintsToTestTokens(data []uint32) []semanticTokenInstance {
 	if len(data)%5 != 0 {
 		panic("invalid token data length, must be multiple of 5")
 	}

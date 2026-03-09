@@ -24,16 +24,14 @@ result.declaration contains arg if {
 # description: Extract variable references in function calls
 result.reference contains arg if {
 	some rule in module.rules
+	some rule_index
 
 	rule.head.args
 
 	arg_names := ast.function_arg_names(rule)
 
-	walk(rule.body, [_, expr])
-
-	expr.terms[0].type == "ref"
-
-	some arg in array.slice(expr.terms, 1, count(expr.terms))
+	call := ast.found.calls[rule_index][_]
+	some arg in array.slice(call, 1, 100)
 
 	arg.type == "var"
 	arg.value in arg_names
@@ -43,7 +41,7 @@ result.reference contains arg if {
 # description: Extract variable references in call expressions
 result.reference contains arg if {
 	some rule in module.rules
-	arg_names := {v.value | some v in rule.head.args}
+	arg_names := ast.function_arg_names(rule)
 	walk(rule.body, [_, expr])
 
 	some term in expr.terms

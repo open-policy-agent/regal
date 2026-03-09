@@ -11,26 +11,18 @@ import data.regal.ast
 # METADATA
 # description: Extract comprehension variable declarations from array/set/object comprehensions
 result.declaration contains var if {
-	# regal ignore:prefer-some-in-iteration
-	comprehensions := ast.found.comprehensions[_]
-	some comprehension in comprehensions
+	comprehension := ast.found.comprehensions[_][_]
 
-	comp_vars := {v |
-		some term in comprehension.value.body
-		term.terms.symbols
-		some symbol in term.terms.symbols
-		some v in array.slice(symbol.value, 1, count(symbol.value) - 1)
-		v.type == "var"
-	}
-	some var in comp_vars
+	some expr in comprehension.value.body
+	some symbol in expr.terms.symbols
+	some var in array.slice(symbol.value, 1, count(symbol.value) - 1)
+	var.type == "var"
 }
 
 # METADATA
 # description: Extract comprehension variable references in the output
 result.reference contains var if {
-	# regal ignore:prefer-some-in-iteration
-	comprehensions := ast.found.comprehensions[_]
-	some comprehension in comprehensions
+	comprehension := ast.found.comprehensions[_][_]
 
 	output_vars := array.flatten([
 		_comprehension_key(comprehension),

@@ -10,8 +10,9 @@ package regal.lsp.semantictokens.vars.imports
 # description: Get the module from workspace
 module := data.workspace.parsed[input.params.textDocument.uri]
 
-# METADATA
-# description: Extract import tokens - return only last term of the path
+# METADATA:
+# description: |
+#   Extract import tokens - return only last term of the path. Does not currently highlight aliased identifiers
 result contains last_term if {
 	some import_statement in module.imports
 	import_path := import_statement.path.value
