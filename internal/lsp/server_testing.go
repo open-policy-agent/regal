@@ -8,9 +8,12 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/runtime/info"
 	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/storage/inmem"
 	"github.com/open-policy-agent/opa/v1/tester"
 
+	"github.com/open-policy-agent/regal/internal/compile"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/pkg/config"
 )
 
 // handleRunTests handles the regal/runTests LSP request.
@@ -21,12 +24,41 @@ func (l *LanguageServer) handleRunTests(
 ) (any, error) {
 	modules := l.cache.GetAllModules()
 
-	txn, err := l.regoStore.NewTransaction(ctx, storage.WriteParams)
+	// Create new isolated store for this test run (NO SHARED STATE)
+	testStore := inmem.NewWithOpts(
+		inmem.OptRoundTripOnWrite(false),
+		inmem.OptReturnASTValuesOnRead(true),
+	)
+
+	txn, err := testStore.NewTransaction(ctx, storage.WriteParams)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transaction: %w", err)
 	}
 
-	defer l.regoStore.Abort(ctx, txn)
+	defer testStore.Abort(ctx, txn)
+
+	// TODO: make the loading of config and regal built-ins only happen
+	// in Regal repo
+	cfg := l.getLoadedConfig()
+
+	var caps *config.Capabilities
+	if cfg != nil && cfg.Capabilities != nil {
+		caps = cfg.Capabilities
+	} else {
+		caps = config.CapabilitiesForThisVersion()
+	}
+
+	_ = testStore.Write(ctx, txn, storage.AddOp, storage.MustParsePath("/internal"), map[string]any{})
+
+	if err := testStore.Write(
+		ctx,
+		txn,
+		storage.AddOp,
+		storage.MustParsePath("/internal/capabilities"),
+		caps,
+	); err != nil {
+		return nil, fmt.Errorf("failed to write capabilities: %w", err)
+	}
 
 	runtimeInfo, err := info.New()
 	if err != nil {
@@ -35,9 +67,13 @@ func (l *LanguageServer) handleRunTests(
 
 	filter := fmt.Sprintf("%s.%s$", regexp.QuoteMeta(params.Package), regexp.QuoteMeta(params.Name))
 
+	compiler := compile.NewCompilerWithRegalBuiltins().
+		WithEnablePrintStatements(true).
+		WithUseTypeCheckAnnotations(true)
+
 	runner := tester.NewRunner().
-		SetCompiler(l.testingCompiler).
-		SetStore(l.regoStore).
+		SetCompiler(compiler).
+		SetStore(testStore).
 		SetModules(modules).
 		SetRuntime(runtimeInfo).
 		CapturePrintOutput(true).

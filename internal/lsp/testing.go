@@ -3,11 +3,14 @@ package lsp
 import (
 	"context"
 	"fmt"
+	"slices"
 
-	"github.com/open-policy-agent/opa/v1/rego"
+	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
-	rparse "github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/ogre"
+	"github.com/open-policy-agent/regal/pkg/config"
+	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
 func (l *LanguageServer) StartTestLocationsWorker(ctx context.Context) {
@@ -64,34 +67,63 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 		return l.sendTestLocations(ctx, fileURI, []any{})
 	}
 
-	// TODO: avoid calling this as it's deprecated
-	//nolint:staticcheck
-	inputMap, err := rparse.PrepareAST(l.toRelativePath(fileURI), contents, module)
+	// TODO: ideally this would not need fs access
+	roots, err := config.GetPotentialRoots(uri.ToPath(fileURI))
+	if err != nil || len(roots) == 0 {
+		return fmt.Errorf("failed to get roots for file: %s", fileURI)
+	}
+
+	// the root is just returned verbatim, however this is used to group
+	// packages in the UI, since the same package can appear in many roots.
+	root := slices.MaxFunc(roots, func(a, b string) int {
+		return len(a) - len(b)
+	})
+
+	regalContext, _ := transform.RegalContext(l.toRelativePath(fileURI), contents, module.RegoVersion().String()).Merge(
+		ast.NewObject(
+			ast.Item(ast.InternedTerm("file"), ast.ObjectTerm(
+				ast.Item(ast.InternedTerm("root"), ast.StringTerm(root)),
+			)),
+		))
+
+	astValue, err := transform.ToASTWithRegalContext(l.toRelativePath(fileURI), contents, module, regalContext)
 	if err != nil {
 		l.log.Message("failed to prepare AST for test locations: %s", err)
 
 		return l.sendTestLocations(ctx, fileURI, []any{})
 	}
 
-	pq, err := l.queryCache.GetOrSet(ctx, l.regoStore, query.TestLocations)
+	queryBody := ast.MustParseBody("result = data.regal.lsp.testlocations.result")
+
+	pq, err := ogre.New(queryBody).Prepare(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to prepare query %s: %w", query.TestLocations, err)
+		return fmt.Errorf("failed to prepare test locations query: %w", err)
 	}
 
-	resultSet, err := pq.EvalQuery().Eval(ctx, rego.EvalInput(inputMap))
+	var result ast.Value
+
+	err = pq.Evaluator().
+		WithInput(astValue).
+		WithResultHandler(func(value ast.Value) error {
+			result = value
+
+			return nil
+		}).
+		Eval(ctx)
 	if err != nil {
 		l.log.Message("failed to evaluate test locations query: %s", err)
 
 		return l.sendTestLocations(ctx, fileURI, []any{})
 	}
 
-	if len(resultSet) == 0 || len(resultSet[0].Expressions) == 0 {
+	nativeResult, err := ast.JSON(result)
+	if err != nil {
+		l.log.Message("failed to convert test locations to JSON: %s", err)
+
 		return l.sendTestLocations(ctx, fileURI, []any{})
 	}
 
-	result := resultSet[0].Expressions[0].Value
-
-	return l.sendTestLocations(ctx, fileURI, result)
+	return l.sendTestLocations(ctx, fileURI, nativeResult)
 }
 
 func (l *LanguageServer) sendTestLocations(ctx context.Context, fileURI string, locations any) error {

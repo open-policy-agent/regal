@@ -69,6 +69,20 @@ func ToAST(name, content string, mod *ast.Module, collect bool) (ast.Value, erro
 	return value, nil
 }
 
+func ToASTWithRegalContext(name, content string, mod *ast.Module, regalContext ast.Object) (ast.Value, error) {
+	value, err := module.ToValue(mod)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert module to value: %w", err)
+	}
+
+	//nolint:forcetypeassert
+	value.(ast.Object).Insert(ast.InternedTerm("regal"), ast.NewTerm(
+		regalContext,
+	))
+
+	return value, nil
+}
+
 // RegalContext creates a context object for a Regal input, containing the attributes
 // common to most / all Regal use cases.
 func RegalContext(name, content, regoVersion string) ast.Object {
