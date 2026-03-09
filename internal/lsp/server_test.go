@@ -98,6 +98,7 @@ func createAndInitServer(t *testing.T, ctx context.Context, tempDir string, clie
 			EnableDebugCodelens:       new(true),
 			EnableExplorer:            new(true),
 			EvalCodelensDisplayInline: new(true),
+			EnableServerTesting:       new(true),
 		},
 	}
 

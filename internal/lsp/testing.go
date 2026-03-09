@@ -11,6 +11,17 @@ import (
 )
 
 func (l *LanguageServer) StartTestLocationsWorker(ctx context.Context) {
+	// Wait for initialization to complete before starting to check worker is needed
+	<-l.initializationGate
+
+	if !l.client.SupportsOPATestProvider() {
+		l.log.Debug("Test locations worker exiting - client does not support opaTestProvider")
+
+		return
+	}
+
+	l.log.Debug("Test locations worker starting")
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -27,6 +38,12 @@ func (l *LanguageServer) StartTestLocationsWorker(ctx context.Context) {
 // This is called after the parse has completed in the lintFileJobs worker to
 // ensure we send the latest.
 func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI string) error {
+	if !l.client.SupportsOPATestProvider() {
+		l.log.Message("processTestLocationsUpdate called but client does not support opaTestProvider")
+
+		return nil
+	}
+
 	if l.ignoreURI(fileURI) {
 		return nil
 	}
