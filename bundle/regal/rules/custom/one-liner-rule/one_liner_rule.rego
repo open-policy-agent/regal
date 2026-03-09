@@ -28,10 +28,7 @@ report contains violation if {
 	# Note that this will give us the text representation of the whole rule,
 	# which we'll need as the "if" is only visible here ¯\_(ツ)_/¯
 	rule_location := util.to_location_object(rule.location)
-	lines := [line |
-		some s in split(rule_location.text, "\n")
-		line := trim_space(s)
-	]
+	lines := [trim_space(line) | some line in split(rule_location.text, "\n")]
 
 	regex.match(`\s+if`, lines[0])
 	_rule_body_brackets(lines)

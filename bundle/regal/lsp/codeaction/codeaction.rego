@@ -23,22 +23,22 @@ result["response"] := actions
 actions contains action if {
 	"quickfix" in only
 
-	some diag in input.params.context.diagnostics
+	some diagnostic in input.params.context.diagnostics
 
-	[title, args] := rules[diag.code]
+	[title, args] := rules[diagnostic.code]
 	action := {
 		"title": title,
 		"kind": "quickfix",
-		"diagnostics": [diag],
+		"diagnostics": [diagnostic],
 		"isPreferred": true,
 		"command": {
 			"title": title,
-			"command": $"regal.fix.{diag.code}",
+			"command": $"regal.fix.{diagnostic.code}",
 			"tooltip": title,
 			"arguments": [json.marshal(object.filter(
 				{
 					"target": input.params.textDocument.uri,
-					"diagnostic": diag,
+					"diagnostic": diagnostic,
 				},
 				args,
 			))],
@@ -47,22 +47,22 @@ actions contains action if {
 }
 
 # METADATA
-# description: Generic code action to ignore any rule in config from diag
+# description: Generic code action to ignore any rule in config from diagnostics
 actions contains action if {
 	"quickfix" in only
 
-	some diag in input.params.context.diagnostics
+	some diagnostic in input.params.context.diagnostics
 
 	action := {
 		"title": "Ignore this rule in config",
 		"kind": "quickfix",
-		"diagnostics": [diag],
+		"diagnostics": [diagnostic],
 		"isPreferred": false,
 		"command": {
 			"title": "Ignore this rule in config",
 			"command": "regal.config.disable-rule",
 			"tooltip": "Ignore this rule in config",
-			"arguments": [json.marshal({"diagnostic": diag})],
+			"arguments": [json.marshal({"diagnostic": diagnostic})],
 		},
 	}
 }
@@ -76,19 +76,19 @@ actions contains action if {
 	input.regal.client.identifier == clients.vscode
 	"quickfix" in only
 
-	some diag in input.params.context.diagnostics
+	some diagnostic in input.params.context.diagnostics
 
 	# always show the docs link
-	title := $"Show documentation for {diag.code}"
+	title := $"Show documentation for {diagnostic.code}"
 	action := {
 		"title": title,
 		"kind": "quickfix",
-		"diagnostics": [diag],
+		"diagnostics": [diagnostic],
 		"command": {
 			"title": title,
 			"command": "vscode.open",
 			"tooltip": title,
-			"arguments": [diag.codeDescription.href],
+			"arguments": [diagnostic.codeDescription.href],
 		},
 	}
 }

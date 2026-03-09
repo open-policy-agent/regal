@@ -26,14 +26,14 @@ report contains violation if {
 	next.terms.symbols[0].value[0].value[1].value in {"member_2", "member_3"}
 
 	# Last, ensure that the same ref that was counted is the one iterated over
-	a := expr.terms[1].value[1]
-	a.type == "ref"
+	term := expr.terms[1].value[1]
+	term.type == "ref"
 
-	b := regal.last(next.terms.symbols[0].value)
-	b.type == "ref"
+	other := regal.last(next.terms.symbols[0].value)
+	other.type == "ref"
 
-	count(a.value) == count(b.value)
-	ast.is_terms_subset(a.value, b.value)
+	count(term.value) == count(other.value)
+	ast.is_terms_subset(term.value, other.value)
 
 	violation := result.fail(rego.metadata.chain(), result.location(expr.terms[1]))
 }

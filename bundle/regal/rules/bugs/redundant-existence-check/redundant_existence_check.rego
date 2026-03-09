@@ -28,14 +28,14 @@ report contains violation if {
 #  would certainly be possible, the cost does not justify the benefit, as it's
 #  quite unlikely that existence checks are found there
 report contains violation if {
-	some func in ast.functions
+	some rule in ast.functions
 
 	arg_vars := {term.value |
-		some term in func.head.args
+		some term in rule.head.args
 		term.type == "var"
 	}
 
-	some expr in func.body
+	some expr in rule.body
 
 	not expr.negated
 	expr.terms.type == "var"

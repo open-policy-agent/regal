@@ -112,7 +112,7 @@ aggregate_report contains violation if {
 _var_to_ref(terms) := [terms] if terms.type == "var"
 _var_to_ref(terms) := terms.value if terms.type == "ref"
 
-_to_string(ref) := concat(".", [part.value | some part in ref])
+_to_string(ref) := concat(".", [term.value | some term in ref])
 
 _resolve(ref, _, _) := _to_string(ref) if ref[0].value == "data"
 
@@ -122,7 +122,7 @@ _resolve(ref, _, imported_symbols) := concat(".", resolved) if {
 
 	resolved := array.concat(
 		imported_symbols[ref[0].value],
-		[part.value | some part in array.slice(ref, 1, 100)],
+		[term.value | some term in array.slice(ref, 1, 100)],
 	)
 }
 
@@ -132,10 +132,7 @@ _resolve(ref, pkg_path, imported_symbols) := concat(".", resolved) if {
 
 	not imported_symbols[ref[0].value]
 
-	resolved := array.concat(
-		pkg_path,
-		[part.value | some part in ref],
-	)
+	resolved := array.concat(pkg_path, [term.value | some term in ref])
 }
 
 # METADATA

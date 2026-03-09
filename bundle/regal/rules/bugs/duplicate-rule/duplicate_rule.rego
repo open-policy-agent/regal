@@ -33,32 +33,32 @@ _message(locations) := sprintf(
 	count(locations) > 1
 }
 
-_rules_as_text := [util.to_location_object(rule.location).text | some rule in input.rules]
-
 _duplicates contains indices if {
+	rules_as_text := [util.to_location_object(rule.location).text | some rule in input.rules]
+
 	# Remove whitespace from textual representation of rule and create a hash from the result.
 	# This provides a decent, and importantly *cheap*, approximation of duplicates. We can then
 	# parse the text of these suspected duplicate rules to get a more exact result.
-	rules_hashed := [crypto.md5(regex.replace(text, `\s+`, "")) | some text in _rules_as_text]
+	rules_hashed := [crypto.md5(regex.replace(text, `\s+`, "")) | some text in rules_as_text]
 
 	some possible_duplicates in util.find_duplicates(rules_hashed)
 
 	# need to include the original index here to be able to backtrack that to the rule
-	asts := {index: ast |
+	parsed_by_index := {index: parsed |
 		some index in possible_duplicates
 
-		module := sprintf("package p\n\nimport rego.v1\n\n%s", [_rules_as_text[index]])
+		module := sprintf("package p\n\nimport rego.v1\n\n%s", [rules_as_text[index]])
 
 		# note that we _don't_ use regal.parse_module here, as we do not want location
 		# information — only the structure of the AST must match
-		ast := rego.parse_module("", module)
+		parsed := rego.parse_module("", module)
 	}
 
-	keys := [key | some key, _ in asts]
+	keys := [key | some key, _ in parsed_by_index]
 
 	indices := [keys[index] |
-		some dups in util.find_duplicates([val | some val in asts])
-		some index in dups
+		some duplicate in util.find_duplicates([val | some val in parsed_by_index])
+		some index in duplicate
 	]
 
 	indices != []

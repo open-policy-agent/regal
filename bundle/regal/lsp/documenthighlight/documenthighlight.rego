@@ -142,9 +142,9 @@ _attribute_from_text(line) := word if {
 		"# custom:",
 	})
 
-	idx := indexof(line, ":")
-	idx != -1
+	i := indexof(line, ":")
+	i != -1
 
 	# Trim the leading '# ' and anything following (and including) ':'
-	word := substring(line, 2, idx - 2)
+	word := substring(line, 2, i - 2)
 }

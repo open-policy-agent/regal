@@ -56,8 +56,8 @@ has_term_var(terms) if {
 
 # converting to string until https://github.com/open-policy-agent/opa/issues/6736 is fixed
 _rule_index(rule) := rule_index_strings[i] if {
-	some i, r in _rules
-	r == rule
+	some i
+	rule == _rules[i]
 }
 
 # hack to work around the different input models of linting vs. the lsp package.. we
@@ -119,9 +119,9 @@ found.vars[rule_index].ref contains term if {
 	some rule_index, ref
 	found.refs[rule_index][ref]
 
-	some x, term in ref.value
+	some i, term in ref.value
 
-	x > 0
+	i > 0
 	term.type == "var"
 }
 
@@ -165,9 +165,9 @@ found.vars[rule_index].somein contains var if {
 
 	arr := value[0].value
 
-	some var in array.flatten([_find_nested_vars(arr[1]), [v |
+	some var in array.flatten([_find_nested_vars(arr[1]), [var |
 		count(arr) == 4
-		some v in _find_nested_vars(arr[2])
+		some var in _find_nested_vars(arr[2])
 	]])
 }
 

@@ -9,7 +9,7 @@ test_fail_package_name_does_not_match_pattern if {
 		with config.rules as conventions([{"targets": ["package"], "pattern": `^foo\.bar\..+$`}])
 
 	r == {expected(
-		`Naming convention violation: package name "foo.bar" does not match pattern '^foo\.bar\..+$'`,
+		`Naming violation: package name "foo.bar" does not match configured convention`,
 		{
 			"col": 1,
 			"file": "policy.rego",
@@ -35,7 +35,7 @@ test_fail_rule_name_does_not_match_pattern if {
 		with config.rules as conventions([{"targets": ["rule"], "pattern": "^[a-z]+$"}])
 
 	r == {expected(
-		`Naming convention violation: rule name "FOO" does not match pattern '^[a-z]+$'`,
+		`Naming violation: rule name "FOO" does not match configured convention`,
 		{
 			"col": 1,
 			"file": "policy.rego",
@@ -61,7 +61,7 @@ test_fail_function_name_does_not_match_pattern if {
 		with config.rules as conventions([{"targets": ["function"], "pattern": "^[a-z]+$"}])
 
 	r == {expected(
-		`Naming convention violation: function name "fooBar" does not match pattern '^[a-z]+$'`,
+		`Naming violation: function name "fooBar" does not match configured convention`,
 		{
 			"col": 1,
 			"file": "policy.rego",
@@ -93,7 +93,7 @@ test_fail_var_name_does_not_match_pattern if {
 		with config.rules as conventions([{"targets": ["variable"], "pattern": "^[a-z_]+$"}])
 
 	r == {expected(
-		`Naming convention violation: variable name "fooBar" does not match pattern '^[a-z_]+$'`,
+		`Naming violation: variable name "fooBar" does not match configured convention`,
 		{
 			"col": 3,
 			"file": "policy.rego",
@@ -139,7 +139,7 @@ test_fail_multiple_conventions if {
 
 	r == {
 		expected(
-			`Naming convention violation: package name "foo.bar" does not match pattern '^acmecorp\.[a-z_\.]+$'`,
+			`Naming violation: package name "foo.bar" does not match configured convention`,
 			{
 				"col": 1,
 				"file": "policy.rego",
@@ -152,7 +152,7 @@ test_fail_multiple_conventions if {
 			},
 		),
 		expected(
-			`Naming convention violation: rule name "foo" does not match pattern '^bar$|^foo_bar$'`,
+			`Naming violation: rule name "foo" does not match configured convention`,
 			{
 				"col": 2,
 				"file": "policy.rego",
@@ -165,7 +165,7 @@ test_fail_multiple_conventions if {
 			},
 		),
 		expected(
-			`Naming convention violation: variable name "fooBar" does not match pattern '^bar$|^foo_bar$'`,
+			`Naming violation: variable name "fooBar" does not match configured convention`,
 			{
 				"col": 3,
 				"file": "policy.rego",
@@ -178,6 +178,44 @@ test_fail_multiple_conventions if {
 			},
 		),
 	}
+}
+
+test_fail_variable_name_does_not_match_name_in_list if {
+	policy := ast.policy(`
+	allow if {
+		fooBar := true
+		fooBar == true
+	}
+	`)
+	r := rule.report with input as policy
+		with config.rules as conventions([{"targets": ["var"], "names": ["foo_bar"]}])
+
+	r == {expected(
+		`Naming violation: variable name "fooBar" does not match configured convention`,
+		{
+			"col": 3,
+			"file": "policy.rego",
+			"row": 5,
+			"end": {
+				"col": 9,
+				"row": 5,
+			},
+			"text": "\t\tfooBar := true",
+		},
+	)}
+}
+
+test_success_variable_name_matches_name_in_list if {
+	policy := ast.policy(`
+	allow if {
+		foo_bar := true
+		foo_bar == true
+	}
+	`)
+	r := rule.report with input as policy
+		with config.rules as conventions([{"targets": ["variable"], "names": ["foo_bar"]}])
+
+	r == set()
 }
 
 expected(description, location) := {

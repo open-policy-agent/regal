@@ -5,7 +5,7 @@ package regal.rules.imports["ignored-import"]
 import data.regal.ast
 import data.regal.result
 
-_import_paths contains [p.value | some p in imp.path.value] if {
+_import_paths contains [term.value | some term in imp.path.value] if {
 	some imp in input.imports
 
 	imp.path.value[0].value in {"data", "input"}
@@ -18,11 +18,11 @@ report contains violation if {
 	ref.value[0].type == "var"
 	ref.value[0].value in {"data", "input"}
 
-	most_specific_match := regal.last(sort([ip |
-		ref_path := [p.value | some p in ref.value]
+	most_specific_match := regal.last(sort([import_path |
+		ref_path := [term.value | some term in ref.value]
 
-		some ip in _import_paths
-		array.slice(ref_path, 0, count(ip)) == ip
+		some import_path in _import_paths
+		array.slice(ref_path, 0, count(import_path)) == import_path
 	]))
 
 	violation := result.fail(rego.metadata.chain(), object.union(

@@ -9,12 +9,12 @@ import data.regal.result
 report contains violation if {
 	included_functions := ast.all_function_names - _excluded_functions
 
-	some fn
-	ast.function_calls[_][fn].name in included_functions
+	some fun
+	ast.function_calls[_][fun].name in included_functions
 
-	count(fn.args) > count(ast.all_functions[fn.name].decl.args)
+	count(fun.args) > count(ast.all_functions[fun.name].decl.args)
 
-	violation := result.fail(rego.metadata.chain(), result.location(regal.last(fn.args)))
+	violation := result.fail(rego.metadata.chain(), result.location(regal.last(fun.args)))
 }
 
 _excluded_functions contains "print"

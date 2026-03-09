@@ -20,7 +20,7 @@ report contains violation if {
 
 _ref_with_vars(ref) if {
 	count(ref) > 2
-	some i, part in ref
+	some i, term in ref
 	i > 0
-	part.type == "var"
+	term.type == "var"
 }

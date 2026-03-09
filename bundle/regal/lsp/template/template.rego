@@ -23,9 +23,9 @@ render_for_builtin(builtin) := content if {
 _docs_link(builtin, category) := link if {
 	builtin.categories != []
 
-	link := [trim_prefix(bc, "url=") |
-		some bc in builtin.categories
-		startswith(bc, "url=")
+	link := [trim_prefix(_category, "url=") |
+		some _category in builtin.categories
+		startswith(_category, "url=")
 	][0]
 } else := sprintf("https://www.openpolicyagent.org/docs/policy-reference/#builtin-%s-%s", [
 	category,
@@ -60,7 +60,7 @@ _category(builtin) := builtin.categories[0] if {
 # here to work around the **extremely** annoying behavior of strings.render_template
 # where missing keys are treated as fatal errors instead of giving template authors a
 # chance to handle this: https://github.com/open-policy-agent/opa/issues/7931
-_to_safe_builtin(builtin) := safe if {
+_to_safe_builtin(builtin) := obj if {
 	safe_attributes := {
 		"description": "(no description)",
 		"categories": [],
@@ -75,7 +75,7 @@ _to_safe_builtin(builtin) := safe if {
 	}
 
 	merged := object.union(safe_attributes, builtin)
-	safe := object.union(merged, {"decl": {"args": [_to_safe_arg(i, arg) | some i, arg in merged.decl.args]}})
+	obj := object.union(merged, {"decl": {"args": [_to_safe_arg(i, arg) | some i, arg in merged.decl.args]}})
 }
 
 _to_safe_arg(i, arg) := arg if {

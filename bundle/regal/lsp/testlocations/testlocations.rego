@@ -14,11 +14,11 @@ import data.regal.result as rs
 #   the location (which has start and end char range too).
 result contains object.union(loc, {
 	"package": _package_ref_string,
-	"name": ast.ref_static_to_string(test.head.ref),
+	"name": ast.ref_static_to_string(rule.head.ref),
 }) if {
-	some test in ast.tests
+	some rule in ast.tests
 
-	loc := rs.location(test.head)
+	loc := rs.location(rule.head)
 }
 
 _package_ref_string := ast.ref_to_string(input.package.path)

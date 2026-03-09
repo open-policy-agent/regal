@@ -23,8 +23,8 @@ report contains violation if {
 # description: report pointless imports of rule paths defined in the same module
 report contains violation if {
 	rule_paths := {path |
-		rref := input.rules[_].head.ref
-		path := ast.extend_ref_terms(input.package.path, rref)
+		ref := input.rules[_].head.ref
+		path := ast.extend_ref_terms(input.package.path, ref)
 	}
 	imp_path := input.imports[_].path
 

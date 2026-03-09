@@ -13,7 +13,10 @@ report contains violation if {
 	not startswith(term.value, "$")
 	not term.value in ast.imported_identifiers
 	not term.value in ast.rule_names
-	not true in {true | some v in ast.found.vars[rule_index].some; v.value == term.value}
+	not true in {true |
+		some var in ast.found.vars[rule_index].some
+		var.value == term.value
+	}
 
 	rule := input.rules[to_number(rule_index)]
 

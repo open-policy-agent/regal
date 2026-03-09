@@ -16,10 +16,10 @@ excluded_file(category, title, file) if {
 # description: |
 #   pattern_compiler transforms a glob pattern into a set of glob
 #   patterns to make the combined set behave as .gitignore
-patterns_compiler(patterns) := {pat |
+patterns_compiler(patterns) := {compiled |
 	some pattern in patterns
-	some p in _leading_doublestar_pattern(_internal_slashes(pattern))
-	some pat in _trailing_slash(p)
+	some processed in _leading_doublestar_pattern(_internal_slashes(pattern))
+	some compiled in _trailing_slash(processed)
 } if {
 	patterns != []
 }

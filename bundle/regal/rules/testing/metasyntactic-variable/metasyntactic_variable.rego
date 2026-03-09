@@ -24,9 +24,9 @@ _metasyntactic := {
 
 report contains violation if {
 	some rule in input.rules
-	some part in ast.named_refs(rule.head.ref)
+	some term in ast.named_refs(rule.head.ref)
 
-	lower(part.value) in _metasyntactic
+	lower(term.value) in _metasyntactic
 
 	# In case we have chained rule bodies — only flag the location where we have an actual name:
 	# foo {
@@ -36,7 +36,7 @@ report contains violation if {
 	# }
 	not ast.is_chained_rule_body(rule, input.regal.file.lines)
 
-	violation := result.fail(rego.metadata.chain(), result.location(part))
+	violation := result.fail(rego.metadata.chain(), result.location(term))
 }
 
 report contains violation if {

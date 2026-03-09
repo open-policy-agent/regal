@@ -36,9 +36,9 @@ _possible_offending_prefixes contains concat("", formatted_combination) if {
 
 	count(combination) > 1
 
-	formatted_combination := array.flatten([combination[0], [w |
+	formatted_combination := array.flatten([combination[0], [formatted |
 		some word in util.rest(combination)
 
-		w := regex.replace(word, `^[a-z]`, upper(substring(word, 0, 1)))
+		formatted := regex.replace(word, `^[a-z]`, upper(substring(word, 0, 1)))
 	]])
 }

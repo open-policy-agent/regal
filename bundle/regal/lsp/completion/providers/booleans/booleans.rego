@@ -20,17 +20,17 @@ items contains item if {
 
 	word := location.word_at(line, input.params.position.character + 1)
 
-	some b in ["true", "false"]
+	some str in ["true", "false"]
 
-	startswith(b, word.text)
+	startswith(str, word.text)
 
 	item := {
-		"label": b,
+		"label": str,
 		"kind": kind.constant,
 		"detail": "boolean value",
 		"textEdit": {
 			"range": location.word_range(word, input.params.position),
-			"newText": b,
+			"newText": str,
 		},
 	}
 }

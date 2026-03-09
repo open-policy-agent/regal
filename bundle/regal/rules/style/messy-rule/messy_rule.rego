@@ -6,15 +6,15 @@ import data.regal.ast
 import data.regal.result
 
 report contains violation if {
-	some i, rule1 in input.rules
+	some i, rule in input.rules
 
 	# tests aren't really incremental rules, and other rules
 	# will flag multiple rules with the same name
-	not startswith(trim_prefix(rule1.head.ref[0].value, "todo_"), "test_")
+	not startswith(trim_prefix(rule.head.ref[0].value, "todo_"), "test_")
 
 	cur_name := ast.rule_names_ordered[i]
 
-	some j, rule2 in input.rules
+	some j, other in input.rules
 
 	j > i
 
@@ -24,5 +24,5 @@ report contains violation if {
 	previous_name := ast.rule_names_ordered[j - 1]
 	previous_name != nxt_name
 
-	violation := result.fail(rego.metadata.chain(), result.location(rule2))
+	violation := result.fail(rego.metadata.chain(), result.location(other))
 }

@@ -16,6 +16,101 @@ rules:
       ignore:
         files:
           - "*_test.rego"
+    naming-convention:
+      # Regal naming conventions configuration. Note that this is disabled by default, and
+      # is meant only to be run every once in a while to ensure we stick to our conventions.
+      # These conventions are not static, and the correct "fix" to a naming violation may
+      # very well be to update this configuration rather than the code.
+      #
+      # To check compliance:
+      # regal lint --enable naming-convention bundle
+      #
+      # See naming.md for rationale and examples of these conventions.
+      # NOTE: that this check is not automated, but intended to be used occasionally.
+      level: ignore
+      conventions:
+        - pattern: '\b[a-z_]{5,}\b'
+          names:
+            # indices
+            - i
+            - j
+            - k
+            # count / length
+            - n
+            # rego types
+            - arr
+            - obj
+            - set
+            - str
+            - num
+            # imaginary 'types'
+            - coll
+            - seq
+            - item
+            # ast types
+            - pkg
+            - imp
+            - ref
+            - refs
+            - var
+            - vars
+            - fun
+            - arg
+            - args
+            - term
+            - terms
+            - expr
+            - exprs
+            - rule
+            - head
+            - body
+            - call
+            - comp
+            - node
+            # ast attributes and related
+            - key
+            - keys
+            - val
+            - vals
+            - type
+            # common
+            - file
+            - text
+            - line
+            - rows
+            - cols
+            - loc
+            - end
+            - col
+            - row
+            - agg
+            - aggs
+            - cfg
+            - word
+            - start
+            - link
+            - len
+            - kind
+            - rest
+            - name
+            - pos
+            - sub
+            - sup
+            - last
+            - next
+            - lhs
+            - rhs
+            - path
+            - url
+            - uri
+            - other
+            - diff
+            - dir
+          targets:
+            - var
+      ignore:
+        files:
+          - "*_test.rego"
     narrow-argument:
       level: error
       exclude-args:
