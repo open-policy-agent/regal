@@ -210,6 +210,15 @@ found.symbols[rule_index] contains value.symbols if {
 }
 
 # METADATA
+# description: all every constructs found in module
+found.every[rule_index] contains terms if {
+	some rule_index, i
+	found.expressions[rule_index][i].terms.domain
+
+	terms := found.expressions[rule_index][i].terms
+}
+
+# METADATA
 # description: all comprehensions found in module
 found.comprehensions[rule_index] contains value if {
 	some i, rule_index in rule_index_strings
