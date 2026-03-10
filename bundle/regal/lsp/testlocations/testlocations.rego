@@ -13,8 +13,10 @@ import data.regal.result as rs
 #   result contains a list of locations. A location is test name, package and
 #   the location (which has start and end char range too).
 result contains object.union(loc, {
+	"package_path": ast.package_path,
 	"package": _package_ref_string,
 	"name": ast.ref_static_to_string(rule.head.ref),
+	"root": input.regal.file.root,
 }) if {
 	some rule in ast.tests
 
