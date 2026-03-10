@@ -69,7 +69,7 @@ func ToAST(name, content string, mod *ast.Module, collect bool) (ast.Value, erro
 	return value, nil
 }
 
-func ToASTWithRegalContext(name, content string, mod *ast.Module, regalContext ast.Object) (ast.Value, error) {
+func ToASTWithRegalContext(mod *ast.Module, regalContext ast.Object) (ast.Value, error) {
 	value, err := module.ToValue(mod)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert module to value: %w", err)

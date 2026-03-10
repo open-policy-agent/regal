@@ -86,7 +86,7 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 			)),
 		))
 
-	astValue, err := transform.ToASTWithRegalContext(l.toRelativePath(fileURI), contents, module, regalContext)
+	astValue, err := transform.ToASTWithRegalContext(module, regalContext)
 	if err != nil {
 		l.log.Message("failed to prepare AST for test locations: %s", err)
 

@@ -22,8 +22,6 @@ func (l *LanguageServer) handleRunTests(
 	ctx context.Context,
 	params types.RunTestsParams,
 ) (any, error) {
-	modules := l.cache.GetAllModules()
-
 	// Create new isolated store for this test run (NO SHARED STATE)
 	testStore := inmem.NewWithOpts(
 		inmem.OptRoundTripOnWrite(false),
@@ -74,7 +72,7 @@ func (l *LanguageServer) handleRunTests(
 	runner := tester.NewRunner().
 		SetCompiler(compiler).
 		SetStore(testStore).
-		SetModules(modules).
+		SetBundles(l.assembleBundles()).
 		SetRuntime(runtimeInfo).
 		CapturePrintOutput(true).
 		SetTimeout(5 * time.Second).
