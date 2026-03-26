@@ -47,7 +47,7 @@ type PrintHook struct {
 func (l *LanguageServer) Eval(
 	ctx context.Context, query string, input map[string]any, printHook print.Hook,
 ) (rego.ResultSet, error) {
-	regoArgs := prepareRegoArgs(ast.MustParseBody(query), l.assembleEvalBundles(), printHook, l.getLoadedConfig())
+	regoArgs := prepareRegoArgs(ast.MustParseBody(query), l.assembleBundles(), printHook, l.getLoadedConfig())
 
 	// TODO: Let's try to avoid preparing on each eval, but only when the contents
 	// of the workspace modules change, and before the user requests an eval.
@@ -93,13 +93,13 @@ func (l *LanguageServer) EvalInWorkspace(ctx context.Context, query string, inpu
 
 func prepareRegoArgs(
 	query ast.Body,
-	bundles map[string]bundle.Bundle,
+	bundles map[string]*bundle.Bundle,
 	printHook print.Hook,
 	cfg *config.Config,
 ) []func(*rego.Rego) {
 	bundleArgs := make([]func(*rego.Rego), 0, len(bundles))
-	for key, b := range bundles { //nolint:gocritic // expensive copy, but I don't think we can avoid it
-		bundleArgs = append(bundleArgs, rego.ParsedBundle(key, &b))
+	for key, b := range bundles {
+		bundleArgs = append(bundleArgs, rego.ParsedBundle(key, b))
 	}
 
 	schemaResolvers := rquery.SchemaResolvers()
@@ -146,7 +146,7 @@ func prepareRegoArgs(
 	return append(args, rego.ParsedBundle("internal", internalBundle))
 }
 
-func (l *LanguageServer) assembleEvalBundles() map[string]bundle.Bundle {
+func (l *LanguageServer) assembleBundles() map[string]*bundle.Bundle {
 	// Modules
 	modules := l.cache.GetAllModules()
 	moduleFiles := make([]bundle.ModuleFile, 0, len(modules))
@@ -163,16 +163,17 @@ func (l *LanguageServer) assembleEvalBundles() map[string]bundle.Bundle {
 		dataBundles = l.bundleCache.All()
 	}
 
-	allBundles := make(map[string]bundle.Bundle, len(dataBundles)+2)
+	allBundles := make(map[string]*bundle.Bundle, len(dataBundles)+2)
 	for k := range dataBundles {
 		if dataBundles[k].Manifest.Roots != nil {
-			allBundles[k] = dataBundles[k]
+			b := dataBundles[k]
+			allBundles[k] = &b
 		} else {
 			l.log.Message("bundle %s has no roots and will be skipped", k)
 		}
 	}
 
-	allBundles["workspace"] = bundle.Bundle{
+	allBundles["workspace"] = &bundle.Bundle{
 		Manifest: workspaceBundleManifest,
 		Modules:  moduleFiles,
 		Data:     emptyStringAnyMap, // Data is sourced from the dataBundles instead
@@ -181,7 +182,7 @@ func (l *LanguageServer) assembleEvalBundles() map[string]bundle.Bundle {
 	if hasCustomRules {
 		// If someone evaluates a custom Regal rule, provide them the Regal bundle
 		// in order to make all Regal functions available
-		allBundles["regal"] = *rbundle.Loaded()
+		allBundles["regal"] = rbundle.Loaded()
 	}
 
 	return allBundles
