@@ -172,8 +172,9 @@ func init() {
 
 func lint(args []string, params *lintParams) (result report.Report, err error) {
 	if params.profile && params.format != formatJSON {
-		return report.Report{}, fmt.Errorf("--profile requires --format json to display profiling data")
+		return report.Report{}, errors.New("--profile requires --format json to display profiling data")
 	}
+
 	ctx, cancel := getLinterContext(params.lintAndFixParams)
 	defer cancel()
 
