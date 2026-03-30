@@ -15,32 +15,27 @@ promoted_notices[category][title] contains original_notice if {
 	some category, title
 	notices := data.regal.rules[category][title].notices
 
-	some original_notice in notices
-
 	not config.user_config.rules[category][title]
-}
-
-promoted_notices[category][title] contains notice if {
-	some category, title
-	notices := data.regal.rules[category][title].notices
-
-	some notice in notices
-
-	rule_config := config.user_config.rules[category][title]
-	object.get(rule_config, "level", "") == "ignore"
-}
-
-promoted_notices[category][title] contains notice if {
-	some category, title
-	notices := data.regal.rules[category][title].notices
 
 	some original_notice in notices
+}
 
+promoted_notices[category][title] contains notice if {
+	some category, title
+	config.user_config.rules[category][title].level == "ignore"
+
+	some notice in data.regal.rules[category][title].notices
+}
+
+promoted_notices[category][title] contains object.union(notice, severity) if {
+	some category, title
 	rule_config := config.user_config.rules[category][title]
-	object.get(rule_config, "level", "") != "ignore"
 
 	# Use configured level as severity, or default to "error"
-	new_severity := object.get(rule_config, "level", "error")
+	level := object.get(rule_config, "level", "error")
+	level != "ignore"
 
-	notice := object.union(original_notice, {"severity": new_severity})
+	severity := {"severity": level}
+
+	some notice in data.regal.rules[category][title].notices
 }
