@@ -31,7 +31,9 @@ test_bar if {
 `
 
 	files := map[string]string{
-		"foo_test.rego": testRegoContents,
+		// needed to create a root for the test files.
+		".regal/config.yaml": "",
+		"foo_test.rego":      testRegoContents,
 	}
 
 	tempDir := testutil.TempDirectoryOf(t, files)

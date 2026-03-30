@@ -377,6 +377,9 @@
             },
             "rego_version": {
               "type": "string"
+            },
+            "root": {
+              "type": "string"
             }
           },
           "type": "object"

@@ -143,8 +143,7 @@ type LanguageServer struct {
 	bundleCache *bundles.Cache
 	queryCache  *query.Cache
 
-	regoRouter      *rego.RegoRouter
-	testingCompiler *ast.Compiler
+	regoRouter *rego.RegoRouter
 
 	// initializationGate blocks workers until the initialized notification is received
 	initializationGate chan struct{}
@@ -229,9 +228,6 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		loadedBuiltins:              concurrent.MapOf(make(map[string]map[string]*ast.Builtin)),
 		workspaceDiagnosticsPoll:    opts.WorkspaceDiagnosticsPoll,
 		loadedConfigAllRegoVersions: concurrent.MapOf(make(map[string]ast.RegoVersion)),
-		testingCompiler: compile.NewCompilerWithRegalBuiltins().
-			WithEnablePrintStatements(true).
-			WithUseTypeCheckAnnotations(true),
 	}
 
 	ls.regoRouter = rego.NewRegoRouter(ctx, store, qc, rego.Providers{
