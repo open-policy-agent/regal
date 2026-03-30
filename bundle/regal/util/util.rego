@@ -235,11 +235,10 @@ repeat(str, n) := replace(sprintf("%-*s", [n, " "]), " ", str)
 # description: |
 #   adds source files for each aggregate in aggs array, which is only useful
 #   for testing, when this isn't done in the main routing logic
-with_source_files(aggregator, aggs) := {file: {aggregator: agg} |
+with_source_files(aggregator, aggs) := {$"p{i + 1}.rego": {aggregator: agg} |
 	is_string(aggregator)
 
 	some i, agg in aggs
-	file := sprintf("p%d.rego", [i + 1])
 }
 
 # METADATA
