@@ -185,17 +185,17 @@ test_fail_single_some if {
 	r := rule.report with input as ast.policy(`
 allow if {
 	some email
-	endswith(input.email, "acmecorp.com")
 	user.emails[email] == input.email
+	endswith(input.email, "acmecorp.com")
 }`)
 
 	r == with_location({
 		"col": 2,
 		"file": "policy.rego",
-		"row": 6,
+		"row": 7,
 		"end": {
 			"col": 39,
-			"row": 6,
+			"row": 7,
 		},
 		"text": "\tendswith(input.email, \"acmecorp.com\")",
 	})
@@ -324,6 +324,27 @@ test_success_not_loop_unification if {
 	allow if {
 		x = ["accounts", _]
 		y
+	}`)
+
+	r == set()
+}
+
+# confirm fix for: https://github.com/open-policy-agent/regal/issues/1443
+test_ref_loop_output_var if {
+	r := rule.report with input as ast.policy(`r if {
+		input[a].d[_]
+		a == 1
+	}`)
+
+	r == set()
+}
+
+# mentioned in: https://github.com/open-policy-agent/regal/issues/1443
+test_non_ref_output_var if {
+	r := rule.report with input as ast.policy(`r if {
+		some petid
+		input.path = ["pets", petid]
+		input.user == input.owner
 	}`)
 
 	r == set()
