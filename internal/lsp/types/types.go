@@ -631,5 +631,15 @@ type (
 		Success bool `json:"success"`
 	}
 
+	MessageActionItem struct {
+		Title string `json:"title"`
+	}
+
+	ShowMessageRequestParams struct {
+		Type    uint                `json:"type"`
+		Message string              `json:"message"`
+		Actions []MessageActionItem `json:"actions"`
+	}
+
 	iuint interface{ ~int | ~uint }
 )
