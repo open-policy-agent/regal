@@ -165,6 +165,9 @@ type LanguageServer struct {
 
 	workspaceRootURI         string
 	workspaceDiagnosticsPoll time.Duration
+
+	// Flag used to suppress input.json prompt if user chooses to ignore it
+	supressInputPrompt bool
 }
 
 // lintFileJob is sent to the lintFileJobs channel to trigger a
@@ -2582,6 +2585,8 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 
 	var inputMap map[string]any
 
+	var inputPath string
+
 	// When the first comment in the file is `regal eval: use-as-input`, the AST of that module is
 	// used as the input rather than the contents of input.json/yaml. This is a development feature for
 	// working on rules (built-in or custom), allowing querying the AST of the module directly.
@@ -2597,7 +2602,33 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		// Normal mode — try to find the input.json/yaml file in the workspace and use as input
 		// NOTE that we don't break on missing input, as some rules don't depend on that, and should
 		// still be evaluable. We may consider returning some notice to the user though.
-		_, inputMap = rio.FindInput(uri.ToPath(args.Target), l.workspacePath())
+		inputPath, inputMap = rio.FindInput(uri.ToPath(args.Target), l.workspacePath())
+		if inputPath == "" && !l.supressInputPrompt {
+			var action types.MessageActionItem
+
+			reqParams := types.ShowMessageRequestParams{
+				Type: 3, // info
+				Message: "No input.json/yaml file was found. " +
+					"This file is used to provide input data to your rules. " +
+					"Would you like to create one?",
+				Actions: []types.MessageActionItem{
+					{Title: "Yes"},
+					{Title: "No"},
+					{Title: "Ignore"},
+				},
+			}
+
+			if err = l.conn.Call(ctx, "window/showMessageRequest", reqParams, &action); err != nil {
+				l.log.Message("window/showMessageRequest failed: %v", err)
+			} else if action.Title == "Yes" {
+				inputFile := filepath.Join(l.workspacePath(), "input.json")
+				if err = os.WriteFile(inputFile, []byte("{}\n"), 0o600); err != nil {
+					l.log.Message("failed to create input.json: %v", err)
+				}
+			} else if action.Title == "Ignore" {
+				l.supressInputPrompt = true
+			}
+		}
 	}
 
 	var result EvalResult
