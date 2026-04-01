@@ -182,13 +182,13 @@ found.vars[rule_index].some contains term if {
 }
 
 # METADATA
-# description: all refs found in module
-found.refs[rule_index] contains value if {
+# description: all ref terms found in module
+found.refs[rule_index] contains term if {
 	some i, rule_index in rule_index_strings
 
-	walk(_rules[i], [_, value])
+	walk(_rules[i], [_, term])
 
-	value.type == "ref"
+	term.type == "ref"
 }
 
 # METADATA

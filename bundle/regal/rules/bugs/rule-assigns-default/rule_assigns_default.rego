@@ -1,4 +1,3 @@
-# regal eval:use-as-input
 # METADATA
 # description: Rule assigned its default value
 package regal.rules.bugs["rule-assigns-default"]
