@@ -276,6 +276,8 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
 
+	// Needed to add a polling loop to wait for the module to be parsed before running the eval command.
+	// Possibly a better way to do this, but wasn't sure.
 	for {
 		if _, _, ok := ls.cache.GetContentAndModule(mainRegoURI); ok {
 			break
@@ -299,6 +301,7 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 		Arguments: []any{string(argsJSON)},
 	}, &executeResponse))
 
+	// Similar to above, but for input.json. Checks if its been created until the loop hits the timeout.
 	select {
 	case <-inputJSONCreated:
 		for {
