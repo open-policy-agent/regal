@@ -101,6 +101,8 @@ rules:
       level: error
     single-item-in:
       level: error
+    superfluous-object-get:
+      level: error
     use-array-flatten:
       level: error
     use-contains:
