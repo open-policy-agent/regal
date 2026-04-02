@@ -210,6 +210,8 @@ x := y if {
 
 use_assignment = "oparator"
 
+superfluous_object_get if object.get(input, ["path", "to", "value"], "default") == "expected"
+
 rule_length if {
 	input.x1
 	input.x2
