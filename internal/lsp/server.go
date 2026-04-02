@@ -4,6 +4,7 @@ package lsp
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -2614,12 +2615,31 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 				},
 			}
 
-			if err = l.conn.Call(ctx, "window/showMessageRequest", reqParams, &action); err != nil {
+			showMsgCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
+
+			if err = l.conn.Call(showMsgCtx, "window/showMessageRequest", reqParams, &action); err != nil {
 				l.log.Message("window/showMessageRequest failed: %v", err)
 			} else if action.Title == "Yes" {
-				inputFile := filepath.Join(l.workspacePath(), "input.json")
-				if err = os.WriteFile(inputFile, []byte("{}\n"), 0o600); err != nil {
-					l.log.Message("failed to create input.json: %v", err)
+				skeleton := map[string]any{}
+
+				ruleName := strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
+				for _, rule := range module.Rules {
+					if rule.Head.Name.String() == ruleName {
+						skeleton = inputSkeletonFromRule(rule)
+
+						break
+					}
+				}
+
+				data, merr := json.MarshalIndent(skeleton, "", "  ")
+				if merr != nil {
+					l.log.Message("failed to marshal input skeleton: %v", merr)
+				} else {
+					inputFile := filepath.Join(l.workspacePath(), "input.json")
+					if err = os.WriteFile(inputFile, append(data, '\n'), 0o600); err != nil {
+						l.log.Message("failed to create input.json: %v", err)
+					}
 				}
 			} else if action.Title == "Ignore" {
 				l.supressInputPrompt = true
