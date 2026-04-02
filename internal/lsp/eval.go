@@ -202,3 +202,37 @@ func (h PrintHook) Print(ctx print.Context, msg string) error {
 
 	return nil
 }
+
+func inputSkeletonFromRule(rule *ast.Rule) map[string]any {
+	root := map[string]any{}
+
+	ast.WalkRefs(rule, func(ref ast.Ref) bool {
+		// We only want input refs
+		if len(ref) < 2 || !ref[0].Equal(ast.InputRootDocument) {
+			return false
+		}
+
+		node := root
+
+		for _, term := range ref[1 : len(ref)-1] {
+			key := strings.Trim(term.Value.String(), `"`)
+			// If there's no object for this part of the path, create one
+			if _, ok := node[key]; !ok {
+				node[key] = map[string]any{}
+			}
+			// If the object exists, make it the starting point for the next check
+			if child, ok := node[key].(map[string]any); ok {
+				node = child
+			}
+		}
+
+		leaf := strings.Trim(ref[len(ref)-1].Value.String(), `"`)
+		if _, ok := node[leaf]; !ok {
+			node[leaf] = "EXAMPLE"
+		}
+
+		return false
+	})
+
+	return root
+}
