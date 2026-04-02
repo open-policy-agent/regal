@@ -213,6 +213,7 @@ func inputSkeletonFromRule(rule *ast.Rule) map[string]any {
 		}
 
 		node := root
+
 		for _, term := range ref[1 : len(ref)-1] {
 			key := strings.Trim(term.Value.String(), `"`)
 			// If there's no object for this part of the path, create one

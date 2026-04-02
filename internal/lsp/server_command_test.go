@@ -306,6 +306,13 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 	case <-inputJSONCreated:
 		for {
 			if _, err := os.Stat(filepath.Join(tempDir, "input.json")); err == nil {
+				contents, err := os.ReadFile(filepath.Join(tempDir, "input.json"))
+				if err != nil {
+					t.Fatalf("failed to read input.json: %s", err)
+				}
+
+				must.Equal(t, "{\n  \"foo\": \"EXAMPLE\"\n}\n", string(contents))
+
 				break
 			}
 
