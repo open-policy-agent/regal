@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -235,5 +236,84 @@ allow if {
 		}
 	case <-timeout.C:
 		t.Fatal("timeout waiting for regal/showExplorerResult notification")
+	}
+}
+
+func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	inputJSONCreated := make(chan struct{}, 1)
+
+	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
+		if req.Method == "window/showMessageRequest" {
+			inputJSONCreated <- struct{}{}
+
+			return types.MessageActionItem{Title: "Yes"}, nil
+		}
+
+		return struct{}{}, nil
+	}
+
+	tempDir := t.TempDir()
+	ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
+
+	go ls.StartCommandWorker(ctx)
+
+	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
+
+	if err := connClient.Notify(ctx, "textDocument/didOpen", types.DidOpenTextDocumentParams{
+		TextDocument: types.TextDocumentItem{
+			URI:  mainRegoURI,
+			Text: "package test\nallow if { input.foo == \"bar\" }\n",
+		},
+	}); err != nil {
+		t.Fatalf("failed to send didOpen: %s", err)
+	}
+
+	timeout := time.NewTimer(determineTimeout())
+	defer timeout.Stop()
+
+	for {
+		if _, _, ok := ls.cache.GetContentAndModule(mainRegoURI); ok {
+			break
+		}
+
+		select {
+		case <-timeout.C:
+			t.Fatal("timed out waiting for module to be parsed")
+		default:
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+
+	commandArgs := types.CommandArgs{Target: mainRegoURI, Query: "data.test.allow"}
+	argsJSON := must.Return(encoding.JSON().Marshal(commandArgs))(t)
+
+	var executeResponse any
+
+	must.Equal(t, nil, connClient.Call(ctx, "workspace/executeCommand", types.ExecuteCommandParams{
+		Command:   "regal.eval",
+		Arguments: []any{string(argsJSON)},
+	}, &executeResponse))
+
+	select {
+	case <-inputJSONCreated:
+		for {
+			if _, err := os.Stat(filepath.Join(tempDir, "input.json")); err == nil {
+				break
+			}
+
+			select {
+			case <-timeout.C:
+				t.Fatal("timed out waiting for input.json to be created")
+			default:
+				time.Sleep(50 * time.Millisecond)
+			}
+		}
+	case <-timeout.C:
+		t.Fatal("timed out waiting for window/showMessageRequest")
 	}
 }
