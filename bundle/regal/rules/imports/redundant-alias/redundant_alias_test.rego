@@ -1,7 +1,7 @@
 package regal.rules.imports["redundant-alias_test"]
 
 import data.regal.ast
-import data.regal.config
+
 import data.regal.rules.imports["redundant-alias"] as rule
 
 test_fail_redundant_alias if {
@@ -12,7 +12,7 @@ test_fail_redundant_alias if {
 		"description": "Redundant alias",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-alias", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/redundant-alias",
 		}],
 		"title": "redundant-alias",
 		"location": {

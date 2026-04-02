@@ -1,5 +1,8 @@
 # METADATA
 # description: Yoda condition
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/yoda-condition
 package regal.rules.style["yoda-condition"]
 
 import data.regal.ast

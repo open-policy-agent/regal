@@ -1,5 +1,8 @@
 # METADATA
 # description: Redundant alias
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/redundant-alias
 package regal.rules.imports["redundant-alias"]
 
 import data.regal.result

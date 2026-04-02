@@ -1,5 +1,8 @@
 # METADATA
 # description: Import declared after rule
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/import-after-rule
 package regal.rules.imports["import-after-rule"]
 
 import data.regal.result

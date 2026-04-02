@@ -89,7 +89,10 @@ test_foo if true
 		"location": {
 			"col": 1,
 			"row": 3,
-			"end": {"col": 9, "row": 3},
+			"end": {
+				"col": 9,
+				"row": 3,
+			},
 			"file": "file:///foo/foo.rego",
 			"text": "test_foo if true",
 		},

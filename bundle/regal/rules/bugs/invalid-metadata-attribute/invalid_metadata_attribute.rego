@@ -1,5 +1,8 @@
 # METADATA
 # description: Invalid attribute in metadata annotation
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/invalid-metadata-attribute
 package regal.rules.bugs["invalid-metadata-attribute"]
 
 import data.regal.ast

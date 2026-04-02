@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer `some .. in` for iteration
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/prefer-some-in-iteration
 package regal.rules.style["prefer-some-in-iteration"]
 
 import data.regal.ast

@@ -1,7 +1,6 @@
 package regal.rules.bugs["inconsistent-args_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["inconsistent-args"] as rule
 
@@ -100,7 +99,7 @@ expected := {
 	"level": "error",
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/inconsistent-args", "bugs"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/inconsistent-args",
 	}],
 	"title": "inconsistent-args",
 	"location": {"file": "policy.rego"},

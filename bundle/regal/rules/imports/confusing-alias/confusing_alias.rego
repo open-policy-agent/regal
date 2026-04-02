@@ -1,5 +1,8 @@
 # METADATA
 # description: Confusing alias of existing import
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/confusing-alias
 package regal.rules.imports["confusing-alias"]
 
 import data.regal.ast

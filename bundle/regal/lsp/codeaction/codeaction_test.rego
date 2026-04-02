@@ -225,7 +225,16 @@ test_code_actions_empty_only_means_all if {
 _diagnostics["opa-fmt"] := {
 	"code": "opa-fmt",
 	"message": "Use opa fmt to format this file",
-	"range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}},
+	"range": {
+		"start": {
+			"line": 0,
+			"character": 0,
+		},
+		"end": {
+			"line": 0,
+			"character": 1,
+		},
+	},
 }
 
 # Silly object.union only to appease the type checker, who for some reason thinks that
@@ -236,7 +245,16 @@ _diagnostics["use-assignment-operator"] := object.union(
 	{
 		"code": "use-assignment-operator",
 		"message": "Use := instead of = for assignment",
-		"range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 1}},
+		"range": {
+			"start": {
+				"line": 2,
+				"character": 0,
+			},
+			"end": {
+				"line": 2,
+				"character": 1,
+			},
+		},
 		"codeDescription": {"href": "https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator"},
 	},
 	{},

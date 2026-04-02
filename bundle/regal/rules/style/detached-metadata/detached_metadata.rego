@@ -1,5 +1,8 @@
 # METADATA
 # description: Detached metadata annotation
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/detached-metadata
 package regal.rules.style["detached-metadata"]
 
 import data.regal.ast

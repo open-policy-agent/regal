@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer importing packages over rules
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/prefer-package-imports
 package regal.rules.imports["prefer-package-imports"]
 
 import data.regal.ast

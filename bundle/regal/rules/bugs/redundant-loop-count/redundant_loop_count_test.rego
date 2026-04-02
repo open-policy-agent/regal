@@ -1,7 +1,6 @@
 package regal.rules.bugs["redundant-loop-count_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["redundant-loop-count"] as rule
 
@@ -29,7 +28,7 @@ test_fail_count_before_loop_gt_zero if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-loop-count", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/redundant-loop-count",
 		}],
 		"title": "redundant-loop-count",
 	}}
@@ -59,7 +58,7 @@ test_fail_count_before_loop_neq_zero if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-loop-count", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/redundant-loop-count",
 		}],
 		"title": "redundant-loop-count",
 	}}
@@ -89,7 +88,7 @@ test_fail_count_before_key_value_loop_gt_zero if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-loop-count", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/redundant-loop-count",
 		}],
 		"title": "redundant-loop-count",
 	}}
@@ -119,7 +118,7 @@ test_fail_count_before_key_value_loop_neq_zero if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-loop-count", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/redundant-loop-count",
 		}],
 		"title": "redundant-loop-count",
 	}}

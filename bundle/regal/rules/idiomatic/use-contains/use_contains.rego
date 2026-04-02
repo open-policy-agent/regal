@@ -1,5 +1,8 @@
 # METADATA
 # description: Use the `contains` keyword
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-contains
 package regal.rules.idiomatic["use-contains"]
 
 import data.regal.ast

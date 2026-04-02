@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer `==` for equality comparison
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/prefer-equals-comparison
 package regal.rules.idiomatic["prefer-equals-comparison"]
 
 import data.regal.ast

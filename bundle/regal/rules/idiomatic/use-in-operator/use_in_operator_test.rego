@@ -1,7 +1,7 @@
 package regal.rules.idiomatic["use-in-operator_test"]
 
 import data.regal.ast
-import data.regal.config
+
 import data.regal.rules.idiomatic["use-in-operator"] as rule
 
 test_fail_use_in_operator_string_lhs if {
@@ -245,7 +245,7 @@ expected := {
 	"level": "error",
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/use-in-operator", "idiomatic"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-in-operator",
 	}],
 	"title": "use-in-operator",
 	"location": {"file": "policy.rego"},

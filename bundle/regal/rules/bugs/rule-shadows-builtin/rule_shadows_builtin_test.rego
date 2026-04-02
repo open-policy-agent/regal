@@ -13,7 +13,7 @@ test_fail_rule_name_shadows_builtin if {
 		"description": "Rule name shadows built-in",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/rule-shadows-builtin", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/rule-shadows-builtin",
 		}],
 		"title": "rule-shadows-builtin",
 		"location": {
@@ -39,7 +39,7 @@ test_fail_rule_name_shadows_builtin_namespace if {
 		"description": "Rule name shadows built-in",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/rule-shadows-builtin", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/rule-shadows-builtin",
 		}],
 		"title": "rule-shadows-builtin",
 		"location": {

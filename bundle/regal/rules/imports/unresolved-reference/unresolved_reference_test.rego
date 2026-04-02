@@ -310,7 +310,7 @@ with_location(location) := {
 	# "location": location,
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/unresolved-reference", "imports"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/unresolved-reference",
 	}],
 	"title": "unresolved-reference",
 }

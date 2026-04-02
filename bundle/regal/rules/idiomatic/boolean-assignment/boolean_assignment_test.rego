@@ -26,7 +26,7 @@ test_boolean_assignment_in_rule_head if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/boolean-assignment", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/boolean-assignment",
 		}],
 		"title": "boolean-assignment",
 	}}

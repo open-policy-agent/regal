@@ -1,5 +1,8 @@
 # METADATA
 # description: Repeated calls to `time.now_ns`
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/time-now-ns-twice
 package regal.rules.bugs["time-now-ns-twice"]
 
 import data.regal.ast

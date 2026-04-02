@@ -1,5 +1,8 @@
 # METADATA
 # description: Messy incremental rule
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/messy-rule
 package regal.rules.style["messy-rule"]
 
 import data.regal.ast

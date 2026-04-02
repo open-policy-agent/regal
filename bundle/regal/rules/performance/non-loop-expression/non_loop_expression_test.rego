@@ -1,7 +1,7 @@
 package regal.rules.performance["non-loop-expression_test"]
 
 import data.regal.ast
-import data.regal.config
+
 import data.regal.rules.performance["non-loop-expression"] as rule
 
 test_loop_start_points_walks_are_loops if {
@@ -355,7 +355,7 @@ with_location(location) := {{
 	"description": "Non-loop expression",
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/non-loop-expression", "performance"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/performance/non-loop-expression",
 	}],
 	"title": "non-loop-expression",
 	"location": location,

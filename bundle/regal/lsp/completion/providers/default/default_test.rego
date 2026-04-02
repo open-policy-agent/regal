@@ -21,8 +21,14 @@ import rego.v1
 		"textEdit": {
 			"newText": "default ",
 			"range": {
-				"start": {"character": 0, "line": 4},
-				"end": {"character": 1, "line": 4},
+				"start": {
+					"character": 0,
+					"line": 4,
+				},
+				"end": {
+					"character": 1,
+					"line": 4,
+				},
 			},
 		},
 	}}

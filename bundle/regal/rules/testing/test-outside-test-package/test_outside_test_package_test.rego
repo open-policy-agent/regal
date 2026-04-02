@@ -1,7 +1,7 @@
 package regal.rules.testing["test-outside-test-package_test"]
 
 import data.regal.ast
-import data.regal.config
+
 import data.regal.rules.testing["test-outside-test-package"] as rule
 
 test_fail_test_outside_test_package if {
@@ -12,14 +12,17 @@ test_fail_test_outside_test_package if {
 		"description": "Test outside of test package",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/test-outside-test-package", "testing"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/testing/test-outside-test-package",
 		}],
 		"title": "test-outside-test-package",
 		"location": {
 			"col": 1,
 			"file": "p_test.rego",
 			"row": 3,
-			"end": {"col": 9, "row": 3},
+			"end": {
+				"col": 9,
+				"row": 3,
+			},
 			"text": `test_foo if { false }`,
 		},
 		"level": "error",

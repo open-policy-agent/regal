@@ -1,5 +1,8 @@
 # METADATA
 # description: Inconsistently named function arguments
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/inconsistent-args
 package regal.rules.bugs["inconsistent-args"]
 
 import data.regal.ast

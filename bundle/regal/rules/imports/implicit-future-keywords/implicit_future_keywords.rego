@@ -1,5 +1,8 @@
 # METADATA
 # description: Use explicit future keyword imports
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/implicit-future-keywords
 package regal.rules.imports["implicit-future-keywords"]
 
 import data.regal.config

@@ -1,5 +1,8 @@
 # METADATA
 # description: Function argument used for return value
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/function-arg-return
 package regal.rules.style["function-arg-return"]
 
 import data.regal.ast

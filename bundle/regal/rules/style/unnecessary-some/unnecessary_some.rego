@@ -1,5 +1,8 @@
 # METADATA
 # description: Unnecessary use of `some`
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/unnecessary-some
 package regal.rules.style["unnecessary-some"]
 
 import data.regal.ast

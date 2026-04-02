@@ -1,5 +1,8 @@
 # METADATA
 # description: Package or rule missing metadata
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/custom/missing-metadata
 package regal.rules.custom["missing-metadata"]
 
 import data.regal.ast

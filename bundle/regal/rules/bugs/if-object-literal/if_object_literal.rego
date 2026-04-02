@@ -1,5 +1,8 @@
 # METADATA
 # description: Object literal following `if`
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/if-object-literal
 package regal.rules.bugs["if-object-literal"]
 
 import data.regal.capabilities

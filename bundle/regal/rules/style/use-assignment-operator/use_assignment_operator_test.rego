@@ -1,7 +1,6 @@
 package regal.rules.style["use-assignment-operator_test"]
 
 import data.regal.ast
-import data.regal.config
 import data.regal.rules.style["use-assignment-operator"] as rule
 
 test_fail_unification_in_regular_assignment if {
@@ -11,7 +10,7 @@ test_fail_unification_in_regular_assignment if {
 		"description": "Prefer := over = for assignment",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-assignment-operator", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator",
 		}],
 		"title": "use-assignment-operator",
 		"location": {
@@ -36,7 +35,7 @@ test_fail_not_implicit_boolean_assignment_with_body if {
 		"description": "Prefer := over = for assignment",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-assignment-operator", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator",
 		}],
 		"title": "use-assignment-operator",
 		"location": {
@@ -60,7 +59,7 @@ test_fail_not_implicit_boolean_assignment if {
 		"description": "Prefer := over = for assignment",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-assignment-operator", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator",
 		}],
 		"title": "use-assignment-operator",
 		"location": {
@@ -89,7 +88,7 @@ test_fail_unification_in_default_assignment if {
 		"description": "Prefer := over = for assignment",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-assignment-operator", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator",
 		}],
 		"title": "use-assignment-operator",
 		"location": {
@@ -113,7 +112,7 @@ test_fail_unification_in_default_function_assignment if {
 		"description": "Prefer := over = for assignment",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-assignment-operator", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator",
 		}],
 		"title": "use-assignment-operator",
 		"location": {
@@ -147,7 +146,7 @@ test_fail_unification_in_object_rule_assignment if {
 		"description": "Prefer := over = for assignment",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-assignment-operator", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator",
 		}],
 		"title": "use-assignment-operator",
 		"location": {
@@ -176,7 +175,7 @@ test_fail_unification_in_function_assignment if {
 		"description": "Prefer := over = for assignment",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-assignment-operator", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator",
 		}],
 		"title": "use-assignment-operator",
 		"location": {
@@ -240,7 +239,7 @@ test_fail_unification_in_else if {
 			"description": "Prefer := over = for assignment",
 			"related_resources": [{
 				"description": "documentation",
-				"ref": config.docs.resolve_url("$baseUrl/$category/use-assignment-operator", "style"),
+				"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator",
 			}],
 			"title": "use-assignment-operator",
 			"location": {"col": 9, "file": "policy.rego", "row": 6, "text": "\t} else = true if {", "end": {
@@ -254,7 +253,7 @@ test_fail_unification_in_else if {
 			"description": "Prefer := over = for assignment",
 			"related_resources": [{
 				"description": "documentation",
-				"ref": config.docs.resolve_url("$baseUrl/$category/use-assignment-operator", "style"),
+				"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator",
 			}],
 			"title": "use-assignment-operator",
 			"location": {"col": 9, "file": "policy.rego", "row": 8, "text": "\t} else = false", "end": {

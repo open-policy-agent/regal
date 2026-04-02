@@ -1,7 +1,6 @@
 package regal.rules.bugs["time-now-ns-twice_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["time-now-ns-twice"] as rule
 
@@ -29,7 +28,7 @@ test_fail_time_now_ns_called_twice if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/time-now-ns-twice", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/time-now-ns-twice",
 		}],
 		"title": "time-now-ns-twice",
 	}}
@@ -58,7 +57,7 @@ test_fail_time_now_ns_called_twice_body_and_head if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/time-now-ns-twice", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/time-now-ns-twice",
 		}],
 		"title": "time-now-ns-twice",
 	}}

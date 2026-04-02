@@ -1,5 +1,8 @@
 # METADATA
 # description: Custom function may be replaced by `in` and `object.keys`
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/custom-has-key-construct
 package regal.rules.idiomatic["custom-has-key-construct"]
 
 import data.regal.ast

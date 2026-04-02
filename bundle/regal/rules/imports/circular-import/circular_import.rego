@@ -1,10 +1,10 @@
 # METADATA
 # description: Circular import
 # related_resources:
-# - description: documentation
-#   ref: https://www.openpolicyagent.org/projects/regal/rules/imports/circular-import
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/circular-import
 # schemas:
-# - input: schema.regal.ast
+#   - input: schema.regal.ast
 package regal.rules.imports["circular-import"]
 
 import data.regal.ast

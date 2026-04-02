@@ -1,7 +1,7 @@
 package regal.rules.style["prefer-snake-case_test"]
 
 import data.regal.ast
-import data.regal.config
+
 import data.regal.rules.style["prefer-snake-case"] as rule
 
 test_fail_camel_cased_rule_name if {
@@ -11,7 +11,10 @@ test_fail_camel_cased_rule_name if {
 		"file": "policy.rego",
 		"row": 3,
 		"text": `camelCase := 5`,
-		"end": {"col": 10, "row": 3},
+		"end": {
+			"col": 10,
+			"row": 3,
+		},
 	}])
 }
 
@@ -46,7 +49,10 @@ test_fail_camel_cased_some_declaration if {
 		"file": "policy.rego",
 		"row": 3,
 		"text": `p if {some fooBar; input[_]}`,
-		"end": {"col": 18, "row": 3},
+		"end": {
+			"col": 18,
+			"row": 3,
+		},
 	}])
 }
 
@@ -64,7 +70,10 @@ test_fail_camel_cased_multiple_some_declaration if {
 		"file": "policy.rego",
 		"row": 6,
 		"text": "\t\tsome x, foo_bar, fooBar; x = 1; foo_bar = 2; input[_]",
-		"end": {"col": 26, "row": 6},
+		"end": {
+			"col": 26,
+			"row": 6,
+		},
 	}])
 }
 
@@ -80,7 +89,10 @@ test_fail_camel_cased_function_argument if {
 		"file": "policy.rego",
 		"row": 5,
 		"text": "f(fooBar) := fooBar",
-		"end": {"col": 9, "row": 5},
+		"end": {
+			"col": 9,
+			"row": 5,
+		},
 	}])
 }
 
@@ -97,7 +109,10 @@ test_fail_camel_cased_var_assignment if {
 		"file": "policy.rego",
 		"row": 3,
 		"text": `allow if { camelCase := 5 }`,
-		"end": {"col": 21, "row": 3},
+		"end": {
+			"col": 21,
+			"row": 3,
+		},
 	}])
 }
 
@@ -109,7 +124,10 @@ test_fail_camel_cased_multiple_var_assignment if {
 		"file": "policy.rego",
 		"row": 3,
 		"text": `allow if { snake_case := "foo"; camelCase := 5 }`,
-		"end": {"col": 42, "row": 3},
+		"end": {
+			"col": 42,
+			"row": 3,
+		},
 	}])
 }
 
@@ -125,7 +143,10 @@ test_fail_camel_cased_some_in_value if {
 		"file": "policy.rego",
 		"row": 5,
 		"text": `allow if { some cC in input }`,
-		"end": {"col": 19, "row": 5},
+		"end": {
+			"col": 19,
+			"row": 5,
+		},
 	}])
 }
 
@@ -136,7 +157,10 @@ test_fail_camel_cased_some_in_key_value if {
 		"file": "policy.rego",
 		"row": 5,
 		"text": `allow if { some cC, sc in input }`,
-		"end": {"col": 19, "row": 5},
+		"end": {
+			"col": 19,
+			"row": 5,
+		},
 	}])
 }
 
@@ -147,7 +171,10 @@ test_fail_camel_cased_some_in_key_value_2 if {
 		"file": "policy.rego",
 		"row": 5,
 		"text": `allow if { some sc, cC in input }`,
-		"end": {"col": 23, "row": 5},
+		"end": {
+			"col": 23,
+			"row": 5,
+		},
 	}])
 }
 
@@ -163,7 +190,10 @@ test_fail_camel_cased_every_value if {
 		"file": "policy.rego",
 		"row": 5,
 		"text": `allow if { every cC in input { cC == 1 } }`,
-		"end": {"col": 20, "row": 5},
+		"end": {
+			"col": 20,
+			"row": 5,
+		},
 	}])
 }
 
@@ -174,7 +204,10 @@ test_fail_camel_cased_every_key if {
 		"file": "policy.rego",
 		"row": 5,
 		"text": `allow if { every cC, sc in input { cC == 1; sc == 2 } }`,
-		"end": {"col": 20, "row": 5},
+		"end": {
+			"col": 20,
+			"row": 5,
+		},
 	}])
 }
 
@@ -190,7 +223,10 @@ test_fail_location_provided_even_when_not_in_ref if {
 		"file": "policy.rego",
 		"row": 5,
 		"text": "foo.Bar := true",
-		"end": {"col": 8, "row": 5},
+		"end": {
+			"col": 8,
+			"row": 5,
+		},
 	}])
 }
 
@@ -200,7 +236,7 @@ expected_with_locations(locations) := {with_location |
 		"description": "Prefer snake_case for names",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/prefer-snake-case", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/prefer-snake-case",
 		}],
 		"title": "prefer-snake-case",
 		"level": "error",

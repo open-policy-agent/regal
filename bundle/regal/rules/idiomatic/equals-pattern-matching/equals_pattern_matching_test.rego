@@ -1,7 +1,6 @@
 package regal.rules.idiomatic["equals-pattern-matching_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.idiomatic["equals-pattern-matching"] as rule
 
@@ -115,7 +114,7 @@ expected := {
 	"level": "error",
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/equals-pattern-matching", "idiomatic"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/equals-pattern-matching",
 	}],
 	"title": "equals-pattern-matching",
 	"location": {"file": "policy.rego"},

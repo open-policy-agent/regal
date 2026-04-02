@@ -1,7 +1,7 @@
 package regal.rules.bugs["invalid-metadata-attribute_test"]
 
 import data.regal.ast
-import data.regal.config
+
 import data.regal.rules.bugs["invalid-metadata-attribute"] as rule
 
 test_fail_invalid_attribute if {
@@ -28,7 +28,7 @@ allow := true
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/invalid-metadata-attribute", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/invalid-metadata-attribute",
 		}],
 		"title": "invalid-metadata-attribute",
 	}}

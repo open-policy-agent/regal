@@ -1,5 +1,8 @@
 # METADATA
 # description: TODO test encountered
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/testing/todo-test
 package regal.rules.testing["todo-test"]
 
 import data.regal.ast

@@ -1,7 +1,6 @@
 package regal.rules.testing["metasyntactic-variable_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.testing["metasyntactic-variable"] as rule
 
@@ -59,21 +58,30 @@ test_fail_metasyntactic_vars_ref_head_strings if {
 			"file": "policy.rego",
 			"row": 3,
 			"text": "foo.a.BAR.b.C.baz := true",
-			"end": {"col": 4, "row": 3},
+			"end": {
+				"col": 4,
+				"row": 3,
+			},
 		}),
 		expected_with_location({
 			"col": 7,
 			"file": "policy.rego",
 			"row": 3,
 			"text": "foo.a.BAR.b.C.baz := true",
-			"end": {"col": 10, "row": 3},
+			"end": {
+				"col": 10,
+				"row": 3,
+			},
 		}),
 		expected_with_location({
 			"col": 15,
 			"file": "policy.rego",
 			"row": 3,
 			"text": "foo.a.BAR.b.C.baz := true",
-			"end": {"col": 18, "row": 3},
+			"end": {
+				"col": 18,
+				"row": 3,
+			},
 		}),
 	}
 }
@@ -84,7 +92,7 @@ expected := {
 	"level": "error",
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/metasyntactic-variable", "testing"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/testing/metasyntactic-variable",
 	}],
 	"title": "metasyntactic-variable",
 }

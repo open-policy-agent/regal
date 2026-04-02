@@ -1,6 +1,5 @@
 package regal.rules.testing["todo-test_test"]
 
-import data.regal.config
 import data.regal.rules.testing["todo-test"] as rule
 
 test_fail_todo_test if {
@@ -18,7 +17,7 @@ test_fail_todo_test if {
 		"description": "TODO test encountered",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/todo-test", "testing"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/testing/todo-test",
 		}],
 		"title": "todo-test",
 		"location": {

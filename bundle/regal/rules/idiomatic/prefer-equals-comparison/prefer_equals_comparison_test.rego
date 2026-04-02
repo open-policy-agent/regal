@@ -1,7 +1,6 @@
 package regal.rules.idiomatic["prefer-equals-comparison_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.idiomatic["prefer-equals-comparison"] as rule
 
@@ -26,7 +25,7 @@ test_fail_impossible_assignment_2_constants if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/prefer-equals-comparison", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/prefer-equals-comparison",
 		}],
 		"title": "prefer-equals-comparison",
 	}}
@@ -51,7 +50,7 @@ test_fail_impossible_assignment_static_ref_equals_constant if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/prefer-equals-comparison", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/prefer-equals-comparison",
 		}],
 		"title": "prefer-equals-comparison",
 	}}
@@ -76,7 +75,7 @@ test_fail_impossible_assignment_constant_equals_static_ref if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/prefer-equals-comparison", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/prefer-equals-comparison",
 		}],
 		"title": "prefer-equals-comparison",
 	}}
@@ -104,7 +103,7 @@ test_fail_impossible_assignment_input_var_equals_static_ref if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/prefer-equals-comparison", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/prefer-equals-comparison",
 		}],
 		"title": "prefer-equals-comparison",
 	}}

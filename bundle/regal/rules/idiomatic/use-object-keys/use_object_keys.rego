@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer to use `object.keys`
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-object-keys
 package regal.rules.idiomatic["use-object-keys"]
 
 import data.regal.ast

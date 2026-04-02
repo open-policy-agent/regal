@@ -1,5 +1,8 @@
 # METADATA
 # description: Avoid `in` for single item collection
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/single-item-in
 package regal.rules.idiomatic["single-item-in"]
 
 import data.regal.ast

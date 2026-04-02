@@ -1,5 +1,8 @@
 # METADATA
 # description: Use `some` to declare output variables
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-some-for-output-vars
 package regal.rules.idiomatic["use-some-for-output-vars"]
 
 import data.regal.ast

@@ -1,5 +1,8 @@
 # METADATA
 # description: Unresolved import
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/unresolved-import
 package regal.rules.imports["unresolved-import"]
 
 import data.regal.ast

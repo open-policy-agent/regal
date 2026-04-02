@@ -193,7 +193,7 @@ test_external_references_max_allowed_configuration if {
 		data.x
 		data.y
 		data.z
-		data.a 
+		data.a
 	}`)
 
 	r1 := rule.report with input as module
@@ -225,7 +225,7 @@ expected := {
 	"description": "External reference in function",
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/external-reference", "style"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/external-reference",
 	}],
 	"title": "external-reference",
 	"level": "error",

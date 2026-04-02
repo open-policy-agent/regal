@@ -1,5 +1,8 @@
 # METADATA
 # description: Use `import rego.v1`
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/use-rego-v1
 package regal.rules.imports["use-rego-v1"]
 
 import data.regal.ast

@@ -1,5 +1,8 @@
 # METADATA
 # description: Duplicate rule
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/duplicate-rule
 package regal.rules.bugs["duplicate-rule"]
 
 import data.regal.result

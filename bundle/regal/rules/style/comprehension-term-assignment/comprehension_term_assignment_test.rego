@@ -1,7 +1,6 @@
 package regal.rules.style["comprehension-term-assignment_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.style["comprehension-term-assignment"] as rule
 
@@ -28,7 +27,7 @@ test_fail_comprehension_term_assignment_last_expr if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/comprehension-term-assignment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/comprehension-term-assignment",
 		}],
 		"title": "comprehension-term-assignment",
 	}}
@@ -46,10 +45,19 @@ test_fail_comprehension_term_assignment_not_last_expr if {
 		"category": "style",
 		"description": "Assigned value can be moved to comprehension term",
 		"level": "error",
-		"location": {"col": 3, "end": {"col": 7, "row": 7}, "file": "policy.rego", "row": 7, "text": "\t\tx := y"},
+		"location": {
+			"col": 3,
+			"end": {
+				"col": 7,
+				"row": 7,
+			},
+			"file": "policy.rego",
+			"row": 7,
+			"text": "\t\tx := y",
+		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/comprehension-term-assignment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/comprehension-term-assignment",
 		}],
 		"title": "comprehension-term-assignment",
 	}}
@@ -68,14 +76,17 @@ test_fail_comprehension_term_assignment_static_ref if {
 		"level": "error",
 		"location": {
 			"col": 3,
-			"end": {"col": 7, "row": 7},
+			"end": {
+				"col": 7,
+				"row": 7,
+			},
 			"file": "policy.rego",
 			"row": 7,
 			"text": "\t\tx := y.attribute",
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/comprehension-term-assignment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/comprehension-term-assignment",
 		}],
 		"title": "comprehension-term-assignment",
 	}}
@@ -94,13 +105,17 @@ test_fail_object_comprehension_key_assignment_static_ref if {
 		"level": "error",
 		"location": {
 			"col": 3,
-			"end": {"col": 7, "row": 7},
+			"end": {
+				"col": 7,
+				"row": 7,
+			},
 			"file": "policy.rego",
-			"row": 7, "text": "\t\tk := y.attribute",
+			"row": 7,
+			"text": "\t\tk := y.attribute",
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/comprehension-term-assignment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/comprehension-term-assignment",
 		}],
 		"title": "comprehension-term-assignment",
 	}}
@@ -119,13 +134,17 @@ test_fail_object_comprehension_value_assignment_static_ref if {
 		"level": "error",
 		"location": {
 			"col": 3,
-			"end": {"col": 7, "row": 7},
+			"end": {
+				"col": 7,
+				"row": 7,
+			},
 			"file": "policy.rego",
-			"row": 7, "text": "\t\tv := y.attribute",
+			"row": 7,
+			"text": "\t\tv := y.attribute",
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/comprehension-term-assignment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/comprehension-term-assignment",
 		}],
 		"title": "comprehension-term-assignment",
 	}}

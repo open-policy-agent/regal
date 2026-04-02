@@ -1,7 +1,6 @@
 package regal.rules.performance["walk-no-path_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.performance["walk-no-path"] as rule
 
@@ -87,7 +86,7 @@ with_location(location) := {
 	"location": location,
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/walk-no-path", "performance"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/performance/walk-no-path",
 	}],
 	"title": "walk-no-path",
 }

@@ -1,5 +1,8 @@
 # METADATA
 # description: Custom function may be replaced by `in` keyword
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/custom-in-construct
 package regal.rules.idiomatic["custom-in-construct"]
 
 import data.regal.ast

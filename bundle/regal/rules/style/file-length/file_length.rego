@@ -1,5 +1,8 @@
 # METADATA
 # description: Max file length exceeded
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/file-length
 package regal.rules.style["file-length"]
 
 import data.regal.config

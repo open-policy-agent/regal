@@ -1,5 +1,8 @@
 # METADATA
 # description: Redundant existence check
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/redundant-existence-check
 package regal.rules.bugs["redundant-existence-check"]
 
 import data.regal.ast

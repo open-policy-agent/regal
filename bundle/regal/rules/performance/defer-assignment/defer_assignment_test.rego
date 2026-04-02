@@ -1,7 +1,6 @@
 package regal.rules.performance["defer-assignment_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.performance["defer-assignment"] as rule
 
@@ -172,7 +171,7 @@ with_location(location) := {
 	"location": location,
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/defer-assignment", "performance"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/performance/defer-assignment",
 	}],
 	"title": "defer-assignment",
 }

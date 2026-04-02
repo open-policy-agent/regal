@@ -1,7 +1,6 @@
 package regal.rules.custom["chained-rule-body_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.custom["chained-rule-body"] as rule
 
@@ -28,7 +27,7 @@ test_fail_chained_incremental_definition if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/chained-rule-body", "custom"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/custom/chained-rule-body",
 		}],
 		"title": "chained-rule-body",
 	}}

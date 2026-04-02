@@ -12,7 +12,7 @@ test_fail_future_keywords_import_wildcard if {
 		"description": "Use explicit future keyword imports",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/implicit-future-keywords", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/implicit-future-keywords",
 		}],
 		"title": "implicit-future-keywords",
 		"location": {

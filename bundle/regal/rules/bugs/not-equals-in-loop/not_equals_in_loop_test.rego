@@ -1,7 +1,6 @@
 package regal.rules.bugs["not-equals-in-loop_test"]
 
 import data.regal.ast
-import data.regal.config
 import data.regal.rules.bugs["not-equals-in-loop"] as rule
 
 test_fail_neq_in_loop if {
@@ -27,7 +26,7 @@ test_fail_neq_in_loop if {
 			},
 			"related_resources": [{
 				"description": "documentation",
-				"ref": config.docs.resolve_url("$baseUrl/$category/not-equals-in-loop", "bugs"),
+				"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/not-equals-in-loop",
 			}],
 			"title": "not-equals-in-loop",
 		},
@@ -47,7 +46,7 @@ test_fail_neq_in_loop if {
 			},
 			"related_resources": [{
 				"description": "documentation",
-				"ref": config.docs.resolve_url("$baseUrl/$category/not-equals-in-loop", "bugs"),
+				"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/not-equals-in-loop",
 			}],
 			"title": "not-equals-in-loop",
 		},
@@ -73,7 +72,7 @@ test_fail_neq_in_loop_one_liner if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/not-equals-in-loop", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/not-equals-in-loop",
 		}],
 		"title": "not-equals-in-loop",
 	}}

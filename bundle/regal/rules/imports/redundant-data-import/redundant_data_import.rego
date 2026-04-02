@@ -1,5 +1,8 @@
 # METADATA
 # description: Redundant import of data
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/redundant-data-import
 package regal.rules.imports["redundant-data-import"]
 
 import data.regal.result

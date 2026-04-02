@@ -1,5 +1,8 @@
 # METADATA
 # description: Metasyntactic variable name
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/testing/metasyntactic-variable
 package regal.rules.testing["metasyntactic-variable"]
 
 import data.regal.ast

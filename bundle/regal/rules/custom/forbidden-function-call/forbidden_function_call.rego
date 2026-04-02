@@ -1,5 +1,8 @@
 # METADATA
 # description: Forbidden function call
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/custom/forbidden-function-call
 package regal.rules.custom["forbidden-function-call"]
 
 import data.regal.ast

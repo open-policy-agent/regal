@@ -1,7 +1,6 @@
 package regal.rules.style["detached-metadata_test"]
 
 import data.regal.ast
-import data.regal.config
 import data.regal.rules.style["detached-metadata"] as rule
 
 test_fail_detached_metadata if {
@@ -30,7 +29,7 @@ allow := true
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/detached-metadata", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/detached-metadata",
 		}],
 		"title": "detached-metadata",
 	}}
@@ -63,7 +62,7 @@ allow := true
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/detached-metadata", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/detached-metadata",
 		}],
 		"title": "detached-metadata",
 	}}
@@ -132,7 +131,7 @@ package p
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/detached-metadata", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/detached-metadata",
 		}],
 		"title": "detached-metadata",
 	}}

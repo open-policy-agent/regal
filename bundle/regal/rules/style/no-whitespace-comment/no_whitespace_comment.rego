@@ -1,5 +1,8 @@
 # METADATA
 # description: Comment should start with whitespace
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment
 package regal.rules.style["no-whitespace-comment"]
 
 import data.regal.ast

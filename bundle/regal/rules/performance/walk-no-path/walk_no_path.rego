@@ -1,5 +1,8 @@
 # METADATA
 # description: Call to `walk` can be optimized
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/performance/walk-no-path
 package regal.rules.performance["walk-no-path"]
 
 import data.regal.ast

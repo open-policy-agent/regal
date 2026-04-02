@@ -1,5 +1,8 @@
 # METADATA
 # description: Assignment can be deferred
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/performance/defer-assignment
 package regal.rules.performance["defer-assignment"]
 
 import data.regal.ast

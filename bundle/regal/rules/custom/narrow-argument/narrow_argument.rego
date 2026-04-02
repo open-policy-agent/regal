@@ -1,5 +1,8 @@
 # METADATA
 # description: Function argument can be narrowed
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/custom/narrow-argument
 package regal.rules.custom["narrow-argument"]
 
 import data.regal.ast

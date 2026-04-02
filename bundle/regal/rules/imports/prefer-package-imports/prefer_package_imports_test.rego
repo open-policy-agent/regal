@@ -53,7 +53,7 @@ test_fail_aggregate_report_on_imported_rule if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/prefer-package-imports", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/prefer-package-imports",
 		}],
 		"title": "prefer-package-imports",
 	}}

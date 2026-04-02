@@ -1,5 +1,8 @@
 # METADATA
 # description: Non-boolean return value unassigned
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/unassigned-return-value
 package regal.rules.bugs["unassigned-return-value"]
 
 import data.regal.ast

@@ -225,7 +225,7 @@ expected(description, location) := {
 	"location": location,
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/naming-convention", "custom"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/custom/naming-convention",
 	}],
 	"title": "naming-convention",
 }

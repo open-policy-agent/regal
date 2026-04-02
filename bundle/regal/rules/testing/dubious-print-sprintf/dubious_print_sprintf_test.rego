@@ -28,7 +28,7 @@ test_fail_print_sprintf if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/dubious-print-sprintf", "testing"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/testing/dubious-print-sprintf",
 		}],
 		"title": "dubious-print-sprintf",
 	}}
@@ -59,7 +59,7 @@ test_fail_bodies_print_sprintf if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/dubious-print-sprintf", "testing"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/testing/dubious-print-sprintf",
 		}],
 		"title": "dubious-print-sprintf",
 	}}

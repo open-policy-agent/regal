@@ -1,5 +1,8 @@
 # METADATA
 # description: Entrypoint can't be marked internal
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/internal-entrypoint
 package regal.rules.bugs["internal-entrypoint"]
 
 import data.regal.ast

@@ -1,5 +1,8 @@
 # METADATA
 # description: Dubious use of print and sprintf
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/testing/dubious-print-sprintf
 package regal.rules.testing["dubious-print-sprintf"]
 
 import data.regal.ast

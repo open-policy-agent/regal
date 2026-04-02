@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer using `object.union_n` over nested `object.union` calls
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-object-union-n
 package regal.rules.idiomatic["use-object-union-n"]
 
 import data.regal.ast

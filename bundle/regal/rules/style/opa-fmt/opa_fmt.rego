@@ -1,5 +1,8 @@
 # METADATA
 # description: File should be formatted with `opa fmt`
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/opa-fmt
 package regal.rules.style["opa-fmt"]
 
 import data.regal.result

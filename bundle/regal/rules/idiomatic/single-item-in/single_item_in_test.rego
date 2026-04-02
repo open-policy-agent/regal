@@ -1,7 +1,6 @@
 package regal.rules.idiomatic["single-item-in_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.idiomatic["single-item-in"] as rule
 
@@ -24,7 +23,7 @@ test_fail_single_item_in_array if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/single-item-in", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/single-item-in",
 		}],
 		"title": "single-item-in",
 	}}
@@ -49,7 +48,7 @@ test_fail_single_item_in_set if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/single-item-in", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/single-item-in",
 		}],
 		"title": "single-item-in",
 	}}
@@ -74,7 +73,7 @@ test_fail_single_item_in_object if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/single-item-in", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/single-item-in",
 		}],
 		"title": "single-item-in",
 	}}

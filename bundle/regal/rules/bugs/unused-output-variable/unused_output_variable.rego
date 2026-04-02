@@ -1,5 +1,8 @@
 # METADATA
 # description: Unused output variable
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/unused-output-variable
 package regal.rules.bugs["unused-output-variable"]
 
 import data.regal.ast

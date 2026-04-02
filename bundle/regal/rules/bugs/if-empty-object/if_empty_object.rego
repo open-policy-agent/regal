@@ -1,5 +1,8 @@
 # METADATA
 # description: Empty object following `if`
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/if-empty-object
 package regal.rules.bugs["if-empty-object"]
 
 import data.regal.capabilities

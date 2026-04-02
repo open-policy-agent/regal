@@ -1,7 +1,6 @@
 package regal.rules.style["double-negative_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.style["double-negative"] as rule
 
@@ -28,7 +27,7 @@ test_fail_double_negative if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/double-negative", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/double-negative",
 		}],
 		"title": "double-negative",
 		"level": "error",

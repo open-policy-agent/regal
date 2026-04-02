@@ -15,7 +15,7 @@ foo == bar; bar == baz; [a, b, c, d, e, f] := [1, 2, 3, 4, 5, 6]; qux := [q | so
 		"description": "Line too long",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/line-length", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/line-length",
 		}],
 		"title": "line-length",
 		"location": {
@@ -23,7 +23,10 @@ foo == bar; bar == baz; [a, b, c, d, e, f] := [1, 2, 3, 4, 5, 6]; qux := [q | so
 			"file": "policy.rego",
 			"row": 6,
 			"text": `foo == bar; bar == baz; [a, b, c, d, e, f] := [1, 2, 3, 4, 5, 6]; qux := [q | some q in input.nonsense]`,
-			"end": {"col": 103, "row": 6},
+			"end": {
+				"col": 103,
+				"row": 6,
+			},
 		},
 		"level": "error",
 	}}
@@ -57,11 +60,14 @@ test_fail_line_too_long_but_below_breakable_word_threshold if {
 			"file": "policy.rego",
 			"row": 7,
 			"text": "\t# Long url: https://www.example.com/this/is/a/very/long",
-			"end": {"col": 56, "row": 7},
+			"end": {
+				"col": 56,
+				"row": 7,
+			},
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/line-length", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/line-length",
 		}],
 		"title": "line-length",
 	}}
@@ -83,11 +89,14 @@ test_fail_line_exceeds_120_characters_even_if_not_in_config if {
 			"row": 5,
 			# regal ignore:line-length
 			"text": "# Long url: https://www.example.com/this/is/a/very/long/url/that/cannot/be/shortened/and/should/trigger/an/error/anyway/so/that/it/can/be/shortened",
-			"end": {"col": 147, "row": 5},
+			"end": {
+				"col": 147,
+				"row": 5,
+			},
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/line-length", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/line-length",
 		}],
 		"title": "line-length",
 	}}

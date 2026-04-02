@@ -1,5 +1,8 @@
 # METADATA
 # description: Non-loop expression
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/performance/non-loop-expression
 package regal.rules.performance["non-loop-expression"]
 
 import data.regal.ast

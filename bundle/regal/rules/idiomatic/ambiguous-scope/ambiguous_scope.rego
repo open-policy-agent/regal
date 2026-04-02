@@ -1,5 +1,8 @@
 # METADATA
 # description: Ambiguous metadata scope
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/ambiguous-scope
 package regal.rules.idiomatic["ambiguous-scope"]
 
 import data.regal.ast

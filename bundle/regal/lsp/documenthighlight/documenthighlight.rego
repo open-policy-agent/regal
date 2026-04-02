@@ -71,8 +71,14 @@ items contains item if {
 
 	item := {
 		"range": {
-			"start": {"line": input.params.position.line, "character": 2},
-			"end": {"line": input.params.position.line, "character": 10},
+			"start": {
+				"line": input.params.position.line,
+				"character": 2,
+			},
+			"end": {
+				"line": input.params.position.line,
+				"character": 10,
+			},
 		},
 		"kind": 1,
 	}
@@ -96,8 +102,14 @@ items contains item if {
 
 	item := {
 		"range": {
-			"start": {"line": i, "character": 2},
-			"end": {"line": i, "character": 2 + count(word)},
+			"start": {
+				"line": i,
+				"character": 2,
+			},
+			"end": {
+				"line": i,
+				"character": 2 + count(word),
+			},
 		},
 		"kind": 1,
 	}
@@ -110,8 +122,14 @@ items contains item if {
 	word := _attribute_from_text(input.regal.file.lines[line])
 	item := {
 		"range": {
-			"start": {"line": line, "character": 2},
-			"end": {"line": line, "character": 2 + count(word)},
+			"start": {
+				"line": line,
+				"character": 2,
+			},
+			"end": {
+				"line": line,
+				"character": 2 + count(word),
+			},
 		},
 		"kind": 1,
 	}

@@ -1,6 +1,5 @@
 package regal.result_test
 
-import data.regal.config
 import data.regal.result
 
 test_no_related_resources_in_result_fail_on_custom_rule_unless_provided if {
@@ -75,7 +74,7 @@ test_related_resources_generated_by_result_fail_for_builtin_rule if {
 		"level": "error",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/name", "category"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/category/name",
 		}],
 		"title": "name",
 	}

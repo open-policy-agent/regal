@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer := over = for assignment
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/use-assignment-operator
 package regal.rules.style["use-assignment-operator"]
 
 import data.regal.ast

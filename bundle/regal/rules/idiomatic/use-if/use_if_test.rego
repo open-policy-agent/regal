@@ -1,7 +1,6 @@
 package regal.rules.idiomatic["use-if_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.idiomatic["use-if"] as rule
 
@@ -29,7 +28,7 @@ test_fail_should_use_if if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-if", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-if",
 		}],
 		"title": "use-if",
 	}}

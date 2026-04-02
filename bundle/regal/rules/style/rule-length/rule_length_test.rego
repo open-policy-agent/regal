@@ -36,7 +36,7 @@ test_fail_rule_longer_than_configured_max_length if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/rule-length", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/rule-length",
 		}],
 		"title": "rule-length",
 	}}

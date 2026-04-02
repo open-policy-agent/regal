@@ -1,5 +1,8 @@
 # METADATA
 # description: Annotation without metadata
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/annotation-without-metadata
 package regal.rules.bugs["annotation-without-metadata"]
 
 import data.regal.ast

@@ -1,7 +1,7 @@
 package regal.rules.imports["avoid-importing-input_test"]
 
 import data.regal.ast
-import data.regal.config
+
 import data.regal.rules.imports["avoid-importing-input"] as rule
 
 test_fail_import_input if {
@@ -12,7 +12,7 @@ test_fail_import_input if {
 		"description": "Avoid importing input",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/avoid-importing-input", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/avoid-importing-input",
 		}],
 		"title": "avoid-importing-input",
 		"location": {
@@ -43,7 +43,7 @@ test_fail_import_input_aliased_attribute if {
 		"description": "Avoid importing input",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/avoid-importing-input", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/avoid-importing-input",
 		}],
 		"title": "avoid-importing-input",
 		"location": {

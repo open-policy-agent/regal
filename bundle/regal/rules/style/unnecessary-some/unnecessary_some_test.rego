@@ -1,7 +1,6 @@
 package regal.rules.style["unnecessary-some_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.style["unnecessary-some"] as rule
 
@@ -29,7 +28,7 @@ test_fail_some_unnecessary_value if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/unnecessary-some", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/unnecessary-some",
 		}],
 		"title": "unnecessary-some",
 	}}
@@ -54,7 +53,7 @@ test_fail_some_unnecessary_key_value if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/unnecessary-some", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/unnecessary-some",
 		}],
 		"title": "unnecessary-some",
 	}}

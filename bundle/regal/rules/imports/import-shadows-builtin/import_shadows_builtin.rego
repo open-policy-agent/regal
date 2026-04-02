@@ -1,5 +1,8 @@
 # METADATA
 # description: Import shadows built-in namespace
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/import-shadows-builtin
 package regal.rules.imports["import-shadows-builtin"]
 
 import data.regal.ast

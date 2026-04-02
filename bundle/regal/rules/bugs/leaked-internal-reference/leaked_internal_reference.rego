@@ -1,5 +1,8 @@
 # METADATA
 # description: Outside reference to internal rule or function
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/leaked-internal-reference
 package regal.rules.bugs["leaked-internal-reference"]
 
 import data.regal.ast

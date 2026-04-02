@@ -1,7 +1,6 @@
 package regal.rules.style["default-over-not_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.style["default-over-not"] as rule
 
@@ -27,7 +26,7 @@ test_fail_default_over_not if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/default-over-not", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/default-over-not",
 		}],
 		"title": "default-over-not",
 	}}

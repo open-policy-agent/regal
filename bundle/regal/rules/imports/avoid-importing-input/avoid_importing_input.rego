@@ -1,5 +1,8 @@
 # METADATA
 # description: Avoid importing input
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/avoid-importing-input
 package regal.rules.imports["avoid-importing-input"]
 
 import data.regal.result

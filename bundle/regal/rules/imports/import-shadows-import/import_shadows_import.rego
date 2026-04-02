@@ -1,5 +1,8 @@
 # METADATA
 # description: Import shadows another import
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/import-shadows-import
 package regal.rules.imports["import-shadows-import"]
 
 import data.regal.capabilities

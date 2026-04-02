@@ -1,5 +1,8 @@
 # METADATA
 # description: Constant condition
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/constant-condition
 package regal.rules.bugs["constant-condition"]
 
 import data.regal.ast

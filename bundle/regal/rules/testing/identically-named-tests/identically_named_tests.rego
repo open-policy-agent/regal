@@ -1,5 +1,8 @@
 # METADATA
 # description: Multiple tests with same name
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/testing/identically-named-tests
 package regal.rules.testing["identically-named-tests"]
 
 import data.regal.ast
