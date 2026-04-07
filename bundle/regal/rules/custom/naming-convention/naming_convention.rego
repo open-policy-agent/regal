@@ -11,11 +11,7 @@ import data.regal.result
 
 # target: package
 report contains violation if {
-	some convention in config.rules.custom["naming-convention"].conventions
-
-	"package" in convention.targets
-
-	not _convention_matched(ast.package_name, convention)
+	_any_package_convention_violation
 
 	violation := result.fail(
 		rego.metadata.chain(),
@@ -73,6 +69,14 @@ report contains violation if {
 		rego.metadata.chain(),
 		result.location_and_description(var, _message("variable", var.value)),
 	)
+}
+
+_any_package_convention_violation if {
+	some convention in config.rules.custom["naming-convention"].conventions
+
+	"package" in convention.targets
+
+	not _convention_matched(ast.package_name, convention)
 }
 
 _message(kind, name) := $`Naming violation: {kind} name "{name}" does not match configured convention`

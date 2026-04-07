@@ -6,10 +6,13 @@ test_some_vars if {
 	policy := `package regal.woo
 
 some_two_vars if {
-	some i, item in input.array   
-	i < 10                        
-	item > 0                        
+	some i, item in input.array
+	i < 10
+	item > 0
 }`
+
+	tokens := some_expr.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
 
 	some note, tc in {"some expression variables": {
 		"declarations": {
@@ -22,9 +25,6 @@ some_two_vars if {
 		},
 	}}
 
-	tokens := some_expr.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
-
 	tc.declarations == tokens.declaration
 	tc.references == tokens.reference
 }
@@ -33,17 +33,17 @@ test_some_single_var_case if {
 	policy := `package regal.woo
 
 some_one_var if {
-	some i in input.array   
-	i < 10                                              
+	some i in input.array
+	i < 10
 }`
+
+	tokens := some_expr.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
 
 	some note, tc in {"some expression variables": {
 		"declarations": {{"location": "4:7:4:8", "type": "var", "value": "i"}},
 		"references": {{"location": "5:2:5:3", "type": "var", "value": "i"}},
 	}}
-
-	tokens := some_expr.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
 
 	tc.declarations == tokens.declaration
 	tc.references == tokens.reference
