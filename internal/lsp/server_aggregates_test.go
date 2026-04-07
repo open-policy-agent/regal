@@ -256,7 +256,7 @@ import rego.v1
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
 
-	for success := true; !success; {
+	for success := false; !success; {
 		select {
 		case violations := <-messages["foo.rego"]:
 			if !slices.Contains(violations, "unresolved-import") {
