@@ -19,14 +19,14 @@ report contains violation if {
 
 	row > first_loop_row
 
-	term_vars := ast.find_term_vars(expr.terms)
-
 	# users are able to use print statements for debugging purposes
-	term_vars[0].value != "print"
+	not _is_print_call(expr.terms[0])
 
 	# if there are any term vars used in the expression, then they must have been
 	# declared after the first loop
-	every term_var in term_vars {
+	every term_var in _expr_vars(expr) {
+		not startswith(term_var.value, "$")
+
 		declared_row := min(object.get(_assignment_index, [rule_index, term_var.value], {0}))
 
 		declared_row < first_loop_row
@@ -35,16 +35,69 @@ report contains violation if {
 	violation := result.fail(rego.metadata.chain(), result.location(expr))
 }
 
-_exprs[rule_index][row] contains expr if {
-	some i
-	expr := input.rules[i].body[_]
-	rule_index := ast.rule_index_strings[i]
-	row := to_number(substring(expr.location, 0, indexof(expr.location, ":")))
+# special case for every, as variables declared don't escape its scope
+report contains violation if {
+	some rule_index
+	_every := ast.found.every[rule_index][_]
+
+	kv_vars := {_every[kind].value |
+		some kind in ["key", "value"]
+
+		_every[kind].type == "var"
+	}
+
+	some expr in _every.body
+
+	not _is_print_call(expr.terms[0])
+	not _any_var_found(expr, _every.body, kv_vars)
+
+	violation := result.fail(rego.metadata.chain(), result.location(expr))
 }
+
+_is_print_call(term) if {
+	term.type == "ref"
+	term.value[0].value == "print"
+}
+
+_any_var_found(expr, _, vars) if {
+	some term in _expr_vars(expr)
+
+	term.value in vars
+}
+
+_any_var_found(expr, body, _) if {
+	assigned := _assign_vars(body)
+
+	some term in _expr_vars(expr)
+
+	term.value in assigned
+}
+
+_assign_vars(body) := {expr.terms[1].value |
+	some expr in body
+
+	expr.terms[0].type == "ref"
+	expr.terms[0].value[0].value == "assign"
+}
+
+_expr_vars(expr) := _term_vars(expr.terms) if not expr.with
+_expr_vars(expr) := array.flatten([_term_vars(expr.terms), _vars_no_builtins(expr.with)]) if expr.with
+
+_term_vars(terms) := _vars_no_builtins(terms[2]) if {
+	terms[0].type == "ref"
+	terms[0].value[0].value == "assign"
+	terms[0].value[0].type == "var"
+} else := _vars_no_builtins(terms)
+
+_vars_no_builtins(terms) := [term |
+	some term in ast.find_term_vars(terms)
+
+	not term.value in ast.builtin_names
+]
 
 _exprs[rule_index][row] contains expr if {
 	some i
-	expr := input.rules[i].body[_].terms.body[_]
+	expr := input.rules[i].body[_]
 	rule_index := ast.rule_index_strings[i]
 	row := to_number(substring(expr.location, 0, indexof(expr.location, ":")))
 }
@@ -96,23 +149,6 @@ _loop_start_points[rule_index][loc.row] contains var if {
 	loc := util.to_location_object(var.location)
 
 	# ignore vars in comprehensions
-	_not_in_comprehension(rule_index, loc)
-}
-
-# every x, y in foo.bar
-_loop_start_points[rule_index][loc.row] contains term if {
-	some rule_index
-	terms := ast.found.every[rule_index][_]
-
-	some kind in ["key", "value"]
-	terms[kind].type == "var"
-
-	term := terms[kind]
-	loc := util.to_location_object(term.location)
-
-	# ignore vars in comprehensions... for now
-	# but we should really treat this as a special case later,
-	# as the loop vars are scoped to the every body
 	_not_in_comprehension(rule_index, loc)
 }
 

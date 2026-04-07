@@ -350,6 +350,65 @@ test_non_ref_output_var if {
 	r == set()
 }
 
+test_fail_non_loop_assignment_expression if {
+	r := rule.report with input as ast.policy(`r if {
+		some a in input.b
+		c := lower("HELLO")
+		d := concat("", [a, c])
+	}`)
+		with ast.builtin_names as {"lower"}
+
+	r == with_location({
+		"col": 3,
+		"end": {
+			"col": 22,
+			"row": 5,
+		},
+		"file": "policy.rego",
+		"row": 5,
+		"text": "\t\tc := lower(\"HELLO\")",
+	})
+}
+
+test_fail_non_loop_assignment_with_expression if {
+	r := rule.report with input as ast.policy(`r if {
+		some a in input.b
+		c := lower(foo) with input as {"foo": "bar"}
+	}`)
+		with ast.builtin_names as {"lower"}
+
+	r == {{
+		"category": "performance",
+		"description": "Non-loop expression",
+		"level": "error",
+		"location": {
+			"col": 3,
+			"end": {
+				"col": 47,
+				"row": 5,
+			},
+			"file": "policy.rego",
+			"row": 5,
+			"text": "\t\tc := lower(foo) with input as {\"foo\": \"bar\"}",
+		},
+		"related_resources": [{
+			"description": "documentation",
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/performance/non-loop-expression",
+		}],
+		"title": "non-loop-expression",
+	}}
+}
+
+test_success_non_loop_assignment_with_expression if {
+	r := rule.report with input as ast.policy(`r if {
+		some a in input.b
+		c := lower(foo) with input as {"foo": a}
+	}`)
+		with ast.builtin_names as {"lower"}
+
+	r == set()
+}
+
 with_location(location) := {{
 	"category": "performance",
 	"description": "Non-loop expression",

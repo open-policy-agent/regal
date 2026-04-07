@@ -5,10 +5,14 @@ import data.regal.lsp.semantictokens.vars.comprehensions
 test_array_comprehension[note] if {
 	policy_one := `package regal.woo
 
-array_comprehensions := [x |  
-	some i, x in [1, 2, 3]    
-	i == 2                    
+array_comprehensions := [x |
+	some i, x in [1, 2, 3]
+	i == 2
 ]`
+
+	array_comp_tokens := comprehensions.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy_one)
+
 	some note, tc in {"array comprehensions": {
 		"declarations": {
 			{"location": "4:10:4:11", "type": "var", "value": "x"},
@@ -19,8 +23,6 @@ array_comprehensions := [x |
 			{"location": "5:2:5:3", "type": "var", "value": "i"},
 		},
 	}}
-	array_comp_tokens := comprehensions.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy_one)
 
 	tc.declarations == array_comp_tokens.declaration
 	tc.references == array_comp_tokens.reference
@@ -29,10 +31,14 @@ array_comprehensions := [x |
 test_set_comprehensions[note] if {
 	policy_one := `package regal.woo
 
-set_comprehensions := {x |    
-	some i, x in [1, 2, 3]    
-	i == 2                    
+set_comprehensions := {x |
+	some i, x in [1, 2, 3]
+	i == 2
 }`
+
+	set_comp_tokens := comprehensions.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy_one)
+
 	some note, tc in {"set comprehensions": {
 		"declarations": {
 			{"location": "4:10:4:11", "type": "var", "value": "x"},
@@ -43,8 +49,6 @@ set_comprehensions := {x |
 			{"location": "5:2:5:3", "type": "var", "value": "i"},
 		},
 	}}
-	set_comp_tokens := comprehensions.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy_one)
 
 	tc.declarations == set_comp_tokens.declaration
 	tc.references == set_comp_tokens.reference
@@ -53,10 +57,13 @@ set_comprehensions := {x |
 test_object_comprehension[note] if {
 	policy_one := `package regal.woo
 
-object_comprehensions := {k: v |  
-	some k, v in [1, 2, 3]       
-	v == 2                        
+object_comprehensions := {k: v |
+	some k, v in [1, 2, 3]
+	v == 2
 }`
+	object_comp_tokens := comprehensions.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
+		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy_one)
+
 	some note, tc in {"object comprehensions": {
 		"declarations": {
 			{"location": "4:10:4:11", "type": "var", "value": "v"},
@@ -68,8 +75,6 @@ object_comprehensions := {k: v |
 			{"location": "5:2:5:3", "type": "var", "value": "v"},
 		},
 	}}
-	object_comp_tokens := comprehensions.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy_one)
 
 	tc.declarations == object_comp_tokens.declaration
 	tc.references == object_comp_tokens.reference
