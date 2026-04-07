@@ -1,7 +1,6 @@
 package regal.rules.{{.Category}}{{.NameTest}}
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.{{.Category}}{{.Name}} as rule
 
@@ -29,7 +28,7 @@ test_rule_named_foo_not_allowed if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/{{.NameOriginal}}", "{{.Category}}"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/{{.Category}}/{{.NameOriginal}}",
 		}],
 		"title": "{{.NameOriginal}}",
 	}}

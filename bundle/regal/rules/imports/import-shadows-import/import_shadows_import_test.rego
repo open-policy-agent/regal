@@ -1,7 +1,7 @@
 package regal.rules.imports["import-shadows-import_test"]
 
 import data.regal.ast
-import data.regal.config
+
 import data.regal.rules.imports["import-shadows-import"] as rule
 
 test_fail_duplicate_import if {
@@ -15,7 +15,7 @@ import data.foo
 		"description": "Import shadows another import",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/import-shadows-import", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/import-shadows-import",
 		}],
 		"title": "import-shadows-import",
 		"location": {
@@ -43,7 +43,7 @@ import data.bar as foo
 		"description": "Import shadows another import",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/import-shadows-import", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/import-shadows-import",
 		}],
 		"title": "import-shadows-import",
 		"location": {

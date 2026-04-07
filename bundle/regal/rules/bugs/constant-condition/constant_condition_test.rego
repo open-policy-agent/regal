@@ -1,7 +1,6 @@
 package regal.rules.bugs["constant-condition_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["constant-condition"] as rule
 
@@ -24,7 +23,7 @@ test_fail_simple_constant_condition if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/constant-condition", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/constant-condition",
 		}],
 		"title": "constant-condition",
 		"level": "error",
@@ -49,7 +48,7 @@ test_fail_if_template_string_constant_condition if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/constant-condition", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/constant-condition",
 		}],
 		"title": "constant-condition",
 		"level": "error",
@@ -84,7 +83,7 @@ test_fail_simple_constant_condition_nested if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/constant-condition", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/constant-condition",
 		}],
 		"title": "constant-condition",
 		"level": "error",
@@ -105,12 +104,15 @@ test_fail_rule_with_body_looking_generated if {
 			"file": "policy.rego",
 			"col": 12,
 			"row": 3,
-			"end": {"row": 3, "col": 16},
+			"end": {
+				"row": 3,
+				"col": 16,
+			},
 			"text": "allow if { true }",
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/constant-condition", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/constant-condition",
 		}],
 		"title": "constant-condition",
 		"level": "error",
@@ -136,7 +138,7 @@ test_fail_operator_constant_condition if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/constant-condition", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/constant-condition",
 		}],
 		"title": "constant-condition",
 		"level": "error",
@@ -165,7 +167,7 @@ test_fail_operator_constant_condition_nested if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/constant-condition", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/constant-condition",
 		}],
 		"title": "constant-condition",
 		"level": "error",

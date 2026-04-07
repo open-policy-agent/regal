@@ -93,7 +93,7 @@ expected := {
 	"level": "error",
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/leaked-internal-reference", "bugs"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/leaked-internal-reference",
 	}],
 	"title": "leaked-internal-reference",
 	"location": {"file": "policy.rego"},

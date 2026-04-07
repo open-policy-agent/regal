@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer set or object rule over comprehension
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/prefer-set-or-object-rule
 package regal.rules.idiomatic["prefer-set-or-object-rule"]
 
 import data.regal.ast

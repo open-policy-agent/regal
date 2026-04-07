@@ -1,7 +1,6 @@
 package regal.rules.idiomatic["ambiguous-scope_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.idiomatic["ambiguous-scope"] as rule
 
@@ -31,7 +30,7 @@ allow if input.y
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/ambiguous-scope", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/ambiguous-scope",
 		}],
 		"title": "ambiguous-scope",
 	}}
@@ -63,7 +62,7 @@ func(x) if x < "10"
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/ambiguous-scope", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/ambiguous-scope",
 		}],
 		"title": "ambiguous-scope",
 	}}

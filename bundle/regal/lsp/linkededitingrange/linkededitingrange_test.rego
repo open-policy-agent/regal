@@ -17,13 +17,25 @@ foo(bar, baz) := baz if {
 	expected_ranges := {
 		# function arg 'bar' in function head
 		{
-			"start": {"line": 2, "character": 4},
-			"end": {"line": 2, "character": 7},
+			"start": {
+				"line": 2,
+				"character": 4,
+			},
+			"end": {
+				"line": 2,
+				"character": 7,
+			},
 		},
 		# function arg 'bar' reference in function body
 		{
-			"start": {"line": 3, "character": 4},
-			"end": {"line": 3, "character": 7},
+			"start": {
+				"line": 3,
+				"character": 4,
+			},
+			"end": {
+				"line": 3,
+				"character": 7,
+			},
 		},
 	}
 
@@ -61,13 +73,25 @@ foo(bar, baz) := baz if {
 	expected_ranges := {
 		# function arg 'bar' in function head
 		{
-			"start": {"line": 2, "character": 4},
-			"end": {"line": 2, "character": 7},
+			"start": {
+				"line": 2,
+				"character": 4,
+			},
+			"end": {
+				"line": 2,
+				"character": 7,
+			},
 		},
 		# function arg 'bar' reference in function body
 		{
-			"start": {"line": 3, "character": 4},
-			"end": {"line": 3, "character": 7},
+			"start": {
+				"line": 3,
+				"character": 4,
+			},
+			"end": {
+				"line": 3,
+				"character": 7,
+			},
 		},
 	}
 

@@ -1,7 +1,6 @@
 package regal.rules.bugs["unused-output-variable_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["unused-output-variable"] as rule
 
@@ -16,10 +15,19 @@ test_fail_unused_output_variable if {
 		"category": "bugs",
 		"description": "Unused output variable",
 		"level": "error",
-		"location": {"col": 9, "end": {"col": 10, "row": 7}, "file": "policy.rego", "row": 7, "text": "\t\tinput[x]"},
+		"location": {
+			"col": 9,
+			"end": {
+				"col": 10,
+				"row": 7,
+			},
+			"file": "policy.rego",
+			"row": 7,
+			"text": "\t\tinput[x]",
+		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/unused-output-variable", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/unused-output-variable",
 		}],
 		"title": "unused-output-variable",
 	}}
@@ -37,10 +45,19 @@ test_fail_unused_output_variable_some if {
 		"category": "bugs",
 		"description": "Unused output variable",
 		"level": "error",
-		"location": {"col": 9, "end": {"col": 11, "row": 8}, "file": "policy.rego", "row": 8, "text": "\t\tinput[xx]"},
+		"location": {
+			"col": 9,
+			"end": {
+				"col": 11,
+				"row": 8,
+			},
+			"file": "policy.rego",
+			"row": 8,
+			"text": "\t\tinput[xx]",
+		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/unused-output-variable", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/unused-output-variable",
 		}],
 		"title": "unused-output-variable",
 	}}
@@ -62,10 +79,19 @@ _test_fail_unused_output_variable_assignment if {
 		"category": "bugs",
 		"description": "Unused output variable",
 		"level": "error",
-		"location": {"col": 14, "end": {"col": 15, "row": 6}, "file": "policy.rego", "row": 6, "text": "\t\tx := input[y]"},
+		"location": {
+			"col": 14,
+			"end": {
+				"col": 15,
+				"row": 6,
+			},
+			"file": "policy.rego",
+			"row": 6,
+			"text": "\t\tx := input[y]",
+		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/unused-output-variable", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/unused-output-variable",
 		}],
 		"title": "unused-output-variable",
 	}}

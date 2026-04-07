@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer `if` over boolean assignment
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/boolean-assignment
 package regal.rules.idiomatic["boolean-assignment"]
 
 import data.regal.config

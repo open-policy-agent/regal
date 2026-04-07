@@ -1,5 +1,8 @@
 # METADATA
 # description: Call to print or trace function
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/testing/print-or-trace-call
 package regal.rules.testing["print-or-trace-call"]
 
 import data.regal.ast

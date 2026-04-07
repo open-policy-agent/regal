@@ -1,7 +1,6 @@
 package regal.rules.custom["narrow-argument_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.custom["narrow-argument"] as rule
 
@@ -27,7 +26,7 @@ test_fail_can_be_narrowed_single_ref if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/narrow-argument", "custom"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/custom/narrow-argument",
 		}],
 		"title": "narrow-argument",
 	}}
@@ -55,7 +54,7 @@ test_fail_can_be_narrowed_prefixed_ref if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/narrow-argument", "custom"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/custom/narrow-argument",
 		}],
 		"title": "narrow-argument",
 	}}
@@ -83,7 +82,7 @@ test_fail_can_be_narrowed_prefixed_array_ref if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/narrow-argument", "custom"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/custom/narrow-argument",
 		}],
 		"title": "narrow-argument",
 	}}

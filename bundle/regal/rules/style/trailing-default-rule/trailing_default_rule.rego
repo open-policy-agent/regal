@@ -1,5 +1,8 @@
 # METADATA
 # description: Default rule should be declared first
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/trailing-default-rule
 package regal.rules.style["trailing-default-rule"]
 
 import data.regal.ast

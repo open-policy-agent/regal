@@ -1,5 +1,8 @@
 # METADATA
 # description: Iteration in top-level assignment
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/top-level-iteration
 package regal.rules.bugs["top-level-iteration"]
 
 import data.regal.ast

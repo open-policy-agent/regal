@@ -1,5 +1,8 @@
 # METADATA
 # description: Mismatch in `sprintf` arguments count
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/sprintf-arguments-mismatch
 package regal.rules.bugs["sprintf-arguments-mismatch"]
 
 import data.regal.ast

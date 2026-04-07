@@ -1,7 +1,6 @@
 package regal.rules.bugs["if-object-literal_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["if-object-literal"] as rule
 
@@ -41,7 +40,7 @@ test_fail[name] if {
 		"location": object.union({"file": "policy.rego"}, location),
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/if-object-literal", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/if-object-literal",
 		}],
 		"title": "if-object-literal",
 	}}

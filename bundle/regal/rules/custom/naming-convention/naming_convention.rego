@@ -1,5 +1,8 @@
 # METADATA
 # description: Naming convention violation
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/custom/naming-convention
 package regal.rules.custom["naming-convention"]
 
 import data.regal.ast

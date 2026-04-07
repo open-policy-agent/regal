@@ -1,7 +1,6 @@
 package regal.rules.style["mixed-iteration_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.style["mixed-iteration"] as rule
 
@@ -24,7 +23,7 @@ test_fail_mixed_iteration if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/mixed-iteration", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/mixed-iteration",
 		}],
 		"title": "mixed-iteration",
 	}}
@@ -49,7 +48,7 @@ test_fail_mixed_iteration_nested if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/mixed-iteration", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/mixed-iteration",
 		}],
 		"title": "mixed-iteration",
 	}}

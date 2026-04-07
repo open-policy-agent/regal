@@ -26,7 +26,7 @@ test_fail_var_shadows_builtin if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/var-shadows-builtin", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/var-shadows-builtin",
 		}],
 		"title": "var-shadows-builtin",
 	}}

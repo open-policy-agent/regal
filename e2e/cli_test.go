@@ -327,7 +327,6 @@ func TestCreateNewBuiltinRuleFromTemplate(t *testing.T) {
 		).
 		expectFiles(
 			exists(tmpDir, "bundle/regal/rules/naming/foo-bar-baz/foo_bar_baz.rego"),
-			exists(tmpDir, "bundle/regal/rules/naming/foo-bar-baz/foo_bar_baz.rego"),
 			exists(tmpDir, "bundle/regal/rules/naming/foo-bar-baz/foo_bar_baz_test.rego"),
 			exists(tmpDir, "bundle/regal/config/provided/data.yaml"),
 			exists(tmpDir, "docs/rules/naming/foo-bar-baz.md"),

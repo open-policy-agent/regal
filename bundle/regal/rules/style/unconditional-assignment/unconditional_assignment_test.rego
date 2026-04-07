@@ -1,7 +1,6 @@
 package regal.rules.style["unconditional-assignment_test"]
 
 import data.regal.ast
-import data.regal.config
 import data.regal.rules.style["unconditional-assignment"] as rule
 
 test_fail_unconditional_assignment_in_body if {
@@ -14,7 +13,7 @@ test_fail_unconditional_assignment_in_body if {
 		"description": "Unconditional assignment in rule body",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/unconditional-assignment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/unconditional-assignment",
 		}],
 		"title": "unconditional-assignment",
 		"location": {
@@ -41,7 +40,7 @@ test_fail_unconditional_eq_in_body if {
 		"description": "Unconditional assignment in rule body",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/unconditional-assignment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/unconditional-assignment",
 		}],
 		"title": "unconditional-assignment",
 		"location": {
@@ -88,7 +87,7 @@ test_fail_unconditional_multi_value_assignment if {
 		"description": "Unconditional assignment in rule body",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/unconditional-assignment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/unconditional-assignment",
 		}],
 		"title": "unconditional-assignment",
 		"location": {
@@ -115,7 +114,7 @@ test_fail_unconditional_map_assignment if {
 		"description": "Unconditional assignment in rule body",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/unconditional-assignment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/unconditional-assignment",
 		}],
 		"title": "unconditional-assignment",
 		"location": {

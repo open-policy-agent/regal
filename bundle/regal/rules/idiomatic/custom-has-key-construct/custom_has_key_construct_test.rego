@@ -25,7 +25,7 @@ test_fail_custom_has_key if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/custom-has-key-construct", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/custom-has-key-construct",
 		}],
 		"title": "custom-has-key-construct",
 	}}
@@ -52,7 +52,7 @@ test_fail_custom_has_key_reversed if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/custom-has-key-construct", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/custom-has-key-construct",
 		}],
 		"title": "custom-has-key-construct",
 	}}
@@ -84,7 +84,7 @@ test_fail_custom_has_key_multiple_wildcards if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/custom-has-key-construct", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/custom-has-key-construct",
 		}],
 		"title": "custom-has-key-construct",
 	}}

@@ -1,5 +1,8 @@
 # METADATA
 # description: Avoid chaining rule bodies
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/custom/chained-rule-body
 package regal.rules.custom["chained-rule-body"]
 
 import data.regal.ast

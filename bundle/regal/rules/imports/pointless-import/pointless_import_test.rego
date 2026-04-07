@@ -1,7 +1,6 @@
 package regal.rules.imports["pointless-import_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.imports["pointless-import"] as rule
 
@@ -24,7 +23,7 @@ test_fail_pointless_import_of_same_package if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/pointless-import", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/pointless-import",
 		}],
 		"title": "pointless-import",
 	}}
@@ -38,7 +37,7 @@ test_success_external_ref_not_flagged if {
 
 test_success_ref_defined_in_module_flagged if {
 	r := rule.report with input as ast.policy(`import data.policy.a.b.c
-	
+
 	a.b.c := 1
 	`)
 
@@ -66,7 +65,7 @@ test_success_ref_defined_in_module_flagged if {
 
 test_success_ref_prefix_defined_in_module_flagged if {
 	r := rule.report with input as ast.policy(`import data.policy.a.b
-	
+
 	a.b.c := 1`)
 
 	r == {{

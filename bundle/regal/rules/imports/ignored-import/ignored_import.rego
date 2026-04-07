@@ -1,5 +1,8 @@
 # METADATA
 # description: Reference ignores import
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/ignored-import
 package regal.rules.imports["ignored-import"]
 
 import data.regal.ast

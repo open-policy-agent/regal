@@ -29,7 +29,7 @@ test_fail_configured_file_length_exceeded if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/file-length", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/file-length",
 		}],
 		"title": "file-length",
 	}}

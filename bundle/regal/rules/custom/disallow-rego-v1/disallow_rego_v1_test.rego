@@ -1,7 +1,5 @@
 package regal.rules.custom["disallow-rego-v1_test"]
 
-import data.regal.config
-
 import data.regal.rules.custom["disallow-rego-v1"] as rule
 
 test_fail_contains_rego_v1_import if {
@@ -15,7 +13,7 @@ test_fail_contains_rego_v1_import if {
 		"description": "Use of disallowed `import rego.v1`",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/disallow-rego-v1", "custom"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/custom/disallow-rego-v1",
 		}],
 		"title": "disallow-rego-v1",
 		"location": {

@@ -1,5 +1,8 @@
 # METADATA
 # description: Line too long
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/line-length
 package regal.rules.style["line-length"]
 
 import data.regal.config

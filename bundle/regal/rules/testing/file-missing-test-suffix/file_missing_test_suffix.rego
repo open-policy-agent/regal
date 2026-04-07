@@ -1,5 +1,8 @@
 # METADATA
 # description: Files containing tests should have a _test.rego suffix
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/testing/file-missing-test-suffix
 package regal.rules.testing["file-missing-test-suffix"]
 
 import data.regal.ast

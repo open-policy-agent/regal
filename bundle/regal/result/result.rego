@@ -115,11 +115,11 @@ _related_resources(annotations, category, title) := arr if {
 
 	arr := [{
 		"description": "documentation",
-		"ref": $"{config.docs.base_url}/{category}/{title}",
+		"ref": $"https://www.openpolicyagent.org/projects/regal/rules/{category}/{title}",
 	}]
 }
 
-_fail_annotated(metadata, details) := violation if {
+_fail_annotated(metadata, details) := without_custom_and_scope if {
 	is_object(metadata)
 
 	with_location := object.union(metadata, details)
@@ -130,12 +130,6 @@ _fail_annotated(metadata, details) := violation if {
 	})
 
 	without_custom_and_scope := object.remove(with_category, ["custom", "scope", "schemas"])
-	related_resources := _resource_urls(without_custom_and_scope.related_resources, category)
-
-	violation := json.patch(
-		without_custom_and_scope,
-		[{"op": "replace", "path": "/related_resources", "value": related_resources}],
-	)
 }
 
 _fail_annotated_custom(metadata, details) := violation if {
@@ -150,11 +144,6 @@ _fail_annotated_custom(metadata, details) := violation if {
 
 	violation := object.remove(with_category, ["custom", "scope", "schemas"])
 }
-
-_resource_urls(related_resources, category) := [obj |
-	some item in related_resources
-	obj := object.union(item, {"ref": config.docs.resolve_url(item.ref, category)})
-]
 
 # Note that the `text` attribute always returns the entire line and *not*
 # based on the location range. This is intentional, as the context is often

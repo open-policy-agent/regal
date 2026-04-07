@@ -1,7 +1,6 @@
 package regal.rules.bugs["import-shadows-rule_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["import-shadows-rule"] as rule
 
@@ -28,7 +27,7 @@ test_fail_import_shadows_rule if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/import-shadows-rule", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/import-shadows-rule",
 		}],
 		"title": "import-shadows-rule",
 	}}
@@ -57,7 +56,7 @@ test_fail_import_alias_shadows_rule if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/import-shadows-rule", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/import-shadows-rule",
 		}],
 		"title": "import-shadows-rule",
 	}}

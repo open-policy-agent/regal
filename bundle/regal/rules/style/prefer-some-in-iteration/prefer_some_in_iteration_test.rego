@@ -316,7 +316,7 @@ with_location(location) := {{
 	"location": location,
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/prefer-some-in-iteration", "style"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/prefer-some-in-iteration",
 	}],
 	"title": "prefer-some-in-iteration",
 }}

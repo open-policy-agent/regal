@@ -1,5 +1,8 @@
 # METADATA
 # description: Unnecessary wildcard key
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/in-wildcard-key
 package regal.rules.idiomatic["in-wildcard-key"]
 
 import data.regal.ast

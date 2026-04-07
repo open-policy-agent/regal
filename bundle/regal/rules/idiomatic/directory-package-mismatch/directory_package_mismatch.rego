@@ -1,5 +1,8 @@
 # METADATA
 # description: Directory structure should mirror package
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/directory-package-mismatch
 package regal.rules.idiomatic["directory-package-mismatch"]
 
 import data.regal.ast

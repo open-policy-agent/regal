@@ -41,7 +41,7 @@ with_location(location) := {{
 	"location": location,
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/directory-package-mismatch", "idiomatic"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/directory-package-mismatch",
 	}],
 	"title": "directory-package-mismatch",
 }}

@@ -1,7 +1,6 @@
 package regal.rules.idiomatic["prefer-set-or-object-rule_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.idiomatic["prefer-set-or-object-rule"] as rule
 
@@ -28,7 +27,7 @@ test_fail_set_comprehension_could_be_rule if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/prefer-set-or-object-rule", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/prefer-set-or-object-rule",
 		}],
 		"title": "prefer-set-or-object-rule",
 	}}
@@ -57,7 +56,7 @@ test_fail_object_comprehension_could_be_rule if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/prefer-set-or-object-rule", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/prefer-set-or-object-rule",
 		}],
 		"title": "prefer-set-or-object-rule",
 	}}

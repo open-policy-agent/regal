@@ -1,5 +1,8 @@
 # METADATA
 # description: Assigned value can be moved to comprehension term
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/comprehension-term-assignment
 package regal.rules.style["comprehension-term-assignment"]
 
 import data.regal.ast

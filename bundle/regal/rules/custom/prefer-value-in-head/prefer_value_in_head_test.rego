@@ -194,7 +194,7 @@ expected := {
 	"level": "error",
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/prefer-value-in-head", "custom"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/custom/prefer-value-in-head",
 	}],
 	"title": "prefer-value-in-head",
 	"location": {"file": "policy.rego"},

@@ -1,7 +1,6 @@
 package regal.rules.bugs["top-level-iteration_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["top-level-iteration"] as rule
 
@@ -23,7 +22,7 @@ test_fail_top_level_iteration_wildcard if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/top-level-iteration", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/top-level-iteration",
 		}],
 		"title": "top-level-iteration",
 		"level": "error",
@@ -48,7 +47,7 @@ test_fail_top_level_iteration_named_var if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/top-level-iteration", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/top-level-iteration",
 		}],
 		"title": "top-level-iteration",
 		"level": "error",

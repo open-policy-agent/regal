@@ -1,5 +1,8 @@
 # METADATA
 # description: Rule body could be made a one-liner
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/custom/one-liner-rule
 package regal.rules.custom["one-liner-rule"]
 
 import data.regal.capabilities

@@ -1,5 +1,8 @@
 # METADATA
 # description: Redundant count before loop
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/redundant-loop-count
 package regal.rules.bugs["redundant-loop-count"]
 
 import data.regal.ast

@@ -1,5 +1,8 @@
 # METADATA
 # description: '`with` used outside test context'
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/performance/with-outside-test-context
 package regal.rules.performance["with-outside-test-context"]
 
 import data.regal.ast

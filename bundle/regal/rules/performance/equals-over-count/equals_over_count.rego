@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer direct use of `==`/`!=` over `count` to check for empty collections
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/performance/equals-over-count
 package regal.rules.performance["equals-over-count"]
 
 import data.regal.ast

@@ -1,7 +1,7 @@
 package regal.rules.style["todo-comment_test"]
 
 import data.regal.ast
-import data.regal.config
+
 import data.regal.rules.style["todo-comment"] as rule
 
 test_fail_todo_comment if {
@@ -12,7 +12,7 @@ test_fail_todo_comment if {
 		"description": "Avoid TODO comments",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/todo-comment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/todo-comment",
 		}],
 		"title": "todo-comment",
 		"location": {
@@ -37,7 +37,7 @@ test_fail_fixme_comment if {
 		"description": "Avoid TODO comments",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/todo-comment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/todo-comment",
 		}],
 		"title": "todo-comment",
 		"location": {

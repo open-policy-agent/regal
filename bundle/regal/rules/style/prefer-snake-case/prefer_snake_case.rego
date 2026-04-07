@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer snake_case for names
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/prefer-snake-case
 package regal.rules.style["prefer-snake-case"]
 
 import data.regal.ast

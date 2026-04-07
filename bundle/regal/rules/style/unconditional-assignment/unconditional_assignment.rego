@@ -1,5 +1,8 @@
 # METADATA
 # description: Unconditional assignment in rule body
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/unconditional-assignment
 package regal.rules.style["unconditional-assignment"]
 
 import data.regal.ast

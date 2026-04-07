@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer default assignment over negated condition
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/default-over-not
 package regal.rules.style["default-over-not"]
 
 import data.regal.ast

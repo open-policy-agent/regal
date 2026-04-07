@@ -1,5 +1,8 @@
 # METADATA
 # description: Max rule length exceeded
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/rule-length
 package regal.rules.style["rule-length"]
 
 import data.regal.config

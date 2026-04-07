@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer default assignment over fallback else
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/default-over-else
 package regal.rules.style["default-over-else"]
 
 import data.regal.ast

@@ -1,7 +1,6 @@
 package regal.rules.idiomatic["custom-in-construct_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.idiomatic["custom-in-construct"] as rule
 
@@ -26,7 +25,7 @@ test_fail_custom_in if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/custom-in-construct", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/custom-in-construct",
 		}],
 		"title": "custom-in-construct",
 	}}
@@ -51,7 +50,7 @@ test_fail_custom_in_reversed if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/custom-in-construct", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/custom-in-construct",
 		}],
 		"title": "custom-in-construct",
 	}}

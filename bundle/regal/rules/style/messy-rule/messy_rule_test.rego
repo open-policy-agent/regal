@@ -1,7 +1,6 @@
 package regal.rules.style["messy-rule_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.style["messy-rule"] as rule
 
@@ -144,7 +143,7 @@ expected := {
 	"level": "error",
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/messy-rule", "style"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/messy-rule",
 	}],
 	"title": "messy-rule",
 	"location": {"file": "policy.rego"},

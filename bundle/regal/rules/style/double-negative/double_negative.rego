@@ -1,10 +1,10 @@
 # METADATA
 # description: Avoid double negatives
 # related_resources:
-# - description: documentation
-#   ref: https://www.openpolicyagent.org/projects/regal/rules/style/double-negative
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/double-negative
 # schemas:
-# - input: schema.regal.ast
+#   - input: schema.regal.ast
 package regal.rules.style["double-negative"]
 
 import data.regal.ast

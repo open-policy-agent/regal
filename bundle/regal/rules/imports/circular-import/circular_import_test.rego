@@ -1,7 +1,6 @@
 package regal.rules.imports["circular-import_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.imports["circular-import"] as rule
 
@@ -153,7 +152,7 @@ test_aggregate_report_fails_when_cycle_present if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/circular-import", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/circular-import",
 		}],
 		"title": "circular-import",
 	}}
@@ -179,7 +178,7 @@ test_aggregate_report_fails_when_cycle_present_in_1_package if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/circular-import", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/circular-import",
 		}],
 		"title": "circular-import",
 	}}
@@ -216,7 +215,7 @@ test_aggregate_report_fails_when_cycle_present_in_n_packages if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/circular-import", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/circular-import",
 		}],
 		"title": "circular-import",
 	}}

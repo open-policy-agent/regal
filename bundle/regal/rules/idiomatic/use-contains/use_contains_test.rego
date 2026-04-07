@@ -1,7 +1,6 @@
 package regal.rules.idiomatic["use-contains_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.idiomatic["use-contains"] as rule
 
@@ -29,7 +28,7 @@ test_fail_should_use_contains if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-contains", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-contains",
 		}],
 		"title": "use-contains",
 	}}

@@ -1,5 +1,8 @@
 # METADATA
 # description: Rule assigned its default value
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/rule-assigns-default
 package regal.rules.bugs["rule-assigns-default"]
 
 import data.regal.ast

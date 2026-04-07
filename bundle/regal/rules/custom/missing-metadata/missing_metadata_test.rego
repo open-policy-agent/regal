@@ -80,7 +80,7 @@ test_fail_missing_package_metadata_report if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/missing-metadata", "custom"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/custom/missing-metadata",
 		}],
 		"title": "missing-metadata",
 	}}
@@ -150,7 +150,7 @@ baz := true
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/missing-metadata", "custom"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/custom/missing-metadata",
 		}],
 		"title": "missing-metadata",
 	}}

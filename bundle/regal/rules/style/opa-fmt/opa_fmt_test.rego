@@ -1,6 +1,5 @@
 package regal.rules.style["opa-fmt_test"]
 
-import data.regal.config
 import data.regal.rules.style["opa-fmt"] as rule
 
 test_fail_not_formatted if {
@@ -19,7 +18,7 @@ test_fail_not_formatted if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/opa-fmt", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/opa-fmt",
 		}],
 		"title": "opa-fmt",
 	}}
@@ -48,7 +47,7 @@ test_fail_v0_required_but_v1_policy if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/opa-fmt", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/opa-fmt",
 		}],
 		"title": "opa-fmt",
 	}}

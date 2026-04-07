@@ -1,7 +1,6 @@
 package regal.rules.bugs["rule-assigns-default_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["rule-assigns-default"] as rule
 
@@ -31,7 +30,7 @@ test_fail_rule_assigned_default_value if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/rule-assigns-default", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/rule-assigns-default",
 		}],
 		"title": "rule-assigns-default",
 	}}

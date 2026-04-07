@@ -1,7 +1,6 @@
 package regal.rules.idiomatic["in-wildcard-key_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.idiomatic["in-wildcard-key"] as rule
 
@@ -24,7 +23,7 @@ test_fail_wildcard_key_not_needed if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/in-wildcard-key", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/in-wildcard-key",
 		}],
 		"title": "in-wildcard-key",
 	}}

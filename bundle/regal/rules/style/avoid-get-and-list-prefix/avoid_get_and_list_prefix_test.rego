@@ -1,7 +1,7 @@
 package regal.rules.style["avoid-get-and-list-prefix_test"]
 
 import data.regal.ast
-import data.regal.config
+
 import data.regal.rules.style["avoid-get-and-list-prefix"] as rule
 
 test_fail_rule_name_starts_with_get if {
@@ -12,7 +12,7 @@ test_fail_rule_name_starts_with_get if {
 		"description": "Avoid `get_` and `list_` prefix for rules and functions",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/avoid-get-and-list-prefix", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/avoid-get-and-list-prefix",
 		}],
 		"title": "avoid-get-and-list-prefix",
 		"location": {
@@ -37,7 +37,7 @@ test_fail_function_name_starts_with_list if {
 		"description": "Avoid `get_` and `list_` prefix for rules and functions",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/avoid-get-and-list-prefix", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/avoid-get-and-list-prefix",
 		}],
 		"title": "avoid-get-and-list-prefix",
 		"location": {

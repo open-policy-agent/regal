@@ -1,7 +1,6 @@
 package regal.rules.performance["with-outside-test-context_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.performance["with-outside-test-context"] as rule
 
@@ -28,7 +27,7 @@ test_fail_with_used_outside_test if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/with-outside-test-context", "performance"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/performance/with-outside-test-context",
 		}],
 		"title": "with-outside-test-context",
 	}}

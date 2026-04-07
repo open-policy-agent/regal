@@ -1,7 +1,6 @@
 package regal.rules.style["pointless-reassignment_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.style["pointless-reassignment"] as rule
 
@@ -29,7 +28,7 @@ test_fail_pointless_reassignment_in_rule_head if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/pointless-reassignment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/pointless-reassignment",
 		}],
 		"title": "pointless-reassignment",
 	}}
@@ -61,7 +60,7 @@ test_fail_pointless_reassignment_in_rule_body if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/pointless-reassignment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/pointless-reassignment",
 		}],
 		"title": "pointless-reassignment",
 	}}
@@ -95,7 +94,7 @@ test_fail_pointless_reassignment_in_rule_body_nested if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/pointless-reassignment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/pointless-reassignment",
 		}],
 		"title": "pointless-reassignment",
 	}}

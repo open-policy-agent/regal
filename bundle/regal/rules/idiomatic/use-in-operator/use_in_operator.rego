@@ -1,5 +1,8 @@
 # METADATA
 # description: Use in to check for membership
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-in-operator
 package regal.rules.idiomatic["use-in-operator"]
 
 import data.regal.ast

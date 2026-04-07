@@ -1,7 +1,6 @@
 package regal.rules.style["trailing-default-rule_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.style["trailing-default-rule"] as rule
 
@@ -40,7 +39,7 @@ test_fail_default_declared_after if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/trailing-default-rule", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/trailing-default-rule",
 		}],
 		"title": "trailing-default-rule",
 	}}

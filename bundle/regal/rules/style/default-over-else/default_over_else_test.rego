@@ -122,7 +122,7 @@ with_location(location) := {{
 	"location": location,
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/default-over-else", "style"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/default-over-else",
 	}],
 	"title": "default-over-else",
 }}

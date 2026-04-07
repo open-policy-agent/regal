@@ -1,5 +1,8 @@
 # METADATA
 # description: Rule name shadows built-in
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/rule-shadows-builtin
 package regal.rules.bugs["rule-shadows-builtin"]
 
 import data.regal.ast

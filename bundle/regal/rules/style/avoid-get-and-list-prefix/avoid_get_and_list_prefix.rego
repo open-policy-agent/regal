@@ -1,5 +1,8 @@
 # METADATA
 # description: Avoid `get_` and `list_` prefix for rules and functions
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/avoid-get-and-list-prefix
 package regal.rules.style["avoid-get-and-list-prefix"]
 
 import data.regal.ast

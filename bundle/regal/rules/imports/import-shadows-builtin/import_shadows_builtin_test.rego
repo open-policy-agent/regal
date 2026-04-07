@@ -26,7 +26,7 @@ test_fail_import_shadows_builtin_name if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/import-shadows-builtin", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/import-shadows-builtin",
 		}],
 		"title": "import-shadows-builtin",
 	}}
@@ -52,7 +52,7 @@ test_fail_import_shadows_builtin_namespace if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/import-shadows-builtin", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/import-shadows-builtin",
 		}],
 		"title": "import-shadows-builtin",
 	}}

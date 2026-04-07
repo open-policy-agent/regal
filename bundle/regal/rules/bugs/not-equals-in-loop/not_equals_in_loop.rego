@@ -1,5 +1,8 @@
 # METADATA
 # description: Use of != in loop
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/not-equals-in-loop
 package regal.rules.bugs["not-equals-in-loop"]
 
 import data.regal.ast

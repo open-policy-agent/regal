@@ -1,7 +1,6 @@
 package regal.rules.bugs["redundant-existence-check_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["redundant-existence-check"] as rule
 
@@ -28,7 +27,7 @@ test_fail_redundant_existence_check if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-existence-check", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/redundant-existence-check",
 		}],
 		"title": "redundant-existence-check",
 	}}
@@ -57,7 +56,7 @@ test_fail_redundant_existence_check_subset if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-existence-check", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/redundant-existence-check",
 		}],
 		"title": "redundant-existence-check",
 	}}
@@ -105,7 +104,7 @@ test_fail_redundant_existence_check_head_assignment_of_ref if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-existence-check", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/redundant-existence-check",
 		}],
 		"title": "redundant-existence-check",
 	}}
@@ -133,7 +132,7 @@ test_fail_redundant_existence_check_function_arg if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-existence-check", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/redundant-existence-check",
 		}],
 		"title": "redundant-existence-check",
 	}}
@@ -162,7 +161,7 @@ test_fail_redundant_existence_check_function_arg_reference_after_use if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-existence-check", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/redundant-existence-check",
 		}],
 		"title": "redundant-existence-check",
 	}}

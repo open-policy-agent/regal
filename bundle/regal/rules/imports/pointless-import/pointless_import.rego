@@ -1,5 +1,8 @@
 # METADATA
 # description: Importing own package is pointless
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/pointless-import
 package regal.rules.imports["pointless-import"]
 
 import data.regal.ast

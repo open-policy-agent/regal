@@ -1,7 +1,6 @@
 package regal.rules.bugs["duplicate-rule_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["duplicate-rule"] as rule
 
@@ -26,11 +25,14 @@ test_fail_simple_duplicate_rule if {
 			"file": "policy.rego",
 			"row": 6,
 			"text": "\tallow if {",
-			"end": {"col": 3, "row": 8},
+			"end": {
+				"col": 3,
+				"row": 8,
+			},
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/duplicate-rule", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/duplicate-rule",
 		}],
 		"title": "duplicate-rule",
 	}}
@@ -82,7 +84,7 @@ test_fail_multiple_duplicate_rules if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/duplicate-rule", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/duplicate-rule",
 		}],
 		"title": "duplicate-rule",
 	}}

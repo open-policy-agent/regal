@@ -1,7 +1,6 @@
 package regal.rules.bugs["if-empty-object_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["if-empty-object"] as rule
 
@@ -24,7 +23,7 @@ test_fail_if_empty_object if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/if-empty-object", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/if-empty-object",
 		}],
 		"title": "if-empty-object",
 	}}

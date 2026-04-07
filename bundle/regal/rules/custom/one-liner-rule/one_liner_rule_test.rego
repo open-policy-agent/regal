@@ -173,7 +173,7 @@ expected := {
 	"level": "error",
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/one-liner-rule", "custom"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/custom/one-liner-rule",
 	}],
 	"title": "one-liner-rule",
 	"location": {"file": "policy.rego"},

@@ -57,14 +57,20 @@ test_rule_violation_if_repetition_of_more_than_one_path_component if {
 		object.union(base_result, {"location": {
 			"row": 2,
 			"col": 5,
-			"end": {"col": 16, "row": 2},
+			"end": {
+				"col": 16,
+				"row": 2,
+			},
 			"file": "example.rego",
 			"text": "    foo_bar_baz := true",
 		}}),
 		object.union(base_result, {"location": {
 			"row": 4,
 			"col": 5,
-			"end": {"col": 11, "row": 4},
+			"end": {
+				"col": 11,
+				"row": 4,
+			},
 			"file": "example.rego",
 			"text": "    barBaz := 1",
 		}}),
@@ -85,21 +91,30 @@ test_rule_violation_if_repetition_multiple if {
 			"col": 5,
 			"file": "example.rego",
 			"row": 4,
-			"end": {"col": 8, "row": 4},
+			"end": {
+				"col": 8,
+				"row": 4,
+			},
 			"text": "    bar := true",
 		}}),
 		object.union(base_result, {"location": {
 			"col": 5,
 			"file": "example.rego",
 			"row": 5,
-			"end": {"col": 14, "row": 5},
+			"end": {
+				"col": 14,
+				"row": 5,
+			},
 			"text": "    barNumber := 3",
 		}}),
 		object.union(base_result, {"location": {
 			"col": 5,
 			"file": "example.rego",
 			"row": 6,
-			"end": {"col": 14, "row": 6},
+			"end": {
+				"col": 14,
+				"row": 6,
+			},
 			"text": "    barString := \"string\"",
 		}}),
 	}
@@ -118,7 +133,10 @@ test_rule_violation_if_repetition_in_function if {
 			"col": 5,
 			"file": "example.rego",
 			"row": 4,
-			"end": {"col": 8, "row": 4},
+			"end": {
+				"col": 8,
+				"row": 4,
+			},
 			"text": "    bar(_) := true",
 		}},
 	)}
@@ -136,14 +154,20 @@ test_rule_violation_if_repetition_in_defaults if {
 			"col": 13,
 			"file": "example.rego",
 			"row": 3,
-			"end": {"col": 16, "row": 3},
+			"end": {
+				"col": 16,
+				"row": 3,
+			},
 			"text": "    default bar(_) := true",
 		}}),
 		object.union(base_result, {"location": {
 			"col": 13,
 			"file": "example.rego",
 			"row": 4,
-			"end": {"col": 22, "row": 4},
+			"end": {
+				"col": 22,
+				"row": 4,
+			},
 			"text": "    default barNumber := 3",
 		}}),
 	}
@@ -160,7 +184,10 @@ test_rule_violation_if_repetition_ref_head_rule if {
 		"col": 2,
 		"file": "example.rego",
 		"row": 4,
-		"end": {"col": 8, "row": 4},
+		"end": {
+			"col": 8,
+			"row": 4,
+		},
 		"text": "\tpolicy.decision contains \"nope\"",
 	}})}
 }

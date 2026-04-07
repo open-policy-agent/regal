@@ -31,7 +31,7 @@ test_fail_forbidden_function if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/forbidden-function-call", "custom"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/custom/forbidden-function-call",
 		}],
 		"title": "forbidden-function-call",
 	}}

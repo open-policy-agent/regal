@@ -1,5 +1,8 @@
 # METADATA
 # description: Import shadows rule
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/import-shadows-rule
 package regal.rules.bugs["import-shadows-rule"]
 
 import data.regal.ast

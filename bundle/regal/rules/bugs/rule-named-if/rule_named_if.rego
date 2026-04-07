@@ -1,5 +1,8 @@
 # METADATA
 # description: Rule named "if"
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/rule-named-if
 package regal.rules.bugs["rule-named-if"]
 
 import data.regal.ast

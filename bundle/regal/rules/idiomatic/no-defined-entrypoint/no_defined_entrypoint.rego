@@ -1,5 +1,8 @@
 # METADATA
 # description: Missing entrypoint annotation
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/no-defined-entrypoint
 package regal.rules.idiomatic["no-defined-entrypoint"]
 
 import data.regal.result

@@ -1,7 +1,6 @@
 package regal.rules.bugs["internal-entrypoint_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["internal-entrypoint"] as rule
 
@@ -29,7 +28,7 @@ _allow := true
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/internal-entrypoint", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/internal-entrypoint",
 		}],
 		"title": "internal-entrypoint",
 	}}
@@ -59,7 +58,7 @@ authz._allow := true
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/internal-entrypoint", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/internal-entrypoint",
 		}],
 		"title": "internal-entrypoint",
 	}}

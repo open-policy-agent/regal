@@ -12,7 +12,7 @@ test_fail_no_leading_whitespace if {
 		"description": "Comment should start with whitespace",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/no-whitespace-comment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment",
 		}],
 		"title": "no-whitespace-comment",
 		"location": {
@@ -39,7 +39,7 @@ test_fail_comments_after_shebang if {
 		"description": "Comment should start with whitespace",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/no-whitespace-comment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment",
 		}],
 		"title": "no-whitespace-comment",
 		"location": {
@@ -67,7 +67,7 @@ test_fail_shebang_in_body if {
 		"description": "Comment should start with whitespace",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/no-whitespace-comment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment",
 		}],
 		"title": "no-whitespace-comment",
 		"location": {
@@ -92,7 +92,7 @@ test_fail_no_leading_whitespace_multiple_hashes if {
 		"description": "Comment should start with whitespace",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/no-whitespace-comment", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment",
 		}],
 		"title": "no-whitespace-comment",
 		"location": {

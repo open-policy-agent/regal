@@ -1,6 +1,5 @@
 package regal.rules.bugs["impossible-not_test"]
 
-import data.regal.config
 import data.regal.util
 
 import data.regal.rules.bugs["impossible-not"] as rule
@@ -228,7 +227,7 @@ expected := {
 	"level": "error",
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/impossible-not", "bugs"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/impossible-not",
 	}],
 	"title": "impossible-not",
 }

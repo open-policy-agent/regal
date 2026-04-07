@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer using `array.flatten` over nested `array.concat` calls
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-array-flatten
 package regal.rules.idiomatic["use-array-flatten"]
 
 import data.regal.ast

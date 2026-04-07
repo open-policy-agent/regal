@@ -1,7 +1,6 @@
 package regal.rules.imports["import-after-rule_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.imports["import-after-rule"] as rule
 
@@ -29,7 +28,7 @@ test_fail_import_after_rule if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/import-after-rule", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/import-after-rule",
 		}],
 		"title": "import-after-rule",
 	}}

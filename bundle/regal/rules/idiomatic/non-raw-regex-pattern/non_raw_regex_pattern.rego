@@ -1,5 +1,8 @@
 # METADATA
 # description: Use raw strings for regex patterns
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/non-raw-regex-pattern
 package regal.rules.idiomatic["non-raw-regex-pattern"]
 
 import data.regal.ast

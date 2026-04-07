@@ -1,5 +1,8 @@
 # METADATA
 # description: Variable name shadows built-in
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/var-shadows-builtin
 package regal.rules.bugs["var-shadows-builtin"]
 
 import data.regal.ast

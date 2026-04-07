@@ -1,7 +1,6 @@
 package regal.rules.bugs["annotation-without-metadata_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["annotation-without-metadata"] as rule
 
@@ -27,7 +26,7 @@ allow := false
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/annotation-without-metadata", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/annotation-without-metadata",
 		}],
 		"title": "annotation-without-metadata",
 	}}

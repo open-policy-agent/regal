@@ -1,7 +1,6 @@
 package regal.rules.bugs["zero-arity-function_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["zero-arity-function"] as rule
 
@@ -24,7 +23,7 @@ test_fail_zero_arity_function if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/zero-arity-function", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/zero-arity-function",
 		}],
 		"title": "zero-arity-function",
 	}}
@@ -49,7 +48,7 @@ test_fail_zero_arity_nested_function if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/zero-arity-function", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/zero-arity-function",
 		}],
 		"title": "zero-arity-function",
 	}}

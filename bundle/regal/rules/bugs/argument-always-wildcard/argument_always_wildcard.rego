@@ -1,5 +1,8 @@
 # METADATA
 # description: Argument is always a wildcard
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/argument-always-wildcard
 package regal.rules.bugs["argument-always-wildcard"]
 
 import data.regal.ast

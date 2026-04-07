@@ -1,5 +1,8 @@
 # METADATA
 # description: Add description of rule here!
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/{{.Category}}/{{.NameOriginal}}
 package regal.rules.{{.Category}}{{.Name}}
 
 import data.regal.ast

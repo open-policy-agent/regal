@@ -1,5 +1,8 @@
 # METADATA
 # description: Avoid using deprecated built-in functions
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/deprecated-builtin
 package regal.rules.bugs["deprecated-builtin"]
 
 import data.regal.ast

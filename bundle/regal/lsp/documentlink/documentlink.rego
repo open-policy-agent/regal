@@ -27,23 +27,28 @@ items contains item if {
 	module := data.workspace.parsed[input.params.textDocument.uri]
 
 	some encoded in module.comments
-	comment := object.union(encoded, {"text": base64.decode(encoded.text)})
-	contains(comment.text, "regal ignore:")
 
-	loc := util.to_location_no_text(comment.location)
-	rules := regex.split(`,\s*`, trim_space(regex.replace(comment.text, `^.*regal ignore:\s*(\S+)`, "$1")))
+	text := base64.decode(encoded.text)
+	contains(text, "regal ignore:")
 
-	some rule in rules
-
-	pos := indexof(comment.text, rule)
+	loc := util.to_location_no_text(encoded.location)
 	row := loc.row - 1
-	col := loc.col + pos
+
+	some rule in regex.split(`,\s*`, trim_space(regex.replace(text, `^.*regal ignore:\s*(\S+)`, "$1")))
+
+	col := loc.col + indexof(text, rule)
 
 	item := {
 		"target": $"https://www.openpolicyagent.org/projects/regal/rules/{_category_for[rule]}/{rule}",
 		"range": {
-			"start": {"line": row, "character": col},
-			"end": {"line": row, "character": col + count(rule)},
+			"start": {
+				"line": row,
+				"character": col,
+			},
+			"end": {
+				"line": row,
+				"character": col + count(rule),
+			},
 		},
 		"tooltip": $"See documentation for {rule}",
 	}

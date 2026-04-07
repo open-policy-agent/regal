@@ -1,7 +1,7 @@
 package regal.rules.idiomatic["use-some-for-output-vars_test"]
 
 import data.regal.ast
-import data.regal.config
+
 import data.regal.rules.idiomatic["use-some-for-output-vars"] as rule
 
 test_fail_output_var_not_declared if {
@@ -24,7 +24,7 @@ test_fail_output_var_not_declared if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-some-for-output-vars", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-some-for-output-vars",
 		}],
 		"title": "use-some-for-output-vars",
 	}}
@@ -51,7 +51,7 @@ test_fail_multiple_output_vars_not_declared if {
 			},
 			"related_resources": [{
 				"description": "documentation",
-				"ref": config.docs.resolve_url("$baseUrl/$category/use-some-for-output-vars", "idiomatic"),
+				"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-some-for-output-vars",
 			}],
 			"title": "use-some-for-output-vars",
 		},
@@ -71,7 +71,7 @@ test_fail_multiple_output_vars_not_declared if {
 			},
 			"related_resources": [{
 				"description": "documentation",
-				"ref": config.docs.resolve_url("$baseUrl/$category/use-some-for-output-vars", "idiomatic"),
+				"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-some-for-output-vars",
 			}],
 			"title": "use-some-for-output-vars",
 		},
@@ -100,7 +100,7 @@ test_fail_only_one_declared if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-some-for-output-vars", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-some-for-output-vars",
 		}],
 		"title": "use-some-for-output-vars",
 	}}

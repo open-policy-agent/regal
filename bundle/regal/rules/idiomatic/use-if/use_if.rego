@@ -1,5 +1,8 @@
 # METADATA
 # description: Use the `if` keyword
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-if
 package regal.rules.idiomatic["use-if"]
 
 import data.regal.ast

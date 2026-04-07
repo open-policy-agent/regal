@@ -27,7 +27,7 @@ test_fail_unused_return_value if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/unassigned-return-value", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/unassigned-return-value",
 		}],
 		"title": "unassigned-return-value",
 	}}
@@ -58,7 +58,7 @@ test_fail_unused_return_value_nested if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/unassigned-return-value", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/unassigned-return-value",
 		}],
 		"title": "unassigned-return-value",
 	}}

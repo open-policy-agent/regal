@@ -1,5 +1,8 @@
 # METADATA
 # description: External reference in function
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/external-reference
 package regal.rules.style["external-reference"]
 
 import data.regal.ast

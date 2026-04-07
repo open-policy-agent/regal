@@ -1,6 +1,5 @@
 package regal.rules.testing["identically-named-tests_test"]
 
-import data.regal.config
 import data.regal.rules.testing["identically-named-tests"] as rule
 
 test_fail_identically_named_tests if {
@@ -17,7 +16,7 @@ test_fail_identically_named_tests if {
 		"description": "Multiple tests with same name",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/identically-named-tests", "testing"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/testing/identically-named-tests",
 		}],
 		"title": "identically-named-tests",
 		"location": {

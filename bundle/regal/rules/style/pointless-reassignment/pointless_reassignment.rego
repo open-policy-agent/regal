@@ -1,5 +1,8 @@
 # METADATA
 # description: Pointless reassignment of variable
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/style/pointless-reassignment
 package regal.rules.style["pointless-reassignment"]
 
 import data.regal.ast

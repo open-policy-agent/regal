@@ -1,7 +1,7 @@
 package regal.rules.imports["redundant-data-import_test"]
 
 import data.regal.ast
-import data.regal.config
+
 import data.regal.rules.imports["redundant-data-import"] as rule
 
 test_fail_import_data if {
@@ -12,7 +12,7 @@ test_fail_import_data if {
 		"description": "Redundant import of data",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-data-import", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/redundant-data-import",
 		}],
 		"title": "redundant-data-import",
 		"location": {
@@ -37,7 +37,7 @@ test_fail_import_data_aliased if {
 		"description": "Redundant import of data",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/redundant-data-import", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/redundant-data-import",
 		}],
 		"title": "redundant-data-import",
 		"location": {

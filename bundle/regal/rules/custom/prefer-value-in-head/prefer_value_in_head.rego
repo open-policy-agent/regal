@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer value in rule head
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/custom/prefer-value-in-head
 package regal.rules.custom["prefer-value-in-head"]
 
 import data.regal.ast

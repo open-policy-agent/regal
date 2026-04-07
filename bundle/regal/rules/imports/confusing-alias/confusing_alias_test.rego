@@ -1,7 +1,6 @@
 package regal.rules.imports["confusing-alias_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.imports["confusing-alias"] as rule
 
@@ -72,7 +71,7 @@ violation_with_location(location) := {
 	"location": location,
 	"related_resources": [{
 		"description": "documentation",
-		"ref": config.docs.resolve_url("$baseUrl/$category/confusing-alias", "imports"),
+		"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/confusing-alias",
 	}],
 	"title": "confusing-alias",
 }

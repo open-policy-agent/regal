@@ -1,5 +1,8 @@
 # METADATA
 # description: Prefer pattern matching in function arguments
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/equals-pattern-matching
 package regal.rules.idiomatic["equals-pattern-matching"]
 
 import data.regal.ast

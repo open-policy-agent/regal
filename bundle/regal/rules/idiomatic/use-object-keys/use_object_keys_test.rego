@@ -1,7 +1,6 @@
 package regal.rules.idiomatic["use-object-keys_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.idiomatic["use-object-keys"] as rule
 
@@ -24,7 +23,7 @@ test_fail_use_object_keys_not_some_in_comprehension if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-object-keys", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-object-keys",
 		}],
 		"title": "use-object-keys",
 	}}
@@ -49,7 +48,7 @@ test_fail_use_object_keys_not_some_in_comprehension_single_var if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-object-keys", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-object-keys",
 		}],
 		"title": "use-object-keys",
 	}}
@@ -74,7 +73,7 @@ test_fail_use_object_keys_not_some_comprehension if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/use-object-keys", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-object-keys",
 		}],
 		"title": "use-object-keys",
 	}}

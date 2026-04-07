@@ -1,7 +1,6 @@
 package regal.rules.imports["ignored-import_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.imports["ignored-import"] as rule
 
@@ -29,7 +28,7 @@ test_fail_ignored_import if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/ignored-import", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/ignored-import",
 		}],
 		"title": "ignored-import",
 	}}
@@ -60,7 +59,7 @@ test_fail_ignored_most_specific_import if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/ignored-import", "imports"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/ignored-import",
 		}],
 		"title": "ignored-import",
 	}}

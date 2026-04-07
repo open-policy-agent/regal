@@ -1,5 +1,8 @@
 # METADATA
 # description: Avoid functions without args
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/zero-arity-function
 package regal.rules.bugs["zero-arity-function"]
 
 import data.regal.ast

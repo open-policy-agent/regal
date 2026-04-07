@@ -1,7 +1,5 @@
 package regal.rules.idiomatic["no-defined-entrypoint_test"]
 
-import data.regal.config
-
 import data.regal.rules.idiomatic["no-defined-entrypoint"] as rule
 
 test_aggregate_entrypoints if {
@@ -45,7 +43,7 @@ test_fail_no_entrypoint_defined if {
 		"level": "error",
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/no-defined-entrypoint", "idiomatic"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/idiomatic/no-defined-entrypoint",
 		}],
 		"title": "no-defined-entrypoint",
 	}}

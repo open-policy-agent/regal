@@ -25,7 +25,7 @@ test_fail_function_arg_return_value if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/function-arg-return", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/function-arg-return",
 		}],
 		"title": "function-arg-return",
 	}}
@@ -51,7 +51,7 @@ test_fail_function_arg_return_value_multi_part_ref if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/function-arg-return", "style"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/function-arg-return",
 		}],
 		"title": "function-arg-return",
 	}}

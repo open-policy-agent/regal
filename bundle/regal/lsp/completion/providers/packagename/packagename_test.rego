@@ -29,8 +29,14 @@ test_package_name_completion_on_typing if {
 		"textEdit": {
 			"newText": "foo.bar.baz\n\n",
 			"range": {
-				"end": {"character": 9, "line": 0},
-				"start": {"character": 8, "line": 0},
+				"end": {
+					"character": 9,
+					"line": 0,
+				},
+				"start": {
+					"character": 8,
+					"line": 0,
+				},
 			},
 		},
 	}}

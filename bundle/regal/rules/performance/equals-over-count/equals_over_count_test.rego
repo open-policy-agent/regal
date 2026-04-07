@@ -1,7 +1,6 @@
 package regal.rules.performance["equals-over-count_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.performance["equals-over-count"] as rule
 
@@ -30,7 +29,7 @@ test_fail_count_equals_zero[text] if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/equals-over-count", "performance"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/performance/equals-over-count",
 		}],
 		"title": "equals-over-count",
 	}}

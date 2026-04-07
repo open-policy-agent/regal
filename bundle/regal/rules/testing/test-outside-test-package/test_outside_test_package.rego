@@ -1,5 +1,8 @@
 # METADATA
 # description: Test outside of test package
+# related_resources:
+#   - description: documentation
+#     ref: https://www.openpolicyagent.org/projects/regal/rules/testing/test-outside-test-package
 package regal.rules.testing["test-outside-test-package"]
 
 import data.regal.ast

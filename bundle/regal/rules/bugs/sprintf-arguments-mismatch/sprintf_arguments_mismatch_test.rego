@@ -1,7 +1,6 @@
 package regal.rules.bugs["sprintf-arguments-mismatch_test"]
 
 import data.regal.ast
-import data.regal.config
 
 import data.regal.rules.bugs["sprintf-arguments-mismatch"] as rule
 
@@ -23,7 +22,7 @@ test_fail_too_many_values_in_array if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/sprintf-arguments-mismatch", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/sprintf-arguments-mismatch",
 		}],
 		"title": "sprintf-arguments-mismatch",
 	}}
@@ -50,7 +49,7 @@ test_fail_too_many_values_in_array_nested if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/sprintf-arguments-mismatch", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/sprintf-arguments-mismatch",
 		}],
 		"title": "sprintf-arguments-mismatch",
 	}}
@@ -74,7 +73,7 @@ test_fail_too_few_values_in_array if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/sprintf-arguments-mismatch", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/sprintf-arguments-mismatch",
 		}],
 		"title": "sprintf-arguments-mismatch",
 	}}
@@ -104,7 +103,7 @@ test_fail_different_number_of_values_with_explicit_index if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/sprintf-arguments-mismatch", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/sprintf-arguments-mismatch",
 		}],
 		"title": "sprintf-arguments-mismatch",
 	}}
@@ -131,7 +130,7 @@ test_fail_first_arg_is_variable_with_nonmatching_pattern if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/sprintf-arguments-mismatch", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/sprintf-arguments-mismatch",
 		}],
 		"title": "sprintf-arguments-mismatch",
 	}}
@@ -178,7 +177,7 @@ test_fail_padding_not_accounted_for if {
 		},
 		"related_resources": [{
 			"description": "documentation",
-			"ref": config.docs.resolve_url("$baseUrl/$category/sprintf-arguments-mismatch", "bugs"),
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/sprintf-arguments-mismatch",
 		}],
 		"title": "sprintf-arguments-mismatch",
 	}}
