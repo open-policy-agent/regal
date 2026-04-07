@@ -28,6 +28,8 @@ rules:
       level: error
     invalid-metadata-attribute:
       level: error
+    invalid-regexp:
+      level: error
     leaked-internal-reference:
       level: error
     not-equals-in-loop:

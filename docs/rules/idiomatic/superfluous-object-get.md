@@ -41,3 +41,7 @@ rules:
       # one of "error", "warning", "ignore"
       level: error
 ```
+
+## Related Resources
+
+- GitHub: [Source Code](https://github.com/open-policy-agent/regal/blob/main/bundle/regal/rules/idiomatic/superfluous-object-get/superfluous_object_get.rego)

@@ -84,6 +84,8 @@ inconsistent_args(b, a) if {
 	b == a
 }
 
+invalid_regexp if regex.match(`(((((`, "text")
+
 if_empty_object if {}
 
 redundant_existence_check if {
