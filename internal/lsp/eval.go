@@ -204,24 +204,6 @@ func (h PrintHook) Print(ctx print.Context, msg string) error {
 	return nil
 }
 
-func ruleHasInputRefs(rule *ast.Rule) bool {
-	if rule == nil {
-		return false
-	}
-
-	found := false
-
-	ast.WalkRefs(rule, func(ref ast.Ref) bool {
-		if len(ref) >= 2 && ref[0].Equal(ast.InputRootDocument) {
-			found = true
-		}
-
-		return found
-	})
-
-	return found
-}
-
 func inputSkeletonFromRule(rule *ast.Rule, compiler *ast.Compiler) map[string]any {
 	root := map[string]any{}
 

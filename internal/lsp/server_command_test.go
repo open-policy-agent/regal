@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -248,12 +249,27 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 	defer cancel()
 
 	inputJSONCreated := make(chan struct{}, 1)
+	showDocumentReceived := make(chan struct{}, 1)
 
 	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
-		if req.Method == "window/showMessageRequest" {
-			inputJSONCreated <- struct{}{}
+		switch req.Method {
+		case "window/showMessageRequest":
+			params := must.Return(encoding.JSONUnmarshalTo[types.ShowMessageRequestParams](*req.Params))(t)
 
-			return types.MessageActionItem{Title: "Yes"}, nil
+			if strings.Contains(params.Message, "No input.json/yaml file was found.") {
+				// The initial file creation prompt
+				inputJSONCreated <- struct{}{}
+
+				return types.MessageActionItem{Title: "Yes"}, nil
+			} else if strings.Contains(params.Message, "created successfully") {
+				// The success notification and prompt to open the file
+				return types.MessageActionItem{Title: "Open"}, nil
+			}
+
+		case "window/showDocument":
+			showDocumentReceived <- struct{}{}
+
+			return types.ShowDocumentResult{Success: true}, nil
 		}
 
 		return struct{}{}, nil
@@ -272,6 +288,7 @@ allow if {
 	input.foo.wee.age == 24
 	input.superfoo.wee == "fun"
 	input.superbar.tee == "run"
+	input.list[0].name == "test"
 }
 `
 
@@ -308,6 +325,11 @@ allow if {
       "age": "changeme"
     }
   },
+  "list": {
+    "0": {
+      "name": "changeme"
+    }
+  },
   "superbar": {
     "tee": "changeme"
   },
@@ -329,5 +351,12 @@ allow if {
 		}
 	case <-timeout.C:
 		t.Fatal("timed out waiting for window/showMessageRequest")
+	}
+
+	// Verify the success notification triggered window/showDocument.
+	select {
+	case <-showDocumentReceived:
+	case <-timeout.C:
+		t.Fatal("timed out waiting for window/showDocument")
 	}
 }
