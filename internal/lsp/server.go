@@ -68,6 +68,10 @@ const (
 
 	ruleNameOPAFmt    = "opa-fmt"
 	ruleNameUseRegoV1 = "use-rego-v1"
+
+	// rpcTimeout allows requests to complete independently from the server's ctx,
+	// supporting graceful shutdown rather than immediate cancellation.
+	rpcTimeout = 3 * time.Second
 )
 
 var (
@@ -165,25 +169,11 @@ type LanguageServer struct {
 	workspaceRootURI         string
 	workspaceDiagnosticsPoll time.Duration
 
+	// workersWg tracks all running worker goroutines to enable clean shutdown
+	workersWg sync.WaitGroup
+
 	// Flag used to suppress input.json prompt if user chooses to ignore it
 	supressInputPrompt bool
-}
-
-// lintFileJob is sent to the lintFileJobs channel to trigger a
-// diagnostic update for a file.
-type lintFileJob struct {
-	Reason string
-	URI    string
-}
-
-// lintWorkspaceJob is sent to lintWorkspaceJobs when a full workspace
-// diagnostic update is needed.
-type lintWorkspaceJob struct {
-	Reason string
-	// OverwriteAggregates for a workspace is only run once at start up. All
-	// later updates to aggregate state is made as files are changed.
-	OverwriteAggregates bool
-	AggregateReportOnly bool
 }
 
 type fileLoadFailure struct {
@@ -348,178 +338,58 @@ func (l *LanguageServer) SetConn(conn *jsonrpc2.Conn) {
 	l.conn = conn
 }
 
-func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
-	var wg sync.WaitGroup
-
-	wg.Go(func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case job := <-l.lintFileJobs:
-				l.log.Debug("linting file %s (%s)", job.URI, job.Reason)
-
-				// updateParse will not return an error when the parsing failed,
-				// but only when it was impossible to parse the file.
-				parseSuccess, err := updateParse(ctx, l.parseOpts(job.URI, l.builtinsForCurrentCapabilities()))
-				if err != nil {
-					l.log.Message("failed to update module for %s: %s", job.URI, err)
-
-					continue
-				}
-
-				// Send test locations update after parse completes (if client supports it)
-				if l.client.SupportsOPATestProvider() {
-					if parseSuccess {
-						l.testLocationJobs <- lintFileJob{Reason: job.Reason, URI: job.URI}
-					} else {
-						// Parse failed, send empty test locations
-						if err := l.sendTestLocations(ctx, job.URI, []any{}); err != nil {
-							l.log.Message("failed to send empty test locations after parse failure: %s", err)
-						}
-					}
-				}
-
-				// lint the file and send the diagnostics
-				if err := updateFileDiagnostics(ctx, diagnosticsRunOpts{
-					Cache:            l.cache,
-					RegalConfig:      l.getLoadedConfig(),
-					FileURI:          job.URI,
-					WorkspaceRootURI: l.workspaceRootURI,
-					// updateFileDiagnostics only ever updates the diagnostics
-					// of non aggregate rules
-					UpdateForRules:  l.getEnabledNonAggregateRules(),
-					CustomRulesPath: l.getCustomRulesPath(),
-				}); err != nil {
-					l.log.Message("failed to update file diagnostics: %s", err)
-
-					continue
-				}
-
-				l.sendFileDiagnostics(ctx, job.URI)
-
-				l.lintWorkspaceJobs <- lintWorkspaceJob{
-					Reason: "file " + job.URI + " " + job.Reason,
-					// this run is expected to used the cached aggregate state
-					// for other files.
-					// The aggregate state for this file will still be updated.
-					OverwriteAggregates: false,
-					// when a file has changed, then there is no need to run
-					// any other rules globally other than aggregate rules.
-					AggregateReportOnly: true,
-				}
-
-				l.log.Debug("linting file %s done", job.URI)
-			}
-		}
-	})
-
-	wg.Add(1)
-
-	workspaceLintRunBufferSize := 10
-	workspaceLintRuns := make(chan lintWorkspaceJob, workspaceLintRunBufferSize)
+// Shutdown waits for all worker goroutines to complete. The context can be
+// used to set a timeout or cancel the wait if workers take too long to exit.
+// The context passed to workers should be cancelled before calling this method.
+func (l *LanguageServer) Shutdown(ctx context.Context) error {
+	done := make(chan struct{})
 
 	go func() {
-		defer wg.Done()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case job := <-l.lintWorkspaceJobs:
-				// AggregateReportOnly is set when updating aggregate
-				// violations on character changes. Since these happen so
-				// frequently, we stop adding to the channel if there already
-				// jobs set to preserve performance
-				if job.AggregateReportOnly && len(workspaceLintRuns) > workspaceLintRunBufferSize/2 {
-					l.log.Debug("rate limiting aggregate reports")
-
-					continue
-				}
-
-				workspaceLintRuns <- job
-			}
-		}
+		l.workersWg.Wait()
+		close(done)
 	}()
 
-	if l.workspaceDiagnosticsPoll > 0 {
-		wg.Add(1)
-
-		ticker := time.NewTicker(l.workspaceDiagnosticsPoll)
-
-		go func() {
-			defer wg.Done()
-
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-ticker.C:
-					workspaceLintRuns <- lintWorkspaceJob{Reason: "poll ticker", OverwriteAggregates: true}
-				}
-			}
-		}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
+}
 
-	wg.Go(func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case job := <-workspaceLintRuns:
-				l.log.Debug("linting workspace: %#v", job)
+func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
+	l.workersWg.Go(func() {
+		var wg sync.WaitGroup
 
-				// if there are no parsed modules in the cache, then there is
-				// no need to run the aggregate report. This can happen if the
-				// server is very slow to start up.
-				if len(l.cache.GetAllModules()) == 0 {
-					continue
-				}
+		workspaceLintRuns := make(chan lintWorkspaceJob, 10)
 
-				targetRules := l.getEnabledAggregateRules()
-				if !job.AggregateReportOnly {
-					targetRules = append(targetRules, l.getEnabledNonAggregateRules()...)
-				}
+		wg.Go(func() { startFileLintWorker(ctx, l) })
+		wg.Go(func() { startWorkspaceJobRouter(ctx, l, workspaceLintRuns) })
 
-				err := updateWorkspaceDiagnostics(ctx, diagnosticsRunOpts{
-					Cache:            l.cache,
-					RegalConfig:      l.getLoadedConfig(),
-					WorkspaceRootURI: l.workspaceRootURI,
-					// this is intended to only be set to true once at start up,
-					// on following runs, cached aggregate data is used.
-					OverwriteAggregates: job.OverwriteAggregates,
-					AggregateReportOnly: job.AggregateReportOnly,
-					UpdateForRules:      targetRules,
-					CustomRulesPath:     l.getCustomRulesPath(),
-				})
-				if err != nil {
-					l.log.Message("failed to update all diagnostics: %s", err)
-				}
-
-				for fileURI := range l.cache.GetAllFiles() {
-					l.sendFileDiagnostics(ctx, fileURI)
-				}
-
-				l.log.Debug("linting workspace done")
-			}
+		if l.workspaceDiagnosticsPoll > 0 {
+			wg.Go(func() { startPollingTicker(ctx, l, workspaceLintRuns) })
 		}
-	})
 
-	<-ctx.Done()
-	wg.Wait()
+		wg.Go(func() { startWorkspaceLintWorker(ctx, l, workspaceLintRuns) })
+
+		<-ctx.Done()
+		wg.Wait()
+	})
 }
 
 func (l *LanguageServer) StartHoverWorker(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case job := <-l.builtinsPositionJobs:
-			if err := l.processHoverContentUpdate(ctx, job.URI); err != nil {
-				l.log.Message(err.Error())
+	l.workersWg.Go(func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case job := <-l.builtinsPositionJobs:
+				if err := l.processHoverContentUpdate(ctx, job.URI); err != nil {
+					l.log.Message(err.Error())
+				}
 			}
 		}
-	}
+	})
 }
 
 // StartQueryCacheWorker starts a worker that waits for query strings on the
@@ -527,26 +397,28 @@ func (l *LanguageServer) StartHoverWorker(ctx context.Context) {
 // upon receiving them. This is currently used only when the REGAL_BUNDLE_PATH
 // development mode is set, to ensure we recompile on live bundle updates.
 func (l *LanguageServer) StartQueryCacheWorker(ctx context.Context) {
-	if !bundle.DevModeEnabled() {
-		l.log.Debug("LSP development mode not enabled — not starting query cache worker")
+	l.workersWg.Go(func() {
+		if !bundle.DevModeEnabled() {
+			l.log.Debug("LSP development mode not enabled — not starting query cache worker")
 
-		return
-	}
-
-	bundle.Dev.Subscribe(l.prepareQueryJobs)
-
-	for {
-		select {
-		case <-ctx.Done():
 			return
-		case <-l.prepareQueryJobs:
-			if err := l.queryCache.Store(ctx, query.MainEval, l.regoStore); err != nil {
-				l.log.Message("failed to prepare query %s: %s", query.MainEval, err)
-			} else {
-				l.log.Message("re-prepared query %s", query.MainEval)
+		}
+
+		bundle.Dev.Subscribe(l.prepareQueryJobs)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-l.prepareQueryJobs:
+				if err := l.queryCache.Store(ctx, query.MainEval, l.regoStore); err != nil {
+					l.log.Message("failed to prepare query %s: %s", query.MainEval, err)
+				} else {
+					l.log.Message("re-prepared query %s", query.MainEval)
+				}
 			}
 		}
-	}
+	})
 }
 
 func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
@@ -556,243 +428,266 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 		return
 	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case path := <-l.configWatcher.Reload:
-			userConfig, err := config.FromPath(path)
-			if err != nil && !errors.Is(err, io.EOF) {
-				l.log.Message("failed to reload config: %s", err)
+	l.workersWg.Go(func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case path := <-l.configWatcher.Reload:
+				userConfig, err := config.FromPath(path)
+				if err != nil && !errors.Is(err, io.EOF) {
+					l.log.Message("failed to reload config: %s", err)
 
-				continue
-			}
-
-			mergedConfig, err := config.WithDefaultsFromBundle(bundle.Loaded(), &userConfig)
-			if err != nil {
-				l.log.Message("failed to load config: %s", err)
-
-				continue
-			}
-
-			l.loadConfig(ctx, mergedConfig)
-
-			//nolint:contextcheck
-			go func() {
-				if l.getLoadedConfig().Features.Remote.CheckVersion &&
-					os.Getenv(update.CheckVersionDisableEnvVar) != "" {
-					update.CheckAndWarn(update.Options{
-						CurrentVersion: version.Version,
-						CurrentTime:    time.Now().UTC(),
-						Debug:          false,
-						StateDir:       config.GlobalConfigDir(true),
-					}, os.Stderr)
+					continue
 				}
-			}()
 
-			l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "config file changed"}
-		case <-l.configWatcher.Drop:
-			l.loadedConfigLock.Lock()
+				mergedConfig, err := config.WithDefaultsFromBundle(bundle.Loaded(), &userConfig)
+				if err != nil {
+					l.log.Message("failed to load config: %s", err)
 
-			defaultConfig, _ := config.WithDefaultsFromBundle(bundle.Loaded(), nil)
-			l.loadedConfig = &defaultConfig
-			l.loadedConfigLock.Unlock()
+					continue
+				}
 
-			l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "config file dropped"}
+				l.loadConfig(ctx, mergedConfig)
+
+				l.workersWg.Go(func() {
+					if l.getLoadedConfig().Features.Remote.CheckVersion &&
+						os.Getenv(update.CheckVersionDisableEnvVar) == "" {
+						update.CheckAndWarn(ctx, update.Options{
+							CurrentVersion: version.Version,
+							CurrentTime:    time.Now().UTC(),
+							Debug:          false,
+							StateDir:       config.GlobalConfigDir(true),
+						}, os.Stderr)
+					}
+				})
+
+				l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "config file changed"}
+			case <-l.configWatcher.Drop:
+				l.loadedConfigLock.Lock()
+
+				defaultConfig, _ := config.WithDefaultsFromBundle(bundle.Loaded(), nil)
+				l.loadedConfig = &defaultConfig
+				l.loadedConfigLock.Unlock()
+
+				l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "config file dropped"}
+			}
 		}
-	}
+	})
 }
 
 func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
-	// note, in this function conn.Call is used as the workspace/applyEdit message is a request, not a notification
-	// as per the spec. In order to be 'routed' to the correct handler on the client it must have an ID
-	// receive responses too.
-	// Note however that the responses from the client are not needed by the server.
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case params := <-l.commandRequest:
-			if params.Command == "regal.explorer" {
-				if err := l.handleExplorerCommand(ctx, params); err != nil {
-					l.log.Message("failed to handle explorer command: %s", err)
+	l.workersWg.Go(func() {
+		// note, in this function conn.Call is used as the workspace/applyEdit message is a request, not a notification
+		// as per the spec. In order to be 'routed' to the correct handler on the client it must have an ID
+		// receive responses too.
+		// Note however that the responses from the client are not needed by the server.
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case params := <-l.commandRequest:
+				if params.Command == "regal.explorer" {
+					if err := l.handleExplorerCommand(ctx, params); err != nil {
+						l.log.Message("failed to handle explorer command: %s", err)
+					}
+
+					continue
 				}
 
-				continue
-			}
+				// Handle all other commands (they use string arguments)
+				var (
+					editParams *types.ApplyWorkspaceEditParams
+					args       types.CommandArgs
+					fixed      bool
+					err        error
+				)
 
-			// Handle all other commands (they use string arguments)
-			var (
-				editParams *types.ApplyWorkspaceEditParams
-				args       types.CommandArgs
-				fixed      bool
-				err        error
-			)
+				if len(params.Arguments) != 1 {
+					l.log.Message("expected one argument, got %d", len(params.Arguments))
 
-			if len(params.Arguments) != 1 {
-				l.log.Message("expected one argument, got %d", len(params.Arguments))
+					continue
+				}
 
-				continue
-			}
+				jsonData, ok := params.Arguments[0].(string)
+				if !ok {
+					l.log.Message("expected argument to be a json.RawMessage, got %T", params.Arguments[0])
 
-			jsonData, ok := params.Arguments[0].(string)
-			if !ok {
-				l.log.Message("expected argument to be a json.RawMessage, got %T", params.Arguments[0])
+					continue
+				}
 
-				continue
-			}
+				if err = encoding.JSON().Unmarshal(outil.StringToByteSlice(jsonData), &args); err != nil {
+					l.log.Message("failed to unmarshal command arguments: %s", err)
 
-			if err = encoding.JSON().Unmarshal(outil.StringToByteSlice(jsonData), &args); err != nil {
-				l.log.Message("failed to unmarshal command arguments: %s", err)
+					continue
+				}
 
-				continue
-			}
+				switch params.Command {
+				case "regal.fix.opa-fmt":
+					fixed, editParams, err = l.fixEditParams("Format using opa fmt", fixFmt, args)
+				case "regal.fix.use-rego-v1":
+					fixed, editParams, err = l.fixEditParams("Format for Rego v1 using opa-fmt", fixUseRegoV1, args)
+				case "regal.fix.use-assignment-operator":
+					fixed, editParams, err = l.fixEditParams("Replace = with := in assignment", fixUseAssignmentOperator, args)
+				case "regal.fix.no-whitespace-comment":
+					fixed, editParams, err = l.fixEditParams("Format comment to have leading whitespace", fixNoWhitespaceComment, args)
+				case "regal.fix.non-raw-regex-pattern":
+					fixed, editParams, err = l.fixEditParams("Replace \" with ` in regex pattern", fixNonRawRegexPattern, args)
+				case "regal.fix.prefer-equals-comparison":
+					fixed, editParams, err = l.fixEditParams("Replace = with == in comparison", fixPreferEqualsComparison, args)
+				case "regal.fix.constant-condition":
+					fixed, editParams, err = l.fixEditParams("Remove constant condition", fixConstantCondition, args)
+				case "regal.fix.redundant-existence-check":
+					fixed, editParams, err = l.fixEditParams("Remove redundant existence check", fixRedundantExistence, args)
+				case "regal.fix.directory-package-mismatch":
+					params, err := l.fixRenameParams("Rename file to match package path", args.Target)
+					if err != nil {
+						l.log.Message("failed to fix directory package mismatch: %s", err)
 
-			switch params.Command {
-			case "regal.fix.opa-fmt":
-				fixed, editParams, err = l.fixEditParams("Format using opa fmt", fixFmt, args)
-			case "regal.fix.use-rego-v1":
-				fixed, editParams, err = l.fixEditParams("Format for Rego v1 using opa-fmt", fixUseRegoV1, args)
-			case "regal.fix.use-assignment-operator":
-				fixed, editParams, err = l.fixEditParams("Replace = with := in assignment", fixUseAssignmentOperator, args)
-			case "regal.fix.no-whitespace-comment":
-				fixed, editParams, err = l.fixEditParams("Format comment to have leading whitespace", fixNoWhitespaceComment, args)
-			case "regal.fix.non-raw-regex-pattern":
-				fixed, editParams, err = l.fixEditParams("Replace \" with ` in regex pattern", fixNonRawRegexPattern, args)
-			case "regal.fix.prefer-equals-comparison":
-				fixed, editParams, err = l.fixEditParams("Replace = with == in comparison", fixPreferEqualsComparison, args)
-			case "regal.fix.constant-condition":
-				fixed, editParams, err = l.fixEditParams("Remove constant condition", fixConstantCondition, args)
-			case "regal.fix.redundant-existence-check":
-				fixed, editParams, err = l.fixEditParams("Remove redundant existence check", fixRedundantExistence, args)
-			case "regal.fix.directory-package-mismatch":
-				params, err := l.fixRenameParams("Rename file to match package path", args.Target)
+						break
+					}
+
+					// Use a timeout context for RPC to ensure it completes even during shutdown
+					rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
+
+					//nolint:contextcheck
+					if err := l.conn.Call(rpcCtx, methodWsApplyEdit, params, nil); err != nil {
+						l.log.Message("failed %s notify: %v", methodWsApplyEdit, err.Error())
+					}
+
+					rpcCancel()
+
+					// handle this ourselves as it's a rename and not a content edit
+					fixed = false
+				case "regal.eval":
+					err = l.handleEvalCommand(ctx, args)
+				case "regal.debug":
+					if !l.client.SupportsDebugCodeLens() {
+						l.log.Message("regal.debug command called but client does not support debug functionality")
+
+						break
+					}
+
+					if !l.featureFlags.DebugProvider {
+						l.log.Message("regal.debug command called but disabled in server")
+
+						break
+					}
+
+					if args.Target == "" || args.Query == "" {
+						l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
+
+						break
+					}
+
+					responseParams := map[string]any{
+						"type":        "opa-debug",
+						"name":        args.Query,
+						"request":     "launch",
+						"command":     "eval",
+						"query":       args.Query,
+						"enablePrint": true,
+						"stopOnEntry": true,
+						"inputPath":   rio.FindInputPath(uri.ToPath(args.Target), l.workspacePath()),
+					}
+
+					responseResult := map[string]any{}
+
+					// Use a timeout context for RPC to ensure it completes even during shutdown
+					rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
+
+					//nolint:contextcheck
+					if err = l.conn.Call(rpcCtx, "regal/startDebugging", responseParams, &responseResult); err != nil {
+						l.log.Message("regal/startDebugging failed: %s", err.Error())
+					}
+
+					rpcCancel()
+				case "regal.config.disable-rule":
+					err = l.handleIgnoreRuleCommand(ctx, args)
+					if err != nil {
+						l.log.Message("failed to ignore rule: %s", err)
+					}
+
+					// handle this ourselves as it's a config edit
+					fixed = false
+				}
+
 				if err != nil {
-					l.log.Message("failed to fix directory package mismatch: %s", err)
+					l.log.Message("command failed: %s", err)
+
+					if err := l.conn.Notify(ctx, "window/showMessage", types.ShowMessageParams{
+						Type:    1, // error
+						Message: err.Error(),
+					}); err != nil {
+						l.log.Message("failed to notify client of command error: %s", err)
+					}
 
 					break
 				}
 
-				if err := l.conn.Call(ctx, methodWsApplyEdit, params, nil); err != nil {
-					l.log.Message("failed %s notify: %v", methodWsApplyEdit, err.Error())
-				}
+				if fixed {
+					// Use a timeout context for RPC to ensure it completes during graceful shutdown
+					rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
 
-				// handle this ourselves as it's a rename and not a content edit
-				fixed = false
-			case "regal.eval":
-				err = l.handleEvalCommand(ctx, args)
-			case "regal.debug":
-				if !l.client.SupportsDebugCodeLens() {
-					l.log.Message("regal.debug command called but client does not support debug functionality")
+					//nolint:contextcheck
+					if err = l.conn.Call(rpcCtx, methodWsApplyEdit, editParams, nil); err != nil {
+						l.log.Message("failed %s notify: %v", methodWsApplyEdit, err.Error())
+					}
 
-					break
-				}
-
-				if !l.featureFlags.DebugProvider {
-					l.log.Message("regal.debug command called but disabled in server")
-
-					break
-				}
-
-				if args.Target == "" || args.Query == "" {
-					l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
-
-					break
-				}
-
-				responseParams := map[string]any{
-					"type":        "opa-debug",
-					"name":        args.Query,
-					"request":     "launch",
-					"command":     "eval",
-					"query":       args.Query,
-					"enablePrint": true,
-					"stopOnEntry": true,
-					"inputPath":   rio.FindInputPath(uri.ToPath(args.Target), l.workspacePath()),
-				}
-
-				responseResult := map[string]any{}
-
-				if err = l.conn.Call(ctx, "regal/startDebugging", responseParams, &responseResult); err != nil {
-					l.log.Message("regal/startDebugging failed: %s", err.Error())
-				}
-			case "regal.config.disable-rule":
-				err = l.handleIgnoreRuleCommand(ctx, args)
-				if err != nil {
-					l.log.Message("failed to ignore rule: %s", err)
-				}
-
-				// handle this ourselves as it's a config edit
-				fixed = false
-			}
-
-			if err != nil {
-				l.log.Message("command failed: %s", err)
-
-				if err := l.conn.Notify(ctx, "window/showMessage", types.ShowMessageParams{
-					Type:    1, // error
-					Message: err.Error(),
-				}); err != nil {
-					l.log.Message("failed to notify client of command error: %s", err)
-				}
-
-				break
-			}
-
-			if fixed {
-				if err = l.conn.Call(ctx, methodWsApplyEdit, editParams, nil); err != nil {
-					l.log.Message("failed %s notify: %v", methodWsApplyEdit, err.Error())
+					rpcCancel()
 				}
 			}
 		}
-	}
+	})
 }
 
 // StartWorkspaceStateWorker will poll for changes to the workspaces state that
 // are not sent from the client. For example, when a file a is removed from the
 // workspace after changing branch.
 func (l *LanguageServer) StartWorkspaceStateWorker(ctx context.Context) {
-	timer := time.NewTicker(2 * time.Second)
+	l.workersWg.Go(func() {
+		timer := time.NewTicker(2 * time.Second)
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-timer.C:
-			// first clear files that are missing from the workspaceDir
-			for fileURI := range l.cache.GetAllFiles() {
-				if _, err := os.Stat(uri.ToPath(fileURI)); os.IsNotExist(err) {
-					// clear the cache first, then send the diagnostics based on the cleared cache
-					l.cache.Delete(fileURI)
-					l.sendFileDiagnostics(ctx, fileURI)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-timer.C:
+				// first clear files that are missing from the workspaceDir
+				for fileURI := range l.cache.GetAllFiles() {
+					if _, err := os.Stat(uri.ToPath(fileURI)); os.IsNotExist(err) {
+						// clear the cache first, then send the diagnostics based on the cleared cache
+						l.cache.Delete(fileURI)
+						l.sendFileDiagnostics(ctx, fileURI)
+					}
+				}
+
+				// for this next operation, the workspace root must be set as it's
+				// used to scan for new files.
+				if l.getWorkspaceRootURI() == "" {
+					continue
+				}
+
+				// next, check if there are any new files that are not ignored and
+				// need to be loaded. We get new only so that files being worked
+				// on are not loaded from disk during editing.
+				newURIs, failed, err := l.loadWorkspaceContents(ctx, true)
+				for _, f := range failed {
+					l.log.Message("failed to load file %s: %s", f.URI, f.Error)
+				}
+
+				if err != nil {
+					l.log.Message("failed to refresh workspace contents: %s", err)
+
+					continue
+				}
+
+				for _, cnURI := range newURIs {
+					l.lintFileJobs <- lintFileJob{URI: cnURI, Reason: "internal/workspaceStateWorker/changedOrNewFile"}
 				}
 			}
-
-			// for this next operation, the workspace root must be set as it's
-			// used to scan for new files.
-			if l.workspaceRootURI == "" {
-				continue
-			}
-
-			// next, check if there are any new files that are not ignored and
-			// need to be loaded. We get new only so that files being worked
-			// on are not loaded from disk during editing.
-			newURIs, failed, err := l.loadWorkspaceContents(ctx, true)
-			for _, f := range failed {
-				l.log.Message("failed to load file %s: %s", f.URI, f.Error)
-			}
-
-			if err != nil {
-				l.log.Message("failed to refresh workspace contents: %s", err)
-
-				continue
-			}
-
-			for _, cnURI := range newURIs {
-				l.lintFileJobs <- lintFileJob{URI: cnURI, Reason: "internal/workspaceStateWorker/changedOrNewFile"}
-			}
 		}
-	}
+	})
 }
 
 // StartWebServer starts the web server that serves explorer.
@@ -803,14 +698,16 @@ func (l *LanguageServer) StartWebServer(ctx context.Context) {
 // StartTemplateWorker runs the process of the server that templates newly
 // created Rego files.
 func (l *LanguageServer) StartTemplateWorker(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case job := <-l.templateFileJobs:
-			l.processTemplateJob(ctx, job)
+	l.workersWg.Go(func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case job := <-l.templateFileJobs:
+				l.processTemplateJob(ctx, job)
+			}
 		}
-	}
+	})
 }
 
 // getLoadedConfig returns the currently loaded config, which may either be the default config embedded in Regal, or the
@@ -838,7 +735,7 @@ func (l *LanguageServer) getEnabledAggregateRules() []string {
 }
 
 func (l *LanguageServer) getCustomRulesPath() string {
-	if l.workspaceRootURI != "" {
+	if l.getWorkspaceRootURI() != "" {
 		if customRulesPath := filepath.Join(l.workspacePath(), ".regal", "rules"); rio.IsDir(customRulesPath) {
 			return customRulesPath
 		}
@@ -956,7 +853,7 @@ func (l *LanguageServer) loadEnabledRulesFromConfig(ctx context.Context, cfg con
 }
 
 // processTemplateJob handles the templating of a newly created Rego file.
-func (l *LanguageServer) processTemplateJob(ctx context.Context, job lintFileJob) {
+func (l *LanguageServer) processTemplateJob(_ context.Context, job lintFileJob) {
 	l.log.Debug("template worker received job: %s (reason: %s)", job.URI, job.Reason)
 
 	// mark file as being templated to prevent race conditions
@@ -997,13 +894,18 @@ func (l *LanguageServer) processTemplateJob(ctx context.Context, job lintFileJob
 	})
 	edits = append(edits, additionalRenameEdits.Edit.DocumentChanges...)
 
-	// send the edit back to the editor so it appears in the open buffer.
-	if err = l.conn.Call(ctx, methodWsApplyEdit, types.ApplyWorkspaceAnyEditParams{
+	// Use a timeout context for RPC to ensure it completes during graceful shutdown
+	rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
+
+	//nolint:contextcheck
+	if err = l.conn.Call(rpcCtx, methodWsApplyEdit, types.ApplyWorkspaceAnyEditParams{
 		Label: "Template new Rego file",
 		Edit:  types.WorkspaceAnyEdit{DocumentChanges: edits},
 	}, nil); err != nil {
 		l.log.Message("failed %s notify: %v", methodWsApplyEdit, err.Error())
 	}
+
+	rpcCancel()
 
 	// finally, trigger a diagnostics run for the new contents
 	l.lintFileJobs <- lintFileJob{Reason: "internal/templateNewFile", URI: job.URI}
@@ -1204,7 +1106,7 @@ func (l *LanguageServer) fixRenameParams(label, fileURI string) (types.ApplyWork
 	newURI := l.fromPath(fixedFile)
 
 	// is the newURI still in the root?
-	if !strings.HasPrefix(newURI, l.workspaceRootURI) {
+	if !strings.HasPrefix(newURI, l.getWorkspaceRootURI()) {
 		return types.ApplyWorkspaceAnyEditParams{
 			Label: label,
 			Edit:  types.WorkspaceAnyEdit{},
@@ -1515,7 +1417,7 @@ func (l *LanguageServer) handleTextDocumentDefinition(params types.DefinitionPar
 	return types.Location{
 		// res.File will be relative to the workspace root. The response here needs
 		// a URI for the client to be able to navigate correctly.
-		URI:   uri.FromRelativePath(l.client.Identifier, res.File, l.workspaceRootURI),
+		URI:   uri.FromRelativePath(l.client.Identifier, res.File, l.getWorkspaceRootURI()),
 		Range: types.RangeBetween(res.Row-1, res.Col-1, res.Row-1, res.Col-1),
 	}, nil
 }
@@ -1524,7 +1426,7 @@ func (l *LanguageServer) handleTextDocumentDidOpen(
 	params types.DidOpenTextDocumentParams,
 ) (any, error) {
 	// then we have started the server, and not yet received a suitable root to use.
-	if l.workspaceRootURI == "" {
+	if l.getWorkspaceRootURI() == "" {
 		err := l.updateRootURI(
 			// get the URI of the file's immediate parent
 			l.fromPath(filepath.Dir(uri.ToPath(params.TextDocument.URI))),
@@ -1855,17 +1757,18 @@ func (l *LanguageServer) handleWorkspaceDidRenameFiles(
 
 func (l *LanguageServer) handleWorkspaceDiagnostic() (any, error) {
 	// we can't provide workspace diagnostics without a workspace root being set (e.g. single file mode)
-	if l.workspaceRootURI == "" {
+	rootURI := l.getWorkspaceRootURI()
+	if rootURI == "" {
 		return noWorkspaceFullDocumentDiagnosticReport, nil
 	}
 
-	wkspceDiags, ok := l.cache.GetFileDiagnostics(l.workspaceRootURI)
+	wkspceDiags, ok := l.cache.GetFileDiagnostics(rootURI)
 	if !ok {
 		wkspceDiags = noDiagnostics
 	}
 
 	return types.WorkspaceDiagnosticReport{Items: []types.WorkspaceFullDocumentDiagnosticReport{{
-		URI:   l.workspaceRootURI,
+		URI:   rootURI,
 		Kind:  "full",
 		Items: wkspceDiags,
 	}}}, nil
@@ -2054,6 +1957,9 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 }
 
 func (l *LanguageServer) updateRootURI(rootURI string) error {
+	l.loadedConfigLock.Lock()
+	defer l.loadedConfigLock.Unlock()
+
 	// rootURI not expected to have a trailing slash, remove if present for
 	// consistency
 	normalizedRootURI := strings.TrimSuffix(rootURI, string(os.PathSeparator))
@@ -2084,7 +1990,9 @@ func (l *LanguageServer) updateRootURI(rootURI string) error {
 		)
 	}
 
-	workspaceRootPath := l.workspacePath()
+	// Directly access l.workspaceRootURI since we already hold the lock
+	// (calling l.workspacePath() would deadlock as it calls getWorkspaceRootURI())
+	workspaceRootPath := uri.ToPath(l.workspaceRootURI)
 
 	l.bundleCache = bundles.NewCache(workspaceRootPath, l.log)
 
@@ -2184,7 +2092,9 @@ func (l *LanguageServer) handleInitialized(ctx context.Context) (any, error) {
 	// This allows us to respond to the client immediately while workspace
 	// loading happens in the background
 	go func() {
-		_, failed, err := l.loadWorkspaceContents(ctx, false)
+		// Use newOnly=true to ensure that files already in the cache from editor messages
+		// (e.g., textDocument/didOpen) are not clobbered during workspace initialization
+		_, failed, err := l.loadWorkspaceContents(ctx, true)
 		for _, f := range failed {
 			l.log.Message("failed to load file %s: %s", f.URI, f.Error)
 		}
@@ -2274,7 +2184,7 @@ func (l *LanguageServer) getFilteredModules() (map[string]*ast.Module, error) {
 	allModules := l.cache.GetAllModules()
 	ignore := l.getLoadedConfig().Ignore.Files
 
-	filtered, err := config.FilterIgnoredPaths(outil.Keys(allModules), ignore, false, l.workspaceRootURI)
+	filtered, err := config.FilterIgnoredPaths(outil.Keys(allModules), ignore, false, l.getWorkspaceRootURI())
 	if err != nil {
 		return nil, fmt.Errorf("failed to filter ignored paths: %w", err)
 	}
@@ -2299,12 +2209,20 @@ func (l *LanguageServer) ignoreURI(fileURI string) bool {
 	return err != nil || len(paths) == 0
 }
 
+// getWorkspaceRootURI returns the workspace root URI with proper locking.
+func (l *LanguageServer) getWorkspaceRootURI() string {
+	l.loadedConfigLock.RLock()
+	defer l.loadedConfigLock.RUnlock()
+
+	return l.workspaceRootURI
+}
+
 func (l *LanguageServer) workspacePath() string {
-	return uri.ToPath(l.workspaceRootURI)
+	return uri.ToPath(l.getWorkspaceRootURI())
 }
 
 func (l *LanguageServer) toRelativePath(fileURI string) string {
-	return uri.ToRelativePath(fileURI, l.workspaceRootURI)
+	return uri.ToRelativePath(fileURI, l.getWorkspaceRootURI())
 }
 
 func (l *LanguageServer) fromPath(filePath string) string {
@@ -2342,7 +2260,7 @@ func (l *LanguageServer) parseOpts(fileURI string, bis map[string]*ast.Builtin) 
 		FileURI:          fileURI,
 		Builtins:         bis,
 		RegoVersion:      l.regoVersionForURI(fileURI),
-		WorkspaceRootURI: l.workspaceRootURI,
+		WorkspaceRootURI: l.getWorkspaceRootURI(),
 		ClientIdentifier: l.client.Identifier,
 	}
 }
@@ -2362,7 +2280,7 @@ func (l *LanguageServer) regalContext(fileURI string, _ *rego.Requirements) *reg
 		Environment: rego.Environment{
 			PathSeparator:     string(os.PathSeparator),
 			WebServerBaseURI:  l.webServer.GetBaseURL(),
-			WorkspaceRootURI:  l.workspaceRootURI,
+			WorkspaceRootURI:  l.getWorkspaceRootURI(),
 			WorkspaceRootPath: l.workspacePath(),
 		},
 	}
@@ -2515,9 +2433,16 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 		}
 
 		var result types.ShowDocumentResult
-		if err := l.conn.Call(ctx, "window/showDocument", showParams, &result); err != nil {
+
+		// Use a timeout context for RPC to ensure it completes during graceful shutdown
+		rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
+
+		//nolint:contextcheck
+		if err := l.conn.Call(rpcCtx, "window/showDocument", showParams, &result); err != nil {
 			l.log.Message("window/showDocument failed for %s: %s", filename, err)
 		}
+
+		rpcCancel()
 	}
 
 	if !hasErrors {
@@ -2532,9 +2457,16 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 				}
 
 				var result types.ShowDocumentResult
-				if err := l.conn.Call(ctx, "window/showDocument", showParams, &result); err != nil {
+
+				// Use a timeout context for RPC to ensure it completes during graceful shutdown
+				rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
+
+				//nolint:contextcheck
+				if err := l.conn.Call(rpcCtx, "window/showDocument", showParams, &result); err != nil {
 					l.log.Message("window/showDocument failed for plan: %s", err)
 				}
+
+				rpcCancel()
 			}
 		}
 	}
@@ -2614,7 +2546,11 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 				},
 			}
 
-			if err = l.conn.Call(ctx, "window/showMessageRequest", reqParams, &action); err != nil {
+			// Use a timeout context for RPC to ensure it completes during graceful shutdown
+			rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
+
+			//nolint:contextcheck
+			if err = l.conn.Call(rpcCtx, "window/showMessageRequest", reqParams, &action); err != nil {
 				l.log.Message("window/showMessageRequest failed: %v", err)
 			} else if action.Title == "Yes" {
 				inputFile := filepath.Join(l.workspacePath(), "input.json")
@@ -2624,6 +2560,8 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 			} else if action.Title == "Ignore" {
 				l.supressInputPrompt = true
 			}
+
+			rpcCancel()
 		}
 	}
 
@@ -2651,9 +2589,15 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 
 		responseResult := map[string]any{}
 
-		if err = l.conn.Call(ctx, "regal/showEvalResult", responseParams, &responseResult); err != nil {
+		// Use a timeout context for RPC to ensure it completes during graceful shutdown
+		rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
+
+		//nolint:contextcheck
+		if err = l.conn.Call(rpcCtx, "regal/showEvalResult", responseParams, &responseResult); err != nil {
 			l.log.Message("regal/showEvalResult failed: %v", err.Error())
 		}
+
+		rpcCancel()
 	} else {
 		output := filepath.Join(l.workspacePath(), "output.json")
 

@@ -6,6 +6,7 @@ package lsp
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/sourcegraph/jsonrpc2"
@@ -41,10 +42,10 @@ func New(ctx context.Context, ws *websocket.Conn, c *config.Config) (*Handle, er
 	)
 	ls.SetConn(jconn)
 
-	go ls.StartDiagnosticsWorker(ctx)
-	go ls.StartHoverWorker(ctx)
-	go ls.StartTestLocationsWorker(ctx)
-	go ls.StartCommandWorker(ctx)
+	ls.StartDiagnosticsWorker(ctx)
+	ls.StartHoverWorker(ctx)
+	ls.StartTestLocationsWorker(ctx)
+	ls.StartCommandWorker(ctx)
 
 	return &Handle{conn: jconn, ls: ls}, nil
 }
@@ -59,7 +60,14 @@ func (h *Handle) Wait(ctx context.Context) error {
 	}
 }
 
-// Close closes the underlying connection.
+// Close closes the underlying connection and waits for workers to complete.
 func (h *Handle) Close() error {
-	return h.conn.Close()
+	err := h.conn.Close()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_ = h.ls.Shutdown(shutdownCtx)
+
+	return err
 }

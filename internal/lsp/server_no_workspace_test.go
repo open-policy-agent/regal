@@ -1,7 +1,6 @@
 package lsp
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
 	"time"
@@ -44,12 +43,8 @@ rules:
 	receivedMessages := make(chan types.FileDiagnostics, defaultBufferedChannelSize)
 	clientHandler := test.HandlerFor(methodTdPublishDiagnostics, test.SendsToChannel(receivedMessages))
 
-	// set up the server and client connections
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
 	// note using a blank tempDir here so we can simulate the single file mode
-	_, connClient := createAndInitServer(t, ctx, "", clientHandler)
+	_, connClient, ctx := createAndInitServer(t, "", clientHandler)
 
 	// client sends textDocument/didOpen notification with contents for main.rego
 	if err := connClient.Notify(ctx, "textDocument/didOpen", types.DidOpenTextDocumentParams{
@@ -66,14 +61,7 @@ rules:
 
 	// validate that the client received a diagnostics notification for the file
 	// with the correct items based on the settings.
-	for success := false; !success; {
-		select {
-		case requestData := <-receivedMessages:
-			success = testRequestDataCodes(t, requestData, mainRegoURI, []string{"opa-fmt"})
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for file diagnostics to be sent")
-		}
-	}
+	waitForDiagnostics(t, receivedMessages, mainRegoURI, []string{"opa-fmt"}, timeout)
 
 	timeout.Reset(determineTimeout())
 }

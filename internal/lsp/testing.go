@@ -14,27 +14,29 @@ import (
 )
 
 func (l *LanguageServer) StartTestLocationsWorker(ctx context.Context) {
-	// Wait for initialization to complete before starting to check worker is needed
-	<-l.initializationGate
+	l.workersWg.Go(func() {
+		// Wait for initialization to complete before starting to check worker is needed
+		<-l.initializationGate
 
-	if !l.client.SupportsOPATestProvider() {
-		l.log.Debug("Test locations worker exiting - client does not support opaTestProvider")
+		if !l.client.SupportsOPATestProvider() {
+			l.log.Debug("Test locations worker exiting - client does not support opaTestProvider")
 
-		return
-	}
-
-	l.log.Debug("Test locations worker starting")
-
-	for {
-		select {
-		case <-ctx.Done():
 			return
-		case job := <-l.testLocationJobs:
-			if err := l.processTestLocationsUpdate(ctx, job.URI); err != nil {
-				l.log.Message("failed to process test locations: %s", err)
+		}
+
+		l.log.Debug("Test locations worker starting")
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case job := <-l.testLocationJobs:
+				if err := l.processTestLocationsUpdate(ctx, job.URI); err != nil {
+					l.log.Message("failed to process test locations: %s", err)
+				}
 			}
 		}
-	}
+	})
 }
 
 // processTestLocationsUpdate queries for test rule locations and sends them to the client.
