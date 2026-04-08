@@ -54,14 +54,10 @@ allow := true
 		filepath.Join(childDir, filepath.FromSlash(mainRegoFileName)),
 	)
 
-	// set up the server and client connections
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
 	receivedMessages := make(chan types.FileDiagnostics, defaultBufferedChannelSize)
 	clientHandler := test.HandlerFor(methodTdPublishDiagnostics, test.SendsToChannel(receivedMessages))
 
-	ls, _ := createAndInitServer(t, ctx, tempDir, clientHandler)
+	ls, _, _ := createAndInitServer(t, tempDir, clientHandler)
 
 	if got, exp := ls.workspaceRootURI, uri.FromPath(ls.client.Identifier, tempDir); exp != got {
 		t.Fatalf("expected client root URI to be %s, got %s", exp, got)
@@ -70,14 +66,7 @@ allow := true
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
 
-	for success := false; !success; {
-		select {
-		case requestData := <-receivedMessages:
-			success = testRequestDataCodes(t, requestData, mainRegoFileURI, []string{"opa-fmt"})
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for file diagnostics to be sent")
-		}
-	}
+	waitForDiagnostics(t, receivedMessages, mainRegoFileURI, []string{"opa-fmt"}, timeout)
 
 	// User updates config file contents in parent directory that is not
 	// part of the workspace
@@ -95,14 +84,7 @@ allow := true
 	// validate that the client received a new, empty diagnostics notification for the file
 	timeout.Reset(determineTimeout())
 
-	for success := false; !success; {
-		select {
-		case requestData := <-receivedMessages:
-			success = testRequestDataCodes(t, requestData, mainRegoFileURI, []string{})
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for file diagnostics to be sent")
-		}
-	}
+	waitForDiagnostics(t, receivedMessages, mainRegoFileURI, []string{}, timeout)
 }
 
 func TestLanguageServerCachesEnabledRulesAndUsesDefaultConfig(t *testing.T) {
@@ -120,9 +102,6 @@ rules:
 `,
 	})
 
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
 	// no op handler
 	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
 		t.Logf("message received: %s", req.Method)
@@ -130,13 +109,13 @@ rules:
 		return struct{}{}, nil
 	}
 
-	ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
+	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	if got, exp := ls.workspaceRootURI, uri.FromPath(ls.client.Identifier, tempDir); exp != got {
 		t.Fatalf("expected client root URI to be %s, got %s", exp, got)
 	}
 
-	timeout := time.NewTimer(3 * time.Second)
+	timeout := time.NewTimer(determineTimeout())
 	ticker := time.NewTicker(500 * time.Millisecond)
 
 	for success := false; !success; {

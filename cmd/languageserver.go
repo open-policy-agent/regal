@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -27,7 +28,6 @@ func init() {
 
 		RunE: wrapProfiling(func([]string) error {
 			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
 
 			if exe, err := os.Executable(); err != nil {
 				fmt.Fprintln(os.Stderr, "error getting executable:", err)
@@ -79,6 +79,15 @@ func init() {
 				fmt.Fprintln(os.Stderr, "Connection closed")
 			case sig := <-sigChan:
 				fmt.Fprintln(os.Stderr, "signal: ", sig.String())
+			}
+
+			cancel()
+
+			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer shutdownCancel()
+
+			if err := ls.Shutdown(shutdownCtx); err != nil {
+				fmt.Fprintln(os.Stderr, "shutdown error:", err)
 			}
 
 			return nil

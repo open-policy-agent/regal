@@ -67,9 +67,6 @@ allow if {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancel := context.WithCancel(t.Context())
-			defer cancel()
-
 			receivedMessages := make(chan types.ApplyWorkspaceEditParams, defaultBufferedChannelSize)
 
 			createWorkspaceApplyEditTestHandler := func(
@@ -93,13 +90,7 @@ allow if {
 
 			tempDir := t.TempDir()
 			clientHandler := createWorkspaceApplyEditTestHandler(t, receivedMessages)
-			ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
-
-			// set client identifier for this test since we are testing that behavior
-			ls.client.Identifier = clients.DetermineIdentifier(tc.clientName)
-
-			// edits are sent to the clinet by the command worker
-			go ls.StartCommandWorker(ctx)
+			ls, connClient, ctx := createAndInitServerWithClientName(t, tempDir, clientHandler, tc.clientName)
 
 			mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
 			ls.cache.SetFileContents(mainRegoURI, content)
@@ -145,13 +136,6 @@ allow if {
 func TestExecuteCommandExplorer(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithCancel(t.Context())
-
-	defer func() {
-		time.Sleep(200 * time.Millisecond)
-		cancel()
-	}()
-
 	receivedNotifications := make(chan map[string]any, defaultBufferedChannelSize)
 
 	createExplorerNotificationTestHandler := func(
@@ -186,12 +170,7 @@ func TestExecuteCommandExplorer(t *testing.T) {
 
 	tempDir := t.TempDir()
 	clientHandler := createExplorerNotificationTestHandler(t, receivedNotifications)
-	ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
-
-	// Set client identifier to VSCode so it uses the notification approach
-	ls.client.Identifier = clients.IdentifierVSCode
-
-	go ls.StartCommandWorker(ctx)
+	ls, connClient, ctx := createAndInitServerWithClientName(t, tempDir, clientHandler, "Visual Studio Code")
 
 	content := `package test
 

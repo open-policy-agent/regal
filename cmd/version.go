@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"cmp"
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -54,7 +55,10 @@ func init() {
 
 				// run version check for pretty format only
 				if os.Getenv(update.CheckVersionDisableEnvVar) == "" {
-					update.CheckAndWarn(update.Options{
+					ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+					defer cancel()
+
+					update.CheckAndWarn(ctx, update.Options{
 						CurrentVersion: version.Version,
 						CurrentTime:    time.Now().UTC(),
 						StateDir:       config.GlobalConfigDir(true),

@@ -31,7 +31,7 @@ const (
 	defaultBufferedChannelSize = 5
 )
 
-type messages map[string]chan []string
+type receivedMessagesMap map[string]chan []string
 
 // determineTimeout returns a timeout duration based on whether
 // the test suite is running with race detection, if so, a more permissive
@@ -46,11 +46,45 @@ func determineTimeout() time.Duration {
 	return defaultTimeout
 }
 
-func createAndInitServer(t *testing.T, ctx context.Context, tempDir string, clientHandler connection.HandlerFunc) (
+// drainMessages drains all pending messages from a channel.
+// This is useful in tests to clear buffered messages and avoid race conditions
+// where old messages are consumed instead of waiting for new ones.
+// It's common for messages to build up in the race detector when things are
+// running very slowly.
+func drainMessages[T any](ch chan T) {
+	for {
+		select {
+		case <-ch:
+			// Keep draining
+		default:
+			return
+		}
+	}
+}
+
+func createAndInitServer(t *testing.T, tempDir string, clientHandler connection.HandlerFunc) (
 	*LanguageServer,
 	*jsonrpc2.Conn,
+	context.Context,
 ) {
 	t.Helper()
+
+	return createAndInitServerWithClientName(t, tempDir, clientHandler, "go test")
+}
+
+func createAndInitServerWithClientName(
+	t *testing.T,
+	tempDir string,
+	clientHandler connection.HandlerFunc,
+	clientName string,
+) (
+	*LanguageServer,
+	*jsonrpc2.Conn,
+	context.Context,
+) {
+	t.Helper()
+
+	ctx, cancel := context.WithCancel(t.Context())
 
 	// This is set due to eventing being so slow in go test -race that we
 	// get flakes. TODO, work out how to avoid needing this in lsp tests.
@@ -68,32 +102,59 @@ func createAndInitServer(t *testing.T, ctx context.Context, tempDir string, clie
 		FeatureFlags:             DefaultServerFeatureFlags(),
 	})
 
-	go ls.StartDiagnosticsWorker(ctx)
-	go ls.StartConfigWorker(ctx)
+	ls.StartDiagnosticsWorker(ctx)
+	ls.StartConfigWorker(ctx)
+	ls.StartHoverWorker(ctx)
+	ls.StartTestLocationsWorker(ctx)
+	ls.StartCommandWorker(ctx)
+
+	// Not started automatically:
+	// - StartTemplateWorker: Manually started where needed to test for ordering bugs
+	// - StartWorkspaceStateWorker: Only needed for long-running tests monitoring workspace changes
+	// - StartQueryCacheWorker: Only needed in dev mode (REGAL_BUNDLE_PATH set)
+	// - StartWebServer: Not used in tests
 
 	netConnServer, netConnClient := net.Pipe()
 
 	connServer := connection.New(ctx, netConnServer, ls.Handle)
 	connClient := connection.New(ctx, netConnClient, clientHandler)
 
-	go func() {
-		<-ctx.Done()
-		// we need only close the pipe connections as the jsonrpc2.Conn accept the ctx
+	// Register cleanup to cancel context, wait for workers, and close connections.
+	// t.Cleanup runs after test completes (including any defers in the test).
+	t.Cleanup(func() {
+		cancel()
+
+		// Use context.Background() to ensure a valid context for shutdown,
+		// independent of the test's lifecycle.
+		//nolint:usetesting
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCancel()
+
+		_ = ls.Shutdown(shutdownCtx)
+
+		// Close jsonrpc2 connections before closing the underlying pipes
+		// to prevent "read/write on closed pipe" errors from readMessages()
+		_ = connServer.Close()
+		_ = connClient.Close()
+
 		_ = netConnClient.Close()
 		_ = netConnServer.Close()
-	}()
+	})
 
 	ls.SetConn(connServer)
+
+	// Determine client identifier from name for URI construction
+	clientIdentifier := clients.DetermineIdentifier(clientName)
 
 	// a blank tempDir means no workspace root was required.
 	rootURI := ""
 	if tempDir != "" {
-		rootURI = uri.FromPath(clients.IdentifierGeneric, tempDir)
+		rootURI = uri.FromPath(clientIdentifier, tempDir)
 	}
 
 	request := types.InitializeParams{
 		RootURI:    rootURI,
-		ClientInfo: types.ClientInfo{Name: "go test"},
+		ClientInfo: types.ClientInfo{Name: clientName},
 		InitializationOptions: &types.InitializationOptions{
 			EnableDebugCodelens:       new(true),
 			EnableExplorer:            new(true),
@@ -109,15 +170,22 @@ func createAndInitServer(t *testing.T, ctx context.Context, tempDir string, clie
 	// no response to the call is expected
 	testutil.NoErr(connClient.Call(ctx, "initialized", struct{}{}, nil))(t)
 
-	return ls, connClient
+	return ls, connClient, ctx
 }
 
-func createPublishDiagnosticsHandler(t *testing.T, out io.Writer, messages messages) connection.HandlerFunc {
+func createPublishDiagnosticsHandler(
+	t *testing.T,
+	out io.Writer,
+	receivedMessages receivedMessagesMap,
+) connection.HandlerFunc {
 	t.Helper()
 
-	return func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
+	return func(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
 		if req.Method != methodTdPublishDiagnostics {
-			fmt.Fprintln(out, "createClientHandler: unexpected request method:", req.Method)
+			// Check context before writing to test output to avoid panic if test has completed
+			if ctx.Err() == nil {
+				fmt.Fprintln(out, "createClientHandler: unexpected request method:", req.Method)
+			}
 
 			return struct{}{}, nil
 		}
@@ -129,12 +197,15 @@ func createPublishDiagnosticsHandler(t *testing.T, out io.Writer, messages messa
 			}
 
 			fileBase := filepath.Base(params.URI)
-			fmt.Fprintln(out, "createPublishDiagnosticsHandler: queue", fileBase, len(messages[fileBase]))
+			// Check context before writing to test output to avoid panic if test has completed
+			if ctx.Err() == nil {
+				fmt.Fprintln(out, "createPublishDiagnosticsHandler: queue", fileBase, len(receivedMessages[fileBase]))
+			}
 
 			select {
-			case messages[fileBase] <- util.Sorted(violations):
+			case receivedMessages[fileBase] <- util.Sorted(violations):
 			case <-time.After(1 * time.Second):
-				t.Fatalf("timeout writing to messages channel for %s", fileBase)
+				t.Fatalf("timeout writing to receivedMessages channel for %s", fileBase)
 			}
 
 			return struct{}{}, nil
@@ -142,13 +213,13 @@ func createPublishDiagnosticsHandler(t *testing.T, out io.Writer, messages messa
 	}
 }
 
-func createMessageChannels(files map[string]string) messages {
-	messages := make(messages, len(files))
+func createMessageChannels(files map[string]string) receivedMessagesMap {
+	receivedMessages := make(receivedMessagesMap, len(files))
 	for _, file := range util.MapKeys(files, filepath.Base) {
-		messages[file] = make(chan []string, 10)
+		receivedMessages[file] = make(chan []string, 10)
 	}
 
-	return messages
+	return receivedMessages
 }
 
 func testRequestDataCodes(t *testing.T, requestData types.FileDiagnostics, fileURI string, codes []string) bool {
@@ -158,6 +229,13 @@ func testRequestDataCodes(t *testing.T, requestData types.FileDiagnostics, fileU
 		t.Log("expected diagnostics to be sent for", fileURI, "got", requestData.URI)
 
 		return false
+	}
+
+	// If codes is nil, we just want any diagnostics for this file
+	if codes == nil {
+		t.Logf("got diagnostics for %s (not checking specific codes)", fileURI)
+
+		return true
 	}
 
 	// Extract the codes from requestData.Items
@@ -195,6 +273,108 @@ func TestPositionToOffset(t *testing.T) {
 			if exp != got {
 				t.Fatalf("expected offset for line %d char %d to be %d, got %d", line, char, exp, got)
 			}
+		}
+	}
+}
+
+func waitForDiagnostics(
+	t *testing.T,
+	receivedMessages <-chan types.FileDiagnostics,
+	fileURI string,
+	expectedCodes []string,
+	timeout *time.Timer,
+) {
+	t.Helper()
+
+	for {
+		select {
+		case requestData := <-receivedMessages:
+			if testRequestDataCodes(t, requestData, fileURI, expectedCodes) {
+				return
+			}
+		case <-timeout.C:
+			t.Fatalf(
+				"timed out waiting for diagnostics for %s with codes %v",
+				fileURI,
+				expectedCodes,
+			)
+		}
+	}
+}
+
+func notifyDocumentChange(t *testing.T, connClient *jsonrpc2.Conn, fileURI, newContents string) {
+	t.Helper()
+
+	err := connClient.Notify(t.Context(), "textDocument/didChange", types.DidChangeTextDocumentParams{
+		TextDocument:   types.VersionedTextDocumentIdentifier{URI: fileURI},
+		ContentChanges: []types.TextDocumentContentChangeEvent{{Text: newContents}},
+	}, nil)
+	if err != nil {
+		t.Fatalf("failed to send didChange notification: %v", err)
+	}
+}
+
+// waitForViolations waits for violations to match the expected state.
+// wantPresent: violation codes that must be present in diagnostics
+// wantAbsent: violation codes that must be absent from diagnostics
+// Pass empty slices to check for no violations at all.
+func waitForViolations(
+	t *testing.T,
+	key string,
+	wantPresent,
+	wantAbsent []string,
+	timeout *time.Timer,
+	receivedMessages receivedMessagesMap,
+) {
+	t.Helper()
+
+	for success := false; !success; {
+		select {
+		case violations := <-receivedMessages[key]:
+			allMatch := true
+
+			// Check all rules that should be present
+			for _, rule := range wantPresent {
+				if !slices.Contains(violations, rule) {
+					t.Logf("waiting for violations to contain %s", rule)
+
+					allMatch = false
+
+					break
+				}
+			}
+
+			if !allMatch {
+				continue
+			}
+
+			// Check all rules that should be absent
+			for _, rule := range wantAbsent {
+				if slices.Contains(violations, rule) {
+					t.Logf("waiting for violations to not contain %s", rule)
+
+					allMatch = false
+
+					break
+				}
+			}
+
+			if !allMatch {
+				continue
+			}
+
+			// If both slices are empty, check that violations is empty
+			if len(wantPresent) == 0 && len(wantAbsent) == 0 {
+				if len(violations) > 0 {
+					t.Logf("waiting for violations to be empty for %s, have: %v", key, violations)
+
+					continue
+				}
+			}
+
+			success = true
+		case <-timeout.C:
+			t.Fatalf("timed out waiting for violations - want present: %v, want absent: %v", wantPresent, wantAbsent)
 		}
 	}
 }

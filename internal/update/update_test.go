@@ -87,7 +87,7 @@ func checkAndWarn(t *testing.T, opts Options, bb *bytes.Buffer) string {
 	t.Helper()
 	bb.Reset()
 
-	CheckAndWarn(opts, bb)
+	CheckAndWarn(t.Context(), opts, bb)
 
 	return bb.String()
 }

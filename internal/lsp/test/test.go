@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/sourcegraph/jsonrpc2"
 
@@ -13,7 +12,8 @@ import (
 func HandlerFor[T any](method string, h handler.Func[T]) connection.HandlerFunc {
 	return func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
 		if req.Method != method {
-			return nil, fmt.Errorf("unexpected method: %s for handler of: %s", req.Method, method)
+			// Silently ignore messages from other server workers that are unrelated to this test
+			return struct{}{}, nil
 		}
 
 		return handler.WithParams(req, h)

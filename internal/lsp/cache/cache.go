@@ -126,13 +126,19 @@ func (c *Cache) Rename(oldKey, newKey string) {
 }
 
 func (c *Cache) SetAggregates(aggregates ast.Object) {
-	c.aggregateData.Reset(aggregates)
+	// Make a defensive copy to prevent sharing mutable ast.Object state across goroutines.
+	// The OPA library's ast.Object.Insert() contains non-atomic map/slice operations that
+	// can race even when protected by external locks.
+	c.aggregateData.Reset(aggregates.Copy())
 }
 
 // SetFileAggregates sets aggregate data for the provided URI.
 func (c *Cache) SetFileAggregates(fileURI string, data ast.Object) {
 	if data != nil {
-		c.aggregateData.Set(fileURI, ast.NewTerm(data))
+		// Make a defensive copy to prevent sharing mutable ast.Object state across goroutines.
+		// The OPA library's ast.Object.Insert() contains non-atomic map/slice operations that
+		// can race even when protected by external locks.
+		c.aggregateData.Set(fileURI, ast.NewTerm(data.Copy()))
 	}
 }
 
@@ -141,7 +147,7 @@ func (c *Cache) SetFileAggregates(fileURI string, data ast.Object) {
 // also the provided file URIs as keys.. i.e. not just the values.
 func (c *Cache) GetFileAggregates(fileURIs ...string) ast.Object {
 	if len(fileURIs) == 0 {
-		return c.aggregateData.UnsafeObject()
+		return c.aggregateData.GetObject()
 	}
 
 	return c.aggregateData.Keep(fileURIs...)

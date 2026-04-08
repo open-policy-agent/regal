@@ -15,16 +15,13 @@ import (
 func TestInitializeExperimentalCapabilities(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
 	tempDir := t.TempDir()
 
 	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, _ *jsonrpc2.Request) (any, error) {
 		return struct{}{}, nil
 	}
 
-	_, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
+	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	request := types.InitializeParams{
 		RootURI:    uri.FromPath(clients.IdentifierGeneric, tempDir),

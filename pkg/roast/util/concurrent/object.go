@@ -42,6 +42,7 @@ func (co *Object) Set(key string, value *ast.Term) {
 		co.keys[key] = keyTerm
 	}
 
+	// Write lock protects against races with concurrent Insert operations.
 	co.o.Insert(keyTerm, value)
 
 	co.mu.Unlock()
@@ -103,6 +104,20 @@ func (co *Object) RenameKey(oldKey, newKey string) {
 	co.mu.Unlock()
 }
 
+// GetObject returns a copy of the entire object with proper locking.
+func (co *Object) GetObject() ast.Object {
+	co.mu.RLock()
+	defer co.mu.RUnlock()
+
+	// Return a defensive copy to prevent a time-of-check-time-of-use (TOCTOU) race.
+	// Without this copy, callers could access the returned object while another
+	// goroutine calls Set(), which mutates co.o via Insert().
+	return co.o.Copy()
+}
+
+// UnsafeObject returns the internal object without locking.
+//
+// Deprecated: Use GetObject() instead for thread-safe access.
 func (co *Object) UnsafeObject() ast.Object {
 	return co.o
 }
