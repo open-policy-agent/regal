@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/dependencies"
 	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 
@@ -203,13 +204,45 @@ func (h PrintHook) Print(ctx print.Context, msg string) error {
 	return nil
 }
 
-func inputSkeletonFromRule(rule *ast.Rule) map[string]any {
-	root := map[string]any{}
+func ruleHasInputRefs(rule *ast.Rule) bool {
+	if rule == nil {
+		return false
+	}
+
+	found := false
 
 	ast.WalkRefs(rule, func(ref ast.Ref) bool {
+		if len(ref) >= 2 && ref[0].Equal(ast.InputRootDocument) {
+			found = true
+		}
+
+		return found
+	})
+
+	return found
+}
+
+func inputSkeletonFromRule(rule *ast.Rule, compiler *ast.Compiler) map[string]any {
+	root := map[string]any{}
+
+	refs, err := dependencies.Base(compiler, rule)
+	if err != nil {
+		return root
+	}
+
+	// The logic that resolves dependencies in Base doesn't find refs in the rule head.
+	// So, passing that in individually.
+	headRefs, err := dependencies.Base(compiler, rule.Head)
+	if err != nil {
+		return root
+	}
+
+	refs = append(refs, headRefs...)
+
+	for _, ref := range refs {
 		// We only want input refs
 		if len(ref) < 2 || !ref[0].Equal(ast.InputRootDocument) {
-			return false
+			continue
 		}
 
 		node := root
@@ -228,11 +261,9 @@ func inputSkeletonFromRule(rule *ast.Rule) map[string]any {
 
 		leaf := strings.Trim(ref[len(ref)-1].Value.String(), `"`)
 		if _, ok := node[leaf]; !ok {
-			node[leaf] = "EXAMPLE"
+			node[leaf] = "changeme"
 		}
-
-		return false
-	})
+	}
 
 	return root
 }

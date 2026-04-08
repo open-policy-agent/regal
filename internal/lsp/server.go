@@ -2600,13 +2600,26 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		// NOTE that we don't break on missing input, as some rules don't depend on that, and should
 		// still be evaluable. We may consider returning some notice to the user though.
 		inputPath, inputMap = rio.FindInput(uri.ToPath(args.Target), l.workspacePath())
-		if inputPath == "" && !l.supressInputPrompt {
+
+		ruleName := strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
+
+		var matchedRule *ast.Rule
+
+		for _, rule := range module.Rules {
+			if rule.Head.Name.String() == ruleName && rule.Location.Row == args.Row {
+				matchedRule = rule
+
+				break
+			}
+		}
+
+		if inputPath == "" && !l.supressInputPrompt && ruleHasInputRefs(matchedRule) {
 			var action types.MessageActionItem
 
 			reqParams := types.ShowMessageRequestParams{
 				Type: 3, // info
 				Message: "No input.json/yaml file was found. " +
-					"This file is used to provide input data to your rules. " +
+					"This file is used to provide input data for rule evaluation. " +
 					"Would you like to create one?",
 				Actions: []types.MessageActionItem{
 					{Title: "Yes"},
@@ -2621,16 +2634,10 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 			if err = l.conn.Call(showMsgCtx, "window/showMessageRequest", reqParams, &action); err != nil {
 				l.log.Message("window/showMessageRequest failed: %v", err)
 			} else if action.Title == "Yes" {
-				skeleton := map[string]any{}
+				compiler := compile.NewCompilerWithRegalBuiltins()
+				compiler.Compile(l.cache.GetAllModules())
 
-				ruleName := strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
-				for _, rule := range module.Rules {
-					if rule.Head.Name.String() == ruleName {
-						skeleton = inputSkeletonFromRule(rule)
-
-						break
-					}
-				}
+				skeleton := inputSkeletonFromRule(matchedRule, compiler)
 
 				data, merr := json.MarshalIndent(skeleton, "", "  ")
 				if merr != nil {

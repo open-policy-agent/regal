@@ -9,6 +9,8 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
+	"github.com/open-policy-agent/opa/v1/ast"
+
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
@@ -263,35 +265,23 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 	go ls.StartCommandWorker(ctx)
 
 	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
+	regoContent := `package test
 
-	if err := connClient.Notify(ctx, "textDocument/didOpen", types.DidOpenTextDocumentParams{
-		TextDocument: types.TextDocumentItem{
-			URI:  mainRegoURI,
-			Text: "package test\nallow if { input.foo == \"bar\" }\n",
-		},
-	}); err != nil {
-		t.Fatalf("failed to send didOpen: %s", err)
-	}
+allow if {
+	input.foo.bar == "woo"
+	input.foo.wee.age == 24
+	input.superfoo.wee == "fun"
+	input.superbar.tee == "run"
+}
+`
+
+	ls.cache.SetFileContents(mainRegoURI, regoContent)
+	ls.cache.SetModule(mainRegoURI, ast.MustParseModule(regoContent))
 
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
 
-	// Needed to add a polling loop to wait for the module to be parsed before running the eval command.
-	// Possibly a better way to do this, but wasn't sure.
-	for {
-		if _, _, ok := ls.cache.GetContentAndModule(mainRegoURI); ok {
-			break
-		}
-
-		select {
-		case <-timeout.C:
-			t.Fatal("timed out waiting for module to be parsed")
-		default:
-			time.Sleep(50 * time.Millisecond)
-		}
-	}
-
-	commandArgs := types.CommandArgs{Target: mainRegoURI, Query: "data.test.allow"}
+	commandArgs := types.CommandArgs{Target: mainRegoURI, Query: "data.test.allow", Row: 3}
 	argsJSON := must.Return(encoding.JSON().Marshal(commandArgs))(t)
 
 	var executeResponse any
@@ -301,7 +291,7 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 		Arguments: []any{string(argsJSON)},
 	}, &executeResponse))
 
-	// Similar to above, but for input.json. Checks if its been created until the loop hits the timeout.
+	// Checks if input.json has been created until the loop hits the timeout.
 	select {
 	case <-inputJSONCreated:
 		for {
@@ -311,7 +301,21 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 					t.Fatalf("failed to read input.json: %s", err)
 				}
 
-				must.Equal(t, "{\n  \"foo\": \"EXAMPLE\"\n}\n", string(contents))
+				must.Equal(t, `{
+  "foo": {
+    "bar": "changeme",
+    "wee": {
+      "age": "changeme"
+    }
+  },
+  "superbar": {
+    "tee": "changeme"
+  },
+  "superfoo": {
+    "wee": "changeme"
+  }
+}
+`, string(contents))
 
 				break
 			}
