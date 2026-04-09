@@ -43,7 +43,7 @@ func startFileLintWorker(ctx context.Context, l *LanguageServer) {
 			}
 
 			// Send test locations update after parse completes (if client supports it)
-			if l.client.SupportsOPATestProvider() {
+			if l.getClient().SupportsOPATestProvider() {
 				if parseSuccess {
 					l.testLocationJobs <- lintFileJob{Reason: job.Reason, URI: job.URI}
 				} else {

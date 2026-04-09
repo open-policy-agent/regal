@@ -139,6 +139,12 @@ type LanguageServer struct {
 	loadedBuiltins                       *concurrent.Map[string, map[string]*ast.Builtin]
 
 	client types.Client
+	// clientLock protects access to the client field. The client is written once during
+	// initialization in handleInitialize() and read from multiple worker goroutines.
+	// jsonrpc2's asyncHandler runs initialize and initialized requests in separate
+	// goroutines, so workers waiting on initializationGate may race with the write in
+	// handleInitialize() if not properly synchronized. This lock prevents that race.
+	clientLock sync.RWMutex
 
 	cache       *cache.Cache
 	bundleCache *bundles.Cache
@@ -540,7 +546,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 				case "regal.eval":
 					err = l.handleEvalCommand(ctx, args)
 				case "regal.debug":
-					if !l.client.SupportsDebugCodeLens() {
+					if !l.getClient().SupportsDebugCodeLens() {
 						l.log.Message("regal.debug command called but client does not support debug functionality")
 
 						break
@@ -696,6 +702,24 @@ func (l *LanguageServer) getLoadedConfig() *config.Config {
 	defer l.loadedConfigLock.RUnlock()
 
 	return l.loadedConfig
+}
+
+// getClient returns the current client information.
+// This method is safe to call from multiple goroutines.
+func (l *LanguageServer) getClient() types.Client {
+	l.clientLock.RLock()
+	defer l.clientLock.RUnlock()
+
+	return l.client
+}
+
+// setClient sets the client information.
+// This should only be called during initialization in handleInitialize().
+func (l *LanguageServer) setClient(client types.Client) {
+	l.clientLock.Lock()
+	defer l.clientLock.Unlock()
+
+	l.client = client
 }
 
 func (l *LanguageServer) getEnabledNonAggregateRules() []string {
@@ -1010,7 +1034,7 @@ func (l *LanguageServer) fixEditParams(
 
 	var edits []types.TextEdit
 
-	if l.client.Identifier == clients.IdentifierIntelliJ {
+	if l.getClient().Identifier == clients.IdentifierIntelliJ {
 		// IntelliJ clients need a single edit that replaces the entire file
 		numLines := util.NumLines(oldContent)
 		line, _ := util.Line(oldContent, numLines)
@@ -1044,7 +1068,7 @@ func (l *LanguageServer) fixRenameParams(label, fileURI string) (types.ApplyWork
 	f := fixer.NewFixer().RegisterRoots(roots...).RegisterFixes(fix).SetOnConflictOperation(fixer.OnConflictRename)
 
 	violations := []report.Violation{{Title: fix.Name(), Location: report.Location{File: uri.ToPath(fileURI)}}}
-	cfprovider := fileprovider.NewCacheFileProvider(l.cache, l.client.Identifier)
+	cfprovider := fileprovider.NewCacheFileProvider(l.cache, l.getClient().Identifier)
 
 	fixReport, err := f.FixViolations(violations, cfprovider, l.getLoadedConfig())
 	if err != nil {
@@ -1233,7 +1257,7 @@ func (l *LanguageServer) handleTextDocumentDefinition(params types.DefinitionPar
 	return types.Location{
 		// res.File will be relative to the workspace root. The response here needs
 		// a URI for the client to be able to navigate correctly.
-		URI:   uri.FromRelativePath(l.client.Identifier, res.File, l.getWorkspaceRootURI()),
+		URI:   uri.FromRelativePath(l.getClient().Identifier, res.File, l.getWorkspaceRootURI()),
 		Range: types.RangeBetween(res.Row-1, res.Col-1, res.Row-1, res.Col-1),
 	}, nil
 }
@@ -1424,8 +1448,8 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 
 	// opa-fmt is the default formatter if not set in the client options
 	formatter := "opa-fmt"
-	if l.client.InitOptions.Formatter != nil {
-		formatter = *l.client.InitOptions.Formatter
+	if l.getClient().InitOptions.Formatter != nil {
+		formatter = *l.getClient().InitOptions.Formatter
 	}
 
 	var newContent string
@@ -1609,13 +1633,13 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 		}
 	}
 
-	l.client = types.Client{
+	l.setClient(types.Client{
 		Identifier:   clients.DetermineIdentifier(params.ClientInfo.Name),
 		InitOptions:  cmp.Or(params.InitializationOptions, &types.InitializationOptions{}),
 		Capabilities: capsValue,
-	}
+	})
 
-	if l.client.Identifier == clients.IdentifierGeneric {
+	if l.getClient().Identifier == clients.IdentifierGeneric {
 		l.log.Message(
 			"unable to match client identifier for initializing client, using generic functionality: %s",
 			params.ClientInfo.Name,
@@ -1787,11 +1811,11 @@ func (l *LanguageServer) updateRootURI(rootURI string) error {
 			strings.Join(configRoots, "\n"), configRoots[0],
 		)
 
-		l.workspaceRootURI = uri.FromPath(l.client.Identifier, configRoots[0])
+		l.workspaceRootURI = uri.FromPath(l.getClient().Identifier, configRoots[0])
 	case len(configRoots) == 1:
 		l.log.Message("using %q as workspace root directory", configRoots[0])
 
-		l.workspaceRootURI = uri.FromPath(l.client.Identifier, configRoots[0])
+		l.workspaceRootURI = uri.FromPath(l.getClient().Identifier, configRoots[0])
 	default:
 		l.workspaceRootURI = rootURI
 
@@ -1832,7 +1856,7 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 	failed := make([]fileLoadFailure, 0)
 
 	if err := files.DefaultWalker(l.workspacePath()).Walk(func(path string) error {
-		fileURI := uri.FromPath(l.client.Identifier, path)
+		fileURI := uri.FromPath(l.getClient().Identifier, path)
 		if l.ignoreURI(fileURI) {
 			return nil
 		}
@@ -1867,7 +1891,7 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 			return nil // continue processing other files
 		}
 
-		if l.client.SupportsOPATestProvider() {
+		if l.getClient().SupportsOPATestProvider() {
 			if parseSuccess {
 				l.testLocationJobs <- lintFileJob{Reason: "server initialized", URI: fileURI}
 			} else {
@@ -2037,7 +2061,7 @@ func (l *LanguageServer) toRelativePath(fileURI string) string {
 }
 
 func (l *LanguageServer) fromPath(filePath string) string {
-	return uri.FromPath(l.client.Identifier, filePath)
+	return uri.FromPath(l.getClient().Identifier, filePath)
 }
 
 func (l *LanguageServer) regoVersionForURI(fileURI string) ast.RegoVersion {
@@ -2072,7 +2096,7 @@ func (l *LanguageServer) parseOpts(fileURI string, bis map[string]*ast.Builtin) 
 		Builtins:         bis,
 		RegoVersion:      l.regoVersionForURI(fileURI),
 		WorkspaceRootURI: l.getWorkspaceRootURI(),
-		ClientIdentifier: l.client.Identifier,
+		ClientIdentifier: l.getClient().Identifier,
 	}
 }
 
@@ -2098,7 +2122,7 @@ func (l *LanguageServer) regalContext(fileURI string, _ *rego.Requirements) *reg
 }
 
 func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types.ExecuteCommandParams) error {
-	if !l.client.SupportsExplorer() {
+	if !l.getClient().SupportsExplorer() {
 		l.log.Message("regal.explorer command called but client does not support explorer functionality")
 
 		return errors.New("client does not support explorer functionality")
@@ -2148,7 +2172,7 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 	)
 
 	// For VSCode, use the notification approach
-	if l.client.Identifier == clients.IdentifierVSCode {
+	if l.getClient().Identifier == clients.IdentifierVSCode {
 		stages := make([]types.ExplorerStageResult, 0, len(compileResults))
 		hasErrors := false
 
@@ -2239,7 +2263,7 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 
 	for _, filename := range filesToOpen {
 		showParams := types.ShowDocumentParams{
-			URI:       uri.FromPath(l.client.Identifier, filename),
+			URI:       uri.FromPath(l.getClient().Identifier, filename),
 			TakeFocus: new(false),
 		}
 
@@ -2263,7 +2287,7 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 				l.log.Message("failed to write plan file: %s", err)
 			} else {
 				showParams := types.ShowDocumentParams{
-					URI:       uri.FromPath(l.client.Identifier, planFile),
+					URI:       uri.FromPath(l.getClient().Identifier, planFile),
 					TakeFocus: new(false),
 				}
 
@@ -2464,7 +2488,7 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		target = strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
 	}
 
-	if l.featureFlags.InlineEvaluationProvider && l.client.SupportsEvalCodelensDisplayInline() {
+	if l.featureFlags.InlineEvaluationProvider && l.getClient().SupportsEvalCodelensDisplayInline() {
 		responseParams := map[string]any{
 			"result": result,
 			"line":   args.Row,

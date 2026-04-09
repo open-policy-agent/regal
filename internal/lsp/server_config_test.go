@@ -59,7 +59,7 @@ allow := true
 
 	ls, _, _ := createAndInitServer(t, tempDir, clientHandler)
 
-	if got, exp := ls.workspaceRootURI, uri.FromPath(ls.client.Identifier, tempDir); exp != got {
+	if got, exp := ls.workspaceRootURI, uri.FromPath(ls.getClient().Identifier, tempDir); exp != got {
 		t.Fatalf("expected client root URI to be %s, got %s", exp, got)
 	}
 
@@ -111,7 +111,7 @@ rules:
 
 	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
-	if got, exp := ls.workspaceRootURI, uri.FromPath(ls.client.Identifier, tempDir); exp != got {
+	if got, exp := ls.workspaceRootURI, uri.FromPath(ls.getClient().Identifier, tempDir); exp != got {
 		t.Fatalf("expected client root URI to be %s, got %s", exp, got)
 	}
 
