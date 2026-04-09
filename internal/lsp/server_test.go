@@ -180,3 +180,21 @@ func testRequestDataCodes(t *testing.T, requestData types.FileDiagnostics, fileU
 
 	return true
 }
+
+func TestPositionToOffset(t *testing.T) {
+	t.Parallel()
+
+	text := "line1\nline2\nline3"
+
+	for line := range uint(2) {
+		for char := range uint(5) {
+			pos := types.Position{Line: line, Character: char}
+			exp := line*6 + char
+			got := util.SafeIntToUint(positionToOffset(text, pos))
+
+			if exp != got {
+				t.Fatalf("expected offset for line %d char %d to be %d, got %d", line, char, exp, got)
+			}
+		}
+	}
+}

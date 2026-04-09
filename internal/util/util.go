@@ -146,8 +146,7 @@ func FilepathJoiner(base string) func(string) string {
 	}
 }
 
-// SafeUintToInt will convert a uint to an int, clamping the result to
-// math.MaxInt.
+// SafeUintToInt will convert a uint to an int, clamping the result to math.MaxInt.
 func SafeUintToInt(u uint) int {
 	if u > math.MaxInt {
 		return math.MaxInt // Clamp to prevent overflow
@@ -320,7 +319,7 @@ func Reversed[T any](s []T) []T {
 }
 
 // LineContents returns the contents on line lineNum (0-indexed) from document.
-// This function assumes the lineNum is known to be contained within the document,.
+// This function assumes the lineNum is known to be contained within the document.
 func LineContents(document []byte, lineNum uint) []byte {
 	for i, line := range Lines(document) {
 		if i == lineNum {
@@ -343,4 +342,55 @@ func Lines(s []byte) iter.Seq2[uint, []byte] {
 			lineNum++
 		}
 	}
+}
+
+// NumLines returns the number of lines in s, as uint for convenience with LSP spec types and more.
+func NumLines(s string) uint {
+	return SafeIntToUint(strings.Count(s, "\n")) + 1
+}
+
+// BytesNumLines returns the number of lines in s, as uint for convenience with LSP spec types and more.
+func BytesNumLines(s []byte) uint {
+	return SafeIntToUint(bytes.Count(s, []byte{'\n'})) + 1
+}
+
+// IndexByteNth returns the index of the nth occurrence of b in s, or -1 if not found / out of range.
+func IndexByteNth(s string, b byte, n uint) (i int) {
+	for ; n > 0; n-- {
+		d := strings.IndexByte(s[i:], b)
+		if d == -1 {
+			return -1
+		}
+
+		i += d + 1
+	}
+
+	return i - 1
+}
+
+// Line returns the contents of the line at lineNum (1-indexed) in a most efficient way.
+func Line(s string, lineNum uint) (line string, ok bool) {
+	if lineNum == 0 {
+		return "", false
+	}
+
+	if lineNum == 1 {
+		if before, _, ok0 := strings.Cut(s, "\n"); ok0 {
+			return before, true
+		}
+
+		return s, true
+	}
+
+	idx := IndexByteNth(s, '\n', lineNum-1)
+	if idx == -1 {
+		return "", false
+	}
+
+	endIdx := strings.IndexByte(s[idx+1:], '\n')
+	if endIdx == -1 {
+		return s[idx+1:], true
+	}
+
+	return s[idx+1 : idx+1+endIdx], true
 }

@@ -47,7 +47,7 @@ type Cache struct {
 
 	// when a file is successfully parsed, the number of lines in the file is stored
 	// here. This is used to gracefully fail when exiting unparsable files.
-	successfulParseLineCounts *concurrent.Map[string, int]
+	successfulParseLineCounts *concurrent.Map[string, uint]
 }
 
 func NewCache() *Cache {
@@ -59,7 +59,7 @@ func NewCache() *Cache {
 		diagnosticsParseErrors:    concurrent.MapOf(make(map[string][]types.Diagnostic)),
 		builtinPositionsFile:      concurrent.MapOf(make(map[string]map[uint][]types.BuiltinPosition)),
 		keywordLocationsFile:      concurrent.MapOf(make(map[string]map[uint][]types.KeywordLocation)),
-		successfulParseLineCounts: concurrent.MapOf(make(map[string]int)),
+		successfulParseLineCounts: concurrent.MapOf(make(map[string]uint)),
 		aggregateData:             concurrent.NewObject(),
 	}
 }
@@ -215,11 +215,11 @@ func (c *Cache) GetKeywordLocations(fileURI string) (map[uint][]types.KeywordLoc
 	return c.keywordLocationsFile.Get(fileURI)
 }
 
-func (c *Cache) GetSuccessfulParseLineCount(fileURI string) (int, bool) {
+func (c *Cache) GetSuccessfulParseLineCount(fileURI string) (uint, bool) {
 	return c.successfulParseLineCounts.Get(fileURI)
 }
 
-func (c *Cache) SetSuccessfulParseLineCount(fileURI string, count int) {
+func (c *Cache) SetSuccessfulParseLineCount(fileURI string, count uint) {
 	c.successfulParseLineCounts.Set(fileURI, count)
 }
 

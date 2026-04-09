@@ -1,8 +1,7 @@
 package util
 
 import (
-	"slices"
-	"strconv"
+	"fmt"
 	"testing"
 
 	"github.com/open-policy-agent/regal/internal/test/must"
@@ -91,50 +90,6 @@ func TestFindClosestMatchingRoot(t *testing.T) {
 	}
 }
 
-// Without pre-allocating, this is more than twice as slow and results in 5 allocs/op.
-// BenchmarkFilter/Filter-10    5919769    191.0 ns/op    224 B/op    1 allocs/op
-// ...
-func BenchmarkFilter(b *testing.B) {
-	strings := []string{
-		"foo", "bar", "baz", "qux", "quux", "corge", "grault", "garply", "waldo", "fred", "plugh", "xyzzy", "thud",
-		"x", "y", "z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "the", "lazy", "dog", "jumped", "over",
-		"the", "quick", "brown", "fox",
-	}
-
-	pred := func(s string) bool {
-		return len(s) > 3
-	}
-
-	b.Run("Filter", func(b *testing.B) {
-		for b.Loop() {
-			_ = Filter(strings, pred)
-		}
-	})
-}
-
-// No allocations
-func BenchmarkSorted(b *testing.B) {
-	unsorted := []string{
-		"the", "quick", "brown", "fox", "jumped", "over", "the", "lazy", "dog",
-		"foo", "bar", "baz", "qux", "quux", "corge", "grault", "garply", "waldo", "fred", "plugh", "xyzzy", "thud",
-		"x", "y", "z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
-	}
-	sorted := []string{
-		"a", "b", "bar", "baz", "brown", "c", "corge", "d", "dog", "e", "f", "foo", "fox", "fred", "g", "garply",
-		"grault", "h", "i", "j", "jumped", "lazy", "over", "plugh", "quick", "quux", "qux", "the", "the", "thud",
-		"waldo", "x", "xyzzy", "y", "z",
-	}
-
-	var got []string
-	for b.Loop() {
-		got = Sorted(unsorted)
-	}
-
-	if !slices.Equal(got, sorted) {
-		b.Fatalf("expected %v, got %v", sorted, got)
-	}
-}
-
 func TestLineContents(t *testing.T) {
 	t.Parallel()
 
@@ -159,17 +114,42 @@ func TestLineContents(t *testing.T) {
 	}
 }
 
-// 9090 ns/op    24576 B/op    1 allocs/op // return bytes.Split(document, []byte{'\n'})[lineNum]
-// 4726 ns/op        0 B/op    0 allocs/op // current implementation
-func BenchmarkLineContents(b *testing.B) {
-	src := []byte{}
-	for i := range uint64(1000) {
-		src = append(strconv.AppendUint(append(src, "This is line number "...), i, 10), '\n')
+func TestIndexByteNth(t *testing.T) {
+	t.Parallel()
+
+	for n, exp := range []int{-1, 3, 7, 11, -1} {
+		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
+			t.Parallel()
+
+			must.Equal(t, exp, IndexByteNth("foo\nbar\nbaz\nqux", '\n', uint(n))) //nolint:gosec
+		})
+	}
+}
+
+func TestLine(t *testing.T) {
+	t.Parallel()
+
+	text := "line1\nline2\nline3\nline4"
+
+	for i, exp := range []string{"line1", "line2", "line3", "line4"} {
+		i++
+
+		t.Run(fmt.Sprintf("line %d", i), func(t *testing.T) {
+			t.Parallel()
+
+			line, ok := Line(text, uint(i)) //nolint:gosec
+			must.Equal(t, true, ok, "not ok at line %d", i)
+			must.Equal(t, exp, line, "content at line %d", i)
+		})
 	}
 
-	b.Run("LineContents", func(b *testing.B) {
-		for b.Loop() {
-			_ = LineContents(src, 500)
-		}
-	})
+	for _, lineNum := range []uint{0, 5} {
+		t.Run(fmt.Sprintf("line %d", lineNum), func(t *testing.T) {
+			t.Parallel()
+
+			line, ok := Line(text, lineNum)
+			must.Equal(t, false, ok)
+			must.Equal(t, "", line)
+		})
+	}
 }
