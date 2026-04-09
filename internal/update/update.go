@@ -49,7 +49,7 @@ type decision struct {
 	CTA           string `json:"cta"`
 }
 
-func CheckAndWarn(opts Options, w io.Writer) {
+func CheckAndWarn(ctx context.Context, opts Options, w io.Writer) {
 	// only perform the version check on binaries with production semvers set
 	if _, err := semver.Parse(opts.CurrentVersion); err != nil {
 		if opts.Debug {
@@ -60,7 +60,6 @@ func CheckAndWarn(opts Options, w io.Writer) {
 	}
 
 	latestVersion, cacheIsStale := getLatestCachedVersionAndCheckStale(opts)
-	ctx := context.Background()
 	mod := map[string]*ast.Module{"update.rego": ast.MustParseModule(updateModule)}
 
 	q, err := ogre.New(query).WithModules(mod).Prepare(ctx)

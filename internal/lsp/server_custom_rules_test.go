@@ -1,9 +1,7 @@
 package lsp
 
 import (
-	"context"
 	"path/filepath"
-	"slices"
 	"testing"
 	"time"
 
@@ -52,13 +50,10 @@ allow if {
 	tempDir := testutil.TempDirectoryOf(t, files)
 
 	logger := log.NewLogger(log.LevelDebug, t.Output())
-	messages := createMessageChannels(files)
-	clientHandler := createPublishDiagnosticsHandler(t, logger, messages)
+	receivedMessages := createMessageChannels(files)
+	clientHandler := createPublishDiagnosticsHandler(t, logger, receivedMessages)
 
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
-	_, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
+	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	// send textDocument/didOpen notification to trigger diagnostics
 	if err := connClient.Notify(ctx, "textDocument/didOpen", types.DidOpenTextDocumentParams{
@@ -74,19 +69,5 @@ allow if {
 	defer timeout.Stop()
 
 	// wait for diagnostics to be published file with the custom violation set
-	for success := false; !success; {
-		select {
-		case violations := <-messages["foo.rego"]:
-			if !slices.Contains(violations, "custom") {
-				t.Logf("waiting for violations to contain \"custom\", have: %v", violations)
-
-				continue
-			}
-
-			success = true
-
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for foo.rego diagnostics to be sent")
-		}
-	}
+	waitForViolations(t, "foo.rego", []string{"custom"}, []string{}, timeout, receivedMessages)
 }

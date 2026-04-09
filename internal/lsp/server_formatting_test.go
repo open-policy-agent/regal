@@ -17,9 +17,6 @@ func TestFormatting(t *testing.T) {
 	t.Parallel()
 
 	// set up the server and client connections
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
 	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
 		t.Fatalf("unexpected request: %v", req)
 
@@ -27,7 +24,8 @@ func TestFormatting(t *testing.T) {
 	}
 
 	tempDir := t.TempDir()
-	ls, _ := createAndInitServer(t, ctx, tempDir, clientHandler)
+	ls, _, ctx := createAndInitServer(t, tempDir, clientHandler)
+
 	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main", "main.rego"))
 
 	// Simple as possible — opa fmt should just remove a newline

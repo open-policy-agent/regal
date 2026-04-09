@@ -1,9 +1,7 @@
 package lsp
 
 import (
-	"context"
 	"path/filepath"
-	"slices"
 	"testing"
 	"time"
 
@@ -19,8 +17,6 @@ import (
 // workspace diagnostics are run, this test validates that the correct diagnostics are sent to the client in this
 // scenario.
 func TestLanguageServerMultipleFiles(t *testing.T) {
-	// TODO: this test has been flakey and we need to skip it until we have time to look deeper into why
-	t.Skip()
 	t.Parallel()
 
 	files := map[string]string{
@@ -57,17 +53,33 @@ ignore:
 
 	// set up the workspace content with some example rego and regal config
 	tempDir := testutil.TempDirectoryOf(t, files)
-	messages := createMessageChannels(files)
-	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), messages)
+	receivedMessages := createMessageChannels(files)
+	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
 
-	// set up the server and client connections
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
-	ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
+	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
+
+	// Wait for custom config to load with directory-package-mismatch set to ignore
+	select {
+	case <-timeout.C:
+		t.Fatalf("timed out waiting for server to load config")
+	default:
+		for {
+			time.Sleep(100 * time.Millisecond)
+
+			cfg := ls.getLoadedConfig()
+			if cfg != nil {
+				// Verify directory-package-mismatch is ignored
+				if rule, ok := cfg.Rules["idiomatic"]["directory-package-mismatch"]; ok && rule.Level == "ignore" {
+					break
+				}
+			}
+		}
+	}
+
+	timeout.Reset(determineTimeout())
 
 	// wait for the aggregate data to be set, required for correct lint in next
 	// step
@@ -92,38 +104,12 @@ ignore:
 	timeout.Reset(determineTimeout())
 
 	// validate that the client received a diagnostics notification for authz.rego
-	for success := false; !success; {
-		select {
-		case violations := <-messages["authz.rego"]:
-			if !slices.Contains(violations, "prefer-package-imports") {
-				t.Logf("waiting for violations to contain prefer-package-imports, have: %v", violations)
-
-				continue
-			}
-
-			success = true
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for authz.rego diagnostics to be sent")
-		}
-	}
+	waitForViolations(t, "authz.rego", []string{"prefer-package-imports"}, []string{}, timeout, receivedMessages)
 
 	// validate that the client received a diagnostics notification for admins.rego
 	timeout.Reset(determineTimeout())
 
-	for success := false; !success; {
-		select {
-		case violations := <-messages["admins.rego"]:
-			if !slices.Contains(violations, "use-assignment-operator") {
-				t.Logf("waiting for violations to contain use-assignment-operator, have: %v", violations)
-
-				continue
-			}
-
-			success = true
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for admins.rego diagnostics to be sent")
-		}
-	}
+	waitForViolations(t, "admins.rego", []string{"use-assignment-operator"}, []string{}, timeout, receivedMessages)
 
 	// 3. Client sends textDocument/didChange notification with new contents
 	// for authz.rego no response to the call is expected
@@ -155,18 +141,5 @@ allow if input.user in admins.users
 	// authz.rego should now have no violations
 	timeout.Reset(determineTimeout())
 
-	for success := false; !success; {
-		select {
-		case violations := <-messages["authz.rego"]:
-			if len(violations) > 0 {
-				t.Logf("waiting for violations to be empty for authz.rego, have: %v", violations)
-
-				continue
-			}
-
-			success = true
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for authz.rego diagnostics to be sent")
-		}
-	}
+	waitForViolations(t, "authz.rego", []string{}, []string{}, timeout, receivedMessages)
 }
