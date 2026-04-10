@@ -1132,15 +1132,10 @@ func (l *LanguageServer) fixEditParams(
 
 	if l.client.Identifier == clients.IdentifierIntelliJ {
 		// IntelliJ clients need a single edit that replaces the entire file
-		lines := strings.Split(oldContent, "\n")
-		endLine := len(lines) - 1
-		endChar := 0
+		numLines := util.NumLines(oldContent)
+		line, _ := util.Line(oldContent, numLines)
 
-		if endLine >= 0 {
-			endChar = len(lines[endLine])
-		}
-
-		edits = []types.TextEdit{{Range: types.RangeBetween(0, 0, endLine, endChar), NewText: res[0].Contents}}
+		edits = []types.TextEdit{{Range: types.RangeBetween(0, 0, numLines-1, len(line)), NewText: res[0].Contents}}
 	} else {
 		// Other clients use the standard diff-based edits
 		edits = ComputeEdits(oldContent, res[0].Contents)
@@ -2674,20 +2669,13 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 }
 
 func positionToOffset(text string, p types.Position) int {
-	bytesRead := 0
-
-	for i, line := range strings.Split(text, "\n") {
-		if line == "" {
-			bytesRead++
-		} else {
-			bytesRead += len(line) + 1
-		}
-
-		//nolint:gosec
-		if i == int(p.Line)-1 {
-			return bytesRead + int(p.Character)
-		}
+	if p.Line == 0 {
+		return util.SafeUintToInt(p.Character)
 	}
 
-	return -1
+	if offset := util.IndexByteNth(text, '\n', p.Line); offset > -1 {
+		return offset + 1 + util.SafeUintToInt(p.Character)
+	}
+
+	return len(text)
 }

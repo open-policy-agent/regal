@@ -2,7 +2,6 @@ package inlayhint
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/types"
@@ -10,6 +9,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	lspTypes "github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 var noInlayHints = make([]lspTypes.InlayHint, 0)
@@ -43,33 +43,26 @@ func FromModule(module *ast.Module, builtins builtinsMap) []lspTypes.InlayHint {
 	return inlayHints
 }
 
-func Partial(parseErrors []lspTypes.Diagnostic, contents, uri string, builtins builtinsMap) []lspTypes.InlayHint {
-	firstErrorLine := uint(0)
+func Partial(parseErrors []lspTypes.Diagnostic, policy, uri string, builtins builtinsMap) []lspTypes.InlayHint {
+	var firstErrorLine uint
 	for _, parseError := range parseErrors {
 		if parseError.Range.Start.Line > firstErrorLine {
 			firstErrorLine = parseError.Range.Start.Line
 		}
 	}
 
-	split := strings.Split(contents, "\n")
-
-	if firstErrorLine == 0 || firstErrorLine > uint(len(split)) {
-		// if there are parse errors from line 0, we skip doing anything
-		// if the last valid line is beyond the end of the file, we exit as something is up
-		return noInlayHints
+	if numLines := util.NumLines(policy); firstErrorLine > 0 && firstErrorLine < numLines {
+		// try parse the lines up to the first parse error
+		end := util.IndexByteNth(policy, '\n', firstErrorLine+2)
+		if mod, err := parse.Module(uri, policy[:end]); err == nil {
+			return FromModule(mod, builtins)
+		}
 	}
 
-	// select the lines from the contents up to the first parse error
-	lines := strings.Join(split[:firstErrorLine], "\n")
-
-	// parse the part of the module that might work
-	module, err := parse.Module(uri, lines)
-	if err != nil {
-		// if we still can't parse the bit we hoped was valid, we exit as this is 'too hard'
-		return noInlayHints
-	}
-
-	return FromModule(module, builtins)
+	// if there are parse errors from line 0, we skip doing anything
+	// if the last valid line is beyond the end of the file, we exit as something is up
+	// if we still can't parse the bit we hoped was valid, we exit as this is 'too hard'
+	return noInlayHints
 }
 
 func createInlayTooltip(named *types.NamedType) string {

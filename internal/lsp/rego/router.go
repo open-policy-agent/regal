@@ -16,7 +16,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	ruri "github.com/open-policy-agent/regal/internal/lsp/uri"
-	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
@@ -39,7 +38,7 @@ type (
 		ContentProvider              func(uri string) (string, bool)
 		IgnoredProvider              func(uri string) bool
 		ParseErrorsProvider          func(uri string) ([]types.Diagnostic, bool)
-		SuccessfulParseCountProvider func(uri string) (int, bool)
+		SuccessfulParseCountProvider func(uri string) (uint, bool)
 	}
 
 	RegoRouter struct {
@@ -200,7 +199,7 @@ func regalContextForRequirements(prvs Providers, uri string, reqs *Requirements)
 		}
 
 		if splc, ok := prvs.SuccessfulParseCountProvider(uri); ok {
-			rctx.File.SuccessfulParseCount = util.SafeIntToUint(splc)
+			rctx.File.SuccessfulParseCount = splc
 		} else {
 			// if the file has always been unparsable, we can return early
 			return nil, nil //nolint:nilnil

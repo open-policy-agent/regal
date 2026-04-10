@@ -16,6 +16,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/hints"
 	"github.com/open-policy-agent/regal/pkg/linter"
@@ -75,7 +76,7 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 	options := rparse.ParserOptions()
 	options.RegoVersion = opts.RegoVersion
 
-	numLines := strings.Count(content, "\n") + 1
+	numLines := util.NumLines(content)
 	presentedFileName := uri.ToRelativePath(opts.FileURI, opts.WorkspaceRootURI)
 
 	module, err := rparse.ModuleWithOpts(presentedFileName, content, options)
@@ -123,17 +124,12 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		}
 	}
 
-	lines := strings.Split(content, "\n")
 	diags := make([]types.Diagnostic, 0, len(astErrors))
 
 	for _, astError := range astErrors {
-		line := max(astError.Location.Row-1, 0)
-
-		lineLength := 1
-		if line < numLines {
-			lineLength = len(lines[line])
-		}
-
+		line := uint(max(astError.Location.Row-1, 0))
+		text, _ := util.Line(content, line+1)
+		lineLength := cmp.Or(uint(len(text)), 1)
 		key := "regal/parse"
 		link := "https://www.openpolicyagent.org/docs/errors/" // overview page
 
