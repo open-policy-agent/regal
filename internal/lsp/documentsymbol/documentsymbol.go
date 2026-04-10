@@ -16,7 +16,7 @@ func All(contents string, module *ast.Module, builtins map[string]*ast.Builtin) 
 	// TODO: Rewrite in Rego.
 	// Only pkgSymbols would likely suffice, but we're keeping docSymbols around in case
 	// we ever want to add more top-level symbols than the package.
-	docSymbols := make([]types.DocumentSymbol, 0)
+	docSymbols := make([]types.DocumentSymbol, 0, 1)
 	pkgSymbols := make([]types.DocumentSymbol, 0)
 
 	lines := util.NumLines(contents)

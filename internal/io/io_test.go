@@ -93,9 +93,11 @@ func TestDirCleanUpPaths(t *testing.T) {
 			tempDir := testutil.TempDirectoryOf(t, test.State)
 			expected := util.Map(test.Expected, util.FilepathJoiner(tempDir))
 
-			additionalPreserveTargets := []string{tempDir}
-			for i, v := range test.AdditionalPreserveTargets {
-				additionalPreserveTargets[i] = filepath.Join(tempDir, v)
+			additionalPreserveTargets := make([]string, 0, 1+len(test.AdditionalPreserveTargets))
+			additionalPreserveTargets = append(additionalPreserveTargets, tempDir)
+
+			for _, v := range test.AdditionalPreserveTargets {
+				additionalPreserveTargets = append(additionalPreserveTargets, filepath.Join(tempDir, v))
 			}
 
 			deleteTarget := filepath.Join(tempDir, test.DeleteTarget)
