@@ -4,6 +4,7 @@ package lsp
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -2537,6 +2538,101 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 	return nil
 }
 
+func (l *LanguageServer) handleInputSkeletonPrompt(
+	ctx context.Context,
+	target, ruleName string,
+	row int,
+) (bool, error) {
+	compiler := compile.NewCompilerWithRegalBuiltins()
+	compiler.Compile(l.cache.GetAllModules())
+
+	if compiler.Failed() {
+		l.log.Message("failed to compile workspace modules for input skeleton: %v", compiler.Errors)
+	}
+
+	// Using the compiled modules to parse the rules. The dependencies package used in inputSkeletonFromRule
+	// relies on compiled modules to resolve transitive dependencies.
+	var compiledRule *ast.Rule
+
+	if compiledModule, ok := compiler.Modules[target]; ok {
+		for _, rule := range compiledModule.Rules {
+			if rule.Head.Name.String() == ruleName && rule.Location.Row == row {
+				compiledRule = rule
+
+				break
+			}
+		}
+	}
+
+	if compiledRule == nil {
+		return false, nil
+	}
+
+	skeleton := inputSkeletonFromRule(compiledRule, compiler)
+	if len(skeleton) == 0 {
+		return false, nil
+	}
+
+	var action types.MessageActionItem
+
+	showMsgCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	if err := l.conn.Call(showMsgCtx, "window/showMessageRequest", types.ShowMessageRequestParams{
+		Type: 3, // info
+		Message: "No input.json/yaml file was found. " +
+			"This file is used to provide input data for rule evaluation. " +
+			"Would you like to create one?",
+		Actions: []types.MessageActionItem{
+			{Title: "Yes"},
+			{Title: "No"},
+			{Title: "Ignore"},
+		},
+	}, &action); err != nil {
+		return false, fmt.Errorf("window/showMessageRequest failed: %w", err)
+	}
+
+	switch action.Title {
+	case "Yes":
+		data, err := json.MarshalIndent(skeleton, "", "  ")
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal input skeleton: %w", err)
+		}
+
+		inputFile := filepath.Join(l.workspacePath(), "input.json")
+		if err = os.WriteFile(inputFile, append(data, '\n'), 0o600); err != nil {
+			return false, fmt.Errorf("failed to create input.json: %w", err)
+		}
+
+		var openAction types.MessageActionItem
+		if err = l.conn.Call(ctx, "window/showMessageRequest", types.ShowMessageRequestParams{
+			Type:    3,
+			Message: "input.json created successfully! Running Evaluate will now pull from this file.",
+			Actions: []types.MessageActionItem{{Title: "Open"}},
+		}, &openAction); err != nil {
+			return true, fmt.Errorf("window/showMessageRequest failed: %w", err)
+		}
+
+		if openAction.Title == "Open" {
+			takeFocus := false
+
+			var showResult types.ShowDocumentResult
+			if err = l.conn.Call(ctx, "window/showDocument", types.ShowDocumentParams{
+				URI:       uri.FromPath(l.client.Identifier, inputFile),
+				TakeFocus: &takeFocus,
+			}, &showResult); err != nil {
+				l.log.Message("window/showDocument failed: %v", err)
+			}
+		}
+
+		return true, nil
+	case "Ignore":
+		l.supressInputPrompt = true
+	}
+
+	return false, nil
+}
+
 func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.CommandArgs) error {
 	if args.Target == "" || args.Query == "" {
 		l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
@@ -2594,30 +2690,18 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		// NOTE that we don't break on missing input, as some rules don't depend on that, and should
 		// still be evaluable. We may consider returning some notice to the user though.
 		inputPath, inputMap = rio.FindInput(uri.ToPath(args.Target), l.workspacePath())
-		if inputPath == "" && !l.supressInputPrompt {
-			var action types.MessageActionItem
 
-			reqParams := types.ShowMessageRequestParams{
-				Type: 3, // info
-				Message: "No input.json/yaml file was found. " +
-					"This file is used to provide input data to your rules. " +
-					"Would you like to create one?",
-				Actions: []types.MessageActionItem{
-					{Title: "Yes"},
-					{Title: "No"},
-					{Title: "Ignore"},
-				},
+		ruleName := strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
+
+		if inputPath == "" && !l.supressInputPrompt {
+			created, err := l.handleInputSkeletonPrompt(ctx, args.Target, ruleName, args.Row)
+			// Bubbling up an error here if input.json creation fails for any reason.
+			if err != nil {
+				return err
 			}
 
-			if err = l.conn.Call(ctx, "window/showMessageRequest", reqParams, &action); err != nil {
-				l.log.Message("window/showMessageRequest failed: %v", err)
-			} else if action.Title == "Yes" {
-				inputFile := filepath.Join(l.workspacePath(), "input.json")
-				if err = os.WriteFile(inputFile, []byte("{}\n"), 0o600); err != nil {
-					l.log.Message("failed to create input.json: %v", err)
-				}
-			} else if action.Title == "Ignore" {
-				l.supressInputPrompt = true
+			if created {
+				return nil
 			}
 		}
 	}

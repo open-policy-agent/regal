@@ -2,11 +2,15 @@ package lsp
 
 import (
 	"context"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/sourcegraph/jsonrpc2"
+
+	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
@@ -235,5 +239,124 @@ allow if {
 		}
 	case <-timeout.C:
 		t.Fatal("timeout waiting for regal/showExplorerResult notification")
+	}
+}
+
+func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	inputJSONCreated := make(chan struct{}, 1)
+	showDocumentReceived := make(chan struct{}, 1)
+
+	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
+		switch req.Method {
+		case "window/showMessageRequest":
+			params := must.Return(encoding.JSONUnmarshalTo[types.ShowMessageRequestParams](*req.Params))(t)
+
+			if strings.Contains(params.Message, "No input.json/yaml file was found.") {
+				// The initial file creation prompt
+				inputJSONCreated <- struct{}{}
+
+				return types.MessageActionItem{Title: "Yes"}, nil
+			} else if strings.Contains(params.Message, "created successfully") {
+				// The success notification and prompt to open the file
+				return types.MessageActionItem{Title: "Open"}, nil
+			}
+
+		case "window/showDocument":
+			showDocumentReceived <- struct{}{}
+
+			return types.ShowDocumentResult{Success: true}, nil
+		}
+
+		return struct{}{}, nil
+	}
+
+	tempDir := t.TempDir()
+	ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
+
+	go ls.StartCommandWorker(ctx)
+
+	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
+	regoContent := `package test
+
+allow if {
+	input.foo.bar == "woo"
+	input.foo.wee.age == 24
+	input.superfoo.wee == "fun"
+	input.superbar.tee == "run"
+	input.list[0].name == "test"
+}
+`
+
+	ls.cache.SetFileContents(mainRegoURI, regoContent)
+	ls.cache.SetModule(mainRegoURI, ast.MustParseModule(regoContent))
+
+	timeout := time.NewTimer(determineTimeout())
+	defer timeout.Stop()
+
+	commandArgs := types.CommandArgs{Target: mainRegoURI, Query: "data.test.allow", Row: 3}
+	argsJSON := must.Return(encoding.JSON().Marshal(commandArgs))(t)
+
+	var executeResponse any
+
+	must.Equal(t, nil, connClient.Call(ctx, "workspace/executeCommand", types.ExecuteCommandParams{
+		Command:   "regal.eval",
+		Arguments: []any{string(argsJSON)},
+	}, &executeResponse))
+
+	// Checks if input.json has been created until the loop hits the timeout.
+	select {
+	case <-inputJSONCreated:
+		for {
+			if _, err := os.Stat(filepath.Join(tempDir, "input.json")); err == nil {
+				contents, err := os.ReadFile(filepath.Join(tempDir, "input.json"))
+				if err != nil {
+					t.Fatalf("failed to read input.json: %s", err)
+				}
+
+				must.Equal(t, `{
+  "foo": {
+    "bar": "changeme",
+    "wee": {
+      "age": "changeme"
+    }
+  },
+  "list": {
+    "0": {
+      "name": "changeme"
+    }
+  },
+  "superbar": {
+    "tee": "changeme"
+  },
+  "superfoo": {
+    "wee": "changeme"
+  }
+}
+`, string(contents))
+
+				break
+			}
+
+			select {
+			case <-timeout.C:
+				t.Fatal("timed out waiting for input.json to be created")
+			default:
+				time.Sleep(50 * time.Millisecond)
+			}
+		}
+	case <-timeout.C:
+		t.Fatal("timed out waiting for window/showMessageRequest")
+	}
+
+	// Verify the success notification triggered window/showDocument.
+	select {
+	case <-showDocumentReceived:
+	case <-timeout.C:
+		t.Fatal("timed out waiting for window/showDocument")
 	}
 }
