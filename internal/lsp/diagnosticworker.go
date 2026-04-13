@@ -88,10 +88,10 @@ func startFileLintWorker(ctx context.Context, l *LanguageServer) {
 	}
 }
 
-// startWorkspaceJobRouter routes workspace linting jobs with rate limiting.
+// startWorkspaceLintJobRouter routes workspace linting jobs with rate limiting.
 // It listens on l.lintWorkspaceJobs and forwards to workspaceLintRuns,
 // implementing backpressure for aggregate-only reports to prevent performance degradation.
-func startWorkspaceJobRouter(ctx context.Context, l *LanguageServer, workspaceLintRuns chan<- lintWorkspaceJob) {
+func startWorkspaceLintJobRouter(ctx context.Context, l *LanguageServer, workspaceLintRuns chan<- lintWorkspaceJob) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -143,6 +143,8 @@ func startWorkspaceLintWorker(ctx context.Context, l *LanguageServer, workspaceL
 			// no need to run the aggregate report. This can happen if the
 			// server is very slow to start up.
 			if len(l.cache.GetAllModules()) == 0 {
+				l.log.Debug("skipping workspace lint, no modules in cache (%s)", job.Reason)
+
 				continue
 			}
 
