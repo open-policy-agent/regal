@@ -101,7 +101,7 @@ func startWorkspaceJobRouter(ctx context.Context, l *LanguageServer, workspaceLi
 			// violations on character changes. Since these happen so
 			// frequently, we stop adding to the channel if there already
 			// jobs set to preserve performance
-			if job.AggregateReportOnly && len(workspaceLintRuns) > 10/2 {
+			if job.AggregateReportOnly && len(workspaceLintRuns) > workspaceLintRunsRateLimitThreshold {
 				l.log.Debug("rate limiting aggregate reports")
 
 				continue

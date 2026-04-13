@@ -70,6 +70,12 @@ const (
 	// rpcTimeout allows requests to complete independently from the server's ctx,
 	// supporting graceful shutdown rather than immediate cancellation.
 	rpcTimeout = 3 * time.Second
+
+	// workspaceLintRunsBufferSize is the channel buffer size for workspace linting jobs
+	workspaceLintRunsBufferSize = 10
+	// workspaceLintRunsRateLimitThreshold is the channel length threshold (50% of buffer)
+	// at which aggregate-only reports are dropped to prevent performance degradation
+	workspaceLintRunsRateLimitThreshold = workspaceLintRunsBufferSize / 2
 )
 
 var (
@@ -360,7 +366,7 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 	l.workersWg.Go(func() {
 		var wg sync.WaitGroup
 
-		workspaceLintRuns := make(chan lintWorkspaceJob, 10)
+		workspaceLintRuns := make(chan lintWorkspaceJob, workspaceLintRunsBufferSize)
 
 		wg.Go(func() { startFileLintWorker(ctx, l) })
 		wg.Go(func() { startWorkspaceJobRouter(ctx, l, workspaceLintRuns) })
