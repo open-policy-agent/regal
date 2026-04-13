@@ -1,7 +1,6 @@
 package ast
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -50,12 +49,8 @@ func GetRuleDetail(rule *ast.Rule, builtins map[string]*ast.Builtin) string {
 	case ast.Set, *ast.SetComprehension:
 		detail += " (set)"
 	case ast.Call:
-		name := v[0].String()
-
-		if builtin, ok := builtins[name]; ok {
-			retType := builtin.Decl.NamedResult().String()
-
-			detail += fmt.Sprintf(" (%s)", simplifyType(retType))
+		if builtin, ok := builtins[v[0].String()]; ok && builtin.Decl != nil && builtin.Decl.NamedResult() != nil {
+			detail += " (" + simplifyType(builtin.Decl.NamedResult().String()) + ")"
 		}
 	}
 
