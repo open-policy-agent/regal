@@ -1,8 +1,8 @@
-package regal.lsp.completion.location_test
+package regal.lsp.location_test
 
 import data.regal.ast
 
-import data.regal.lsp.completion.location
+import data.regal.lsp.location
 
 test_find_rule_from_location if {
 	policy := `package p

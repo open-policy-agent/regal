@@ -170,19 +170,6 @@ func AllBuiltinCalls(module *ast.Module, builtins map[string]*ast.Builtin) []Bui
 	return builtinCalls
 }
 
-// AllKeywords returns all keywords in the module.
-func AllKeywords(
-	ctx context.Context, pq *query.Prepared, fileName, contents string, module *ast.Module,
-) (map[string][]KeywordUse, error) {
-	var keywords map[string][]KeywordUse
-
-	if err := policyToValue(ctx, pq, policy{module, fileName, contents}, &keywords); err != nil {
-		return nil, fmt.Errorf("failed querying for all keywords: %w", err)
-	}
-
-	return keywords, nil
-}
-
 // AllRuleHeadLocations returns mapping of rules names to the head locations.
 func AllRuleHeadLocations(
 	ctx context.Context, pq *query.Prepared, fileName, contents string, module *ast.Module,

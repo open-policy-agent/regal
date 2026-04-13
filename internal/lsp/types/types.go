@@ -123,7 +123,7 @@ type (
 		Position     Position               `json:"position"`
 	}
 	DefinitionParams         = TextDocumentPositionParams
-	TextDocumentHoverParams  = TextDocumentPositionParams
+	HoverParams              = TextDocumentPositionParams
 	LinkedEditingRangeParams = TextDocumentPositionParams
 
 	CompletionOptions struct {

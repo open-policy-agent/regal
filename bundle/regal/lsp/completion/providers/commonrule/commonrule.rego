@@ -4,7 +4,7 @@
 package regal.lsp.completion.providers.commonrule
 
 import data.regal.lsp.completion.kind
-import data.regal.lsp.completion.location
+import data.regal.lsp.location
 
 _suggested_names := {
 	"allow",

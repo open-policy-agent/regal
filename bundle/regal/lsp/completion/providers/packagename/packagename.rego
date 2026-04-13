@@ -5,7 +5,7 @@
 package regal.lsp.completion.providers.packagename
 
 import data.regal.lsp.completion.kind
-import data.regal.lsp.completion.location
+import data.regal.lsp.location
 
 # METADATA
 # description: set of suggested package names

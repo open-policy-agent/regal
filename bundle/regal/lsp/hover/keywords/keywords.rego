@@ -1,6 +1,8 @@
-package regal.ast
+package regal.lsp.hover.keywords
 
 import data.regal.util
+
+_module := data.workspace.parsed[input.regal.file.uri]
 
 # METADATA
 # description: collects keywords from input module by the line that they appear on
@@ -8,7 +10,7 @@ import data.regal.util
 
 # METADATA
 # description: collects the `if` keyword. this isn't present in the AST, so we'll simply scan the input lines
-keywords[row] contains keyword if {
+by_row[row] contains keyword if {
 	some i, line in input.regal.file.lines
 
 	col := indexof(line, " if ")
@@ -29,8 +31,8 @@ keywords[row] contains keyword if {
 
 # METADATA
 # description: collects the `package` keyword
-keywords[loc.row] contains keyword if {
-	loc := util.to_location_object(input.package.location)
+by_row[loc.row] contains keyword if {
+	loc := util.to_location_object(_module.package.location)
 
 	keyword := {
 		"name": "package",
@@ -43,8 +45,8 @@ keywords[loc.row] contains keyword if {
 
 # METADATA
 # description: collects the `import` keyword
-keywords[loc.row] contains keyword if {
-	location := input.imports[_].location
+by_row[loc.row] contains keyword if {
+	location := _module.imports[_].location
 
 	loc := util.to_location_object(location)
 
@@ -59,8 +61,8 @@ keywords[loc.row] contains keyword if {
 
 # METADATA
 # description: collects the `contains` keyword
-keywords[loc.row] contains keyword if {
-	location := input.rules[_].head.location
+by_row[loc.row] contains keyword if {
+	location := _module.rules[_].head.location
 
 	loc := util.to_location_object(location)
 	col := indexof(loc.text, " contains ")
@@ -78,8 +80,8 @@ keywords[loc.row] contains keyword if {
 
 # METADATA
 # description: collects the `some`, `every` and `in` keywords
-keywords[keyword.location.row] contains keyword if {
-	walk(input.rules, [_, value])
+by_row[keyword.location.row] contains keyword if {
+	walk(_module.rules, [_, value])
 
 	some keyword in _keywords_with_location(value)
 }
@@ -114,4 +116,4 @@ _in_on_row(row) := [keyword |
 	}
 ]
 
-_comment_row_index contains util.to_location_object(comment.location).row if some comment in input.comments
+_comment_row_index contains util.to_location_object(comment.location).row if some comment in _module.comments

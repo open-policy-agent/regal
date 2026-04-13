@@ -15,18 +15,6 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
-func Must[T any](x T, err error) func(testing.TB) T {
-	return func(tb testing.TB) T {
-		tb.Helper()
-
-		if err != nil {
-			tb.Fatal(err)
-		}
-
-		return x
-	}
-}
-
 func MustBeOK[T any](x T, ok bool) func(testing.TB) T {
 	return func(tb testing.TB) T {
 		tb.Helper()

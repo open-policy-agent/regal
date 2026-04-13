@@ -38,13 +38,6 @@ type Cache struct {
 	// diagnosticsParseErrors is a map of file URI to parse errors for that file
 	diagnosticsParseErrors *concurrent.Map[string, []types.Diagnostic]
 
-	// builtinPositionsFile is a map of file URI to builtin positions for that file
-	builtinPositionsFile *concurrent.Map[string, map[uint][]types.BuiltinPosition]
-
-	// keywordLocationsFile is a map of file URI to Rego keyword locations for that file
-	// to be used for hover hints.
-	keywordLocationsFile *concurrent.Map[string, map[uint][]types.KeywordLocation]
-
 	// when a file is successfully parsed, the number of lines in the file is stored
 	// here. This is used to gracefully fail when exiting unparsable files.
 	successfulParseLineCounts *concurrent.Map[string, uint]
@@ -57,8 +50,6 @@ func NewCache() *Cache {
 		modules:                   concurrent.MapOf(make(map[string]*ast.Module)),
 		diagnosticsFile:           concurrent.MapOf(make(map[string][]types.Diagnostic)),
 		diagnosticsParseErrors:    concurrent.MapOf(make(map[string][]types.Diagnostic)),
-		builtinPositionsFile:      concurrent.MapOf(make(map[string]map[uint][]types.BuiltinPosition)),
-		keywordLocationsFile:      concurrent.MapOf(make(map[string]map[uint][]types.KeywordLocation)),
 		successfulParseLineCounts: concurrent.MapOf(make(map[string]uint)),
 		aggregateData:             concurrent.NewObject(),
 	}
@@ -131,8 +122,6 @@ func (c *Cache) Rename(oldKey, newKey string) {
 	c.aggregateData.RenameKey(oldKey, newKey)
 	c.diagnosticsFile.RenameKey(oldKey, newKey)
 	c.diagnosticsParseErrors.RenameKey(oldKey, newKey)
-	c.builtinPositionsFile.RenameKey(oldKey, newKey)
-	c.keywordLocationsFile.RenameKey(oldKey, newKey)
 	c.successfulParseLineCounts.RenameKey(oldKey, newKey)
 }
 
@@ -195,26 +184,6 @@ func (c *Cache) SetParseErrors(fileURI string, diags []types.Diagnostic) {
 	c.diagnosticsParseErrors.Set(fileURI, diags)
 }
 
-func (c *Cache) GetBuiltinPositions(fileURI string) (map[uint][]types.BuiltinPosition, bool) {
-	return c.builtinPositionsFile.Get(fileURI)
-}
-
-func (c *Cache) SetBuiltinPositions(fileURI string, positions map[uint][]types.BuiltinPosition) {
-	c.builtinPositionsFile.Set(fileURI, positions)
-}
-
-func (c *Cache) GetAllBuiltInPositions() map[string]map[uint][]types.BuiltinPosition {
-	return c.builtinPositionsFile.Clone()
-}
-
-func (c *Cache) SetKeywordLocations(fileURI string, keywords map[uint][]types.KeywordLocation) {
-	c.keywordLocationsFile.Set(fileURI, keywords)
-}
-
-func (c *Cache) GetKeywordLocations(fileURI string) (map[uint][]types.KeywordLocation, bool) {
-	return c.keywordLocationsFile.Get(fileURI)
-}
-
 func (c *Cache) GetSuccessfulParseLineCount(fileURI string) (uint, bool) {
 	return c.successfulParseLineCounts.Get(fileURI)
 }
@@ -232,8 +201,6 @@ func (c *Cache) Delete(fileURI string) {
 	c.aggregateData.Delete(fileURI)
 	c.diagnosticsFile.Delete(fileURI)
 	c.diagnosticsParseErrors.Delete(fileURI)
-	c.builtinPositionsFile.Delete(fileURI)
-	c.keywordLocationsFile.Delete(fileURI)
 	c.successfulParseLineCounts.Delete(fileURI)
 }
 

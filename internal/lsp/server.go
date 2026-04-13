@@ -35,10 +35,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	lsconfig "github.com/open-policy-agent/regal/internal/lsp/config"
 	"github.com/open-policy-agent/regal/internal/lsp/documentsymbol"
-	"github.com/open-policy-agent/regal/internal/lsp/examples"
 	"github.com/open-policy-agent/regal/internal/lsp/foldingrange"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
-	"github.com/open-policy-agent/regal/internal/lsp/hover"
 	"github.com/open-policy-agent/regal/internal/lsp/inlayhint"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
@@ -149,13 +147,12 @@ type LanguageServer struct {
 	// initializationGate blocks workers until the initialized notification is received
 	initializationGate chan struct{}
 
-	commandRequest       chan types.ExecuteCommandParams
-	lintWorkspaceJobs    chan lintWorkspaceJob
-	lintFileJobs         chan lintFileJob
-	builtinsPositionJobs chan lintFileJob
-	templateFileJobs     chan lintFileJob
-	testLocationJobs     chan lintFileJob
-	prepareQueryJobs     chan struct{}
+	commandRequest    chan types.ExecuteCommandParams
+	lintWorkspaceJobs chan lintWorkspaceJob
+	lintFileJobs      chan lintFileJob
+	templateFileJobs  chan lintFileJob
+	testLocationJobs  chan lintFileJob
+	prepareQueryJobs  chan struct{}
 
 	// templatingFiles tracks files currently being templated to ensure
 	// other updates are not processed while the file is being updated.
@@ -222,7 +219,6 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		initializationGate:          make(chan struct{}),
 		lintFileJobs:                make(chan lintFileJob, 10),
 		lintWorkspaceJobs:           make(chan lintWorkspaceJob, 10),
-		builtinsPositionJobs:        make(chan lintFileJob, 10),
 		commandRequest:              make(chan types.ExecuteCommandParams, 10),
 		templateFileJobs:            make(chan lintFileJob, 10),
 		testLocationJobs:            make(chan lintFileJob, 10),
@@ -283,8 +279,6 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return handler.WithParams(req, l.handleTextDocumentFoldingRange)
 	case "textDocument/formatting":
 		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentFormatting)
-	case "textDocument/hover":
-		return handler.WithParams(req, l.handleTextDocumentHover)
 	case "textDocument/inlayHint":
 		return handler.WithParams(req, l.handleTextDocumentInlayHint)
 	case "workspace/didChangeWatchedFiles":
@@ -337,6 +331,7 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	//   - completionItem/resolve
 	// - textDocument/documentLink
 	// - textDocument/documentHighlight
+	// - textDocument/hover
 	// - textDocument/linkedEditingRange
 	// - textDocument/selectionRange
 	// - textDocument/signatureHelp
@@ -508,19 +503,6 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 
 	<-ctx.Done()
 	wg.Wait()
-}
-
-func (l *LanguageServer) StartHoverWorker(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case job := <-l.builtinsPositionJobs:
-			if err := l.processHoverContentUpdate(ctx, job.URI); err != nil {
-				l.log.Message(err.Error())
-			}
-		}
-	}
 }
 
 // StartQueryCacheWorker starts a worker that waits for query strings on the
@@ -1284,130 +1266,6 @@ func (l *LanguageServer) handleIgnoreRuleCommand(_ context.Context, args types.C
 	return nil
 }
 
-// processHoverContentUpdate updates information about built in, and keyword
-// positions in the cache for use when handling hover requests.
-func (l *LanguageServer) processHoverContentUpdate(ctx context.Context, fileURI string) error {
-	if l.ignoreURI(fileURI) {
-		return nil
-	}
-
-	if ok := l.cache.HasFileContents(fileURI); !ok {
-		// If the file is not in the cache, exit early or else
-		// we might accidentally put it in the cache after it's been
-		// deleted: https://github.com/open-policy-agent/regal/issues/679
-		return nil
-	}
-
-	bis := l.builtinsForCurrentCapabilities()
-
-	if success, err := updateParse(ctx, l.parseOpts(fileURI, bis)); err != nil {
-		return fmt.Errorf("failed to update parse: %w", err)
-	} else if !success {
-		return nil
-	}
-
-	if err := hover.UpdateBuiltinPositions(l.cache, fileURI, bis); err != nil {
-		return fmt.Errorf("failed to update builtin positions: %w", err)
-	}
-
-	pq, err := l.queryCache.GetOrSet(ctx, l.regoStore, query.Keywords)
-	if err != nil {
-		return fmt.Errorf("failed to prepare query %s, %w", query.Keywords, err)
-	}
-
-	if err := hover.UpdateKeywordLocations(ctx, pq, l.cache, fileURI); err != nil {
-		return fmt.Errorf("failed to update keyword locations: %w", err)
-	}
-
-	return nil
-}
-
-func (l *LanguageServer) handleTextDocumentHover(params types.TextDocumentHoverParams) (any, error) {
-	if l.ignoreURI(params.TextDocument.URI) {
-		return nil, nil
-	}
-
-	// The Zed editor doesn't show CodeDescription.Href in diagnostic messages.
-	// Instead, we hijack the hover request to show the documentation links
-	// when there are violations present.
-	violations, ok := l.cache.GetFileDiagnostics(params.TextDocument.URI)
-	if l.client.Identifier == clients.IdentifierZed && ok && len(violations) > 0 {
-		var docSnippets []string
-
-		var sharedRange types.Range
-
-		for _, v := range violations {
-			if v.Range.Start.Line == params.Position.Line &&
-				v.Range.Start.Character <= params.Position.Character &&
-				v.Range.End.Character >= params.Position.Character {
-				// this is an approximation, if there are multiple violations on the same line
-				// where hover loc is in their range, then they all just share a range as a
-				// single range is needed in the hover response.
-				source := ""
-				if v.Source != nil {
-					source = *v.Source
-				}
-
-				sharedRange = v.Range
-				docSnippets = append(docSnippets, fmt.Sprintf("[%s/%s](%s)", source, v.Code, v.CodeDescription.Href))
-			}
-		}
-
-		hov := types.Hover{Range: sharedRange}
-		if len(docSnippets) > 1 {
-			hov.Contents = *types.Markdown("Documentation links:\n\n* " + strings.Join(docSnippets, "\n* "))
-		} else if len(docSnippets) == 1 {
-			hov.Contents = *types.Markdown("Documentation: " + docSnippets[0])
-		}
-
-		return hov, nil
-	}
-
-	builtinsOnLine, ok := l.cache.GetBuiltinPositions(params.TextDocument.URI)
-	// when no builtins are found, we can't return a useful hover response.
-	// log the error, but return an empty struct to avoid an error being shown in the client.
-	if !ok {
-		l.log.Message("could not get builtins for uri %q", params.TextDocument.URI)
-
-		// return "null" as per the spec
-		return nil, nil
-	}
-
-	for _, bp := range builtinsOnLine[params.Position.Line+1] {
-		if params.Position.Character >= bp.Start-1 && params.Position.Character <= bp.End-1 {
-			return types.Hover{
-				Contents: *types.Markdown(hover.CreateHoverContent(bp.Builtin)),
-				Range:    types.RangeBetween(bp.Line-1, bp.Start-1, bp.Line-1, bp.End-1),
-			}, nil
-		}
-	}
-
-	keywordsOnLine, ok := l.cache.GetKeywordLocations(params.TextDocument.URI)
-	if !ok {
-		// when no keywords are found, we can't return a useful hover response.
-		// return "null" as per the spec
-		return nil, nil
-	}
-
-	for _, kp := range keywordsOnLine[params.Position.Line+1] {
-		if params.Position.Character >= kp.Start-1 && params.Position.Character <= kp.End-1 {
-			link, ok := examples.GetKeywordLink(kp.Name)
-			if !ok {
-				continue
-			}
-
-			return types.Hover{
-				Contents: *types.Markdown(fmt.Sprintf(
-					"### %s\n\n[View examples](%s) for the '%s' keyword.", kp.Name, link, kp.Name)),
-				Range: types.RangeBetween(kp.Line-1, kp.Start-1, kp.Line-1, kp.End-1),
-			}, nil
-		}
-	}
-
-	// return "null" as per the spec
-	return nil, nil
-}
-
 func (l *LanguageServer) handleWorkspaceExecuteCommand(params types.ExecuteCommandParams) (any, error) {
 	// this must not block, so we send the request to the worker on a buffered channel.
 	// the response to the workspace/executeCommand request must be sent before the command is executed
@@ -1541,9 +1399,7 @@ func (l *LanguageServer) handleTextDocumentDidOpen(
 			l.cache.SetFileContents(params.TextDocument.URI, params.TextDocument.Text)
 		}
 
-		util.SendToAll(lintFileJob{Reason: "textDocument/didOpen", URI: params.TextDocument.URI},
-			l.lintFileJobs, l.builtinsPositionJobs,
-		)
+		l.lintFileJobs <- lintFileJob{Reason: "textDocument/didOpen", URI: params.TextDocument.URI}
 	}
 
 	return emptyStruct, nil
@@ -1583,10 +1439,7 @@ func (l *LanguageServer) handleTextDocumentDidChange(params types.DidChangeTextD
 	}
 
 	if ignored := l.setMaybeIgnoredContents(params.TextDocument.URI, contents); !ignored {
-		util.SendToAll(lintFileJob{Reason: "textDocument/didChange", URI: params.TextDocument.URI},
-			l.lintFileJobs,
-			l.builtinsPositionJobs,
-		)
+		l.lintFileJobs <- lintFileJob{Reason: "textDocument/didChange", URI: params.TextDocument.URI}
 	}
 
 	return emptyStruct, nil
@@ -1789,7 +1642,6 @@ func (l *LanguageServer) handleWorkspaceDidCreateFiles(params types.CreateFilesP
 
 		util.SendToAll(lintFileJob{Reason: "textDocument/didCreate", URI: createOp.URI},
 			l.lintFileJobs,
-			l.builtinsPositionJobs,
 			l.templateFileJobs,
 		)
 	}
@@ -1841,7 +1693,6 @@ func (l *LanguageServer) handleWorkspaceDidRenameFiles(
 
 		util.SendToAll(lintFileJob{Reason: "textDocument/didRename", URI: renameOp.NewURI},
 			l.lintFileJobs,
-			l.builtinsPositionJobs,
 			l.templateFileJobs, // if the file being moved is empty, we template it too (if empty)
 		)
 	}
