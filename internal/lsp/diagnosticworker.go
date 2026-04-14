@@ -57,6 +57,7 @@ func startFileLintWorker(ctx context.Context, l *LanguageServer) {
 			// lint the file and send the diagnostics
 			if err := updateFileDiagnostics(ctx, diagnosticsRunOpts{
 				Cache:            l.cache,
+				Store:            l.regoStore,
 				RegalConfig:      l.getLoadedConfig(),
 				FileURI:          job.URI,
 				WorkspaceRootURI: l.getWorkspaceRootURI(),
@@ -156,6 +157,7 @@ func startWorkspaceLintWorker(ctx context.Context, l *LanguageServer, workspaceL
 			err := updateWorkspaceDiagnostics(ctx, diagnosticsRunOpts{
 				Cache:            l.cache,
 				RegalConfig:      l.getLoadedConfig(),
+				Store:            l.regoStore,
 				WorkspaceRootURI: l.getWorkspaceRootURI(),
 				// this is intended to only be set to true once at start up,
 				// on following runs, cached aggregate data is used.

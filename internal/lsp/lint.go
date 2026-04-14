@@ -40,6 +40,7 @@ var (
 // diagnosticsRunOpts contains options for file and workspace linting.
 type diagnosticsRunOpts struct {
 	Cache            *cache.Cache
+	Store            storage.Store
 	RegalConfig      *config.Config
 	WorkspaceRootURI string
 	UpdateForRules   []string
@@ -191,7 +192,12 @@ func updateFileDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
 		regalInstance = regalInstance.WithUserConfig(*opts.RegalConfig)
 	}
 
-	rpt, err := regalInstance.Lint(ctx)
+	preparedInstance, err := regalInstance.Prepare(ctx, linter.WithBaseStore(opts.Store))
+	if err != nil {
+		return fmt.Errorf("failed to prepare linter: %w", err)
+	}
+
+	rpt, err := preparedInstance.Lint(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to lint: %w", err)
 	}
@@ -216,7 +222,9 @@ func updateFileDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
 
 	// update only this file's aggregates
 	if agg, ok := rast.GetValue[ast.Object](rpt.Aggregates, opts.FileURI); ok {
-		opts.Cache.SetFileAggregates(opts.FileURI, agg)
+		if err := PutFileAggregates(ctx, opts.Store, opts.FileURI, agg); err != nil {
+			return fmt.Errorf("failed to store file aggregates: %w", err)
+		}
 	}
 
 	return nil
@@ -239,14 +247,18 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (e
 		regalInstance = regalInstance.WithUserConfig(*opts.RegalConfig)
 	}
 
-	if opts.AggregateReportOnly {
-		regalInstance = regalInstance.WithAggregates(opts.Cache.GetFileAggregates())
-	} else {
+	// When not running aggregate-only report, provide input modules
+	if !opts.AggregateReportOnly {
 		input := rules.NewInput(files, modules)
 		regalInstance = regalInstance.WithInputModules(&input)
 	}
 
-	rpt, err := regalInstance.Lint(ctx)
+	preparedInstance, err := regalInstance.Prepare(ctx, linter.WithBaseStore(opts.Store))
+	if err != nil {
+		return fmt.Errorf("failed to prepare linter: %w", err)
+	}
+
+	rpt, err := preparedInstance.Lint(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to lint: %w", err)
 	}
@@ -276,7 +288,9 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (e
 
 	if opts.OverwriteAggregates {
 		// clear all aggregates, and use these ones
-		opts.Cache.SetAggregates(rpt.Aggregates)
+		if err := PutAllAggregates(ctx, opts.Store, rpt.Aggregates); err != nil {
+			return fmt.Errorf("failed to store aggregates: %w", err)
+		}
 	}
 
 	return nil

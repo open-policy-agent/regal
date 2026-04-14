@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/open-policy-agent/opa/v1/ast"
+
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
@@ -88,7 +90,11 @@ ignore:
 		default:
 			uri := "file://" + filepath.Join(tempDir, "admins.rego")
 
-			aggs := ls.cache.GetFileAggregates(uri)
+			aggs, err := GetAST[ast.Object](ctx, ls.regoStore, append(pathWorkspaceAggregates, uri))
+			if err != nil {
+				t.Fatalf("failed to get file aggregates: %v", err)
+			}
+
 			if aggs != nil && aggs.Len() > 0 {
 				success = true
 

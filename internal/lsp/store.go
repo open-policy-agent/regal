@@ -18,6 +18,7 @@ var (
 	pathWorkspaceDefinedRefs = storage.Path{"workspace", "defined_refs"}
 	pathWorkspaceBuiltins    = storage.Path{"workspace", "builtins"}
 	pathWorkspaceConfig      = storage.Path{"workspace", "config"}
+	pathWorkspaceAggregates  = storage.Path{"workspace", "aggregates"}
 )
 
 func NewRegalStore() storage.Store {
@@ -28,7 +29,12 @@ func NewRegalStore() storage.Store {
 			// we'll need to conform to the most basic "JSON" format understood by the store
 			"defined_refs": map[string]any{},
 			"builtins":     map[string]any{},
+			"aggregates":   map[string]any{},
 		},
+		// Pre-initialize paths for linter when using shared store (via WithBaseStore).
+		// Allows linter to write to nested paths like {"internal", "prepared"} without NotFoundErr.
+		"internal": map[string]any{},
+		"eval":     map[string]any{},
 	}, inmem.OptRoundTripOnWrite(false), inmem.OptReturnASTValuesOnRead(true))
 }
 
@@ -68,6 +74,58 @@ func Put[T any](ctx context.Context, store storage.Store, path storage.Path, val
 	})
 }
 
+// PutAST stores an AST value directly without JSON round-tripping.
+// Implements copy-on-write by calling Copy() on AST types before storing.
+func PutAST[T any](ctx context.Context, store storage.Store, path storage.Path, value T) error {
+	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+		// Implement copy-on-write for AST types to avoid TOCTOU issues.
+		// When aggregates are extracted from the store and later modified,
+		// we need to ensure the stored copy is not affected.
+		var valueToPut any
+
+		switch v := any(value).(type) {
+		case ast.Object:
+			valueToPut = v.Copy()
+		default:
+			valueToPut = value
+		}
+
+		return write(ctx, store, txn, path, valueToPut)
+	})
+}
+
+// GetAST reads an AST value directly from the store without JSON unmarshaling.
+// If the path is not found, returns the zero value for T without error.
+// Use this for runtime AST values like ast.Object that were stored with PutAST.
+func GetAST[T any](ctx context.Context, store storage.Store, path storage.Path) (T, error) {
+	var result T
+
+	err := storage.Txn(ctx, store, storage.TransactionParams{}, func(txn storage.Transaction) error {
+		value, err := store.Read(ctx, txn, path)
+		if err != nil {
+			var stErr *storage.Error
+			if errors.As(err, &stErr) && stErr.Code == storage.NotFoundErr {
+				return nil // Return zero value without error
+			}
+
+			return fmt.Errorf("failed to read from store: %w", err)
+		}
+
+		typed, ok := value.(T)
+		if !ok {
+			var zero T
+
+			return fmt.Errorf("expected %T, got %T", zero, value)
+		}
+
+		result = typed
+
+		return nil
+	})
+
+	return result, err
+}
+
 func write[T any](ctx context.Context, store storage.Store, txn storage.Transaction, path storage.Path, value T) error {
 	var stErr *storage.Error
 
@@ -94,4 +152,23 @@ func remove(ctx context.Context, store storage.Store, txn storage.Transaction, p
 	}
 
 	return nil
+}
+
+// PutFileAggregates stores aggregate data for a specific file URI.
+// The data parameter should be an ast.Object containing the aggregates for that file.
+func PutFileAggregates(ctx context.Context, store storage.Store, fileURI string, data ast.Object) error {
+	return PutAST(ctx, store, append(pathWorkspaceAggregates, fileURI), data)
+}
+
+// PutAllAggregates replaces all aggregate data in the store.
+// The aggregates parameter should be an ast.Object with file URIs as keys.
+func PutAllAggregates(ctx context.Context, store storage.Store, aggregates ast.Object) error {
+	return PutAST(ctx, store, pathWorkspaceAggregates, aggregates)
+}
+
+// RemoveFileAggregates removes aggregate data for a specific file URI.
+func RemoveFileAggregates(ctx context.Context, store storage.Store, fileURI string) error {
+	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+		return remove(ctx, store, txn, append(pathWorkspaceAggregates, fileURI))
+	})
 }

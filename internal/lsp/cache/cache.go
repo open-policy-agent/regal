@@ -27,11 +27,6 @@ type Cache struct {
 	// modules is a map of file URI to parsed AST modules from the latest file contents value
 	modules *concurrent.Map[string, *ast.Module]
 
-	// aggregateData stores the aggregate data from evaluations for each file.
-	// This is used to cache the results of expensive evaluations and can be used
-	// to update aggregate diagnostics incrementally.
-	aggregateData *concurrent.Object
-
 	// diagnosticsFile is a map of file URI to diagnostics for that file
 	diagnosticsFile *concurrent.Map[string, []types.Diagnostic]
 
@@ -51,7 +46,6 @@ func NewCache() *Cache {
 		diagnosticsFile:           concurrent.MapOf(make(map[string][]types.Diagnostic)),
 		diagnosticsParseErrors:    concurrent.MapOf(make(map[string][]types.Diagnostic)),
 		successfulParseLineCounts: concurrent.MapOf(make(map[string]uint)),
-		aggregateData:             concurrent.NewObject(),
 	}
 }
 
@@ -119,38 +113,9 @@ func (c *Cache) Rename(oldKey, newKey string) {
 	c.fileContents.RenameKey(oldKey, newKey)
 	c.ignoredFileContents.RenameKey(oldKey, newKey)
 	c.modules.RenameKey(oldKey, newKey)
-	c.aggregateData.RenameKey(oldKey, newKey)
 	c.diagnosticsFile.RenameKey(oldKey, newKey)
 	c.diagnosticsParseErrors.RenameKey(oldKey, newKey)
 	c.successfulParseLineCounts.RenameKey(oldKey, newKey)
-}
-
-func (c *Cache) SetAggregates(aggregates ast.Object) {
-	// Make a defensive copy to prevent sharing mutable ast.Object state across goroutines.
-	// The OPA library's ast.Object.Insert() contains non-atomic map/slice operations that
-	// can race even when protected by external locks.
-	c.aggregateData.Reset(aggregates.Copy())
-}
-
-// SetFileAggregates sets aggregate data for the provided URI.
-func (c *Cache) SetFileAggregates(fileURI string, data ast.Object) {
-	if data != nil {
-		// Make a defensive copy to prevent sharing mutable ast.Object state across goroutines.
-		// The OPA library's ast.Object.Insert() contains non-atomic map/slice operations that
-		// can race even when protected by external locks.
-		c.aggregateData.Set(fileURI, ast.NewTerm(data.Copy()))
-	}
-}
-
-// GetFileAggregates is used to get aggregate data for a given list of files, or
-// all files if no file URIs are provided. Note that the returned object includes
-// also the provided file URIs as keys.. i.e. not just the values.
-func (c *Cache) GetFileAggregates(fileURIs ...string) ast.Object {
-	if len(fileURIs) == 0 {
-		return c.aggregateData.GetObject()
-	}
-
-	return c.aggregateData.Keep(fileURIs...)
 }
 
 func (c *Cache) GetFileDiagnostics(uri string) ([]types.Diagnostic, bool) {
@@ -204,7 +169,6 @@ func (c *Cache) Delete(fileURI string) {
 	c.fileContents.Delete(fileURI)
 	c.ignoredFileContents.Delete(fileURI)
 	c.modules.Delete(fileURI)
-	c.aggregateData.Delete(fileURI)
 	c.diagnosticsFile.Delete(fileURI)
 	c.diagnosticsParseErrors.Delete(fileURI)
 	c.successfulParseLineCounts.Delete(fileURI)

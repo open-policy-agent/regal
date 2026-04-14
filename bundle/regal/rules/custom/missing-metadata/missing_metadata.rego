@@ -7,6 +7,7 @@ package regal.rules.custom["missing-metadata"]
 
 import data.regal.ast
 import data.regal.config
+import data.regal.main
 import data.regal.result
 import data.regal.util
 
@@ -97,7 +98,7 @@ aggregate_report contains violation if {
 _package_path_aggs[pkg_name] contains [file, item] if {
 	some file, items in _aggregates
 	some item in items
-	pkg_name := input.aggregates_internal[file].common.package_name
+	pkg_name := main.aggregates_internal[file].common.package_name
 }
 
 # METADATA
@@ -122,4 +123,4 @@ _excepted_rule_pattern(cfg, value) if regex.match(cfg["except-rule-path-pattern"
 # METADATA
 # schemas:
 #   - input: schema.regal.aggregate
-_aggregates[file] := input.aggregates_internal[file]["custom/missing-metadata"] if some file
+_aggregates[file] := main.aggregates_internal[file]["custom/missing-metadata"] if some file

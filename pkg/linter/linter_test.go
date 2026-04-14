@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/storage/inmem"
 	"github.com/open-policy-agent/opa/v1/topdown"
 
 	"github.com/open-policy-agent/regal/internal/parse"
@@ -443,11 +444,20 @@ func TestLintWithCollectQueryAndAggregates(t *testing.T) {
 		}
 	}
 
-	result := must.Return(NewLinter().
+	// Create a store with the aggregates for the aggregate-only lint run
+	// Use the same pattern as NewRegalStore
+	store := inmem.NewFromObjectWithOpts(map[string]any{
+		"workspace": map[string]any{
+			"aggregates": allAggregates,
+		},
+	}, inmem.OptReturnASTValuesOnRead(true))
+
+	preparedLinter := must.Return(NewLinter().
 		WithDisableAll(true).
 		WithEnabledRules("unresolved-import").
-		WithAggregates(allAggregates).
-		Lint(t.Context()))(t)
+		Prepare(t.Context(), WithBaseStore(store)))(t)
+
+	result := must.Return(preparedLinter.Lint(t.Context()))(t)
 
 	testutil.AssertNumViolations(t, 3, result)
 

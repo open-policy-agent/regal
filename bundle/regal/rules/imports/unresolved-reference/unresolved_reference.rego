@@ -7,6 +7,7 @@ package regal.rules.imports["unresolved-reference"]
 
 import data.regal.ast
 import data.regal.config
+import data.regal.main
 import data.regal.result
 
 # METADATA
@@ -153,4 +154,4 @@ _to_location_object(loc, text, file) := {"location": {
 # METADATA
 # schemas:
 #   - input: schema.regal.aggregate
-_aggregates[file] := input.aggregates_internal[file]["imports/unresolved-reference"] if some file
+_aggregates[file] := main.aggregates_internal[file]["imports/unresolved-reference"] if some file

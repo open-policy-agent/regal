@@ -144,7 +144,7 @@ func TestLanguageServerUpdatesAggregateState(t *testing.T) {
 	}
 
 	tempDir := testutil.TempDirectoryOf(t, files)
-	ls, connClient, _ := createAndInitServer(t, tempDir, clientHandler)
+	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	// 1. check the Aggregates are set at start up
 	timeout := time.NewTimer(determineTimeout())
@@ -155,8 +155,12 @@ func TestLanguageServerUpdatesAggregateState(t *testing.T) {
 	for success := false; !success; {
 		select {
 		case <-ticker.C:
-			aggregates := ls.cache.GetFileAggregates()
-			if aggregates == nil || aggregates.Len() == 0 {
+			aggs, err := GetAST[ast.Object](ctx, ls.regoStore, pathWorkspaceAggregates)
+			if err != nil {
+				t.Fatalf("failed to get file aggregates: %v", err)
+			}
+
+			if aggs == nil || aggs.Len() == 0 {
 				t.Log("no server aggregates")
 
 				continue
@@ -168,9 +172,16 @@ func TestLanguageServerUpdatesAggregateState(t *testing.T) {
 		}
 	}
 
-	aggregates := ls.cache.GetFileAggregates()
+	aggs, err := GetAST[ast.Object](ctx, ls.regoStore, pathWorkspaceAggregates)
+	if err != nil {
+		t.Fatalf("failed to get file aggregates: %v", err)
+	}
 
-	imports := determineImports(t, aggregates)
+	if aggs == nil {
+		t.Fatalf("expected aggregates to be set")
+	}
+
+	imports := determineImports(t, aggs)
 	if exp := []string{"baz", "quz"}; !slices.Equal(exp, imports) {
 		t.Fatalf("global state imports unexpected, got %v exp %v", imports, exp)
 	}
@@ -191,9 +202,18 @@ import data.wow # new
 	for success := false; !success; {
 		select {
 		case <-ticker.C:
-			aggregates := ls.cache.GetFileAggregates()
+			aggs, err := GetAST[ast.Object](ctx, ls.regoStore, pathWorkspaceAggregates)
+			if err != nil {
+				t.Fatalf("failed to get file aggregates: %v", err)
+			}
 
-			imports = determineImports(t, aggregates)
+			if aggs == nil {
+				t.Log("aggregates not set yet")
+
+				continue
+			}
+
+			imports = determineImports(t, aggs)
 
 			if exp, got := []string{"baz", "qux", "wow"}, imports; !slices.Equal(exp, got) {
 				t.Logf("global state imports unexpected, got %v exp %v", got, exp)

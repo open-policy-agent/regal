@@ -224,9 +224,6 @@ allow if {
 func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
 	inputJSONCreated := make(chan struct{}, 1)
 	showDocumentReceived := make(chan struct{}, 1)
 
@@ -255,9 +252,7 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 	}
 
 	tempDir := t.TempDir()
-	ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
-
-	go ls.StartCommandWorker(ctx)
+	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
 	regoContent := `package test

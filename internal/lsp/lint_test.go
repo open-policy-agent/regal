@@ -186,6 +186,7 @@ func TestLintWithConfigIgnoreWildcards(t *testing.T) {
 
 	opts := diagnosticsRunOpts{
 		Cache:            state,
+		Store:            NewRegalStore(),
 		RegalConfig:      conf,
 		FileURI:          fileURI,
 		WorkspaceRootURI: "file:///workspace",
