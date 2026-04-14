@@ -2,6 +2,7 @@ package inlayhint
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/types"
@@ -44,18 +45,17 @@ func FromModule(module *ast.Module, builtins builtinsMap) []lspTypes.InlayHint {
 }
 
 func Partial(parseErrors []lspTypes.Diagnostic, policy, uri string, builtins builtinsMap) []lspTypes.InlayHint {
-	var firstErrorLine uint
-	for _, parseError := range parseErrors {
-		if parseError.Range.Start.Line > firstErrorLine {
-			firstErrorLine = parseError.Range.Start.Line
-		}
-	}
+	firstErrorLine := slices.MinFunc(parseErrors, func(a, b lspTypes.Diagnostic) int {
+		return util.SafeUintToInt(a.Range.Start.Line - b.Range.Start.Line)
+	}).Range.Start.Line
 
+	// try parse the lines up to the first parse error
 	if numLines := util.NumLines(policy); firstErrorLine > 0 && firstErrorLine < numLines {
-		// try parse the lines up to the first parse error
-		end := util.IndexByteNth(policy, '\n', firstErrorLine+2)
-		if mod, err := parse.Module(uri, policy[:end]); err == nil {
-			return FromModule(mod, builtins)
+		// (1-indexed so don't +1 here)
+		if end := util.IndexByteNth(policy, '\n', firstErrorLine); end != -1 {
+			if mod, err := parse.Module(uri, policy[:end]); err == nil {
+				return FromModule(mod, builtins)
+			}
 		}
 	}
 
