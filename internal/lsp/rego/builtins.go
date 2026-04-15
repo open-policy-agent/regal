@@ -1,7 +1,6 @@
 package rego
 
 import (
-	"strings"
 	"sync"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -21,16 +20,4 @@ func BuiltinsForCapabilities(capabilities *ast.Capabilities) map[string]*ast.Bui
 	}
 
 	return m
-}
-
-func BuiltinCategory(builtin *ast.Builtin) string {
-	if len(builtin.Categories) == 0 {
-		if i := strings.Index(builtin.Name, "."); i > -1 {
-			return builtin.Name[:i]
-		}
-
-		return builtin.Name
-	}
-
-	return builtin.Categories[0]
 }

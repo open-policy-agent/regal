@@ -3,7 +3,7 @@
 package regal.lsp.completion.providers.builtins
 
 import data.regal.lsp.completion.kind
-import data.regal.lsp.completion.location
+import data.regal.lsp.location
 
 # METADATA
 # description: suggest built-in functions matching typed ref

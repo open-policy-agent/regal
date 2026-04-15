@@ -5,7 +5,7 @@ package regal.lsp.completion.providers.default
 import data.regal.ast
 
 import data.regal.lsp.completion.kind
-import data.regal.lsp.completion.location
+import data.regal.lsp.location
 
 # METADATA
 # description: all completion suggestions for default keyword

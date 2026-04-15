@@ -31,22 +31,3 @@ func TestAllRuleHeadLocations(t *testing.T) {
 	must.Equal(t, 3, len(ruleHeads["data.p.allow"]), "allow rule heads")
 	must.Equal(t, 2, len(ruleHeads["data.p.foo.bar"]), "foo.bar rule heads")
 }
-
-func TestAllKeywords(t *testing.T) {
-	t.Parallel()
-
-	contents := `package p
-
-	import data.foo
-
-	my_set contains "x" if true`
-
-	pq := must.Return(query.NewCache().GetOrSet(t.Context(), inmem.New(), query.Keywords))(t)
-	keywords := must.Return(AllKeywords(t.Context(), pq, "p.rego", contents, parse.MustParseModule(contents)))(t)
-
-	// this is "lines with keywords", not number of keywords
-	must.Equal(t, 3, len(keywords), "lines with keywords")
-	must.Equal(t, 1, len(keywords["1"]), "line 1 keywords")
-	must.Equal(t, 1, len(keywords["3"]), "line 3 keywords")
-	must.Equal(t, 2, len(keywords["5"]), "line 5 keywords")
-}

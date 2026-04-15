@@ -3,7 +3,7 @@
 package regal.lsp.completion.providers.input
 
 import data.regal.lsp.completion.kind
-import data.regal.lsp.completion.location
+import data.regal.lsp.location
 
 # METADATA
 # description: all completion suggestions for the input keyword

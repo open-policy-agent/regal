@@ -5,7 +5,7 @@ package regal.lsp.completion.providers.rulerefs
 import data.regal.ast
 
 import data.regal.lsp.completion.kind
-import data.regal.lsp.completion.location
+import data.regal.lsp.location
 
 _ref_is_internal(ref) if contains(ref, "._")
 

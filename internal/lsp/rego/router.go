@@ -26,6 +26,7 @@ var (
 		"textDocument/documentHighlight": make([]types.DocumentHighlight, 0),
 		"textDocument/documentSymbol":    make([]types.DocumentSymbol, 0),
 		"textDocument/codeLens":          make([]types.CodeLens, 0),
+		"textDocument/hover":             make([]types.Hover, 0),
 		"textDocument/signatureHelp":     nil,
 	}
 
@@ -88,6 +89,10 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 		},
 		"textDocument/documentHighlight": {
 			handler:  textDocument[types.DocumentHighlightParams, []types.DocumentHighlight],
+			requires: &Requirements{File: FileRequirements{Lines: true}},
+		},
+		"textDocument/hover": {
+			handler:  textDocument[types.HoverParams, *types.Hover],
 			requires: &Requirements{File: FileRequirements{Lines: true}},
 		},
 		"textDocument/semanticTokens/full": {

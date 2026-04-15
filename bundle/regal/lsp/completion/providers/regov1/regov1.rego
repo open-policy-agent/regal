@@ -5,7 +5,7 @@
 package regal.lsp.completion.providers.regov1
 
 import data.regal.lsp.completion.kind
-import data.regal.lsp.completion.location
+import data.regal.lsp.location
 
 # METADATA
 # description: completion suggestion for rego.v1 import

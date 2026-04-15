@@ -4,7 +4,7 @@
 #   - input: schema.regal.lsp.common
 package regal.lsp.util.find
 
-import data.regal.lsp.completion.location
+import data.regal.lsp.location
 import data.regal.lsp.util.range
 
 # METADATA

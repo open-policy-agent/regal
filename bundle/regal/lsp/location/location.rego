@@ -1,6 +1,6 @@
 # METADATA
 # description: various rules and functions related to location and position
-package regal.lsp.completion.location
+package regal.lsp.location
 
 import data.regal.ast
 import data.regal.util

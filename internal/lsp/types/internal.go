@@ -30,20 +30,6 @@ const (
 	Function
 )
 
-type BuiltinPosition struct {
-	Builtin *ast.Builtin
-	Line    uint
-	Start   uint
-	End     uint
-}
-
-type KeywordLocation struct {
-	Name  string
-	Line  uint
-	Start uint
-	End   uint
-}
-
 type CommandArgs struct {
 	// Target is the URI of the document for which the command applies to
 	Target string `json:"target"`

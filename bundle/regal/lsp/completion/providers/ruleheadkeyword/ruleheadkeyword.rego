@@ -11,7 +11,7 @@
 package regal.lsp.completion.providers.ruleheadkeyword
 
 import data.regal.lsp.completion.kind
-import data.regal.lsp.completion.location
+import data.regal.lsp.location
 
 # METADATA
 # description: Set of suggested completion items

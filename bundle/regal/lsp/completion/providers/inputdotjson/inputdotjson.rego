@@ -13,7 +13,7 @@
 package regal.lsp.completion.providers.inputdotjson
 
 import data.regal.lsp.completion.kind
-import data.regal.lsp.completion.location
+import data.regal.lsp.location
 
 # METADATA
 # description: items contains found suggestions from `input.json`
