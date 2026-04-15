@@ -692,16 +692,35 @@ func (l Linter) regoPrepare(ctx context.Context) error {
 				return errors.New("expected 'prepared' field in result object")
 			}
 
-			// Try replace first, then add if not found (for shared stores)
-			err := stg.Write(ctx, txn, storage.ReplaceOp, preparedPath, prep)
-			if err != nil {
+			// Ensure all intermediate path segments exist before writing the leaf.
+			// Sometimes these are missing at start up and we want to be reliable.
+			for i := 1; i < len(preparedPath); i++ {
+				prefix := preparedPath[:i]
+				if _, err := stg.Read(ctx, txn, prefix); err != nil {
+					var stErr *storage.Error
+					if !errors.As(err, &stErr) || stErr.Code != storage.NotFoundErr {
+						return util.WrapErr(err, "failed to read intermediate path")
+					}
+
+					if err := stg.Write(ctx, txn, storage.AddOp, prefix, map[string]any{}); err != nil {
+						return util.WrapErr(err, "failed to create intermediate path")
+					}
+				}
+			}
+
+			// Replace if the leaf path exists, otherwise add it.
+			if _, err := stg.Read(ctx, txn, preparedPath); err == nil {
+				if err := stg.Write(ctx, txn, storage.ReplaceOp, preparedPath, prep); err != nil {
+					return util.WrapErr(err, "failed to replace prepared data in store")
+				}
+			} else {
 				var stErr *storage.Error
-				if errors.As(err, &stErr) && stErr.Code == storage.NotFoundErr {
-					err = stg.Write(ctx, txn, storage.AddOp, preparedPath, prep)
+				if !errors.As(err, &stErr) || stErr.Code != storage.NotFoundErr {
+					return util.WrapErr(err, "failed to read prepared path")
 				}
 
-				if err != nil {
-					return util.WrapErr(err, "failed to write prepared data to store")
+				if err := stg.Write(ctx, txn, storage.AddOp, preparedPath, prep); err != nil {
+					return util.WrapErr(err, "failed to add prepared data to store")
 				}
 			}
 

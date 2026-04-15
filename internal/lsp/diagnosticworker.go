@@ -16,16 +16,23 @@ type lintFileJob struct {
 // diagnostic update is needed.
 type lintWorkspaceJob struct {
 	Reason string
-	// OverwriteAggregates for a workspace is only run once at start up. All
-	// later updates to aggregate state is made as files are changed.
-	OverwriteAggregates bool
-	AggregateReportOnly bool
+	// IsInitialization is only set once, for the workspace lint that is
+	// run on all files loaded  from disk at startup. This closes the
+	// init gate on the server.
+	IsInitialization bool
+	// FullWorkspaceLint runs all rules (aggregate + non-aggregate) with input
+	// modules, like initialization, but without storing aggregates or closing
+	// the initialization gate. Used for config changes and at init.
+	FullWorkspaceLint bool
 }
 
 // startFileLintWorker processes individual file linting jobs.
 // It listens on l.lintFileJobs, parses files, sends test locations,
 // runs file diagnostics, and queues workspace jobs for aggregate updates.
 func startFileLintWorker(ctx context.Context, l *LanguageServer) {
+	// wait for initial workspace lint to run before doing incremental lints.
+	<-l.initializationGate
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -75,13 +82,6 @@ func startFileLintWorker(ctx context.Context, l *LanguageServer) {
 
 			l.lintWorkspaceJobs <- lintWorkspaceJob{
 				Reason: "file " + job.URI + " " + job.Reason,
-				// this run is expected to used the cached aggregate state
-				// for other files.
-				// The aggregate state for this file will still be updated.
-				OverwriteAggregates: false,
-				// when a file has changed, then there is no need to run
-				// any other rules globally other than aggregate rules.
-				AggregateReportOnly: true,
 			}
 
 			l.log.Debug("linting file %s done", job.URI)
@@ -98,12 +98,9 @@ func startWorkspaceLintJobRouter(ctx context.Context, l *LanguageServer, workspa
 		case <-ctx.Done():
 			return
 		case job := <-l.lintWorkspaceJobs:
-			// AggregateReportOnly is set when updating aggregate
-			// violations on character changes. Since these happen so
-			// frequently, we stop adding to the channel if there already
-			// jobs set to preserve performance
-			if job.AggregateReportOnly && len(workspaceLintRuns) > workspaceLintRunsRateLimitThreshold {
-				l.log.Debug("rate limiting aggregate reports")
+			if !job.IsInitialization && !job.FullWorkspaceLint &&
+				len(workspaceLintRuns) > workspaceLintRunsRateLimitThreshold {
+				l.log.Debug("dropped surplus workspace lint run")
 
 				continue
 			}
@@ -124,7 +121,7 @@ func startPollingTicker(ctx context.Context, l *LanguageServer, workspaceLintRun
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			workspaceLintRuns <- lintWorkspaceJob{Reason: "poll ticker", OverwriteAggregates: true}
+			workspaceLintRuns <- lintWorkspaceJob{Reason: "poll ticker"}
 		}
 	}
 }
@@ -140,31 +137,20 @@ func startWorkspaceLintWorker(ctx context.Context, l *LanguageServer, workspaceL
 		case job := <-workspaceLintRuns:
 			l.log.Debug("linting workspace: %#v", job)
 
-			// if there are no parsed modules in the cache, then there is
-			// no need to run the aggregate report. This can happen if the
-			// server is very slow to start up.
-			if len(l.cache.GetAllModules()) == 0 {
-				l.log.Debug("skipping workspace lint, no modules in cache (%s)", job.Reason)
-
-				continue
-			}
-
 			targetRules := l.getEnabledAggregateRules()
-			if !job.AggregateReportOnly {
+			if job.FullWorkspaceLint {
 				targetRules = append(targetRules, l.getEnabledNonAggregateRules()...)
 			}
 
 			err := updateWorkspaceDiagnostics(ctx, diagnosticsRunOpts{
-				Cache:            l.cache,
-				RegalConfig:      l.getLoadedConfig(),
-				Store:            l.regoStore,
-				WorkspaceRootURI: l.getWorkspaceRootURI(),
-				// this is intended to only be set to true once at start up,
-				// on following runs, cached aggregate data is used.
-				OverwriteAggregates: job.OverwriteAggregates,
-				AggregateReportOnly: job.AggregateReportOnly,
-				UpdateForRules:      targetRules,
-				CustomRulesPath:     l.getCustomRulesPath(),
+				Cache:             l.cache,
+				RegalConfig:       l.getLoadedConfig(),
+				Store:             l.regoStore,
+				WorkspaceRootURI:  l.getWorkspaceRootURI(),
+				UpdateForRules:    targetRules,
+				CustomRulesPath:   l.getCustomRulesPath(),
+				IsInitialization:  job.IsInitialization,
+				FullWorkspaceLint: job.FullWorkspaceLint,
 			})
 			if err != nil {
 				l.log.Message("failed to update all diagnostics: %s", err)
@@ -172,6 +158,12 @@ func startWorkspaceLintWorker(ctx context.Context, l *LanguageServer, workspaceL
 
 			for fileURI := range l.cache.GetAllFiles() {
 				l.sendFileDiagnostics(ctx, fileURI)
+			}
+
+			if job.IsInitialization {
+				l.initializationGateOnce.Do(func() { close(l.initializationGate) })
+
+				l.log.Debug("closed initialization gate")
 			}
 
 			l.log.Debug("linting workspace done")

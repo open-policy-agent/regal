@@ -170,6 +170,14 @@ func createAndInitServerWithClientName(
 	// no response to the call is expected
 	testutil.NoErr(connClient.Call(ctx, "initialized", struct{}{}, nil))(t)
 
+	// wait for the server to complete the start up process to avoid races
+	// where the initial workspace loading and linting races with requests
+	// sent in tests. This is not an issue for diagnostics, since the file jobs
+	// are only run after the initializationGate is closed, but the server can
+	// still process other requests like apply edits and commands which
+	// can cause inconsistent filecontents in the cache.
+	<-ls.initializationGate
+
 	return ls, connClient, ctx
 }
 

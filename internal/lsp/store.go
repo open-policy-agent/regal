@@ -129,6 +129,21 @@ func GetAST[T any](ctx context.Context, store storage.Store, path storage.Path) 
 func write[T any](ctx context.Context, store storage.Store, txn storage.Transaction, path storage.Path, value T) error {
 	var stErr *storage.Error
 
+	// Ensure all intermediate path segments exist before writing the leaf.
+	// Parent paths can be missing at startup or after a store reset.
+	for i := 1; i < len(path); i++ {
+		prefix := path[:i]
+		if _, err := store.Read(ctx, txn, prefix); err != nil {
+			if !errors.As(err, &stErr) || stErr.Code != storage.NotFoundErr {
+				return fmt.Errorf("failed to read intermediate path %s in store: %w", prefix, err)
+			}
+
+			if err = store.Write(ctx, txn, storage.AddOp, prefix, map[string]any{}); err != nil {
+				return fmt.Errorf("failed to create intermediate path %s in store: %w", prefix, err)
+			}
+		}
+	}
+
 	err := store.Write(ctx, txn, storage.ReplaceOp, path, value)
 	if errors.As(err, &stErr) && stErr.Code == storage.NotFoundErr {
 		if err = store.Write(ctx, txn, storage.AddOp, path, value); err != nil {
@@ -163,6 +178,11 @@ func PutFileAggregates(ctx context.Context, store storage.Store, fileURI string,
 // PutAllAggregates replaces all aggregate data in the store.
 // The aggregates parameter should be an ast.Object with file URIs as keys.
 func PutAllAggregates(ctx context.Context, store storage.Store, aggregates ast.Object) error {
+	// In such cases, this makes it possible for per file updates in future.
+	if aggregates == nil || aggregates.Len() == 0 {
+		return PutAST(ctx, store, pathWorkspaceAggregates, map[string]any{})
+	}
+
 	return PutAST(ctx, store, pathWorkspaceAggregates, aggregates)
 }
 

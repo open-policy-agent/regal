@@ -159,7 +159,8 @@ type LanguageServer struct {
 	regoRouter *rego.RegoRouter
 
 	// initializationGate blocks workers until the initialized notification is received
-	initializationGate chan struct{}
+	initializationGate     chan struct{}
+	initializationGateOnce sync.Once
 
 	commandRequest    chan types.ExecuteCommandParams
 	lintWorkspaceJobs chan lintWorkspaceJob
@@ -452,7 +453,7 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 					}
 				})
 
-				l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "config file changed"}
+				l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "config file changed", FullWorkspaceLint: true}
 			case <-l.configWatcher.Drop:
 				l.loadedConfigLock.Lock()
 
@@ -460,7 +461,7 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 				l.loadedConfig = &defaultConfig
 				l.loadedConfigLock.Unlock()
 
-				l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "config file dropped"}
+				l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "config file dropped", FullWorkspaceLint: true}
 			}
 		}
 	})
@@ -1857,62 +1858,92 @@ func (l *LanguageServer) updateRootURI(rootURI string) error {
 	return nil
 }
 
+type fileToLoad struct {
+	uri  string
+	path string
+}
+
 func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool) ([]string, []fileLoadFailure, error) {
-	changedOrNewURIs := make([]string, 0)
-	failed := make([]fileLoadFailure, 0)
+	if l.workspacePath() == "" {
+		// this happens in single file cases
+		l.log.Debug("skipping loading of workspace files as path is empty")
 
-	if err := files.DefaultWalker(l.workspacePath()).Walk(func(path string) error {
-		fileURI := uri.FromPath(l.getClient().Identifier, path)
-		if l.ignoreURI(fileURI) {
-			return nil
-		}
+		return nil, nil, nil
+	}
 
-		// if the caller has requested only new files, then we can exit early
-		// if the file is already in the cache.
-		if newOnly {
-			if ok := l.cache.HasFileContents(fileURI); ok {
+	fileCh := make(chan fileToLoad, 1000)
+
+	// Walk the workspace and enqueue files that need loading from disk.
+	walkErr := make(chan error, 1)
+
+	go func() {
+		defer close(fileCh)
+
+		walkErr <- files.DefaultWalker(l.workspacePath()).Walk(func(path string) error {
+			fileURI := uri.FromPath(l.getClient().Identifier, path)
+			if l.ignoreURI(fileURI) {
 				return nil
 			}
-		}
 
-		changed, _, err := l.cache.UpdateForURIFromDisk(fileURI, path)
-		if err != nil {
-			failed = append(failed,
-				fileLoadFailure{URI: fileURI, Error: fmt.Errorf("failed to update cache for uri %q: %w", path, err)},
-			)
-
-			return nil // continue processing other files
-		}
-
-		// there is no need to update the parse if the file contents
-		// was not changed in the above operation.
-		if !changed {
-			return nil
-		}
-
-		parseSuccess, err := updateParse(ctx, l.parseOpts(fileURI, l.builtinsForCurrentCapabilities()))
-		if err != nil {
-			failed = append(failed, fileLoadFailure{URI: fileURI, Error: fmt.Errorf("failed to update parse: %w", err)})
-
-			return nil // continue processing other files
-		}
-
-		if l.getClient().SupportsOPATestProvider() {
-			if parseSuccess {
-				l.testLocationJobs <- lintFileJob{Reason: "server initialized", URI: fileURI}
-			} else {
-				// this is covering the case where the client starts and the state
-				// is different (the client remembers test locations and state).
-				if err := l.sendTestLocations(ctx, fileURI, []any{}); err != nil {
-					l.log.Message("failed to send empty test locations after parse failure: %s", err)
+			if newOnly {
+				if ok := l.cache.HasFileContents(fileURI); ok {
+					return nil
 				}
 			}
-		}
 
-		changedOrNewURIs = append(changedOrNewURIs, fileURI)
+			fileCh <- fileToLoad{uri: fileURI, path: path}
 
-		return nil
-	}); err != nil {
+			return nil
+		})
+	}()
+
+	var (
+		mu               sync.Mutex
+		changedOrNewURIs = make([]string, 0)
+		failed           = make([]fileLoadFailure, 0)
+		wg               sync.WaitGroup
+	)
+
+	for range 10 {
+		wg.Go(func() {
+			for f := range fileCh {
+				changed, _, err := l.cache.UpdateForURIFromDisk(f.uri, f.path)
+				if err != nil {
+					mu.Lock()
+
+					failed = append(failed,
+						fileLoadFailure{URI: f.uri, Error: fmt.Errorf("failed to update cache for uri %q: %w", f.path, err)},
+					)
+					mu.Unlock()
+
+					continue
+				}
+
+				if !changed {
+					continue
+				}
+
+				if _, err := updateParse(ctx, l.parseOpts(f.uri, l.builtinsForCurrentCapabilities())); err != nil {
+					fmt.Fprintln(os.Stderr, "error parse", f.uri)
+					mu.Lock()
+
+					failed = append(failed,
+						fileLoadFailure{URI: f.uri, Error: fmt.Errorf("failed to update parse: %w", err)},
+					)
+					mu.Unlock()
+				}
+
+				mu.Lock()
+
+				changedOrNewURIs = append(changedOrNewURIs, f.uri)
+				mu.Unlock()
+			}
+		})
+	}
+
+	wg.Wait()
+
+	if err := <-walkErr; err != nil {
 		return nil, nil, fmt.Errorf("failed to walk workspace dir %q: %w", l.workspacePath(), err)
 	}
 
@@ -1926,9 +1957,6 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 }
 
 func (l *LanguageServer) handleInitialized(ctx context.Context) (any, error) {
-	// Signal workers that initialization handshake is complete
-	close(l.initializationGate)
-
 	// Load workspace contents and start jobs asynchronously
 	// This allows us to respond to the client immediately while workspace
 	// loading happens in the background
@@ -1944,14 +1972,11 @@ func (l *LanguageServer) handleInitialized(ctx context.Context) (any, error) {
 			l.log.Message("failed to load workspace contents: %s", err)
 		}
 
-		// 'OverwriteAggregates' is set to populate the cache's initial aggregate state.
-		// Subsequent runs of lintWorkspaceJobs will not set this and use the cached state.
-		l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "server initialize", OverwriteAggregates: true}
-
-		// if running without config, then we should send the diagnostic request now
-		// otherwise it'll happen when the config is loaded
-		if !l.configWatcher.IsWatching() {
-			l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "server initialized"}
+		l.lintWorkspaceJobs <- lintWorkspaceJob{
+			// This job, when done, will close the initializationGate
+			IsInitialization:  true,
+			FullWorkspaceLint: true,
+			Reason:            "Workspace Initialization",
 		}
 	}()
 

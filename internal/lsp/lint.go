@@ -28,8 +28,6 @@ import (
 var (
 	emptyDiagnostics = []types.Diagnostic{}
 
-	errNoOverwriteUpdate = errors.New("OverwriteAggregates should not be set for updateFileDiagnostics")
-	errAggOnlyUpdate     = errors.New("AggregateReportOnly should not be set for updateFileDiagnostics")
 	errParseFailNoErrors = errors.New("failed to parse module, but no errors were set as diagnostics")
 
 	diagErrorLevel = new(uint(1))
@@ -49,9 +47,9 @@ type diagnosticsRunOpts struct {
 	// File-specific
 	FileURI string
 
-	// Workspace-specific
-	OverwriteAggregates bool
-	AggregateReportOnly bool
+	// see fields in lintWorkspaceJob
+	IsInitialization  bool
+	FullWorkspaceLint bool
 }
 
 // updateParseOpts contains options for updateParse function.
@@ -161,14 +159,6 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 }
 
 func updateFileDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
-	if opts.OverwriteAggregates {
-		return errNoOverwriteUpdate
-	}
-
-	if opts.AggregateReportOnly {
-		return errAggOnlyUpdate
-	}
-
 	module, ok := opts.Cache.GetModule(opts.FileURI)
 	if !ok {
 		return nil // then there must have been a parse error
@@ -240,15 +230,14 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (e
 
 	regalInstance := linter.NewLinter().
 		WithPathPrefix(opts.WorkspaceRootURI).
-		WithExportAggregates(opts.OverwriteAggregates). // aggregates need only be exported if used to overwrite
+		WithExportAggregates(opts.IsInitialization).
 		WithCustomRulesPaths(opts.CustomRulesPath)
 
 	if opts.RegalConfig != nil {
 		regalInstance = regalInstance.WithUserConfig(*opts.RegalConfig)
 	}
 
-	// When not running aggregate-only report, provide input modules
-	if !opts.AggregateReportOnly {
+	if opts.FullWorkspaceLint {
 		input := rules.NewInput(files, modules)
 		regalInstance = regalInstance.WithInputModules(&input)
 	}
@@ -276,18 +265,14 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (e
 			fd = emptyDiagnostics
 		}
 
-		// when only an aggregate report was run, then we must make sure to
-		// only update diagnostics from these rules. So the report is
-		// authoratative, but for those rules only.
-		if opts.AggregateReportOnly {
-			opts.Cache.SetFileDiagnosticsForRules(uri, opts.UpdateForRules, fd)
-		} else {
+		if opts.FullWorkspaceLint {
 			opts.Cache.SetFileDiagnostics(uri, fd)
+		} else {
+			opts.Cache.SetFileDiagnosticsForRules(uri, opts.UpdateForRules, fd)
 		}
 	}
 
-	if opts.OverwriteAggregates {
-		// clear all aggregates, and use these ones
+	if opts.IsInitialization {
 		if err := PutAllAggregates(ctx, opts.Store, rpt.Aggregates); err != nil {
 			return fmt.Errorf("failed to store aggregates: %w", err)
 		}

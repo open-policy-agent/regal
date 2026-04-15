@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/lsp/test"
+	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/must"
@@ -43,8 +43,8 @@ rules:
 	tempDir := testutil.TempDirectoryOf(t, files)
 	mainRegoURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tempDir, filepath.FromSlash(mainRegoFileName)))
 
-	receivedMessages := make(chan types.FileDiagnostics, defaultBufferedChannelSize)
-	clientHandler := test.HandlerFor(methodTdPublishDiagnostics, test.SendsToChannel(receivedMessages))
+	receivedMessages := createMessageChannels(files)
+	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
 
 	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
@@ -52,7 +52,14 @@ rules:
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
 
-	waitForDiagnostics(t, receivedMessages, mainRegoURI, []string{"opa-fmt", "use-assignment-operator"}, timeout)
+	waitForViolations(
+		t,
+		"main.rego",
+		[]string{"opa-fmt", "use-assignment-operator"},
+		[]string{},
+		timeout,
+		receivedMessages,
+	)
 
 	// Client sends textDocument/didChange notification with new contents for main.rego
 	// no response to the call is expected
@@ -64,7 +71,7 @@ allow := true
 	// validate that the client received a new diagnostics notification for the file
 	timeout.Reset(determineTimeout())
 
-	waitForDiagnostics(t, receivedMessages, mainRegoURI, []string{"opa-fmt"}, timeout)
+	waitForViolations(t, "main.rego", []string{"opa-fmt"}, []string{}, timeout, receivedMessages)
 
 	// config update is caught by the config watcher
 	newConfigContents := `
@@ -82,7 +89,7 @@ rules:
 	// validate that the client received a new, empty diagnostics notification for the file
 	timeout.Reset(determineTimeout())
 
-	waitForDiagnostics(t, receivedMessages, mainRegoURI, []string{}, timeout)
+	waitForViolations(t, "main.rego", []string{}, []string{}, timeout, receivedMessages)
 
 	// Client sends new config with an EOPA capabilities file specified.
 	newConfigContents = `
@@ -104,7 +111,7 @@ capabilities:
 	// validate that the client received a new, empty diagnostics notification for the file
 	timeout.Reset(determineTimeout())
 
-	waitForDiagnostics(t, receivedMessages, mainRegoURI, []string{}, timeout)
+	waitForViolations(t, "main.rego", []string{}, []string{}, timeout, receivedMessages)
 
 	// Client sends textDocument/didChange notification with new
 	// contents for main.rego no response to the call is expected. We added
@@ -122,7 +129,7 @@ allow := neo4j.q
 	// validate that the client received a new diagnostics notification for the file
 	timeout.Reset(determineTimeout())
 
-	waitForDiagnostics(t, receivedMessages, mainRegoURI, []string{}, timeout)
+	waitForViolations(t, "main.rego", []string{}, []string{}, timeout, receivedMessages)
 
 	// 7. With our new config applied, and the file updated, we can ask the
 	// LSP for a completion. We expect to see neo4j.query show up. Since

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sync"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
@@ -11,6 +12,21 @@ import (
 	"github.com/open-policy-agent/regal/internal/ogre"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
+)
+
+var (
+	emptyLocations any = []any{}
+
+	testLocationsQuery = sync.OnceValue(func() *ogre.Query {
+		query := ast.MustParseBody("result = data.regal.lsp.testlocations.result")
+
+		pq, err := ogre.New(query).Prepare(context.Background())
+		if err != nil {
+			panic("failed to prepare test locations query: " + err.Error())
+		}
+
+		return pq
+	})
 )
 
 func (l *LanguageServer) StartTestLocationsWorker(ctx context.Context) {
@@ -66,7 +82,7 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 	if !ok {
 		// This shouldn't happen since parsing completed successfully before
 		// calling
-		return l.sendTestLocations(ctx, fileURI, []any{})
+		return l.sendTestLocations(ctx, fileURI, emptyLocations)
 	}
 
 	// TODO: ideally this would not need fs access
@@ -92,19 +108,12 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 	if err != nil {
 		l.log.Message("failed to prepare AST for test locations: %s", err)
 
-		return l.sendTestLocations(ctx, fileURI, []any{})
-	}
-
-	queryBody := ast.MustParseBody("result = data.regal.lsp.testlocations.result")
-
-	pq, err := ogre.New(queryBody).Prepare(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to prepare test locations query: %w", err)
+		return l.sendTestLocations(ctx, fileURI, emptyLocations)
 	}
 
 	var result ast.Value
 
-	err = pq.Evaluator().
+	err = testLocationsQuery().Evaluator().
 		WithInput(astValue).
 		WithResultHandler(func(value ast.Value) error {
 			result = value
@@ -115,14 +124,14 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 	if err != nil {
 		l.log.Message("failed to evaluate test locations query: %s", err)
 
-		return l.sendTestLocations(ctx, fileURI, []any{})
+		return l.sendTestLocations(ctx, fileURI, emptyLocations)
 	}
 
 	nativeResult, err := ast.JSON(result)
 	if err != nil {
 		l.log.Message("failed to convert test locations to JSON: %s", err)
 
-		return l.sendTestLocations(ctx, fileURI, []any{})
+		return l.sendTestLocations(ctx, fileURI, emptyLocations)
 	}
 
 	return l.sendTestLocations(ctx, fileURI, nativeResult)
