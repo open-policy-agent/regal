@@ -104,7 +104,6 @@ func createAndInitServerWithClientName(
 
 	ls.StartDiagnosticsWorker(ctx)
 	ls.StartConfigWorker(ctx)
-	ls.StartHoverWorker(ctx)
 	ls.StartTestLocationsWorker(ctx)
 	ls.StartCommandWorker(ctx)
 
