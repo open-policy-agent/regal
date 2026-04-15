@@ -148,6 +148,9 @@ type LanguageServer struct {
 
 	// initializationGate blocks workers until the initialized notification is received
 	initializationGate chan struct{}
+	// aggregatesInitialized is closed once the initial OverwriteAggregates workspace
+	// lint has completed. Jobs that depend on the aggregate cache check this before running.
+	aggregatesInitialized chan struct{}
 
 	commandRequest       chan types.ExecuteCommandParams
 	lintWorkspaceJobs    chan lintWorkspaceJob
@@ -220,6 +223,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		log:                         opts.Logger,
 		featureFlags:                *featureFlags,
 		initializationGate:          make(chan struct{}),
+		aggregatesInitialized:        make(chan struct{}),
 		lintFileJobs:                make(chan lintFileJob, 10),
 		lintWorkspaceJobs:           make(chan lintWorkspaceJob, 10),
 		builtinsPositionJobs:        make(chan lintFileJob, 10),
@@ -381,7 +385,6 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 					}
 				}
 
-				// lint the file and send the diagnostics
 				if err := updateFileDiagnostics(ctx, diagnosticsRunOpts{
 					Cache:            l.cache,
 					RegalConfig:      l.getLoadedConfig(),
@@ -472,9 +475,26 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 
 				// if there are no parsed modules in the cache, then there is
 				// no need to run the aggregate report. This can happen if the
-				// server is very slow to start up.
-				if len(l.cache.GetAllModules()) == 0 {
+				// server is very slow to start up. However, we must still allow
+				// OverwriteAggregates jobs through — they are what opens the gate,
+				// and skipping them would leave aggregatesInitialized permanently false.
+				if len(l.cache.GetAllModules()) == 0 && !job.OverwriteAggregates {
 					continue
+				}
+
+				// Block all workspace lint jobs until the initial OverwriteAggregates run
+				// has completed. Jobs that arrive early (e.g. from the config watcher firing
+				// before loadWorkspaceContents finishes) would run with an incomplete module
+				// set and produce false diagnostics. The OverwriteAggregates job is exempt
+				// since it is the one that sets aggregatesInitialized.
+				if !job.OverwriteAggregates {
+					select {
+					case <-l.aggregatesInitialized:
+					default:
+						l.log.Debug("skipping workspace lint %q: aggregates not yet initialized", job.Reason)
+
+						continue
+					}
 				}
 
 				targetRules := l.getEnabledAggregateRules()
@@ -495,6 +515,10 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 				})
 				if err != nil {
 					l.log.Message("failed to update all diagnostics: %s", err)
+				}
+
+				if job.OverwriteAggregates {
+					close(l.aggregatesInitialized)
 				}
 
 				for fileURI := range l.cache.GetAllFiles() {
@@ -2181,7 +2205,8 @@ func (l *LanguageServer) handleInitialized(ctx context.Context) (any, error) {
 	// loading happens in the background
 	go func() {
 		_, failed, err := l.loadWorkspaceContents(ctx, false)
-		for _, f := range failed {
+
+for _, f := range failed {
 			l.log.Message("failed to load file %s: %s", f.URI, f.Error)
 		}
 
