@@ -10,12 +10,11 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
-	"github.com/open-policy-agent/opa/v1/ast"
-
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/must"
+	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
@@ -233,11 +232,14 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 			params := must.Return(encoding.JSONUnmarshalTo[types.ShowMessageRequestParams](*req.Params))(t)
 
 			if strings.Contains(params.Message, "No input.json/yaml file was found.") {
-				// The initial file creation prompt
-				inputJSONCreated <- struct{}{}
+				t.Log("create input.json prompt received, replied to")
 
 				return types.MessageActionItem{Title: "Yes"}, nil
 			} else if strings.Contains(params.Message, "created successfully") {
+				t.Log("input.json created successfully")
+
+				inputJSONCreated <- struct{}{}
+
 				// The success notification and prompt to open the file
 				return types.MessageActionItem{Title: "Open"}, nil
 			}
@@ -245,17 +247,16 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 		case "window/showDocument":
 			showDocumentReceived <- struct{}{}
 
+			t.Log("window/showDocument received")
+
 			return types.ShowDocumentResult{Success: true}, nil
 		}
 
 		return struct{}{}, nil
 	}
 
-	tempDir := t.TempDir()
-	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
-
-	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
-	regoContent := `package test
+	files := map[string]string{
+		"main.rego": `package test
 
 allow if {
 	input.foo.bar == "woo"
@@ -263,12 +264,14 @@ allow if {
 	input.superfoo.wee == "fun"
 	input.superbar.tee == "run"
 	input.list[0].name == "test"
-}
-`
+}`,
+		".regal/config.yaml": "",
+	}
+	tempDir := testutil.TempDirectoryOf(t, files)
 
-	ls.cache.SetFileContents(mainRegoURI, regoContent)
-	ls.cache.SetModule(mainRegoURI, ast.MustParseModule(regoContent))
+	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
+	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
 

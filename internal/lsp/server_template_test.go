@@ -192,6 +192,8 @@ func TestNewFileTemplating(t *testing.T) {
 	receivedMessages := make(chan message, 10)
 	ls, connClient, ctx := createAndInitServer(t, tempDir, createTemplateTestClientHandler(t, receivedMessages))
 
+	ls.StartConfigWorker(ctx)
+
 	// TODO: In an ideal world, we would be able to start with other workers,
 	// but there are some tests that test this functionality in detail and they
 	// do not want this running by default.

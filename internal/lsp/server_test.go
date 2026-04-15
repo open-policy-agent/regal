@@ -103,11 +103,11 @@ func createAndInitServerWithClientName(
 	})
 
 	ls.StartDiagnosticsWorker(ctx)
-	ls.StartConfigWorker(ctx)
 	ls.StartTestLocationsWorker(ctx)
 	ls.StartCommandWorker(ctx)
 
 	// Not started automatically:
+	// - ls.StartConfigWorker(ctx): Manually started where needed
 	// - StartTemplateWorker: Manually started where needed to test for ordering bugs
 	// - StartWorkspaceStateWorker: Only needed for long-running tests monitoring workspace changes
 	// - StartQueryCacheWorker: Only needed in dev mode (REGAL_BUNDLE_PATH set)

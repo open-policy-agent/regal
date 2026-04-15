@@ -60,6 +60,8 @@ ignore:
 
 	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
+	ls.StartConfigWorker(ctx)
+
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
 

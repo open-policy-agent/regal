@@ -46,7 +46,9 @@ rules:
 	receivedMessages := createMessageChannels(files)
 	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
 
-	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
+	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
+
+	ls.StartConfigWorker(ctx)
 
 	// validate that the client received a diagnostics notification for the file
 	timeout := time.NewTimer(determineTimeout())

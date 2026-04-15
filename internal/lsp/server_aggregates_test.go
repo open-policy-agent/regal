@@ -97,7 +97,9 @@ package bar
 
 	tempDir := testutil.TempDirectoryOf(t, files)
 
-	ls, _, _ := createAndInitServer(t, tempDir, clientHandler)
+	ls, _, ctx := createAndInitServer(t, tempDir, clientHandler)
+
+	ls.StartConfigWorker(ctx)
 
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
@@ -147,31 +149,7 @@ func TestLanguageServerUpdatesAggregateState(t *testing.T) {
 	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	// 1. check the Aggregates are set at start up
-	timeout := time.NewTimer(determineTimeout())
-
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-
-	for success := false; !success; {
-		select {
-		case <-ticker.C:
-			aggs, err := GetAST[ast.Object](ctx, ls.regoStore, pathWorkspaceAggregates)
-			if err != nil {
-				t.Fatalf("failed to get file aggregates: %v", err)
-			}
-
-			if aggs == nil || aggs.Len() == 0 {
-				t.Log("no server aggregates")
-
-				continue
-			}
-
-			success = true
-		case <-timeout.C:
-			t.Fatal("timed out waiting for file aggregates to be set")
-		}
-	}
-
+	// should be here now since only when workspace lint done, does the above return
 	aggs, err := GetAST[ast.Object](ctx, ls.regoStore, pathWorkspaceAggregates)
 	if err != nil {
 		t.Fatalf("failed to get file aggregates: %v", err)
@@ -197,7 +175,10 @@ import data.qux # changed
 import data.wow # new
 `)
 
-	timeout.Reset(determineTimeout())
+	timeout := time.NewTimer(determineTimeout())
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
 
 	for success := false; !success; {
 		select {
@@ -252,7 +233,9 @@ import rego.v1
 	receivedMessages := createMessageChannels(files)
 	clientHandler := createPublishDiagnosticsHandler(t, logger, receivedMessages)
 
-	_, connClient, _ := createAndInitServer(t, tempDir, clientHandler)
+	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
+
+	ls.StartConfigWorker(ctx)
 
 	// wait for foo.rego to have the correct violations
 	timeout := time.NewTimer(determineTimeout())

@@ -49,7 +49,9 @@ allow := true
 	receivedMessages := createMessageChannels(files)
 	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
 
-	ls, _, _ := createAndInitServer(t, tempDir, clientHandler)
+	ls, _, ctx := createAndInitServer(t, tempDir, clientHandler)
+
+	ls.StartConfigWorker(ctx)
 
 	if got, exp := ls.getWorkspaceRootURI(), uri.FromPath(ls.getClient().Identifier, tempDir); exp != got {
 		t.Fatalf("expected client root URI to be %s, got %s", exp, got)
@@ -102,6 +104,8 @@ rules:
 	}
 
 	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
+
+	ls.StartConfigWorker(ctx)
 
 	if got, exp := ls.workspaceRootURI, uri.FromPath(ls.getClient().Identifier, tempDir); exp != got {
 		t.Fatalf("expected client root URI to be %s, got %s", exp, got)
