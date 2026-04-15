@@ -229,43 +229,6 @@ func createMessageChannels(files map[string]string) receivedMessagesMap {
 	return receivedMessages
 }
 
-func testRequestDataCodes(t *testing.T, requestData types.FileDiagnostics, fileURI string, codes []string) bool {
-	t.Helper()
-
-	if requestData.URI != fileURI {
-		t.Log("expected diagnostics to be sent for", fileURI, "got", requestData.URI)
-
-		return false
-	}
-
-	// If codes is nil, we just want any diagnostics for this file
-	if codes == nil {
-		t.Logf("got diagnostics for %s (not checking specific codes)", fileURI)
-
-		return true
-	}
-
-	// Extract the codes from requestData.Items
-	requestCodes := make([]string, len(requestData.Items))
-	for i, item := range requestData.Items {
-		requestCodes[i] = item.Code
-	}
-
-	// Sort both slices
-	slices.Sort(requestCodes)
-	slices.Sort(codes)
-
-	if !slices.Equal(requestCodes, codes) {
-		t.Logf("waiting for items: %v, got: %v", codes, requestCodes)
-
-		return false
-	}
-
-	t.Logf("got expected items")
-
-	return true
-}
-
 func TestPositionToOffset(t *testing.T) {
 	t.Parallel()
 
@@ -280,31 +243,6 @@ func TestPositionToOffset(t *testing.T) {
 			if exp != got {
 				t.Fatalf("expected offset for line %d char %d to be %d, got %d", line, char, exp, got)
 			}
-		}
-	}
-}
-
-func waitForDiagnostics(
-	t *testing.T,
-	receivedMessages <-chan types.FileDiagnostics,
-	fileURI string,
-	expectedCodes []string,
-	timeout *time.Timer,
-) {
-	t.Helper()
-
-	for {
-		select {
-		case requestData := <-receivedMessages:
-			if testRequestDataCodes(t, requestData, fileURI, expectedCodes) {
-				return
-			}
-		case <-timeout.C:
-			t.Fatalf(
-				"timed out waiting for diagnostics for %s with codes %v",
-				fileURI,
-				expectedCodes,
-			)
 		}
 	}
 }

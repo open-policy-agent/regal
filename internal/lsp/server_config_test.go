@@ -10,7 +10,7 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/lsp/test"
+	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/must"
@@ -45,17 +45,9 @@ allow := true
 
 	// childDir will be the directory that the client is using as its workspace
 	tempDir := testutil.TempDirectoryOf(t, files)
-	childDir := filepath.Join(tempDir, childDirName)
 
-	// mainRegoFileURI is used throughout the test to refer to the main.rego file
-	// and so it is defined here for convenience
-	mainRegoFileURI := uri.FromPath(
-		clients.IdentifierGoTest,
-		filepath.Join(childDir, filepath.FromSlash(mainRegoFileName)),
-	)
-
-	receivedMessages := make(chan types.FileDiagnostics, defaultBufferedChannelSize)
-	clientHandler := test.HandlerFor(methodTdPublishDiagnostics, test.SendsToChannel(receivedMessages))
+	receivedMessages := createMessageChannels(files)
+	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
 
 	ls, _, _ := createAndInitServer(t, tempDir, clientHandler)
 
@@ -66,7 +58,7 @@ allow := true
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
 
-	waitForDiagnostics(t, receivedMessages, mainRegoFileURI, []string{"opa-fmt"}, timeout)
+	waitForViolations(t, "main.rego", []string{"opa-fmt"}, []string{}, timeout, receivedMessages)
 
 	// User updates config file contents in parent directory that is not
 	// part of the workspace
@@ -84,7 +76,7 @@ allow := true
 	// validate that the client received a new, empty diagnostics notification for the file
 	timeout.Reset(determineTimeout())
 
-	waitForDiagnostics(t, receivedMessages, mainRegoFileURI, []string{}, timeout)
+	waitForViolations(t, "main.rego", []string{}, []string{}, timeout, receivedMessages)
 }
 
 func TestLanguageServerCachesEnabledRulesAndUsesDefaultConfig(t *testing.T) {

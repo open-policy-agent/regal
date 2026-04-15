@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/lsp/test"
+	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -40,8 +40,8 @@ rules:
 	tempDir := testutil.TempDirectoryOf(t, files)
 	mainRegoURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tempDir, filepath.FromSlash(mainRegoFileName)))
 
-	receivedMessages := make(chan types.FileDiagnostics, defaultBufferedChannelSize)
-	clientHandler := test.HandlerFor(methodTdPublishDiagnostics, test.SendsToChannel(receivedMessages))
+	receivedMessages := receivedMessagesMap{"main.rego": make(chan []string, 10)}
+	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
 
 	// note using a blank tempDir here so we can simulate the single file mode
 	_, connClient, ctx := createAndInitServer(t, "", clientHandler)
@@ -61,7 +61,7 @@ rules:
 
 	// validate that the client received a diagnostics notification for the file
 	// with the correct items based on the settings.
-	waitForDiagnostics(t, receivedMessages, mainRegoURI, []string{"opa-fmt"}, timeout)
+	waitForViolations(t, "main.rego", []string{"opa-fmt"}, []string{}, timeout, receivedMessages)
 
 	timeout.Reset(determineTimeout())
 }

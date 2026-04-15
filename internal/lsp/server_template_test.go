@@ -16,7 +16,6 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
-	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/assert"
@@ -335,9 +334,9 @@ func TestNewFileTemplating(t *testing.T) {
 func TestTemplateWorkerSkipsDidOpenWhenTemplating(t *testing.T) {
 	t.Parallel()
 
-	receivedMessages := make(chan types.FileDiagnostics, defaultBufferedChannelSize)
+	receivedMessages := receivedMessagesMap{"policy.rego": make(chan []string, 10)}
 	tempDir := testutil.TempDirectoryOf(t, map[string]string{".regal/config.yaml": `{}`})
-	clientHandler := test.HandlerFor(methodTdPublishDiagnostics, test.SendsToChannel(receivedMessages))
+	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
 	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	// note that the template worker is not started, we simulate it's running
@@ -385,12 +384,12 @@ func TestTemplateWorkerSkipsDidOpenWhenTemplating(t *testing.T) {
 
 	// Wait for didOpen to complete
 	timeout = time.NewTimer(determineTimeout())
-	waitForDiagnostics(t, receivedMessages, newFileURI, nil, timeout)
+	waitForViolations(t, "policy.rego", []string{}, []string{}, timeout, receivedMessages)
 
 	// Drain any additional pending diagnostics messages from workspace linting
 	// to avoid race condition where buffered messages from first didOpen are
-	// consumed by the second waitForDiagnostics call
-	drainMessages(receivedMessages)
+	// consumed by the second waitForViolations call
+	drainMessages(receivedMessages["policy.rego"])
 
 	// Cache should still have initial content because didOpen was skipped
 	cacheContent := testutil.MustBeOK(ls.cache.GetFileContents(newFileURI))(t)
@@ -424,10 +423,10 @@ func TestTemplateWorkerSkipsDidOpenWhenTemplating(t *testing.T) {
 
 	// Wait for second didOpen to complete
 	timeout = time.NewTimer(determineTimeout())
-	waitForDiagnostics(t, receivedMessages, newFileURI, nil, timeout)
+	waitForViolations(t, "policy.rego", []string{}, []string{}, timeout, receivedMessages)
 
 	// Drain any pending messages before checking final state
-	drainMessages(receivedMessages)
+	drainMessages(receivedMessages["policy.rego"])
 
 	// Verify cache was updated
 	finalContent := testutil.MustBeOK(ls.cache.GetFileContents(newFileURI))(t)
