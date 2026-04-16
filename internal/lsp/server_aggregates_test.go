@@ -111,7 +111,7 @@ package bar
 		t.Fatalf("timed out waiting for server to load config")
 	default:
 		for {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(testPollInterval)
 
 			cfg := ls.getLoadedConfig()
 			if cfg != nil {
@@ -177,19 +177,21 @@ import data.wow # new
 
 	timeout := time.NewTimer(determineTimeout())
 
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(testPollInterval)
 	defer ticker.Stop()
 
+	pollCount := 0
 	for success := false; !success; {
 		select {
 		case <-ticker.C:
+			pollCount++
 			aggs, err := GetAST[ast.Object](ctx, ls.regoStore, pathWorkspaceAggregates)
 			if err != nil {
 				t.Fatalf("failed to get file aggregates: %v", err)
 			}
 
 			if aggs == nil {
-				t.Log("aggregates not set yet")
+				t.Logf("aggregates not set yet (poll %d)", pollCount)
 
 				continue
 			}
@@ -197,14 +199,14 @@ import data.wow # new
 			imports = determineImports(t, aggs)
 
 			if exp, got := []string{"baz", "qux", "wow"}, imports; !slices.Equal(exp, got) {
-				t.Logf("global state imports unexpected, got %v exp %v", got, exp)
+				t.Logf("global state imports unexpected, got %v exp %v (poll %d)", got, exp, pollCount)
 
 				continue
 			}
 
 			success = true
 		case <-timeout.C:
-			t.Fatalf("timed out waiting for file aggregates to be set")
+			t.Fatalf("timed out waiting for file aggregates to be set after %d polls", pollCount)
 		}
 	}
 }

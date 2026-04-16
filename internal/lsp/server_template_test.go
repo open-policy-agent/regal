@@ -208,7 +208,7 @@ func TestNewFileTemplating(t *testing.T) {
 		t.Fatalf("timed out waiting for server to load config")
 	default:
 		for {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(testPollInterval)
 
 			cfg := ls.getLoadedConfig()
 			if cfg != nil {
@@ -357,7 +357,7 @@ func TestTemplateWorkerSkipsDidOpenWhenTemplating(t *testing.T) {
 		t.Fatalf("timed out waiting for server to initialize")
 	default:
 		for {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(testPollInterval)
 
 			if ls.getLoadedConfig() != nil {
 				break

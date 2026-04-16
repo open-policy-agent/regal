@@ -71,7 +71,7 @@ ignore:
 		t.Fatalf("timed out waiting for server to load config")
 	default:
 		for {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(testPollInterval)
 
 			cfg := ls.getLoadedConfig()
 			if cfg != nil {
@@ -103,7 +103,7 @@ ignore:
 				break // don't sleep
 			}
 
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(testPollInterval)
 		case <-timeout.C:
 			t.Fatalf("timed out waiting admin aggregates to be set")
 		}

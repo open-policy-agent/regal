@@ -139,7 +139,7 @@ allow := neo4j.q
 	// we're using the normal OPA capabilities file.
 	timeout.Reset(determineTimeout())
 
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(testPollInterval)
 	defer ticker.Stop()
 
 	for success := false; !success; {

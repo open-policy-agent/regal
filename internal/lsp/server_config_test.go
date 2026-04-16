@@ -112,23 +112,25 @@ rules:
 	}
 
 	timeout := time.NewTimer(determineTimeout())
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(testPollInterval)
+	pollCount := 0
 
 	for success := false; !success; {
 		select {
 		case <-ticker.C:
+			pollCount++
 			enabledRules := ls.getEnabledNonAggregateRules()
 			enabledAggRules := ls.getEnabledAggregateRules()
 
 			if len(enabledRules) == 0 || len(enabledAggRules) == 0 {
-				t.Log("no enabled rules yet...")
+				t.Logf("no enabled rules yet... (poll %d)", pollCount)
 
 				continue
 			}
 
 			success = true
 		case <-timeout.C:
-			t.Fatalf("timed out waiting for enabled rules to be correct")
+			t.Fatalf("timed out waiting for enabled rules to be correct after %d polls", pollCount)
 		}
 	}
 
@@ -143,28 +145,30 @@ rules:
 	}
 
 	timeout.Reset(determineTimeout())
+	pollCount = 0
 
 	for success := false; !success; {
 		select {
 		case <-ticker.C:
+			pollCount++
 			enabledRules := ls.getEnabledNonAggregateRules()
 			enabledAggRules := ls.getEnabledAggregateRules()
 
 			if slices.Contains(enabledRules, "directory-package-mismatch") {
-				t.Log("enabledRules still contains directory-package-mismatch")
+				t.Logf("enabledRules still contains directory-package-mismatch (poll %d)", pollCount)
 
 				continue
 			}
 
 			if slices.Contains(enabledAggRules, "unresolved-import") {
-				t.Log("enabledAggRules still contains unresolved-import")
+				t.Logf("enabledAggRules still contains unresolved-import (poll %d)", pollCount)
 
 				continue
 			}
 
 			success = true
 		case <-timeout.C:
-			t.Fatalf("timed out waiting for enabled rules to be correct")
+			t.Fatalf("timed out waiting for enabled rules to be correct after %d polls", pollCount)
 		}
 	}
 

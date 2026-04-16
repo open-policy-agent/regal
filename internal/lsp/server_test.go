@@ -29,6 +29,9 @@ const (
 	// maximum time observed for an operation to complete.
 	defaultTimeout             = 20 * time.Second
 	defaultBufferedChannelSize = 5
+	// testPollInterval is the polling interval used in tests when waiting for
+	// state changes. Smaller value means a faster happy path.
+	testPollInterval = 100 * time.Millisecond
 )
 
 type receivedMessagesMap map[string]chan []string
