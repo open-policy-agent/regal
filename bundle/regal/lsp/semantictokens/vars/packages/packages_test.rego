@@ -3,9 +3,15 @@ package regal.lsp.semantictokens.vars.packages_test
 import data.regal.lsp.semantictokens.vars.packages
 
 test_packages if {
-	policy := `package regal.woo`
-	tokens := packages.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
+	policy := "package regal.woo\n"
+	module := regal.parse_module("policy.rego", policy)
 
-	{"location": "1:15:1:18", "type": "string", "value": "woo"} in tokens
+	tokens := packages.result with data.workspace.parsed["file:///p.rego"] as module
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.regal.file.lines as split(policy, "\n")
+
+	tokens == {
+		{"col": 0, "length": 7, "line": 0, "modifiers": 0, "type": 3},
+		{"col": 14, "length": 3, "line": 0, "modifiers": 0, "type": 0},
+	}
 }

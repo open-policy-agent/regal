@@ -40,6 +40,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
+	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
@@ -1811,18 +1812,8 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 			SelectionRangeProvider:     true,
 			LinkedEditingRangeProvider: true,
 			SemanticTokensProvider: types.SemanticTokensOptions{
-				Legend: types.SemanticTokensLegend{
-					TokenTypes: []string{
-						"namespace",
-						"variable",
-						"namespace",
-					},
-					TokenModifiers: []string{
-						"declaration",
-						"reference",
-					},
-				},
-				Full: true,
+				Legend: semantictokens.Legend,
+				Full:   true,
 			},
 			// 'Experimental' is LSP terminology, we are using these to be
 			// 'custom' additions that are ready for use, but not in the base
