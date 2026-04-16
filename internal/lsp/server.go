@@ -161,8 +161,6 @@ type LanguageServer struct {
 
 	regoRouter *rego.RegoRouter
 
-	lintRunner *lintJobRunner
-
 	// initializationGate blocks workers until the initialized notification is received
 	initializationGate     chan struct{}
 	initializationGateOnce sync.Once
@@ -242,29 +240,6 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		ContentProvider:              ls.cache.GetFileContents,
 		ParseErrorsProvider:          ls.cache.GetParseErrors,
 		SuccessfulParseCountProvider: ls.cache.GetSuccessfulParseLineCount,
-	})
-
-	ls.lintRunner = newLintJobRunner(func(ctx context.Context) {
-		ls.log.Debug("linting workspace")
-
-		err := updateWorkspaceDiagnostics(ctx, diagnosticsRunOpts{
-			Cache:            c,
-			RegalConfig:      ls.getLoadedConfig(),
-			WorkspaceRootURI: ls.getWorkspaceRootURI(),
-			UpdateForRules:   ls.getEnabledRules(),
-			CustomRulesPath:  ls.getCustomRulesPath(),
-		})
-		if err != nil {
-			ls.log.Message("failed to lint workspace: %s", err)
-
-			return
-		}
-
-		for fileURI := range c.GetAllFiles() {
-			ls.sendFileDiagnostics(ctx, fileURI)
-		}
-
-		ls.log.Debug("linting workspace done")
 	})
 
 	merged, _ := config.WithDefaultsFromBundle(bundle.Embedded(), cfg)
@@ -379,11 +354,6 @@ func (l *LanguageServer) Shutdown(ctx context.Context) error {
 	done := make(chan struct{})
 
 	go func() {
-		err := l.lintRunner.Stop(ctx)
-		if err != nil {
-			l.log.Message("failed to stop lint runner: %s", err)
-		}
-
 		l.workersWg.Wait()
 
 		close(done)
@@ -417,6 +387,10 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 			})
 		}
 
+		// coalescing channel: non-blocking send ensures multiple triggers
+		// coalesce into a single lint run, avoiding redundant expensive work.
+		work := make(chan struct{}, 1)
+
 		wg.Go(func() {
 			for {
 				select {
@@ -424,12 +398,44 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 					return
 				case job := <-l.lintJobs:
 					l.log.Debug("linting: %s", job.Reason)
-					l.lintRunner.Trigger()
+
+					select {
+					case work <- struct{}{}:
+					default:
+					}
 				}
 			}
 		})
 
-		wg.Go(func() { l.lintRunner.Start(ctx) })
+		wg.Go(func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-work:
+					l.log.Debug("linting workspace")
+
+					err := updateWorkspaceDiagnostics(ctx, diagnosticsRunOpts{
+						Cache:            l.cache,
+						RegalConfig:      l.getLoadedConfig(),
+						WorkspaceRootURI: l.getWorkspaceRootURI(),
+						UpdateForRules:   l.getEnabledRules(),
+						CustomRulesPath:  l.getCustomRulesPath(),
+					})
+					if err != nil {
+						l.log.Message("failed to lint workspace: %s", err)
+
+						continue
+					}
+
+					for fileURI := range l.cache.GetAllFiles() {
+						l.sendFileDiagnostics(ctx, fileURI)
+					}
+
+					l.log.Debug("linting workspace done")
+				}
+			}
+		})
 
 		<-ctx.Done()
 		wg.Wait()
