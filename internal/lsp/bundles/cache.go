@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 
 	"github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/util"
@@ -26,6 +27,7 @@ import (
 // provides a way to refresh them when the source files change.
 type Cache struct {
 	log           *log.Logger
+	mu            sync.RWMutex
 	bundles       map[string]*cacheBundle
 	workspacePath string
 }
@@ -65,6 +67,8 @@ func (c *Cache) Refresh() ([]string, error) {
 
 	var refreshedBundles []string
 
+	c.mu.Lock()
+
 	// refresh any bundles that have changed
 	for _, root := range foundBundleRoots {
 		if _, ok := c.bundles[root]; !ok {
@@ -88,17 +92,25 @@ func (c *Cache) Refresh() ([]string, error) {
 		return !slices.Contains(foundBundleRoots, root)
 	})
 
+	c.mu.Unlock()
+
 	return refreshedBundles, nil
 }
 
 // List returns a list of all the bundle roots that are currently present in
 // the cache.
 func (c *Cache) List() []string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	return util.Keys(c.bundles)
 }
 
 // Get returns the bundle for the given root from the cache.
 func (c *Cache) Get(root string) (bundle.Bundle, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	b, ok := c.bundles[root]
 	if !ok {
 		return bundle.Bundle{}, false
@@ -109,6 +121,9 @@ func (c *Cache) Get(root string) (bundle.Bundle, bool) {
 
 // All returns all the bundles in the cache.
 func (c *Cache) All() map[string]bundle.Bundle {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	bundles := make(map[string]bundle.Bundle, len(c.bundles))
 
 	for root, cacheBundle := range c.bundles {
