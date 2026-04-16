@@ -81,6 +81,10 @@ func (e *Evaluator) Eval(ctx context.Context) (err error) {
 		return errNoResultHandler
 	}
 
+	if e.prepared == nil {
+		return errors.New("query must be prepared before eval")
+	}
+
 	store := e.prepared.store.store
 	txnProvided := e.txn != nil
 
