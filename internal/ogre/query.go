@@ -118,6 +118,10 @@ func (q *Query) Prepare(_ context.Context) (*Query, error) {
 		q.metrics = metrics.NoOp()
 	}
 
+	if q.store == nil {
+		q.store = NewStore()
+	}
+
 	// Compile all modules
 	q.compiler = q.newCompiler()
 
@@ -133,10 +137,6 @@ func (q *Query) Prepare(_ context.Context) (*Query, error) {
 		}
 
 		return nil, q.compiler.Errors
-	}
-
-	if q.store == nil {
-		q.store = NewStore()
 	}
 
 	return q, nil
