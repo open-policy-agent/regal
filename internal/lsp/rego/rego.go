@@ -33,23 +33,7 @@ func init() {
 }
 
 type (
-	BuiltInCall struct {
-		Builtin  *ast.Builtin
-		Location *ast.Location
-		Args     []*ast.Term
-	}
-
-	KeywordUse struct {
-		Name     string             `json:"name"`
-		Location KeywordUseLocation `json:"location"`
-	}
-
 	RuleHeads map[string][]*ast.Location
-
-	KeywordUseLocation struct {
-		Row uint `json:"row"`
-		Col uint `json:"col"`
-	}
 
 	File struct {
 		Name                 string             `json:"name"`
@@ -124,50 +108,6 @@ func (c Input[T]) String() string { // For debugging only
 	}
 
 	return s
-}
-
-func PositionFromLocation(loc *ast.Location) types.Position {
-	return types.Position{Line: util.SafeIntToUint(loc.Row - 1), Character: util.SafeIntToUint(loc.Col - 1)}
-}
-
-// AllBuiltinCalls returns all built-in calls in the module, excluding operators
-// and any other function identified by an infix.
-func AllBuiltinCalls(module *ast.Module, builtins map[string]*ast.Builtin) []BuiltInCall {
-	builtinCalls := make([]BuiltInCall, 0)
-
-	callVisitor := ast.NewGenericVisitor(func(x any) bool {
-		var terms []*ast.Term
-
-		switch node := x.(type) {
-		case ast.Call:
-			terms = node
-		case *ast.Expr:
-			if call, ok := node.Terms.([]*ast.Term); ok {
-				terms = call
-			}
-		default:
-			return false
-		}
-
-		if len(terms) == 0 {
-			return false
-		}
-
-		if b, ok := builtins[terms[0].Value.String()]; ok {
-			// Exclude operators and similar builtins
-			if b.Infix != "" {
-				return false
-			}
-
-			builtinCalls = append(builtinCalls, BuiltInCall{Builtin: b, Location: terms[0].Location, Args: terms[1:]})
-		}
-
-		return false
-	})
-
-	callVisitor.Walk(module)
-
-	return builtinCalls
 }
 
 // AllRuleHeadLocations returns mapping of rules names to the head locations.

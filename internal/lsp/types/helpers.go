@@ -13,10 +13,6 @@ func NewCompletionParams(uri string, line, char uint, context *CompletionContext
 	}
 }
 
-func Markdown(value string) *MarkupContent {
-	return &MarkupContent{Kind: "markdown", Value: value}
-}
-
 func RangeBetween[T1, T2, T3, T4 iuint](startLine T1, startCharacter T2, endLine T3, endCharacter T4) Range {
 	return Range{
 		Start: Position{Line: uint(startLine), Character: uint(startCharacter)},

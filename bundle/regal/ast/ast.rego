@@ -93,7 +93,7 @@ _is_name("string", pos) if pos > 0
 # METADATA
 # description: all the rules (excluding functions) in the input AST
 rules := [rule |
-	some rule in input.rules
+	some rule in _rules
 
 	not rule.head.args
 ]
@@ -110,7 +110,7 @@ tests := [rule |
 # METADATA
 # description: all the functions declared in the input AST
 functions := [rule |
-	some rule in input.rules
+	some rule in _rules
 	rule.head.args
 ]
 
@@ -121,7 +121,7 @@ functions := [rule |
 #   private rules (or even packages), so using this rule should be preferred over
 #   manually checking for this using the rule ref
 public_rules_and_functions := [rule |
-	some rule in input.rules
+	some rule in _rules
 	not startswith(rule.head.ref[0].value, "_")
 
 	every term in array.slice(rule.head.ref, 1, 100) {
@@ -301,10 +301,30 @@ builtin_functions_called contains name if {
 # METADATA
 # description: |
 #   Returns custom functions declared in input policy in the same format as builtin capabilities
-function_decls[name] := {"decl": {"args": [{"type": "any"} | head.args[_]], "result": {"type": "any"}}} if {
-	head := functions[_].head
-	name := ref_to_string(head.ref)
+function_decls[name] := info if {
+	names := {name |
+		head := functions[_].head
+		name := ref_static_to_string(head.ref)
+	}
+	heads := {name: heads[0] |
+		some name in names
+
+		heads := [rule.head |
+			some rule in functions
+			ref_static_to_string(rule.head.ref) == name
+		]
+	}
+
+	some name, head in heads
+
+	info := {"decl": {
+		"args": [{"type": _custom_arg_type(arg.type), "name": arg.value} | some arg in head.args],
+		"result": {"type": "any"},
+	}}
 }
+
+_custom_arg_type(type) := type if type != "var"
+_custom_arg_type("var") := "any"
 
 # METADATA
 # description: returns the args for function past the expected number of args

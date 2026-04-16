@@ -94,9 +94,13 @@ _keyword(name, row, col) := keyword if {
 	is_number(row)
 	is_number(col)
 
-	some keyword in keywords.by_row[row]
-	keyword.location.col <= col
-	keyword.location.col + count(name) > col
+	# should always be exactly one, but some abundance of caution
+	# to avoid eval conflict errors however unlikely
+	keyword := [keyword |
+		some keyword in keywords.by_row[row]
+		keyword.location.col <= col
+		keyword.location.col + count(name) > col
+	][0]
 }
 
 # METADATA

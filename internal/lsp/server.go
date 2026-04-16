@@ -37,7 +37,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/documentsymbol"
 	"github.com/open-policy-agent/regal/internal/lsp/foldingrange"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
-	"github.com/open-policy-agent/regal/internal/lsp/inlayhint"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
@@ -73,7 +72,6 @@ var (
 	noDocumentSymbols                       any = make([]types.DocumentSymbol, 0)
 	noFoldingRanges                         any = make([]types.FoldingRange, 0)
 	noTextEdits                             any = make([]types.TextEdit, 0)
-	noInlayHints                            any = make([]types.InlayHint, 0)
 	noWorkspaceFullDocumentDiagnosticReport any = make([]types.WorkspaceFullDocumentDiagnosticReport, 0)
 	emptyStruct                             any = struct{}{}
 
@@ -279,8 +277,6 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return handler.WithParams(req, l.handleTextDocumentFoldingRange)
 	case "textDocument/formatting":
 		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentFormatting)
-	case "textDocument/inlayHint":
-		return handler.WithParams(req, l.handleTextDocumentInlayHint)
 	case "workspace/didChangeWatchedFiles":
 		return handler.WithParams(req, l.handleWorkspaceDidChangeWatchedFiles)
 	case "workspace/diagnostic":
@@ -318,8 +314,7 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 			return emptyStruct, nil
 		})
 	case "$/cancelRequest":
-		// TODO: this is a no-op, but is something that we should implement
-		// if we want to support longer running, client-triggered operations
+		// NOTE: no-op, implement if we want to support longer running, client-triggered operations
 		// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#dollarRequests
 		return emptyStruct, nil
 	}
@@ -332,6 +327,8 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	// - textDocument/documentLink
 	// - textDocument/documentHighlight
 	// - textDocument/hover
+	// - textDocument/inlayHint
+	//   - inlayHint/resolve
 	// - textDocument/linkedEditingRange
 	// - textDocument/selectionRange
 	// - textDocument/signatureHelp
@@ -1277,39 +1274,6 @@ func (l *LanguageServer) handleWorkspaceExecuteCommand(params types.ExecuteComma
 	return emptyStruct, nil
 }
 
-func (l *LanguageServer) handleTextDocumentInlayHint(params types.InlayHintParams) (any, error) {
-	if l.ignoreURI(params.TextDocument.URI) {
-		return noInlayHints, nil
-	}
-
-	bis := l.builtinsForCurrentCapabilities()
-
-	// when a file cannot be parsed, we do a best effort attempt to provide inlay hints
-	// by finding the location of the first parse error and attempting to parse up to that point
-	if parseErrors, ok := l.cache.GetParseErrors(params.TextDocument.URI); ok && len(parseErrors) > 0 {
-		contents, ok := l.cache.GetFileContents(params.TextDocument.URI)
-		if !ok {
-			// if there is no content, we can't even do a partial parse
-			return noInlayHints, nil
-		}
-
-		return inlayhint.Partial(parseErrors, contents, params.TextDocument.URI, bis), nil
-	}
-
-	if contents, ok := l.cache.GetFileContents(params.TextDocument.URI); ok && contents == "" {
-		return noInlayHints, nil
-	}
-
-	module, ok := l.cache.GetModule(params.TextDocument.URI)
-	if !ok {
-		l.log.Message("failed to get inlay hint: no parsed module for uri %q", params.TextDocument.URI)
-
-		return noInlayHints, nil
-	}
-
-	return inlayhint.FromModule(module, bis), nil
-}
-
 // Note: currently ignoring params.Query, as the client seems to do a good
 // job of filtering anyway, and that would merely be an optimization here.
 // But perhaps a good one to do at some point, and I'm not sure all clients
@@ -1816,8 +1780,10 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 					Supported: true,
 				},
 			},
-			InlayHintProvider: types.ResolveProviderOption{},
-			HoverProvider:     true,
+			InlayHintProvider: types.ResolveProviderOption{
+				ResolveProvider: true,
+			},
+			HoverProvider: true,
 			SignatureHelpProvider: types.SignatureHelpOptions{
 				TriggerCharacters: []string{"(", ","},
 			},

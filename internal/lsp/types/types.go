@@ -403,9 +403,10 @@ type (
 
 	InlayHint struct {
 		Tooltip      MarkupContent `json:"tooltip"`
-		Label        string        `json:"label"`
 		Position     Position      `json:"position"`
-		Kind         uint          `json:"kind"`
+		Data         any           `json:"data,omitempty"`
+		Label        string        `json:"label"`
+		Kind         uint8         `json:"kind"`
 		PaddingLeft  bool          `json:"paddingLeft"`
 		PaddingRight bool          `json:"paddingRight"`
 	}
