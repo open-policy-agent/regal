@@ -2080,8 +2080,6 @@ func (l *LanguageServer) handleInitialized(ctx context.Context) (any, error) {
 			} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
 				l.testLocationJobs <- fileJob{URI: cnURI}
 			}
-
-			l.lintJobs <- lintJob{Reason: "internal/workspaceStateWorker/changedOrNewFile"}
 		}
 
 		l.lintJobs <- lintJob{
