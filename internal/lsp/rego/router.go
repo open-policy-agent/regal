@@ -95,9 +95,9 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 			handler:  textDocument[types.HoverParams, *types.Hover],
 			requires: &Requirements{File: FileRequirements{Lines: true}},
 		},
-		"textDocument/semanticTokens/full": {
-			handler:  semanticTokensHandler,
-			requires: &Requirements{File: FileRequirements{Lines: true}},
+		"textDocument/inlayHint": {
+			handler:  textDocument[types.InlayHintParams, *[]types.InlayHint],
+			requires: &Requirements{File: FileRequirements{Lines: true, ParseErrors: true}},
 		},
 		"textDocument/linkedEditingRange": {
 			handler:  textDocument[types.LinkedEditingRangeParams, types.LinkedEditingRanges],
@@ -106,12 +106,19 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 		"textDocument/selectionRange": {
 			handler: textDocument[types.SelectionRangeParams, []types.SelectionRange],
 		},
+		"textDocument/semanticTokens/full": {
+			handler:  semanticTokensHandler,
+			requires: &Requirements{File: FileRequirements{Lines: true}},
+		},
 		"textDocument/signatureHelp": {
 			handler:  textDocument[types.SignatureHelpParams, *types.SignatureHelp],
 			requires: &Requirements{File: FileRequirements{Lines: true}},
 		},
 		"completionItem/resolve": {
 			resolver: resolve[types.CompletionItem],
+		},
+		"inlayHint/resolve": {
+			resolver: resolve[types.InlayHint],
 		},
 	}
 
