@@ -353,7 +353,7 @@ func TestLintWithAggregateRule(t *testing.T) {
 func TestEnabledRules(t *testing.T) {
 	t.Parallel()
 
-	enabledRules, _, err := NewLinter().
+	enabledRules, err := NewLinter().
 		WithDisableAll(true).
 		WithEnabledRules("opa-fmt", "no-whitespace-comment").
 		DetermineEnabledRules(t.Context())
@@ -379,25 +379,13 @@ rules:
     directory-package-mismatch: # non agg rule
       level: ignore
 `))
-	enabledRules, enabledAggRules, err := NewLinter().WithUserConfig(config).DetermineEnabledRules(t.Context())
+	enabledRules, err := NewLinter().WithUserConfig(config).DetermineEnabledRules(t.Context())
 
 	must.Equal(t, nil, err, "unexpected error")
 	must.NotEqual(t, 0, len(enabledRules), "enabled aggregate rules")
 	assert.False(t, slices.Contains(enabledRules, "directory-package-mismatch"))
 	assert.False(t, slices.Contains(enabledRules, "opa-fmt"))
-	assert.False(t, slices.Contains(enabledAggRules, "unresolved-import"))
-}
-
-func TestEnabledAggregateRules(t *testing.T) {
-	t.Parallel()
-
-	_, enabledRules, err := NewLinter().
-		WithDisableAll(true).
-		WithEnabledRules("opa-fmt", "unresolved-import", "use-assignment-operator").
-		DetermineEnabledRules(t.Context())
-
-	must.Equal(t, nil, err, "unexpected error")
-	assert.SlicesEqual(t, []string{"unresolved-import"}, enabledRules, "unexpected enabled aggregate rules")
+	assert.False(t, slices.Contains(enabledRules, "unresolved-import"))
 }
 
 func TestLintWithCollectQuery(t *testing.T) {

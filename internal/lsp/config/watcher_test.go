@@ -14,7 +14,6 @@ import (
 
 func TestWatcher(t *testing.T) {
 	// we have had timeouts at 100ms, so this test uses time.Second
-
 	t.Parallel()
 
 	tempDir := testutil.TempDirectoryOf(t, map[string]string{"config.yaml": "---\nfoo: bar\n"})

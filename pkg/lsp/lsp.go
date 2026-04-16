@@ -42,11 +42,9 @@ func New(ctx context.Context, ws *websocket.Conn, c *config.Config) (*Handle, er
 	)
 	ls.SetConn(jconn)
 
-	go ls.StartDiagnosticsWorker(ctx)
-	go ls.StartTestLocationsWorker(ctx)
-	go ls.StartCommandWorker(ctx)
-	go ls.StartTestLocationsWorker(ctx)
-	go ls.StartCommandWorker(ctx)
+	ls.StartDiagnosticsWorker(ctx)
+	ls.StartTestLocationsWorker(ctx)
+	ls.StartCommandWorker(ctx)
 
 	return &Handle{conn: jconn, ls: ls}, nil
 }

@@ -21,7 +21,6 @@ import (
 	"github.com/open-policy-agent/regal/pkg/hints"
 	"github.com/open-policy-agent/regal/pkg/linter"
 	"github.com/open-policy-agent/regal/pkg/report"
-	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/rules"
 )
 
@@ -38,7 +37,6 @@ var (
 // diagnosticsRunOpts contains options for file and workspace linting.
 type diagnosticsRunOpts struct {
 	Cache            *cache.Cache
-	Store            storage.Store
 	RegalConfig      *config.Config
 	WorkspaceRootURI string
 	UpdateForRules   []string
@@ -46,10 +44,6 @@ type diagnosticsRunOpts struct {
 
 	// File-specific
 	FileURI string
-
-	// see fields in lintWorkspaceJob
-	IsInitialization  bool
-	FullWorkspaceLint bool
 }
 
 // updateParseOpts contains options for updateParse function.
@@ -158,68 +152,6 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 	return false, nil
 }
 
-func updateFileDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
-	module, ok := opts.Cache.GetModule(opts.FileURI)
-	if !ok {
-		return nil // then there must have been a parse error
-	}
-
-	contents, ok := opts.Cache.GetFileContents(opts.FileURI)
-	if !ok {
-		return fmt.Errorf("failed to get file contents for uri %q", opts.FileURI)
-	}
-
-	input := rules.NewInput(map[string]string{opts.FileURI: contents}, map[string]*ast.Module{opts.FileURI: module})
-
-	regalInstance := linter.NewLinter().
-		WithCollectQuery(true).     // needed to get the aggregateData for this file
-		WithExportAggregates(true). // needed to get the aggregateData out so we can update the cache
-		WithInputModules(&input).
-		WithCustomRulesPaths(opts.CustomRulesPath).
-		WithPathPrefix(opts.WorkspaceRootURI)
-
-	if opts.RegalConfig != nil {
-		regalInstance = regalInstance.WithUserConfig(*opts.RegalConfig)
-	}
-
-	preparedInstance, err := regalInstance.Prepare(ctx, linter.WithBaseStore(opts.Store))
-	if err != nil {
-		return fmt.Errorf("failed to prepare linter: %w", err)
-	}
-
-	rpt, err := preparedInstance.Lint(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to lint: %w", err)
-	}
-
-	fileDiags := convertReportToDiagnostics(&rpt, opts.WorkspaceRootURI)
-
-	for uri := range opts.Cache.GetAllFiles() {
-		if parseErrs, ok := opts.Cache.GetParseErrors(uri); ok && len(parseErrs) > 0 {
-			continue // continue to show these until addressed
-		}
-
-		// For updateFileDiagnostics, we only update the file in question.
-		if uri == opts.FileURI {
-			fd, ok := fileDiags[uri]
-			if !ok {
-				fd = []types.Diagnostic{}
-			}
-
-			opts.Cache.SetFileDiagnosticsForRules(uri, opts.UpdateForRules, fd)
-		}
-	}
-
-	// update only this file's aggregates
-	if agg, ok := rast.GetValue[ast.Object](rpt.Aggregates, opts.FileURI); ok {
-		if err := PutFileAggregates(ctx, opts.Store, opts.FileURI, agg); err != nil {
-			return fmt.Errorf("failed to store file aggregates: %w", err)
-		}
-	}
-
-	return nil
-}
-
 func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (err error) {
 	if opts.FileURI != "" {
 		return errors.New("FileURI should not be set for updateAllDiagnostics")
@@ -230,19 +162,16 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (e
 
 	regalInstance := linter.NewLinter().
 		WithPathPrefix(opts.WorkspaceRootURI).
-		WithExportAggregates(opts.IsInitialization).
 		WithCustomRulesPaths(opts.CustomRulesPath)
 
 	if opts.RegalConfig != nil {
 		regalInstance = regalInstance.WithUserConfig(*opts.RegalConfig)
 	}
 
-	if opts.FullWorkspaceLint {
-		input := rules.NewInput(files, modules)
-		regalInstance = regalInstance.WithInputModules(&input)
-	}
+	input := rules.NewInput(files, modules)
+	regalInstance = regalInstance.WithInputModules(&input)
 
-	preparedInstance, err := regalInstance.Prepare(ctx, linter.WithBaseStore(opts.Store))
+	preparedInstance, err := regalInstance.Prepare(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to prepare linter: %w", err)
 	}
@@ -265,17 +194,7 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (e
 			fd = emptyDiagnostics
 		}
 
-		if opts.FullWorkspaceLint {
-			opts.Cache.SetFileDiagnostics(uri, fd)
-		} else {
-			opts.Cache.SetFileDiagnosticsForRules(uri, opts.UpdateForRules, fd)
-		}
-	}
-
-	if opts.IsInitialization {
-		if err := PutAllAggregates(ctx, opts.Store, rpt.Aggregates); err != nil {
-			return fmt.Errorf("failed to store aggregates: %w", err)
-		}
+		opts.Cache.SetFileDiagnostics(uri, fd)
 	}
 
 	return nil

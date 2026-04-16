@@ -62,14 +62,14 @@ func init() {
 
 			ls.SetConn(conn)
 
-			go ls.StartDiagnosticsWorker(ctx)
-			go ls.StartTestLocationsWorker(ctx)
-			go ls.StartCommandWorker(ctx)
-			go ls.StartConfigWorker(ctx)
-			go ls.StartWorkspaceStateWorker(ctx)
-			go ls.StartTemplateWorker(ctx)
-			go ls.StartQueryCacheWorker(ctx)
-			go ls.StartWebServer(ctx)
+			ls.StartDiagnosticsWorker(ctx)
+			ls.StartTestLocationsWorker(ctx)
+			ls.StartCommandWorker(ctx)
+			ls.StartConfigWorker(ctx)
+			ls.StartWorkspaceStateWorker(ctx)
+			ls.StartTemplateWorker(ctx)
+			ls.StartQueryCacheWorker(ctx)
+			ls.StartWebServer(ctx)
 
 			sigChan := make(chan os.Signal, 1)
 			signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)

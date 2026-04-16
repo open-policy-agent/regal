@@ -70,12 +70,6 @@ const (
 	// rpcTimeout allows requests to complete independently from the server's ctx,
 	// supporting graceful shutdown rather than immediate cancellation.
 	rpcTimeout = 3 * time.Second
-
-	// workspaceLintRunsBufferSize is the channel buffer size for workspace linting jobs.
-	workspaceLintRunsBufferSize = 10
-	// workspaceLintRunsRateLimitThreshold is the channel length threshold (50% of buffer)
-	// at which aggregate-only reports are dropped to prevent performance degradation.
-	workspaceLintRunsRateLimitThreshold = workspaceLintRunsBufferSize / 2
 )
 
 var (
@@ -100,6 +94,16 @@ var (
 	fixConstantCondition      = &fixes.ConstantCondition{}
 	fixRedundantExistence     = &fixes.RedundantExistenceCheck{}
 )
+
+// lintJob is sent to the lintJobs channel to trigger a linter run.
+type lintJob struct {
+	Reason string
+}
+
+type fileJob struct {
+	Reason string
+	URI    string
+}
 
 // DefaultServerFeatureFlags returns the default feature flags with all
 // custom features enabled.
@@ -138,11 +142,10 @@ type LanguageServer struct {
 	configWatcher *lsconfig.Watcher
 	loadedConfig  *config.Config
 	// this is also used to lock the updates to the cache of enabled rules
-	loadedConfigLock                     sync.RWMutex
-	loadedConfigEnabledNonAggregateRules []string
-	loadedConfigEnabledAggregateRules    []string
-	loadedConfigAllRegoVersions          *concurrent.Map[string, ast.RegoVersion]
-	loadedBuiltins                       *concurrent.Map[string, map[string]*ast.Builtin]
+	loadedConfigLock            sync.RWMutex
+	loadedConfigEnabledRules    []string
+	loadedConfigAllRegoVersions *concurrent.Map[string, ast.RegoVersion]
+	loadedBuiltins              *concurrent.Map[string, map[string]*ast.Builtin]
 
 	client types.Client
 	// clientLock protects access to the client field. The client is written once during
@@ -158,16 +161,17 @@ type LanguageServer struct {
 
 	regoRouter *rego.RegoRouter
 
+	lintRunner *lintJobRunner
+
 	// initializationGate blocks workers until the initialized notification is received
 	initializationGate     chan struct{}
 	initializationGateOnce sync.Once
 
-	commandRequest    chan types.ExecuteCommandParams
-	lintWorkspaceJobs chan lintWorkspaceJob
-	lintFileJobs      chan lintFileJob
-	templateFileJobs  chan lintFileJob
-	testLocationJobs  chan lintFileJob
-	prepareQueryJobs  chan struct{}
+	lintJobs         chan lintJob
+	templateFileJobs chan fileJob
+	testLocationJobs chan fileJob
+	prepareQueryJobs chan struct{}
+	commandRequest   chan types.ExecuteCommandParams
 
 	// templatingFiles tracks files currently being templated to ensure
 	// other updates are not processed while the file is being updated.
@@ -211,18 +215,19 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 	}
 
 	ls := &LanguageServer{
-		cache:                       c,
-		queryCache:                  qc,
-		loadedConfig:                cfg,
-		regoStore:                   store,
-		log:                         opts.Logger,
-		featureFlags:                *featureFlags,
-		initializationGate:          make(chan struct{}),
-		lintFileJobs:                make(chan lintFileJob, 10),
-		lintWorkspaceJobs:           make(chan lintWorkspaceJob, 10),
-		commandRequest:              make(chan types.ExecuteCommandParams, 10),
-		templateFileJobs:            make(chan lintFileJob, 10),
-		testLocationJobs:            make(chan lintFileJob, 10),
+		cache:              c,
+		queryCache:         qc,
+		loadedConfig:       cfg,
+		regoStore:          store,
+		log:                opts.Logger,
+		featureFlags:       *featureFlags,
+		initializationGate: make(chan struct{}),
+		lintJobs:           make(chan lintJob, 10),
+		commandRequest:     make(chan types.ExecuteCommandParams, 10),
+		templateFileJobs:   make(chan fileJob, 10),
+		// at start up, we need to be able to fire many of these in quick succession for large repos
+		// without blocking.
+		testLocationJobs:            make(chan fileJob, 1000),
 		prepareQueryJobs:            make(chan struct{}, 1),
 		templatingFiles:             concurrent.MapOf(make(map[string]bool)),
 		webServer:                   web.NewServer(opts.Logger),
@@ -237,6 +242,29 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		ContentProvider:              ls.cache.GetFileContents,
 		ParseErrorsProvider:          ls.cache.GetParseErrors,
 		SuccessfulParseCountProvider: ls.cache.GetSuccessfulParseLineCount,
+	})
+
+	ls.lintRunner = newLintJobRunner(func(ctx context.Context) {
+		ls.log.Debug("linting workspace")
+
+		err := updateWorkspaceDiagnostics(ctx, diagnosticsRunOpts{
+			Cache:            c,
+			RegalConfig:      ls.getLoadedConfig(),
+			WorkspaceRootURI: ls.getWorkspaceRootURI(),
+			UpdateForRules:   ls.getEnabledRules(),
+			CustomRulesPath:  ls.getCustomRulesPath(),
+		})
+		if err != nil {
+			ls.log.Message("failed to lint workspace: %s", err)
+
+			return
+		}
+
+		for fileURI := range c.GetAllFiles() {
+			ls.sendFileDiagnostics(ctx, fileURI)
+		}
+
+		ls.log.Debug("linting workspace done")
 	})
 
 	merged, _ := config.WithDefaultsFromBundle(bundle.Embedded(), cfg)
@@ -267,7 +295,7 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	case "textDocument/diagnostic":
 		return l.handleTextDocumentDiagnostic()
 	case "textDocument/didOpen":
-		return handler.WithParams(req, l.handleTextDocumentDidOpen)
+		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentDidOpen)
 	case "textDocument/didClose":
 		return handler.WithParams(req, l.handleTextDocumentDidClose)
 	case "textDocument/didSave":
@@ -275,13 +303,13 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	case "textDocument/documentSymbol":
 		return handler.WithParams(req, l.handleTextDocumentDocumentSymbol)
 	case "textDocument/didChange":
-		return handler.WithParams(req, l.handleTextDocumentDidChange)
+		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentDidChange)
 	case "textDocument/foldingRange":
 		return handler.WithParams(req, l.handleTextDocumentFoldingRange)
 	case "textDocument/formatting":
 		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentFormatting)
 	case "workspace/didChangeWatchedFiles":
-		return handler.WithParams(req, l.handleWorkspaceDidChangeWatchedFiles)
+		return handler.WithContextAndParams(ctx, req, l.handleWorkspaceDidChangeWatchedFiles)
 	case "workspace/diagnostic":
 		return l.handleWorkspaceDiagnostic()
 	case "workspace/didRenameFiles":
@@ -289,7 +317,7 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	case "workspace/didDeleteFiles":
 		return handler.WithContextAndParams(ctx, req, l.handleWorkspaceDidDeleteFiles)
 	case "workspace/didCreateFiles":
-		return handler.WithParams(req, l.handleWorkspaceDidCreateFiles)
+		return handler.WithContextAndParams(ctx, req, l.handleWorkspaceDidCreateFiles)
 	case "workspace/executeCommand":
 		return handler.WithParams(req, l.handleWorkspaceExecuteCommand)
 	case "workspace/symbol":
@@ -351,7 +379,13 @@ func (l *LanguageServer) Shutdown(ctx context.Context) error {
 	done := make(chan struct{})
 
 	go func() {
+		err := l.lintRunner.Stop(ctx)
+		if err != nil {
+			l.log.Message("failed to stop lint runner: %s", err)
+		}
+
 		l.workersWg.Wait()
+
 		close(done)
 	}()
 
@@ -367,16 +401,35 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 	l.workersWg.Go(func() {
 		var wg sync.WaitGroup
 
-		workspaceLintRuns := make(chan lintWorkspaceJob, workspaceLintRunsBufferSize)
-
-		wg.Go(func() { startFileLintWorker(ctx, l) })
-		wg.Go(func() { startWorkspaceLintJobRouter(ctx, l, workspaceLintRuns) })
-
 		if l.workspaceDiagnosticsPoll > 0 {
-			wg.Go(func() { startPollingTicker(ctx, l, workspaceLintRuns) })
+			wg.Go(func() {
+				ticker := time.NewTicker(l.workspaceDiagnosticsPoll)
+				defer ticker.Stop()
+
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-ticker.C:
+						l.lintJobs <- lintJob{Reason: "poll ticker"}
+					}
+				}
+			})
 		}
 
-		wg.Go(func() { startWorkspaceLintWorker(ctx, l, workspaceLintRuns) })
+		wg.Go(func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case job := <-l.lintJobs:
+					l.log.Debug("linting: %s", job.Reason)
+					l.lintRunner.Trigger()
+				}
+			}
+		})
+
+		wg.Go(func() { l.lintRunner.Start(ctx) })
 
 		<-ctx.Done()
 		wg.Wait()
@@ -453,7 +506,7 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 					}
 				})
 
-				l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "config file changed", FullWorkspaceLint: true}
+				l.lintJobs <- lintJob{Reason: "config file changed"}
 			case <-l.configWatcher.Drop:
 				l.loadedConfigLock.Lock()
 
@@ -461,7 +514,7 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 				l.loadedConfig = &defaultConfig
 				l.loadedConfigLock.Unlock()
 
-				l.lintWorkspaceJobs <- lintWorkspaceJob{Reason: "config file dropped", FullWorkspaceLint: true}
+				l.lintJobs <- lintJob{Reason: "config file dropped"}
 			}
 		}
 	})
@@ -674,7 +727,14 @@ func (l *LanguageServer) StartWorkspaceStateWorker(ctx context.Context) {
 				}
 
 				for _, cnURI := range newURIs {
-					l.lintFileJobs <- lintFileJob{URI: cnURI, Reason: "internal/workspaceStateWorker/changedOrNewFile"}
+					parseSuccess, err := updateParse(ctx, l.parseOpts(cnURI, l.builtinsForCurrentCapabilities()))
+					if err != nil {
+						l.log.Message("failed to update module for %s: %s", cnURI, err)
+					} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+						l.testLocationJobs <- fileJob{URI: cnURI}
+					}
+
+					l.lintJobs <- lintJob{Reason: "internal/workspaceStateWorker/changedOrNewFile"}
 				}
 			}
 		}
@@ -729,18 +789,11 @@ func (l *LanguageServer) setClient(client types.Client) {
 	l.client = client
 }
 
-func (l *LanguageServer) getEnabledNonAggregateRules() []string {
+func (l *LanguageServer) getEnabledRules() []string {
 	l.loadedConfigLock.RLock()
 	defer l.loadedConfigLock.RUnlock()
 
-	return l.loadedConfigEnabledNonAggregateRules
-}
-
-func (l *LanguageServer) getEnabledAggregateRules() []string {
-	l.loadedConfigLock.RLock()
-	defer l.loadedConfigLock.RUnlock()
-
-	return l.loadedConfigEnabledAggregateRules
+	return l.loadedConfigEnabledRules
 }
 
 func (l *LanguageServer) getCustomRulesPath() string {
@@ -848,21 +901,20 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
 func (l *LanguageServer) loadEnabledRulesFromConfig(ctx context.Context, cfg config.Config) error {
 	lint := linter.NewLinter().WithUserConfig(cfg).WithCustomRulesPaths(l.getCustomRulesPath())
 
-	regular, aggregate, err := lint.DetermineEnabledRules(ctx)
+	rules, err := lint.DetermineEnabledRules(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to determine enabled rules: %w", err)
 	}
 
 	l.loadedConfigLock.Lock()
-	l.loadedConfigEnabledNonAggregateRules = regular
-	l.loadedConfigEnabledAggregateRules = aggregate
+	l.loadedConfigEnabledRules = rules
 	l.loadedConfigLock.Unlock()
 
 	return nil
 }
 
 // processTemplateJob handles the templating of a newly created Rego file.
-func (l *LanguageServer) processTemplateJob(_ context.Context, job lintFileJob) {
+func (l *LanguageServer) processTemplateJob(_ context.Context, job fileJob) {
 	l.log.Debug("template worker received job: %s (reason: %s)", job.URI, job.Reason)
 
 	// mark file as being templated to prevent race conditions
@@ -917,7 +969,7 @@ func (l *LanguageServer) processTemplateJob(_ context.Context, job lintFileJob) 
 	rpcCancel()
 
 	// finally, trigger a diagnostics run for the new contents
-	l.lintFileJobs <- lintFileJob{Reason: "internal/templateNewFile", URI: job.URI}
+	l.lintJobs <- lintJob{Reason: "internal/templateNewFile"}
 }
 
 func (l *LanguageServer) templateContentsForFile(fileURI string) (string, error) {
@@ -1270,6 +1322,7 @@ func (l *LanguageServer) handleTextDocumentDefinition(params types.DefinitionPar
 }
 
 func (l *LanguageServer) handleTextDocumentDidOpen(
+	ctx context.Context,
 	params types.DidOpenTextDocumentParams,
 ) (any, error) {
 	// then we have started the server, and not yet received a suitable root to use.
@@ -1294,7 +1347,14 @@ func (l *LanguageServer) handleTextDocumentDidOpen(
 			l.cache.SetFileContents(params.TextDocument.URI, params.TextDocument.Text)
 		}
 
-		l.lintFileJobs <- lintFileJob{Reason: "textDocument/didOpen", URI: params.TextDocument.URI}
+		parseSuccess, err := updateParse(ctx, l.parseOpts(params.TextDocument.URI, l.builtinsForCurrentCapabilities()))
+		if err != nil {
+			l.log.Message("failed to update module for %s: %s", params.TextDocument.URI, err)
+		} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+			l.testLocationJobs <- fileJob{URI: params.TextDocument.URI}
+		}
+
+		l.lintJobs <- lintJob{Reason: "textDocument/didOpen"}
 	}
 
 	return emptyStruct, nil
@@ -1309,7 +1369,10 @@ func (l *LanguageServer) handleTextDocumentDidClose(params types.DidCloseTextDoc
 	return emptyStruct, nil
 }
 
-func (l *LanguageServer) handleTextDocumentDidChange(params types.DidChangeTextDocumentParams) (any, error) {
+func (l *LanguageServer) handleTextDocumentDidChange(
+	ctx context.Context,
+	params types.DidChangeTextDocumentParams,
+) (any, error) {
 	if len(params.ContentChanges) == 0 {
 		return emptyStruct, nil
 	}
@@ -1334,7 +1397,14 @@ func (l *LanguageServer) handleTextDocumentDidChange(params types.DidChangeTextD
 	}
 
 	if ignored := l.setMaybeIgnoredContents(params.TextDocument.URI, contents); !ignored {
-		l.lintFileJobs <- lintFileJob{Reason: "textDocument/didChange", URI: params.TextDocument.URI}
+		parseSuccess, err := updateParse(ctx, l.parseOpts(params.TextDocument.URI, l.builtinsForCurrentCapabilities()))
+		if err != nil {
+			l.log.Message("failed to update module for %s: %s", params.TextDocument.URI, err)
+		} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+			l.testLocationJobs <- fileJob{URI: params.TextDocument.URI}
+		}
+
+		l.lintJobs <- lintJob{Reason: "textDocument/didChange"}
 	}
 
 	return emptyStruct, nil
@@ -1382,7 +1452,7 @@ func (l *LanguageServer) handleTextDocumentDidSave(
 		return emptyStruct, nil
 	}
 
-	enabled, _, err := linter.NewLinter().WithUserConfig(*l.getLoadedConfig()).DetermineEnabledRules(ctx)
+	enabled, err := linter.NewLinter().WithUserConfig(*l.getLoadedConfig()).DetermineEnabledRules(ctx)
 	if err != nil {
 		l.log.Message("failed to determine enabled rules: %s", err)
 
@@ -1448,7 +1518,14 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 		l.cache.ClearFileDiagnostics()
 		l.cache.SetFileContents(params.TextDocument.URI, newContent)
 
-		l.lintFileJobs <- lintFileJob{Reason: "internal/templateFormattingFallback", URI: params.TextDocument.URI}
+		parseSuccess, err := updateParse(ctx, l.parseOpts(params.TextDocument.URI, l.builtinsForCurrentCapabilities()))
+		if err != nil {
+			l.log.Message("failed to update module for %s: %s", params.TextDocument.URI, err)
+		} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+			l.testLocationJobs <- fileJob{URI: params.TextDocument.URI}
+		}
+
+		l.lintJobs <- lintJob{Reason: "internal/templateFormattingFallback"}
 
 		return ComputeEdits(oldContent, newContent), nil
 	}
@@ -1525,7 +1602,10 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 	return ComputeEdits(oldContent, newContent), nil
 }
 
-func (l *LanguageServer) handleWorkspaceDidCreateFiles(params types.CreateFilesParams) (any, error) {
+func (l *LanguageServer) handleWorkspaceDidCreateFiles(
+	ctx context.Context,
+	params types.CreateFilesParams,
+) (any, error) {
 	if l.ignoreURI(params.Files[0].URI) {
 		return emptyStruct, nil
 	}
@@ -1535,10 +1615,16 @@ func (l *LanguageServer) handleWorkspaceDidCreateFiles(params types.CreateFilesP
 			return nil, fmt.Errorf("failed to update cache for uri %q: %w", createOp.URI, err)
 		}
 
-		util.SendToAll(lintFileJob{Reason: "textDocument/didCreate", URI: createOp.URI},
-			l.lintFileJobs,
-			l.templateFileJobs,
-		)
+		parseSuccess, err := updateParse(ctx, l.parseOpts(createOp.URI, l.builtinsForCurrentCapabilities()))
+		if err != nil {
+			l.log.Message("failed to update module for %s: %s", createOp.URI, err)
+		} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+			l.testLocationJobs <- fileJob{URI: createOp.URI}
+		}
+
+		l.lintJobs <- lintJob{Reason: "textDocument/didCreate"}
+
+		l.templateFileJobs <- fileJob{URI: createOp.URI}
 	}
 
 	return emptyStruct, nil
@@ -1586,10 +1672,16 @@ func (l *LanguageServer) handleWorkspaceDidRenameFiles(
 
 		l.cache.SetFileContents(renameOp.NewURI, content)
 
-		util.SendToAll(lintFileJob{Reason: "textDocument/didRename", URI: renameOp.NewURI},
-			l.lintFileJobs,
-			l.templateFileJobs, // if the file being moved is empty, we template it too (if empty)
-		)
+		parseSuccess, err := updateParse(ctx, l.parseOpts(renameOp.NewURI, l.builtinsForCurrentCapabilities()))
+		if err != nil {
+			l.log.Message("failed to update module for %s: %s", renameOp.NewURI, err)
+		} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+			l.testLocationJobs <- fileJob{URI: renameOp.NewURI}
+		}
+
+		l.lintJobs <- lintJob{Reason: "textDocument/didRename"}
+
+		l.templateFileJobs <- fileJob{URI: renameOp.NewURI}
 	}
 
 	return emptyStruct, nil
@@ -1963,7 +2055,7 @@ func (l *LanguageServer) handleInitialized(ctx context.Context) (any, error) {
 	go func() {
 		// Use newOnly=true to ensure that files already in the cache from editor messages
 		// (e.g., textDocument/didOpen) are not clobbered during workspace initialization
-		_, failed, err := l.loadWorkspaceContents(ctx, true)
+		newURIs, failed, err := l.loadWorkspaceContents(ctx, true)
 		for _, f := range failed {
 			l.log.Message("failed to load file %s: %s", f.URI, f.Error)
 		}
@@ -1972,11 +2064,22 @@ func (l *LanguageServer) handleInitialized(ctx context.Context) (any, error) {
 			l.log.Message("failed to load workspace contents: %s", err)
 		}
 
-		l.lintWorkspaceJobs <- lintWorkspaceJob{
-			// This job, when done, will close the initializationGate
-			IsInitialization:  true,
-			FullWorkspaceLint: true,
-			Reason:            "Workspace Initialization",
+		// must start other workers here otherwise the test locations block
+		l.initializationGateOnce.Do(func() { close(l.initializationGate) })
+
+		for _, cnURI := range newURIs {
+			parseSuccess, err := updateParse(ctx, l.parseOpts(cnURI, l.builtinsForCurrentCapabilities()))
+			if err != nil {
+				l.log.Message("failed to update module for %s: %s", cnURI, err)
+			} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+				l.testLocationJobs <- fileJob{URI: cnURI}
+			}
+
+			l.lintJobs <- lintJob{Reason: "internal/workspaceStateWorker/changedOrNewFile"}
+		}
+
+		l.lintJobs <- lintJob{
+			Reason: "Workspace Initialization",
 		}
 	}()
 
@@ -1991,10 +2094,10 @@ func (*LanguageServer) handleTextDocumentDiagnostic() (any, error) {
 }
 
 func (l *LanguageServer) handleWorkspaceDidChangeWatchedFiles(
+	ctx context.Context,
 	params types.WorkspaceDidChangeWatchedFilesParams,
 ) (any, error) {
-	// when a file is changed (saved), then we trigger a full workspace lint
-	regoFiles := make([]string, 0, len(params.Changes))
+	changes := false
 
 	for _, change := range params.Changes {
 		// this handles the case of a new config file being created when one did not exist before
@@ -2009,13 +2112,22 @@ func (l *LanguageServer) handleWorkspaceDidChangeWatchedFiles(
 			continue
 		}
 
-		regoFiles = append(regoFiles, change.URI)
+		parseSuccess, err := updateParse(ctx, l.parseOpts(change.URI, l.builtinsForCurrentCapabilities()))
+		if err != nil {
+			l.log.Message("failed to update module for %s: %s", change.URI, err)
+
+			continue
+		}
+
+		if l.getClient().SupportsOPATestProvider() && parseSuccess {
+			l.testLocationJobs <- fileJob{URI: change.URI}
+		}
+
+		changes = true
 	}
 
-	if len(regoFiles) > 0 {
-		l.lintWorkspaceJobs <- lintWorkspaceJob{
-			Reason: fmt.Sprintf("workspace/didChangeWatchedFiles (%s)", strings.Join(regoFiles, ", ")),
-		}
+	if changes {
+		l.lintJobs <- lintJob{Reason: "workspace/didChangeWatchedFiles"}
 	}
 
 	return emptyStruct, nil

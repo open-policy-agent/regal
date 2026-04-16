@@ -1,23 +1,14 @@
 package lsp
 
 import (
-	"context"
 	"path/filepath"
-	"slices"
-	"strings"
 	"testing"
 	"time"
-
-	"github.com/sourcegraph/jsonrpc2"
-
-	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
-	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
 
 func TestLanguageServerLintsUsingAggregateState(t *testing.T) {
@@ -132,85 +123,6 @@ package bar
 	waitForViolations(t, "foo.rego", []string{}, []string{}, timeout, receivedMessages)
 }
 
-func TestLanguageServerUpdatesAggregateState(t *testing.T) {
-	t.Parallel()
-
-	clientHandler := func(context.Context, *jsonrpc2.Conn, *jsonrpc2.Request) (result any, err error) {
-		return struct{}{}, nil
-	}
-
-	files := map[string]string{
-		"foo.rego":           "package foo\n\nimport data.baz\n",
-		"bar.rego":           "package bar\n\nimport data.quz\n",
-		".regal/config.yaml": "",
-	}
-
-	tempDir := testutil.TempDirectoryOf(t, files)
-	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
-
-	// 1. check the Aggregates are set at start up
-	// should be here now since only when workspace lint done, does the above return
-	aggs, err := GetAST[ast.Object](ctx, ls.regoStore, pathWorkspaceAggregates)
-	if err != nil {
-		t.Fatalf("failed to get file aggregates: %v", err)
-	}
-
-	if aggs == nil {
-		t.Fatalf("expected aggregates to be set")
-	}
-
-	imports := determineImports(t, aggs)
-	if exp := []string{"baz", "quz"}; !slices.Equal(exp, imports) {
-		t.Fatalf("global state imports unexpected, got %v exp %v", imports, exp)
-	}
-
-	// 2. check the aggregates for a file are updated after an update
-	notifyDocumentChange(
-		t,
-		connClient,
-		uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego")),
-		`package bar
-
-import data.qux # changed
-import data.wow # new
-`)
-
-	timeout := time.NewTimer(determineTimeout())
-
-	ticker := time.NewTicker(testPollInterval)
-	defer ticker.Stop()
-
-	pollCount := 0
-	for success := false; !success; {
-		select {
-		case <-ticker.C:
-			pollCount++
-			aggs, err := GetAST[ast.Object](ctx, ls.regoStore, pathWorkspaceAggregates)
-			if err != nil {
-				t.Fatalf("failed to get file aggregates: %v", err)
-			}
-
-			if aggs == nil {
-				t.Logf("aggregates not set yet (poll %d)", pollCount)
-
-				continue
-			}
-
-			imports = determineImports(t, aggs)
-
-			if exp, got := []string{"baz", "qux", "wow"}, imports; !slices.Equal(exp, got) {
-				t.Logf("global state imports unexpected, got %v exp %v (poll %d)", got, exp, pollCount)
-
-				continue
-			}
-
-			success = true
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for file aggregates to be set after %d polls", pollCount)
-		}
-	}
-}
-
 func TestLanguageServerAggregateViolationFixedAndReintroducedInUnviolatingFileChange(t *testing.T) {
 	t.Parallel()
 
@@ -292,39 +204,4 @@ import rego.v1
 		timeout,
 		receivedMessages,
 	)
-}
-
-func toStringSlice(arr *ast.Array) []string {
-	result := make([]string, 0, arr.Len())
-	for i := range arr.Len() {
-		if str, ok := arr.Elem(i).Value.(ast.String); ok {
-			result = append(result, string(str))
-		}
-	}
-
-	return result
-}
-
-func determineImports(t *testing.T, aggs ast.Object) (imports []string) {
-	t.Helper()
-
-	for _, fileURI := range aggs.Keys() {
-		fileAggs := aggs.Get(fileURI).Value.(ast.Object)
-
-		if aggregates, ok := rast.GetValue[ast.Set](fileAggs, "imports/unresolved-import"); ok {
-			for aggregate := range rast.ValuesOfType[ast.Object](aggregates.Slice()) {
-				if importsList, ok := rast.GetValue[*ast.Array](aggregate, "imports"); ok {
-					importsList.Foreach(func(entry *ast.Term) {
-						if arrEntry, ok := entry.Value.(*ast.Array); ok && arrEntry.Len() > 0 {
-							if pathArr, ok := arrEntry.Elem(0).Value.(*ast.Array); ok {
-								imports = append(imports, strings.Join(toStringSlice(pathArr), "."))
-							}
-						}
-					})
-				}
-			}
-		}
-	}
-
-	return util.Sorted(imports)
 }

@@ -119,10 +119,8 @@ rules:
 		select {
 		case <-ticker.C:
 			pollCount++
-			enabledRules := ls.getEnabledNonAggregateRules()
-			enabledAggRules := ls.getEnabledAggregateRules()
 
-			if len(enabledRules) == 0 || len(enabledAggRules) == 0 {
+			if len(ls.getEnabledRules()) == 0 {
 				t.Logf("no enabled rules yet... (poll %d)", pollCount)
 
 				continue
@@ -145,14 +143,14 @@ rules:
 	}
 
 	timeout.Reset(determineTimeout())
+
 	pollCount = 0
 
 	for success := false; !success; {
 		select {
 		case <-ticker.C:
 			pollCount++
-			enabledRules := ls.getEnabledNonAggregateRules()
-			enabledAggRules := ls.getEnabledAggregateRules()
+			enabledRules := ls.getEnabledRules()
 
 			if slices.Contains(enabledRules, "directory-package-mismatch") {
 				t.Logf("enabledRules still contains directory-package-mismatch (poll %d)", pollCount)
@@ -160,8 +158,8 @@ rules:
 				continue
 			}
 
-			if slices.Contains(enabledAggRules, "unresolved-import") {
-				t.Logf("enabledAggRules still contains unresolved-import (poll %d)", pollCount)
+			if slices.Contains(enabledRules, "unresolved-import") {
+				t.Logf("enabledRules still contains unresolved-import (poll %d)", pollCount)
 
 				continue
 			}
@@ -191,8 +189,7 @@ rules:
 	for success := false; !success; {
 		select {
 		case <-ticker.C:
-			enabledRules := ls.getEnabledNonAggregateRules()
-			enabledAggRules := ls.getEnabledAggregateRules()
+			enabledRules := ls.getEnabledRules()
 
 			if slices.Contains(enabledRules, "opa-fmt") {
 				t.Log("enabledRules still contains opa-fmt")
@@ -206,8 +203,8 @@ rules:
 				continue
 			}
 
-			if !slices.Contains(enabledAggRules, "unresolved-import") {
-				t.Log("enabledAggRules must contain unresolved-import")
+			if !slices.Contains(enabledRules, "unresolved-import") {
+				t.Log("enabledRules must contain unresolved-import")
 
 				continue
 			}

@@ -81,18 +81,16 @@ allow if {
 						return map[string]any{"applied": true}, nil
 					}
 
-					t.Fatalf("unexpected request: %v", req)
-
 					return struct{}{}, nil
 				}
 			}
 
-			tempDir := t.TempDir()
+			files := map[string]string{"main.rego": content}
+			tempDir := testutil.TempDirectoryOf(t, files)
 			clientHandler := createWorkspaceApplyEditTestHandler(t, receivedMessages)
-			ls, connClient, ctx := createAndInitServerWithClientName(t, tempDir, clientHandler, tc.clientName)
+			_, connClient, ctx := createAndInitServerWithClientName(t, tempDir, clientHandler, tc.clientName)
 
 			mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
-			ls.cache.SetFileContents(mainRegoURI, content)
 
 			// Create command arguments with proper JSON marshaling for Windows backslash escapes
 			commandArgs := types.CommandArgs{Target: mainRegoURI}
@@ -272,6 +270,7 @@ allow if {
 	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
+
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
 

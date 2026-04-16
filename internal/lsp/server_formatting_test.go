@@ -1,35 +1,46 @@
 package lsp
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
-
-	"github.com/sourcegraph/jsonrpc2"
+	"time"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/must"
+	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
 func TestFormatting(t *testing.T) {
 	t.Parallel()
 
-	// set up the server and client connections
-	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
-		t.Fatalf("unexpected request: %v", req)
-
-		return struct{}{}, nil
+	files := map[string]string{
+		"main/main.rego": "package main\n\n",
 	}
 
-	tempDir := t.TempDir()
-	ls, _, ctx := createAndInitServer(t, tempDir, clientHandler)
+	logger := log.NewLogger(log.LevelDebug, t.Output())
+	receivedMessages := createMessageChannels(files)
+	clientHandler := createPublishDiagnosticsHandler(t, logger, receivedMessages)
+	tempDir := testutil.TempDirectoryOf(t, files)
+	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main", "main.rego"))
 
-	// Simple as possible — opa fmt should just remove a newline
-	ls.cache.SetFileContents(mainRegoURI, "package main\n\n")
+	if err := connClient.Notify(ctx, "workspace/didChangeWatchedFiles", types.WorkspaceDidChangeWatchedFilesParams{
+		Changes: []types.FileEvent{{
+			URI:  mainRegoURI,
+			Type: 1, // created
+		}},
+	}, nil); err != nil {
+		t.Fatalf("failed to send didChange notification: %s", err)
+	}
+
+	timeout := time.NewTimer(determineTimeout())
+	defer timeout.Stop()
+
+	waitForViolations(t, "main.rego", []string{"opa-fmt"}, []string{}, timeout, receivedMessages)
 
 	res := must.Return(ls.handleTextDocumentFormatting(ctx, types.DocumentFormattingParams{
 		TextDocument: types.TextDocumentIdentifier{URI: mainRegoURI},

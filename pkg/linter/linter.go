@@ -541,20 +541,20 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 // the supplied configuration. This makes use of the linter rule settings
 // to produce a single list of the rules that are to be run on this linter
 // instance.
-func (l Linter) DetermineEnabledRules(ctx context.Context) ([]string, []string, error) {
+func (l Linter) DetermineEnabledRules(ctx context.Context) ([]string, error) {
 	conf, err := l.GetConfig()
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to merge config: %w", err)
+		return nil, fmt.Errorf("failed to merge config: %w", err)
 	}
 
 	pq, err := ogre.New(enabledRulesQuery).
 		WithStore(ogre.NewStoreFromObject(ctx, l.prepareData(conf))).
 		Prepare(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed preparing query: %w", err)
+		return nil, fmt.Errorf("failed preparing query: %w", err)
 	}
 
-	var regular, aggregate []string
+	var ruleKeys []string
 
 	input := ast.InternedEmptyObject.Value
 
@@ -564,29 +564,16 @@ func (l Linter) DetermineEnabledRules(ctx context.Context) ([]string, []string, 
 			return errors.New("expected enabled rules object, didn't get it")
 		}
 
-		// Since we currently have no reliable way to determine whether a rule is an aggregate
-		// rule or not in Rego without actually evaluating it, we query the comiler for this
-		// information for each rule in the result. Long term, we should figure out the best way
-		// to do this in Rego only.
-		ref := ast.DefaultRootRef.Extend(ast.MustParseRef("regal.rules.category.title.aggregate"))
-
 		return enabled.Iter(func(category, rules *ast.Term) error {
 			categoryRules, ok := rules.Value.(ast.Object)
 			if !ok {
 				return fmt.Errorf("expected list of enabled rules for category %s, didn't get it", category)
 			}
 
-			ref[3] = category
-
 			for _, title := range categoryRules.Keys() {
-				ref[4] = title
 				titleStr, _ := title.Value.(ast.String)
 
-				if rules := pq.Compiler().GetRulesExact(ref); len(rules) == 0 {
-					regular = append(regular, string(titleStr))
-				} else {
-					aggregate = append(aggregate, string(titleStr))
-				}
+				ruleKeys = append(ruleKeys, string(titleStr))
 			}
 
 			return nil
@@ -594,10 +581,10 @@ func (l Linter) DetermineEnabledRules(ctx context.Context) ([]string, []string, 
 	})
 
 	if err = ex.Eval(ctx); err != nil {
-		return nil, nil, fmt.Errorf("failed to evaluate enabled rules query: %w", err)
+		return nil, fmt.Errorf("failed to evaluate enabled rules query: %w", err)
 	}
 
-	return util.Sorted(regular), util.Sorted(aggregate), nil
+	return util.Sorted(ruleKeys), nil
 }
 
 // GetConfig returns the final configuration for the linter, i.e. Regal's default

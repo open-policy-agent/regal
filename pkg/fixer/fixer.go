@@ -168,7 +168,7 @@ func (f *Fixer) applyLinterFixes(
 	fp fileprovider.FileProvider,
 	fixReport *Report,
 ) error {
-	enabledRules, _, err := l.DetermineEnabledRules(ctx)
+	enabledRules, err := l.DetermineEnabledRules(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to determine enabled rules: %w", err)
 	}

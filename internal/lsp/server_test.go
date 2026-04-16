@@ -124,23 +124,31 @@ func createAndInitServerWithClientName(
 	// Register cleanup to cancel context, wait for workers, and close connections.
 	// t.Cleanup runs after test completes (including any defers in the test).
 	t.Cleanup(func() {
+		// Cancel first so workers and in-flight lintFunc observe ctx.Done()
+		// and exit. Without this, Shutdown deadlocks waiting for a lintFunc
+		// that never returns (e.g. OPA compilation under -race).
 		cancel()
 
-		// Use context.Background() to ensure a valid context for shutdown,
-		// independent of the test's lifecycle.
 		//nolint:usetesting
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer shutdownCancel()
 
 		_ = ls.Shutdown(shutdownCtx)
 
-		// Close jsonrpc2 connections before closing the underlying pipes
-		// to prevent "read/write on closed pipe" errors from readMessages()
-		_ = connServer.Close()
-		_ = connClient.Close()
-
+		// Close the pipes to make jsonrpc2's readMessages goroutine hit a
+		// read error and exit its loop.
 		_ = netConnClient.Close()
 		_ = netConnServer.Close()
+
+		// Wait for readMessages to fully exit before calling conn.Close().
+		// conn.Close() closes pending call.done channels; if readMessages
+		// is still processing a response it will panic sending on one.
+		// DisconnectNotify fires after readMessages returns.
+		<-connServer.DisconnectNotify()
+		<-connClient.DisconnectNotify()
+
+		_ = connServer.Close()
+		_ = connClient.Close()
 	})
 
 	ls.SetConn(connServer)

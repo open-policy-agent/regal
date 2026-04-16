@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-policy-agent/opa/v1/ast"
-
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
@@ -80,32 +78,6 @@ ignore:
 					break
 				}
 			}
-		}
-	}
-
-	timeout.Reset(determineTimeout())
-
-	// wait for the aggregate data to be set, required for correct lint in next
-	// step
-	for success := false; !success; {
-		select {
-		default:
-			uri := "file://" + filepath.Join(tempDir, "admins.rego")
-
-			aggs, err := GetAST[ast.Object](ctx, ls.regoStore, append(pathWorkspaceAggregates, uri))
-			if err != nil {
-				t.Fatalf("failed to get file aggregates: %v", err)
-			}
-
-			if aggs != nil && aggs.Len() > 0 {
-				success = true
-
-				break // don't sleep
-			}
-
-			time.Sleep(testPollInterval)
-		case <-timeout.C:
-			t.Fatalf("timed out waiting admin aggregates to be set")
 		}
 	}
 
