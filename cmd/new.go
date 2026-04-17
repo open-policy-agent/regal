@@ -35,6 +35,7 @@ type TemplateValues struct {
 	NameOriginal string
 	Name         string
 	NameTest     string
+	FileName     string
 }
 
 var (
@@ -257,6 +258,7 @@ func createBuiltinDocs(params newRuleCommandParams) error {
 func templateValues(params newRuleCommandParams) (tvs TemplateValues) {
 	tvs.Category = params.category
 	tvs.NameOriginal = params.name
+	tvs.FileName = strings.ToLower(strings.ReplaceAll(params.name, "-", "_")) + ".rego"
 
 	if strings.Contains(params.name, "-") || strings.Contains(params.name, "_") {
 		dashedNameValue := strings.ReplaceAll(params.name, "_", "-")
