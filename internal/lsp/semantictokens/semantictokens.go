@@ -12,16 +12,35 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 )
 
-const (
-	TokenTypePackage  = 0
-	TokenTypeVariable = 1
-	TokenTypeImport   = 2
+type (
+	TokenType     = uint32
+	TokenModifier = uint32
 )
 
 const (
-	ModifierDeclaration = 1 << 0
-	ModifierReference   = 1 << 1
+	Namespace TokenType = iota
+	Variable
+	Import
+	Keyword
 )
+
+const (
+	ModifierDeclaration TokenModifier = 1 << iota
+	ModifierReference
+)
+
+var Legend = types.SemanticTokensLegend{
+	TokenTypes: []string{
+		Namespace: "namespace",
+		Variable:  "variable",
+		Import:    "import",
+		Keyword:   "keyword",
+	},
+	TokenModifiers: []string{
+		ModifierDeclaration: "declaration",
+		ModifierReference:   "reference",
+	},
+}
 
 type Token struct {
 	Line      uint32
@@ -94,20 +113,15 @@ type VarsSection struct {
 
 // Represents the structured result from the Rego query
 type SemanticTokensResult struct {
-	PackageTokens []ASTLocation `json:"packages"`
+	PackageTokens []Token       `json:"packages"`
 	ImportTokens  []ASTLocation `json:"imports"`
 	Vars          VarsSection   `json:"vars"`
-	DebugInfo     interface{}   `json:"debug_info"`
+	DebugInfo     any           `json:"debug_info"`
 }
 
 func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticTokens, error) {
-	tokens := make([]Token, 0)
-
-	packageTokens, err := processPackageTokens(result.PackageTokens)
-	if err != nil {
-		return nil, err
-	}
-	tokens = append(tokens, packageTokens...)
+	tokens := make([]Token, 0, len(result.PackageTokens))
+	tokens = append(tokens, result.PackageTokens...)
 
 	varTokens, err := processVariableTokens(result.Vars)
 	if err != nil {
@@ -122,20 +136,6 @@ func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticToke
 	tokens = append(tokens, importTokens...)
 
 	return encodeTokens(tokens), nil
-}
-
-func processPackageTokens(packageTokens []ASTLocation) ([]Token, error) {
-	tokens := make([]Token, 0)
-
-	for _, pkgToken := range packageTokens {
-		token, err := extractTokens(pkgToken, TokenTypePackage, 0)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create package token: %w", err)
-		}
-		tokens = append(tokens, token)
-	}
-
-	return tokens, nil
 }
 
 func processVariableTokens(vars VarsSection) ([]Token, error) {
@@ -172,7 +172,7 @@ func processTokenCategory(category ArgTokenCategory, categoryName string) ([]Tok
 	tokens := make([]Token, 0)
 
 	for _, declToken := range category.Declaration {
-		token, err := extractTokens(declToken, TokenTypeVariable, ModifierDeclaration)
+		token, err := extractTokens(declToken, Variable, ModifierDeclaration)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create %s declaration token: %w", categoryName, err)
 		}
@@ -180,7 +180,7 @@ func processTokenCategory(category ArgTokenCategory, categoryName string) ([]Tok
 	}
 
 	for _, refToken := range category.Reference {
-		token, err := extractTokens(refToken, TokenTypeVariable, ModifierReference)
+		token, err := extractTokens(refToken, Variable, ModifierReference)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create %s reference token: %w", categoryName, err)
 		}
@@ -194,7 +194,7 @@ func processImportTokens(importTokens []ASTLocation) ([]Token, error) {
 	tokens := make([]Token, 0)
 
 	for _, importToken := range importTokens {
-		token, err := extractTokens(importToken, TokenTypeImport, 0)
+		token, err := extractTokens(importToken, Import, 0)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create import token: %w", err)
 		}

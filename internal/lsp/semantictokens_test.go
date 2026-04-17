@@ -26,10 +26,8 @@ func TestFull(t *testing.T) {
 		expectedTokens []semanticTokenInstance
 	}{
 		"package only": {
-			policy: `package regal.woo`,
-			expectedTokens: []semanticTokenInstance{
-				{DeltaLine: 0, DeltaCol: 14, Length: 3, Type: 0, Modifier: 0},
-			},
+			policy:         `package regal.woo`,
+			expectedTokens: []semanticTokenInstance{{Length: 7, Type: 3}, {DeltaCol: 14, Length: 3}},
 		},
 		"variable declarations": {
 			policy: `package regal.woo
@@ -39,21 +37,23 @@ test_function(param1, param2) := result if {
 }
 `,
 			expectedTokens: []semanticTokenInstance{
-				{DeltaLine: 0, DeltaCol: 14, Length: 3, Type: 0, Modifier: 0},
+				{Length: 7, Type: 3},
+				{DeltaLine: 0, DeltaCol: 14, Length: 3},
 				{DeltaLine: 2, DeltaCol: 14, Length: 6, Type: 1, Modifier: 1},
 				{DeltaLine: 0, DeltaCol: 8, Length: 6, Type: 1, Modifier: 1},
 			},
 		},
 		"variable references": {
 			policy: `package regal.woo
-			
+
 test_function(param1) := result if {
       calc3 := 1
       calc3 == param1
 }
 `,
 			expectedTokens: []semanticTokenInstance{
-				{DeltaLine: 0, DeltaCol: 14, Length: 3, Type: 0, Modifier: 0},
+				{Length: 7, Type: 3},
+				{DeltaLine: 0, DeltaCol: 14, Length: 3},
 				{DeltaLine: 2, DeltaCol: 14, Length: 6, Type: 1, Modifier: 1},
 				{DeltaLine: 2, DeltaCol: 15, Length: 6, Type: 1, Modifier: 2},
 			},
@@ -62,7 +62,7 @@ test_function(param1) := result if {
 			policy: `package regal.woo
 
 import data.regal.ast
-			
+
 test_function(param1) := result if {
       calc3 := 1
       calc3 == param1
@@ -70,26 +70,28 @@ test_function(param1) := result if {
 }
 `,
 			expectedTokens: []semanticTokenInstance{
-				{DeltaLine: 0, DeltaCol: 14, Length: 3, Type: 0, Modifier: 0},
-				{DeltaLine: 2, DeltaCol: 18, Length: 3, Type: 2, Modifier: 0},
+				{Length: 7, Type: 3},
+				{DeltaLine: 0, DeltaCol: 14, Length: 3},
+				{DeltaLine: 2, DeltaCol: 18, Length: 3, Type: 2},
 				{DeltaLine: 2, DeltaCol: 14, Length: 6, Type: 1, Modifier: 1},
 				{DeltaLine: 2, DeltaCol: 15, Length: 6, Type: 1, Modifier: 2},
 			},
 		},
 		"full policy with package, declarations and references": {
 			policy: `package regal.woo
-			
+
 test_function(param1) := result if {
 	  calc1 := param1 * 2
       calc2 := param2 + 10
       result := calc1 + calc2
-	  
+
       calc3 := 1
       calc3 == param1
 }
 `,
 			expectedTokens: []semanticTokenInstance{
-				{DeltaLine: 0, DeltaCol: 14, Length: 3, Type: 0, Modifier: 0},
+				{Length: 7, Type: 3},
+				{DeltaLine: 0, DeltaCol: 14, Length: 3},
 				{DeltaLine: 2, DeltaCol: 14, Length: 6, Type: 1, Modifier: 1},
 				{DeltaLine: 1, DeltaCol: 12, Length: 6, Type: 1, Modifier: 2},
 				{DeltaLine: 5, DeltaCol: 15, Length: 6, Type: 1, Modifier: 2},
@@ -98,22 +100,23 @@ test_function(param1) := result if {
 		"comprehensions": {
 			policy: `package regal.woo
 
-array_comprehensions := [x |  
-    some i, x in [1, 2, 3]    
-    i == 2                    
+array_comprehensions := [x |
+    some i, x in [1, 2, 3]
+    i == 2
 ]
 
-set_comprehensions := {x |    
-    some i, x in [1, 2, 3]    
-    i == 2                    
+set_comprehensions := {x |
+    some i, x in [1, 2, 3]
+    i == 2
 }
 
-object_comprehensions := {k: v |  
-    some k, v in [1, 2, 3]       
-    v == 2                        
+object_comprehensions := {k: v |
+    some k, v in [1, 2, 3]
+    v == 2
 }`,
 			expectedTokens: []semanticTokenInstance{
-				{DeltaLine: 0, DeltaCol: 14, Length: 3, Type: 0, Modifier: 0},
+				{Length: 7, Type: 3},
+				{DeltaLine: 0, DeltaCol: 14, Length: 3},
 				{DeltaLine: 2, DeltaCol: 25, Length: 1, Type: 1, Modifier: 2},
 				{DeltaLine: 1, DeltaCol: 9, Length: 1, Type: 1, Modifier: 1},
 				{DeltaLine: 0, DeltaCol: 0, Length: 1, Type: 1, Modifier: 1},
@@ -139,19 +142,20 @@ object_comprehensions := {k: v |
 			policy: `package regal.woo
 
 every_two_vars_construct if {
-    every k, v in input.object {  
-        is_string(k)             
-        v > 0                    
+    every k, v in input.object {
+        is_string(k)
+        v > 0
     }
 }
 
 every_one_var_construct if {
-    every k in input.object {  
-        is_string(k)                                
+    every k in input.object {
+        is_string(k)
     }
 }`,
 			expectedTokens: []semanticTokenInstance{
-				{DeltaLine: 0, DeltaCol: 14, Length: 3, Type: 0, Modifier: 0},
+				{Length: 7, Type: 3},
+				{DeltaLine: 0, DeltaCol: 14, Length: 3},
 				{DeltaLine: 3, DeltaCol: 10, Length: 1, Type: 1, Modifier: 1},
 				{DeltaLine: 0, DeltaCol: 3, Length: 1, Type: 1, Modifier: 1},
 				{DeltaLine: 1, DeltaCol: 18, Length: 1, Type: 1, Modifier: 2},
@@ -164,17 +168,18 @@ every_one_var_construct if {
 			policy: `package regal.woo
 
 some_two_vars_construct if {
-    some i, item in input.array   
-    i < 10                        
-    item > 0                        
+    some i, item in input.array
+    i < 10
+    item > 0
 }
 
 some_one_var_construct if {
-    some i in input.array   
-    i < 10                                              
+    some i in input.array
+    i < 10
 }`,
 			expectedTokens: []semanticTokenInstance{
-				{DeltaLine: 0, DeltaCol: 14, Length: 3, Type: 0, Modifier: 0},
+				{Length: 7, Type: 3},
+				{DeltaLine: 0, DeltaCol: 14, Length: 3},
 				{DeltaLine: 3, DeltaCol: 9, Length: 1, Type: 1, Modifier: 1},
 				{DeltaLine: 0, DeltaCol: 3, Length: 4, Type: 1, Modifier: 1},
 				{DeltaLine: 1, DeltaCol: 4, Length: 1, Type: 1, Modifier: 2},
