@@ -287,7 +287,7 @@ func TestTestRegalTestWithExtendedASTTypeChecking(t *testing.T) {
 			hasPrefix("1 error occurred: "),
 			hasSuffix(
 				"rego_type_error: undefined ref: input.foo\n\tinput.foo\n\t      ^\n\t      "+
-					"have: \"foo\"\n\t      want (one of): [\"comments\" \"imports\" \"package\" \"regal\" \"rules\"]\n",
+					"have: \"foo\"\n\t      want (one of): [\"aggregates_internal\" \"comments\" \"imports\" \"package\" \"regal\" \"rules\"]\n",
 			),
 		).
 		verify(t)

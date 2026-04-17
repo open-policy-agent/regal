@@ -29,6 +29,10 @@ func NewRegalStore() storage.Store {
 			"defined_refs": map[string]any{},
 			"builtins":     map[string]any{},
 		},
+		// Pre-initialize paths for linter when using shared store (via WithBaseStore).
+		// Allows linter to write to nested paths like {"internal", "prepared"} without NotFoundErr.
+		"internal": map[string]any{},
+		"eval":     map[string]any{},
 	}, inmem.OptRoundTripOnWrite(false), inmem.OptReturnASTValuesOnRead(true))
 }
 

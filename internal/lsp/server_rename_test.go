@@ -21,7 +21,7 @@ func TestLanguageServerFixRenameParams(t *testing.T) {
 
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
-	ls.client.Identifier = clients.IdentifierGeneric
+	ls.setClient(types.Client{Identifier: clients.IdentifierGeneric})
 	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
 	ls.loadedConfig = &config.Config{
 		Rules: map[string]config.Category{"idiomatic": {
@@ -32,7 +32,7 @@ func TestLanguageServerFixRenameParams(t *testing.T) {
 		}},
 	}
 
-	fileURI := uri.FromRelativePath(ls.client.Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
+	fileURI := uri.FromRelativePath(ls.getClient().Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 
 	params := must.Return(ls.fixRenameParams("fix my file!", fileURI))(t)
@@ -54,7 +54,7 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
-	ls.client.Identifier = clients.IdentifierGeneric
+	ls.setClient(types.Client{Identifier: clients.IdentifierGeneric})
 	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
 	ls.loadedConfig = &config.Config{
 		Rules: map[string]config.Category{"idiomatic": {
@@ -65,7 +65,7 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 		}},
 	}
 
-	fileURI := uri.FromRelativePath(ls.client.Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
+	fileURI := uri.FromRelativePath(ls.getClient().Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
 	conflictingFileURI := uri.FromPath(
 		clients.IdentifierGeneric,
 		filepath.Join(tmpDir, "workspace", "authz", "main", "rules", "policy.rego"),
@@ -110,7 +110,7 @@ func TestLanguageServerFixRenameParamsWhenTargetOutsideRoot(t *testing.T) {
 
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
-	ls.client.Identifier = clients.IdentifierGeneric
+	ls.setClient(types.Client{Identifier: clients.IdentifierGeneric})
 	// the root where the client stated the workspace is
 	// this is what would be set if a config file were in the parent instead
 	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
@@ -123,7 +123,7 @@ func TestLanguageServerFixRenameParamsWhenTargetOutsideRoot(t *testing.T) {
 		}},
 	}
 
-	fileURI := uri.FromRelativePath(ls.client.Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
+	fileURI := uri.FromRelativePath(ls.getClient().Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 
 	_, err := ls.fixRenameParams("fix my file!", fileURI)

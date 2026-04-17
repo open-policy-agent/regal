@@ -10,7 +10,7 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/lsp/test"
+	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/must"
@@ -45,39 +45,22 @@ allow := true
 
 	// childDir will be the directory that the client is using as its workspace
 	tempDir := testutil.TempDirectoryOf(t, files)
-	childDir := filepath.Join(tempDir, childDirName)
 
-	// mainRegoFileURI is used throughout the test to refer to the main.rego file
-	// and so it is defined here for convenience
-	mainRegoFileURI := uri.FromPath(
-		clients.IdentifierGoTest,
-		filepath.Join(childDir, filepath.FromSlash(mainRegoFileName)),
-	)
+	receivedMessages := createMessageChannels(files)
+	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
 
-	// set up the server and client connections
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
+	ls, _, ctx := createAndInitServer(t, tempDir, clientHandler)
 
-	receivedMessages := make(chan types.FileDiagnostics, defaultBufferedChannelSize)
-	clientHandler := test.HandlerFor(methodTdPublishDiagnostics, test.SendsToChannel(receivedMessages))
+	ls.StartConfigWorker(ctx)
 
-	ls, _ := createAndInitServer(t, ctx, tempDir, clientHandler)
-
-	if got, exp := ls.workspaceRootURI, uri.FromPath(ls.client.Identifier, tempDir); exp != got {
+	if got, exp := ls.getWorkspaceRootURI(), uri.FromPath(ls.getClient().Identifier, tempDir); exp != got {
 		t.Fatalf("expected client root URI to be %s, got %s", exp, got)
 	}
 
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
 
-	for success := false; !success; {
-		select {
-		case requestData := <-receivedMessages:
-			success = testRequestDataCodes(t, requestData, mainRegoFileURI, []string{"opa-fmt"})
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for file diagnostics to be sent")
-		}
-	}
+	waitForViolations(t, "main.rego", []string{"opa-fmt"}, []string{}, timeout, receivedMessages)
 
 	// User updates config file contents in parent directory that is not
 	// part of the workspace
@@ -95,14 +78,7 @@ allow := true
 	// validate that the client received a new, empty diagnostics notification for the file
 	timeout.Reset(determineTimeout())
 
-	for success := false; !success; {
-		select {
-		case requestData := <-receivedMessages:
-			success = testRequestDataCodes(t, requestData, mainRegoFileURI, []string{})
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for file diagnostics to be sent")
-		}
-	}
+	waitForViolations(t, "main.rego", []string{}, []string{}, timeout, receivedMessages)
 }
 
 func TestLanguageServerCachesEnabledRulesAndUsesDefaultConfig(t *testing.T) {
@@ -120,9 +96,6 @@ rules:
 `,
 	})
 
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
 	// no op handler
 	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
 		t.Logf("message received: %s", req.Method)
@@ -130,30 +103,32 @@ rules:
 		return struct{}{}, nil
 	}
 
-	ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
+	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
-	if got, exp := ls.workspaceRootURI, uri.FromPath(ls.client.Identifier, tempDir); exp != got {
+	ls.StartConfigWorker(ctx)
+
+	if got, exp := ls.workspaceRootURI, uri.FromPath(ls.getClient().Identifier, tempDir); exp != got {
 		t.Fatalf("expected client root URI to be %s, got %s", exp, got)
 	}
 
-	timeout := time.NewTimer(3 * time.Second)
-	ticker := time.NewTicker(500 * time.Millisecond)
+	timeout := time.NewTimer(determineTimeout())
+	ticker := time.NewTicker(testPollInterval)
+	pollCount := 0
 
 	for success := false; !success; {
 		select {
 		case <-ticker.C:
-			enabledRules := ls.getEnabledNonAggregateRules()
-			enabledAggRules := ls.getEnabledAggregateRules()
+			pollCount++
 
-			if len(enabledRules) == 0 || len(enabledAggRules) == 0 {
-				t.Log("no enabled rules yet...")
+			if len(ls.getEnabledRules()) == 0 {
+				t.Logf("no enabled rules yet... (poll %d)", pollCount)
 
 				continue
 			}
 
 			success = true
 		case <-timeout.C:
-			t.Fatalf("timed out waiting for enabled rules to be correct")
+			t.Fatalf("timed out waiting for enabled rules to be correct after %d polls", pollCount)
 		}
 	}
 
@@ -169,27 +144,29 @@ rules:
 
 	timeout.Reset(determineTimeout())
 
+	pollCount = 0
+
 	for success := false; !success; {
 		select {
 		case <-ticker.C:
-			enabledRules := ls.getEnabledNonAggregateRules()
-			enabledAggRules := ls.getEnabledAggregateRules()
+			pollCount++
+			enabledRules := ls.getEnabledRules()
 
 			if slices.Contains(enabledRules, "directory-package-mismatch") {
-				t.Log("enabledRules still contains directory-package-mismatch")
+				t.Logf("enabledRules still contains directory-package-mismatch (poll %d)", pollCount)
 
 				continue
 			}
 
-			if slices.Contains(enabledAggRules, "unresolved-import") {
-				t.Log("enabledAggRules still contains unresolved-import")
+			if slices.Contains(enabledRules, "unresolved-import") {
+				t.Logf("enabledRules still contains unresolved-import (poll %d)", pollCount)
 
 				continue
 			}
 
 			success = true
 		case <-timeout.C:
-			t.Fatalf("timed out waiting for enabled rules to be correct")
+			t.Fatalf("timed out waiting for enabled rules to be correct after %d polls", pollCount)
 		}
 	}
 
@@ -212,8 +189,7 @@ rules:
 	for success := false; !success; {
 		select {
 		case <-ticker.C:
-			enabledRules := ls.getEnabledNonAggregateRules()
-			enabledAggRules := ls.getEnabledAggregateRules()
+			enabledRules := ls.getEnabledRules()
 
 			if slices.Contains(enabledRules, "opa-fmt") {
 				t.Log("enabledRules still contains opa-fmt")
@@ -227,8 +203,8 @@ rules:
 				continue
 			}
 
-			if !slices.Contains(enabledAggRules, "unresolved-import") {
-				t.Log("enabledAggRules must contain unresolved-import")
+			if !slices.Contains(enabledRules, "unresolved-import") {
+				t.Log("enabledRules must contain unresolved-import")
 
 				continue
 			}

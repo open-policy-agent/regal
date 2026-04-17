@@ -49,3 +49,13 @@ func (s *Store) ReadTransaction(ctx context.Context) storage.Transaction {
 
 	return txn
 }
+
+// WrapStore wraps an existing storage.Store in an ogre.Store.
+// This is useful when you want to use an existing store (e.g., from LSP)
+// with ogre queries.
+func WrapStore(store storage.Store) *Store {
+	return &Store{
+		store:     store,
+		baseCache: cache.NewBaseCache(),
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/storage/inmem"
 	"github.com/open-policy-agent/opa/v1/topdown"
 
 	"github.com/open-policy-agent/regal/internal/parse"
@@ -352,7 +353,7 @@ func TestLintWithAggregateRule(t *testing.T) {
 func TestEnabledRules(t *testing.T) {
 	t.Parallel()
 
-	enabledRules, _, err := NewLinter().
+	enabledRules, err := NewLinter().
 		WithDisableAll(true).
 		WithEnabledRules("opa-fmt", "no-whitespace-comment").
 		DetermineEnabledRules(t.Context())
@@ -378,25 +379,13 @@ rules:
     directory-package-mismatch: # non agg rule
       level: ignore
 `))
-	enabledRules, enabledAggRules, err := NewLinter().WithUserConfig(config).DetermineEnabledRules(t.Context())
+	enabledRules, err := NewLinter().WithUserConfig(config).DetermineEnabledRules(t.Context())
 
 	must.Equal(t, nil, err, "unexpected error")
 	must.NotEqual(t, 0, len(enabledRules), "enabled aggregate rules")
 	assert.False(t, slices.Contains(enabledRules, "directory-package-mismatch"))
 	assert.False(t, slices.Contains(enabledRules, "opa-fmt"))
-	assert.False(t, slices.Contains(enabledAggRules, "unresolved-import"))
-}
-
-func TestEnabledAggregateRules(t *testing.T) {
-	t.Parallel()
-
-	_, enabledRules, err := NewLinter().
-		WithDisableAll(true).
-		WithEnabledRules("opa-fmt", "unresolved-import", "use-assignment-operator").
-		DetermineEnabledRules(t.Context())
-
-	must.Equal(t, nil, err, "unexpected error")
-	assert.SlicesEqual(t, []string{"unresolved-import"}, enabledRules, "unexpected enabled aggregate rules")
+	assert.False(t, slices.Contains(enabledRules, "unresolved-import"))
 }
 
 func TestLintWithCollectQuery(t *testing.T) {
@@ -443,11 +432,20 @@ func TestLintWithCollectQueryAndAggregates(t *testing.T) {
 		}
 	}
 
-	result := must.Return(NewLinter().
+	// Create a store with the aggregates for the aggregate-only lint run
+	// Use the same pattern as NewRegalStore
+	store := inmem.NewFromObjectWithOpts(map[string]any{
+		"workspace": map[string]any{
+			"aggregates": allAggregates,
+		},
+	}, inmem.OptReturnASTValuesOnRead(true))
+
+	preparedLinter := must.Return(NewLinter().
 		WithDisableAll(true).
 		WithEnabledRules("unresolved-import").
-		WithAggregates(allAggregates).
-		Lint(t.Context()))(t)
+		Prepare(t.Context(), WithBaseStore(store)))(t)
+
+	result := must.Return(preparedLinter.Lint(t.Context()))(t)
 
 	testutil.AssertNumViolations(t, 3, result)
 

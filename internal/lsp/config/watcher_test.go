@@ -13,6 +13,7 @@ import (
 )
 
 func TestWatcher(t *testing.T) {
+	// we have had timeouts at 100ms, so this test uses time.Second
 	t.Parallel()
 
 	tempDir := testutil.TempDirectoryOf(t, map[string]string{"config.yaml": "---\nfoo: bar\n"})
@@ -30,7 +31,7 @@ func TestWatcher(t *testing.T) {
 
 	select {
 	case <-watcher.Reload:
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(time.Second):
 		t.Fatal("timeout waiting for initial config event")
 	}
 
@@ -39,7 +40,7 @@ func TestWatcher(t *testing.T) {
 
 	select {
 	case <-watcher.Reload:
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(time.Second):
 		t.Fatal("timeout waiting for config event")
 	}
 
@@ -47,7 +48,7 @@ func TestWatcher(t *testing.T) {
 
 	select {
 	case <-watcher.Drop:
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(time.Second):
 		t.Fatal("timeout waiting for config drop event")
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -27,7 +28,6 @@ func init() {
 
 		RunE: wrapProfiling(func([]string) error {
 			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
 
 			if exe, err := os.Executable(); err != nil {
 				fmt.Fprintln(os.Stderr, "error getting executable:", err)
@@ -62,14 +62,14 @@ func init() {
 
 			ls.SetConn(conn)
 
-			go ls.StartDiagnosticsWorker(ctx)
-			go ls.StartTestLocationsWorker(ctx)
-			go ls.StartCommandWorker(ctx)
-			go ls.StartConfigWorker(ctx)
-			go ls.StartWorkspaceStateWorker(ctx)
-			go ls.StartTemplateWorker(ctx)
-			go ls.StartQueryCacheWorker(ctx)
-			go ls.StartWebServer(ctx)
+			ls.StartDiagnosticsWorker(ctx)
+			ls.StartTestLocationsWorker(ctx)
+			ls.StartCommandWorker(ctx)
+			ls.StartConfigWorker(ctx)
+			ls.StartWorkspaceStateWorker(ctx)
+			ls.StartTemplateWorker(ctx)
+			ls.StartQueryCacheWorker(ctx)
+			ls.StartWebServer(ctx)
 
 			sigChan := make(chan os.Signal, 1)
 			signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -79,6 +79,15 @@ func init() {
 				fmt.Fprintln(os.Stderr, "Connection closed")
 			case sig := <-sigChan:
 				fmt.Fprintln(os.Stderr, "signal: ", sig.String())
+			}
+
+			cancel()
+
+			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer shutdownCancel()
+
+			if err := ls.Shutdown(shutdownCtx); err != nil {
+				fmt.Fprintln(os.Stderr, "shutdown error:", err)
 			}
 
 			return nil

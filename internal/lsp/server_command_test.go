@@ -10,12 +10,11 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
-	"github.com/open-policy-agent/opa/v1/ast"
-
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/must"
+	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
@@ -67,9 +66,6 @@ allow if {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, cancel := context.WithCancel(t.Context())
-			defer cancel()
-
 			receivedMessages := make(chan types.ApplyWorkspaceEditParams, defaultBufferedChannelSize)
 
 			createWorkspaceApplyEditTestHandler := func(
@@ -85,24 +81,16 @@ allow if {
 						return map[string]any{"applied": true}, nil
 					}
 
-					t.Fatalf("unexpected request: %v", req)
-
 					return struct{}{}, nil
 				}
 			}
 
-			tempDir := t.TempDir()
+			files := map[string]string{"main.rego": content}
+			tempDir := testutil.TempDirectoryOf(t, files)
 			clientHandler := createWorkspaceApplyEditTestHandler(t, receivedMessages)
-			ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
-
-			// set client identifier for this test since we are testing that behavior
-			ls.client.Identifier = clients.DetermineIdentifier(tc.clientName)
-
-			// edits are sent to the clinet by the command worker
-			go ls.StartCommandWorker(ctx)
+			_, connClient, ctx := createAndInitServerWithClientName(t, tempDir, clientHandler, tc.clientName)
 
 			mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
-			ls.cache.SetFileContents(mainRegoURI, content)
 
 			// Create command arguments with proper JSON marshaling for Windows backslash escapes
 			commandArgs := types.CommandArgs{Target: mainRegoURI}
@@ -145,13 +133,6 @@ allow if {
 func TestExecuteCommandExplorer(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithCancel(t.Context())
-
-	defer func() {
-		time.Sleep(200 * time.Millisecond)
-		cancel()
-	}()
-
 	receivedNotifications := make(chan map[string]any, defaultBufferedChannelSize)
 
 	createExplorerNotificationTestHandler := func(
@@ -186,12 +167,7 @@ func TestExecuteCommandExplorer(t *testing.T) {
 
 	tempDir := t.TempDir()
 	clientHandler := createExplorerNotificationTestHandler(t, receivedNotifications)
-	ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
-
-	// Set client identifier to VSCode so it uses the notification approach
-	ls.client.Identifier = clients.IdentifierVSCode
-
-	go ls.StartCommandWorker(ctx)
+	ls, connClient, ctx := createAndInitServerWithClientName(t, tempDir, clientHandler, "Visual Studio Code")
 
 	content := `package test
 
@@ -245,9 +221,6 @@ allow if {
 func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
 	inputJSONCreated := make(chan struct{}, 1)
 	showDocumentReceived := make(chan struct{}, 1)
 
@@ -257,11 +230,14 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 			params := must.Return(encoding.JSONUnmarshalTo[types.ShowMessageRequestParams](*req.Params))(t)
 
 			if strings.Contains(params.Message, "No input.json/yaml file was found.") {
-				// The initial file creation prompt
-				inputJSONCreated <- struct{}{}
+				t.Log("create input.json prompt received, replied to")
 
 				return types.MessageActionItem{Title: "Yes"}, nil
 			} else if strings.Contains(params.Message, "created successfully") {
+				t.Log("input.json created successfully")
+
+				inputJSONCreated <- struct{}{}
+
 				// The success notification and prompt to open the file
 				return types.MessageActionItem{Title: "Open"}, nil
 			}
@@ -269,19 +245,16 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 		case "window/showDocument":
 			showDocumentReceived <- struct{}{}
 
+			t.Log("window/showDocument received")
+
 			return types.ShowDocumentResult{Success: true}, nil
 		}
 
 		return struct{}{}, nil
 	}
 
-	tempDir := t.TempDir()
-	ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
-
-	go ls.StartCommandWorker(ctx)
-
-	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
-	regoContent := `package test
+	files := map[string]string{
+		"main.rego": `package test
 
 allow if {
 	input.foo.bar == "woo"
@@ -289,11 +262,14 @@ allow if {
 	input.superfoo.wee == "fun"
 	input.superbar.tee == "run"
 	input.list[0].name == "test"
-}
-`
+}`,
+		".regal/config.yaml": "",
+	}
+	tempDir := testutil.TempDirectoryOf(t, files)
 
-	ls.cache.SetFileContents(mainRegoURI, regoContent)
-	ls.cache.SetModule(mainRegoURI, ast.MustParseModule(regoContent))
+	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
+
+	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
 
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()

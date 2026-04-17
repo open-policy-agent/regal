@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -137,7 +138,7 @@ func TestLoadWorkspaceContents(t *testing.T) {
 
 			server := NewLanguageServer(t.Context(), opts)
 			server.workspaceRootURI = "file://" + tempDir
-			server.client.Identifier = clients.IdentifierGeneric
+			server.setClient(types.Client{Identifier: clients.IdentifierGeneric})
 			server.loadedConfig = &config.Config{}
 
 			for _, fileName := range tc.cachedFiles {

@@ -8,10 +8,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
-	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
-	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/report"
 )
 
@@ -168,52 +166,4 @@ func TestConvertReportToDiagnostics(t *testing.T) {
 	}
 
 	assert.DeepEqual(t, expectedFileDiags, convertReportToDiagnostics(rpt, "workspaceRootURI"), "file diagnostics")
-}
-
-func TestLintWithConfigIgnoreWildcards(t *testing.T) {
-	t.Parallel()
-
-	rule := map[string]config.Category{"idiomatic": {"directory-package-mismatch": config.Rule{Level: "ignore"}}}
-	conf := &config.Config{Rules: rule}
-
-	contents := "package p\n\ncamelCase := 1\n"
-	fileURI := "file:///workspace/ignore/p.rego"
-
-	state := cache.NewCache()
-	state.SetFileContents(fileURI, contents)
-	state.SetModule(fileURI, parse.MustParseModule(contents))
-	state.SetFileDiagnostics(fileURI, []types.Diagnostic{})
-
-	opts := diagnosticsRunOpts{
-		Cache:            state,
-		RegalConfig:      conf,
-		FileURI:          fileURI,
-		WorkspaceRootURI: "file:///workspace",
-		UpdateForRules:   []string{"prefer-snake-case"},
-	}
-
-	must.Equal(t, nil, updateFileDiagnostics(t.Context(), opts))
-
-	diagnostics, _ := state.GetFileDiagnostics(fileURI)
-
-	must.Equal(t, 1, len(diagnostics), "number of diagnostics")
-	assert.Equal(t, "prefer-snake-case", diagnostics[0].Code, "diagnostic code")
-
-	// Clear the diagnostic and update the config with a wildcard ignore
-	// for any file in the ignore directory.
-	state.SetFileDiagnostics(fileURI, []types.Diagnostic{})
-
-	conf.Rules["style"] = config.Category{
-		"prefer-snake-case": config.Rule{
-			Level:  "error",
-			Ignore: &config.Ignore{Files: []string{"ignore/**"}},
-		},
-	}
-	opts.UpdateForRules = []string{"prefer-snake-case"}
-
-	must.Equal(t, nil, updateFileDiagnostics(t.Context(), opts))
-
-	if diagnostics, _ := state.GetFileDiagnostics(fileURI); len(diagnostics) != 0 {
-		t.Fatalf("Expected no diagnostics, got %v", diagnostics)
-	}
 }

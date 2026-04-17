@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sync"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
@@ -13,35 +14,52 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
+var (
+	emptyLocations any = []any{}
+
+	testLocationsQuery = sync.OnceValue(func() *ogre.Query {
+		query := ast.MustParseBody("result = data.regal.lsp.testlocations.result")
+
+		pq, err := ogre.New(query).Prepare(context.Background())
+		if err != nil {
+			panic("failed to prepare test locations query: " + err.Error())
+		}
+
+		return pq
+	})
+)
+
 func (l *LanguageServer) StartTestLocationsWorker(ctx context.Context) {
-	// Wait for initialization to complete before starting to check worker is needed
-	<-l.initializationGate
+	l.workersWg.Go(func() {
+		// Wait for initialization to complete before starting to check worker is needed
+		<-l.initializationGate
 
-	if !l.client.SupportsOPATestProvider() {
-		l.log.Debug("Test locations worker exiting - client does not support opaTestProvider")
+		if !l.getClient().SupportsOPATestProvider() {
+			l.log.Debug("Test locations worker exiting - client does not support opaTestProvider")
 
-		return
-	}
-
-	l.log.Debug("Test locations worker starting")
-
-	for {
-		select {
-		case <-ctx.Done():
 			return
-		case job := <-l.testLocationJobs:
-			if err := l.processTestLocationsUpdate(ctx, job.URI); err != nil {
-				l.log.Message("failed to process test locations: %s", err)
+		}
+
+		l.log.Debug("Test locations worker starting")
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case job := <-l.testLocationJobs:
+				if err := l.processTestLocationsUpdate(ctx, job.URI); err != nil {
+					l.log.Message("failed to process test locations: %s", err)
+				}
 			}
 		}
-	}
+	})
 }
 
 // processTestLocationsUpdate queries for test rule locations and sends them to the client.
 // This is called after the parse has completed in the lintFileJobs worker to
 // ensure we send the latest.
 func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI string) error {
-	if !l.client.SupportsOPATestProvider() {
+	if !l.getClient().SupportsOPATestProvider() {
 		l.log.Message("processTestLocationsUpdate called but client does not support opaTestProvider")
 
 		return nil
@@ -64,7 +82,7 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 	if !ok {
 		// This shouldn't happen since parsing completed successfully before
 		// calling
-		return l.sendTestLocations(ctx, fileURI, []any{})
+		return l.sendTestLocations(ctx, fileURI, emptyLocations)
 	}
 
 	// TODO: ideally this would not need fs access
@@ -90,19 +108,12 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 	if err != nil {
 		l.log.Message("failed to prepare AST for test locations: %s", err)
 
-		return l.sendTestLocations(ctx, fileURI, []any{})
-	}
-
-	queryBody := ast.MustParseBody("result = data.regal.lsp.testlocations.result")
-
-	pq, err := ogre.New(queryBody).Prepare(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to prepare test locations query: %w", err)
+		return l.sendTestLocations(ctx, fileURI, emptyLocations)
 	}
 
 	var result ast.Value
 
-	err = pq.Evaluator().
+	err = testLocationsQuery().Evaluator().
 		WithInput(astValue).
 		WithResultHandler(func(value ast.Value) error {
 			result = value
@@ -113,14 +124,14 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 	if err != nil {
 		l.log.Message("failed to evaluate test locations query: %s", err)
 
-		return l.sendTestLocations(ctx, fileURI, []any{})
+		return l.sendTestLocations(ctx, fileURI, emptyLocations)
 	}
 
 	nativeResult, err := ast.JSON(result)
 	if err != nil {
 		l.log.Message("failed to convert test locations to JSON: %s", err)
 
-		return l.sendTestLocations(ctx, fileURI, []any{})
+		return l.sendTestLocations(ctx, fileURI, emptyLocations)
 	}
 
 	return l.sendTestLocations(ctx, fileURI, nativeResult)

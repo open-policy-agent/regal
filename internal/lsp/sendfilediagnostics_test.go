@@ -48,14 +48,14 @@ func TestSendFileDiagnosticsEmptyArrays(t *testing.T) {
 			clientHandler := test.HandlerFor(methodTdPublishDiagnostics, test.SendsToChannel(receivedDiagnostics))
 
 			fileURI := "file:///test.rego"
-			ls, _ := createAndInitServer(t, t.Context(), t.TempDir(), clientHandler)
+			ls, _, ctx := createAndInitServer(t, t.TempDir(), clientHandler)
 
 			if tc.fileInCache {
 				ls.cache.SetParseErrors(fileURI, tc.parseErrors)
 				ls.cache.SetFileDiagnostics(fileURI, tc.lintErrors)
 			}
 
-			ls.sendFileDiagnostics(t.Context(), fileURI)
+			ls.sendFileDiagnostics(ctx, fileURI)
 
 			select {
 			case diag := <-receivedDiagnostics:

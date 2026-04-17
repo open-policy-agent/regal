@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/lsp/test"
+	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/must"
@@ -20,7 +20,7 @@ import (
 // This test also ensures that updating the config to point to a non-default engine and capabilities version works
 // and causes that engine's builtins to work with completions.
 //
-//nolint:maintidx
+
 func TestLanguageServerSingleFile(t *testing.T) {
 	t.Parallel()
 
@@ -43,57 +43,37 @@ rules:
 	tempDir := testutil.TempDirectoryOf(t, files)
 	mainRegoURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tempDir, filepath.FromSlash(mainRegoFileName)))
 
-	receivedMessages := make(chan types.FileDiagnostics, defaultBufferedChannelSize)
-	clientHandler := test.HandlerFor(methodTdPublishDiagnostics, test.SendsToChannel(receivedMessages))
+	receivedMessages := createMessageChannels(files)
+	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
 
-	// set up the server and client connections
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
+	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
-	_, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
+	ls.StartConfigWorker(ctx)
 
 	// validate that the client received a diagnostics notification for the file
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()
 
-	for success := false; !success; {
-		select {
-		case requestData := <-receivedMessages:
-			success = testRequestDataCodes(t, requestData, mainRegoURI, []string{"opa-fmt", "use-assignment-operator"})
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for file diagnostics to be sent")
-		}
-	}
+	waitForViolations(
+		t,
+		"main.rego",
+		[]string{"opa-fmt", "use-assignment-operator"},
+		[]string{},
+		timeout,
+		receivedMessages,
+	)
 
 	// Client sends textDocument/didChange notification with new contents for main.rego
 	// no response to the call is expected
-	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.VersionedTextDocumentIdentifier{
-			URI: mainRegoURI,
-		},
-		ContentChanges: []types.TextDocumentContentChangeEvent{
-			{
-				Text: `package main
+	notifyDocumentChange(t, connClient, mainRegoURI, `package main
 import rego.v1
 allow := true
-`,
-			},
-		},
-	}, nil); err != nil {
-		t.Fatalf("failed to send didChange notification: %s", err)
-	}
+`)
 
 	// validate that the client received a new diagnostics notification for the file
 	timeout.Reset(determineTimeout())
 
-	for success := false; !success; {
-		select {
-		case requestData := <-receivedMessages:
-			success = testRequestDataCodes(t, requestData, mainRegoURI, []string{"opa-fmt"})
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for file diagnostics to be sent")
-		}
-	}
+	waitForViolations(t, "main.rego", []string{"opa-fmt"}, []string{}, timeout, receivedMessages)
 
 	// config update is caught by the config watcher
 	newConfigContents := `
@@ -111,31 +91,7 @@ rules:
 	// validate that the client received a new, empty diagnostics notification for the file
 	timeout.Reset(determineTimeout())
 
-	for success := false; !success; {
-		select {
-		case requestData := <-receivedMessages:
-			if requestData.URI != mainRegoURI {
-				t.Logf("expected diagnostics to be sent for main.rego, got %s", requestData.URI)
-
-				continue
-			}
-
-			codes := make([]string, 0, len(requestData.Items))
-			for _, d := range requestData.Items {
-				codes = append(codes, d.Code)
-			}
-
-			if len(requestData.Items) != 0 {
-				t.Logf("expected empty diagnostics, got %v", codes)
-
-				continue
-			}
-
-			success = testRequestDataCodes(t, requestData, mainRegoURI, []string{})
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for main.rego diagnostics to be sent")
-		}
-	}
+	waitForViolations(t, "main.rego", []string{}, []string{}, timeout, receivedMessages)
 
 	// Client sends new config with an EOPA capabilities file specified.
 	newConfigContents = `
@@ -157,84 +113,25 @@ capabilities:
 	// validate that the client received a new, empty diagnostics notification for the file
 	timeout.Reset(determineTimeout())
 
-	for success := false; !success; {
-		select {
-		case requestData := <-receivedMessages:
-			if requestData.URI != mainRegoURI {
-				t.Logf("expected diagnostics to be sent for main.rego, got %s", requestData.URI)
-
-				break
-			}
-
-			codes := make([]string, 0, len(requestData.Items))
-			for _, d := range requestData.Items {
-				codes = append(codes, d.Code)
-			}
-
-			if len(requestData.Items) != 0 {
-				t.Logf("expected empty diagnostics, got %v", codes)
-
-				continue
-			}
-
-			success = testRequestDataCodes(t, requestData, mainRegoURI, []string{})
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for main.rego diagnostics to be sent")
-		}
-	}
+	waitForViolations(t, "main.rego", []string{}, []string{}, timeout, receivedMessages)
 
 	// Client sends textDocument/didChange notification with new
 	// contents for main.rego no response to the call is expected. We added
 	// the start of an EOPA-specific call, so if the capabilities were
 	// loaded correctly, we should see a completion later after we ask for
 	// it.
-	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
-		TextDocument: types.VersionedTextDocumentIdentifier{
-			URI: mainRegoURI,
-		},
-		ContentChanges: []types.TextDocumentContentChangeEvent{
-			{
-				Text: `package main
+	notifyDocumentChange(t, connClient, mainRegoURI, `package main
 import rego.v1
 
 # METADATA
 # entrypoint: true
 allow := neo4j.q
-`,
-			},
-		},
-	}, nil); err != nil {
-		t.Fatalf("failed to send didChange notification: %s", err)
-	}
+`)
 
 	// validate that the client received a new diagnostics notification for the file
 	timeout.Reset(determineTimeout())
 
-	for success := false; !success; {
-		select {
-		case requestData := <-receivedMessages:
-			if requestData.URI != mainRegoURI {
-				t.Logf("expected diagnostics to be sent for main.rego, got %s", requestData.URI)
-
-				break
-			}
-
-			codes := make([]string, 0, len(requestData.Items))
-			for _, d := range requestData.Items {
-				codes = append(codes, d.Code)
-			}
-
-			if len(requestData.Items) != 0 {
-				t.Logf("expected empty diagnostics, got %v", codes)
-
-				continue
-			}
-
-			success = testRequestDataCodes(t, requestData, mainRegoURI, []string{})
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for file diagnostics to be sent")
-		}
-	}
+	waitForViolations(t, "main.rego", []string{}, []string{}, timeout, receivedMessages)
 
 	// 7. With our new config applied, and the file updated, we can ask the
 	// LSP for a completion. We expect to see neo4j.query show up. Since
@@ -242,7 +139,7 @@ allow := neo4j.q
 	// we're using the normal OPA capabilities file.
 	timeout.Reset(determineTimeout())
 
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(testPollInterval)
 	defer ticker.Stop()
 
 	for success := false; !success; {

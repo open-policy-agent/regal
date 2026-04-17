@@ -53,12 +53,7 @@ test_bar if {
 		}
 	}
 
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
-	ls, connClient := createAndInitServer(t, ctx, tempDir, clientHandler)
-
-	go ls.StartTestLocationsWorker(ctx)
+	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	if err := connClient.Notify(ctx, "textDocument/didOpen", types.DidOpenTextDocumentParams{
 		TextDocument: types.TextDocumentItem{

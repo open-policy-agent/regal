@@ -26,6 +26,10 @@
           },
           "type": "array"
         },
+        "aggregates_internal": {
+          "type": "object",
+          "description": "Internal mapping of rule -> aggregate entries (optional, used when provided)"
+        },
         "regal": {
           "$ref": "#/$defs/regal"
         }

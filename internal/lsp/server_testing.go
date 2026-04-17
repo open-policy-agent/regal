@@ -22,6 +22,16 @@ func (l *LanguageServer) handleRunTests(
 	ctx context.Context,
 	params types.RunTestsParams,
 ) (any, error) {
+	// Ensure the target file is parsed before running tests.
+	// This handles the case where regal/runTests is called immediately after
+	// textDocument/didOpen, before the async diagnostics worker has parsed the file.
+	// This makes the code more robust, but is mostly only helpful in tests.
+	if _, ok := l.cache.GetModule(params.URI); !ok {
+		if _, err := updateParse(ctx, l.parseOpts(params.URI, l.builtinsForCurrentCapabilities())); err != nil {
+			return nil, fmt.Errorf("failed to parse %s: %w", params.URI, err)
+		}
+	}
+
 	// Create new isolated store for this test run (NO SHARED STATE)
 	testStore := inmem.NewWithOpts(
 		inmem.OptRoundTripOnWrite(false),

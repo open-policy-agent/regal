@@ -72,7 +72,7 @@ func (l *LanguageServer) EvalInWorkspace(ctx context.Context, query string, inpu
 	resultQuery := "result := " + query
 	hook := PrintHook{
 		Output:       make(map[string]map[int][]string),
-		FileNameBase: l.workspaceRootURI,
+		FileNameBase: l.getWorkspaceRootURI(),
 	}
 
 	result, err := l.Eval(ctx, resultQuery, input, hook)

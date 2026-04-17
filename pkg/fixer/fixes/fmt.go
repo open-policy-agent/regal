@@ -45,12 +45,15 @@ func (f *Fmt) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]FixResult, error) {
 		return nil, fmt.Errorf("failed to parse module: %w", err)
 	}
 
-	f.OPAFmtOpts.RegoVersion = module.RegoVersion()
-	if f.OPAFmtOpts.RegoVersion == ast.RegoV0 {
-		f.OPAFmtOpts.RegoVersion = ast.RegoV0CompatV1
+	// Create a local copy to avoid mutating shared state
+	fmtOpts := f.OPAFmtOpts
+
+	fmtOpts.RegoVersion = module.RegoVersion()
+	if fmtOpts.RegoVersion == ast.RegoV0 {
+		fmtOpts.RegoVersion = ast.RegoV0CompatV1
 	}
 
-	formatted, err := format.AstWithOpts(module, f.OPAFmtOpts)
+	formatted, err := format.AstWithOpts(module, fmtOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to format: %w", err)
 	}
