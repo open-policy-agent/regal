@@ -113,27 +113,22 @@ type VarsSection struct {
 
 // Represents the structured result from the Rego query
 type SemanticTokensResult struct {
-	PackageTokens []Token       `json:"packages"`
-	ImportTokens  []ASTLocation `json:"imports"`
-	Vars          VarsSection   `json:"vars"`
-	DebugInfo     any           `json:"debug_info"`
+	PackageTokens []Token     `json:"packages"`
+	ImportTokens  []Token     `json:"imports"`
+	Vars          VarsSection `json:"vars"`
+	DebugInfo     any         `json:"debug_info"`
 }
 
 func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticTokens, error) {
-	tokens := make([]Token, 0, len(result.PackageTokens))
-	tokens = append(tokens, result.PackageTokens...)
-
 	varTokens, err := processVariableTokens(result.Vars)
 	if err != nil {
 		return nil, err
 	}
-	tokens = append(tokens, varTokens...)
 
-	importTokens, err := processImportTokens(result.ImportTokens)
-	if err != nil {
-		return nil, err
-	}
-	tokens = append(tokens, importTokens...)
+	tokens := make([]Token, 0, len(result.PackageTokens)+len(result.ImportTokens)+len(varTokens))
+	tokens = append(tokens, result.PackageTokens...)
+	tokens = append(tokens, result.ImportTokens...)
+	tokens = append(tokens, varTokens...)
 
 	return encodeTokens(tokens), nil
 }
@@ -183,20 +178,6 @@ func processTokenCategory(category ArgTokenCategory, categoryName string) ([]Tok
 		token, err := extractTokens(refToken, Variable, ModifierReference)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create %s reference token: %w", categoryName, err)
-		}
-		tokens = append(tokens, token)
-	}
-
-	return tokens, nil
-}
-
-func processImportTokens(importTokens []ASTLocation) ([]Token, error) {
-	tokens := make([]Token, 0)
-
-	for _, importToken := range importTokens {
-		token, err := extractTokens(importToken, Import, 0)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create import token: %w", err)
 		}
 		tokens = append(tokens, token)
 	}
