@@ -25,6 +25,7 @@ const (
 
 const (
 	ModifierDeclaration TokenModifier = 1 << iota
+	ModifierDefinition
 	ModifierReference
 )
 
@@ -37,6 +38,7 @@ var Legend = types.SemanticTokensLegend{
 	},
 	TokenModifiers: []string{
 		"declaration",
+		"definition",
 		"reference",
 	},
 }

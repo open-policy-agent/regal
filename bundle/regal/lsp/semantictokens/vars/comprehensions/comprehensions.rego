@@ -36,7 +36,7 @@ result contains token if {
 		"col": tloc.col - 1,
 		"length": tloc.end.col - tloc.col,
 		"type": 1,
-		"modifiers": bits.lsh(1, 0),
+		"modifiers": bits.lsh(1, 1),
 	}
 }
 
@@ -61,7 +61,7 @@ result contains token if {
 		"col": tloc.col - 1,
 		"length": tloc.end.col - tloc.col,
 		"type": 1,
-		"modifiers": bits.lsh(1, 1),
+		"modifiers": bits.lsh(1, 2),
 	}
 }
 

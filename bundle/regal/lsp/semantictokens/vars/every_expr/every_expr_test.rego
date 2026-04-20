@@ -17,10 +17,10 @@ every_two_vars if {
 		with input.regal.file.lines as split(policy, "\n")
 
 	tokens == {
-		{"col": 7, "length": 1, "line": 3, "modifiers": 1, "type": 1},
-		{"col": 10, "length": 1, "line": 3, "modifiers": 1, "type": 1},
-		{"col": 12, "length": 1, "line": 4, "modifiers": 2, "type": 1},
-		{"col": 2, "length": 1, "line": 5, "modifiers": 2, "type": 1},
+		{"col": 7, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 10, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 12, "length": 1, "line": 4, "modifiers": 4, "type": 1},
+		{"col": 2, "length": 1, "line": 5, "modifiers": 4, "type": 1},
 	}
 }
 
@@ -38,7 +38,7 @@ every_one_var if {
 		with input.regal.file.lines as split(policy, "\n")
 
 	tokens == {
-		{"col": 7, "length": 1, "line": 3, "modifiers": 1, "type": 1},
-		{"col": 12, "length": 1, "line": 4, "modifiers": 2, "type": 1},
+		{"col": 7, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 12, "length": 1, "line": 4, "modifiers": 4, "type": 1},
 	}
 }

@@ -16,10 +16,10 @@ some_two_vars if {
 		with input.regal.file.lines as split(policy, "\n")
 
 	tokens == {
-		{"col": 6, "length": 1, "line": 3, "modifiers": 1, "type": 1},
-		{"col": 9, "length": 4, "line": 3, "modifiers": 1, "type": 1},
-		{"col": 1, "length": 1, "line": 4, "modifiers": 2, "type": 1},
-		{"col": 1, "length": 4, "line": 5, "modifiers": 2, "type": 1},
+		{"col": 6, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 9, "length": 4, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 1, "length": 1, "line": 4, "modifiers": 4, "type": 1},
+		{"col": 1, "length": 4, "line": 5, "modifiers": 4, "type": 1},
 	}
 }
 
@@ -36,7 +36,7 @@ some_one_var if {
 		with input.regal.file.lines as split(policy, "\n")
 
 	tokens == {
-		{"col": 6, "length": 1, "line": 3, "modifiers": 1, "type": 1},
-		{"col": 1, "length": 1, "line": 4, "modifiers": 2, "type": 1},
+		{"col": 6, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 1, "length": 1, "line": 4, "modifiers": 4, "type": 1},
 	}
 }

@@ -14,13 +14,10 @@ import data.regal.util
 module := data.workspace.parsed[input.params.textDocument.uri]
 
 # METADATA
-# description: Extract variable declarations from some keyword domains
+# description: Extract variable declarations from bare some keyword domain
 result contains token if {
-	some context in {"somein", "some"}
 	some rule_index
-
-	# regal ignore:prefer-some-in-iteration
-	declared_vars := ast.found.vars[rule_index][context]
+	declared_vars := ast.found.vars[rule_index]["some"]
 
 	some var in declared_vars
 
@@ -36,6 +33,25 @@ result contains token if {
 }
 
 # METADATA
+# description: Extract variable definitions from some-in keyword domain
+result contains token if {
+	some rule_index
+	declared_vars := ast.found.vars[rule_index]["somein"]
+
+	some var in declared_vars
+
+	tloc := util.to_location_object(var.location)
+
+	token := {
+		"line": tloc.row - 1,
+		"col": tloc.col - 1,
+		"length": tloc.end.col - tloc.col,
+		"type": 1,
+		"modifiers": bits.lsh(1, 1),
+	}
+}
+
+# METADATA
 # description: Extract variable references in some keyword domains
 result contains token if {
 	some var in _some_var_refs
@@ -46,7 +62,7 @@ result contains token if {
 		"col": tloc.col - 1,
 		"length": tloc.end.col - tloc.col,
 		"type": 1,
-		"modifiers": bits.lsh(1, 1),
+		"modifiers": bits.lsh(1, 2),
 	}
 }
 

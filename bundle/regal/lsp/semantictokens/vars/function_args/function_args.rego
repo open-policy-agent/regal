@@ -35,7 +35,7 @@ result contains token if {
 # METADATA
 # description: Extract variable references in function calls
 result contains token if {
-	modifier := bits.lsh(1, 1)
+	modifier := bits.lsh(1, 2)
 	some rule in module.rules
 	some rule_index
 
@@ -63,7 +63,7 @@ result contains token if {
 # METADATA
 # description: Extract variable references in call expressions
 result contains token if {
-	modifier := bits.lsh(1, 1)
+	modifier := bits.lsh(1, 2)
 	some rule in module.rules
 	arg_names := ast.function_arg_names(rule)
 	walk(rule.body, [_, expr])

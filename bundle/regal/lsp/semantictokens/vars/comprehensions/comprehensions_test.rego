@@ -15,10 +15,10 @@ array_comprehensions := [x |
 		with input.regal.file.lines as split(policy, "\n")
 
 	tokens == {
-		{"col": 6, "length": 1, "line": 3, "modifiers": 1, "type": 1},
-		{"col": 9, "length": 1, "line": 3, "modifiers": 1, "type": 1},
-		{"col": 25, "length": 1, "line": 2, "modifiers": 2, "type": 1},
-		{"col": 1, "length": 1, "line": 4, "modifiers": 2, "type": 1},
+		{"col": 6, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 9, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 25, "length": 1, "line": 2, "modifiers": 4, "type": 1},
+		{"col": 1, "length": 1, "line": 4, "modifiers": 4, "type": 1},
 	}
 }
 
@@ -35,10 +35,10 @@ set_comprehensions := {x |
 		with input.regal.file.lines as split(policy, "\n")
 
 	tokens == {
-		{"col": 6, "length": 1, "line": 3, "modifiers": 1, "type": 1},
-		{"col": 9, "length": 1, "line": 3, "modifiers": 1, "type": 1},
-		{"col": 23, "length": 1, "line": 2, "modifiers": 2, "type": 1},
-		{"col": 1, "length": 1, "line": 4, "modifiers": 2, "type": 1},
+		{"col": 6, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 9, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 23, "length": 1, "line": 2, "modifiers": 4, "type": 1},
+		{"col": 1, "length": 1, "line": 4, "modifiers": 4, "type": 1},
 	}
 }
 
@@ -55,10 +55,10 @@ object_comprehensions := {k: v |
 		with input.regal.file.lines as split(policy, "\n")
 
 	tokens == {
-		{"col": 6, "length": 1, "line": 3, "modifiers": 1, "type": 1},
-		{"col": 9, "length": 1, "line": 3, "modifiers": 1, "type": 1},
-		{"col": 26, "length": 1, "line": 2, "modifiers": 2, "type": 1},
-		{"col": 29, "length": 1, "line": 2, "modifiers": 2, "type": 1},
-		{"col": 1, "length": 1, "line": 4, "modifiers": 2, "type": 1},
+		{"col": 6, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 9, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 26, "length": 1, "line": 2, "modifiers": 4, "type": 1},
+		{"col": 29, "length": 1, "line": 2, "modifiers": 4, "type": 1},
+		{"col": 1, "length": 1, "line": 4, "modifiers": 4, "type": 1},
 	}
 }

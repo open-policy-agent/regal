@@ -20,9 +20,9 @@ test_function(param1, param2) := result if {
 	tokens == {
 		{"col": 14, "length": 6, "line": 2, "modifiers": 1, "type": 1},
 		{"col": 22, "length": 6, "line": 2, "modifiers": 1, "type": 1},
-		{"col": 10, "length": 6, "line": 3, "modifiers": 2, "type": 1},
-		{"col": 10, "length": 6, "line": 4, "modifiers": 2, "type": 1},
-		{"col": 10, "length": 6, "line": 8, "modifiers": 2, "type": 1},
+		{"col": 10, "length": 6, "line": 3, "modifiers": 4, "type": 1},
+		{"col": 10, "length": 6, "line": 4, "modifiers": 4, "type": 1},
+		{"col": 10, "length": 6, "line": 8, "modifiers": 4, "type": 1},
 	}
 }
 

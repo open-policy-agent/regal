@@ -14,7 +14,7 @@ import data.regal.util
 module := data.workspace.parsed[input.params.textDocument.uri]
 
 # METADATA
-# description: Extract variable declarations from every keyword domains
+# description: Extract variable definitions from every keyword domains
 result contains token if {
 	some rule_index
 	declared_vars := ast.found.vars[rule_index]["every"]
@@ -27,7 +27,7 @@ result contains token if {
 		"col": tloc.col - 1,
 		"length": tloc.end.col - tloc.col,
 		"type": 1,
-		"modifiers": bits.lsh(1, 0),
+		"modifiers": bits.lsh(1, 1),
 	}
 }
 
@@ -55,6 +55,6 @@ result contains token if {
 		"col": tloc.col - 1,
 		"length": tloc.end.col - tloc.col,
 		"type": 1,
-		"modifiers": bits.lsh(1, 1),
+		"modifiers": bits.lsh(1, 2),
 	}
 }
