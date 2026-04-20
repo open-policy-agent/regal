@@ -7,7 +7,6 @@ package regal.rules.imports["unresolved-import"]
 
 import data.regal.ast
 import data.regal.config
-import data.regal.main
 import data.regal.result
 import data.regal.util
 
@@ -47,10 +46,10 @@ aggregate contains entry if {
 # schemas:
 #   - input: schema.regal.aggregate
 aggregate_report contains violation if {
-	all_known_refs := {path | path := main.aggregates_internal[_]["imports/unresolved-import"][_].exported_refs[_]}
+	all_known_refs := {path | path := input.aggregates_internal[_]["imports/unresolved-import"][_].exported_refs[_]}
 
 	some file
-	entry := main.aggregates_internal[file]["imports/unresolved-import"][_]
+	entry := input.aggregates_internal[file]["imports/unresolved-import"][_]
 
 	some [path, location] in entry.imports
 	not path in _except_imports
@@ -109,5 +108,5 @@ _aggregates[file] := agg if {
 	# we know that there is only one aggregate of this type per file,
 	# so we can simplify things some for our callers
 	some file
-	agg := main.aggregates_internal[file]["imports/unresolved-import"][_]
+	agg := input.aggregates_internal[file]["imports/unresolved-import"][_]
 }

@@ -289,6 +289,8 @@ func waitForViolations(
 		case violations := <-receivedMessages[key]:
 			allMatch := true
 
+			t.Logf("Checking %s violations: %v", key, violations)
+
 			// Check all rules that should be present
 			for _, rule := range wantPresent {
 				if !slices.Contains(violations, rule) {

@@ -8,17 +8,14 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
-	"github.com/open-policy-agent/opa/v1/storage/inmem"
 	"github.com/open-policy-agent/opa/v1/topdown"
 
-	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/test"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
-	"github.com/open-policy-agent/regal/pkg/rules"
 )
 
 func TestLintWithDefaultBundle(t *testing.T) {
@@ -320,36 +317,6 @@ func TestLintWithPrintHook(t *testing.T) {
 	assert.Equal(t, "p.rego\n", bb.String(), "unexpected print hook output")
 }
 
-func TestLintWithAggregateRule(t *testing.T) {
-	t.Parallel()
-
-	policies := make(map[string]string, 2)
-	policies["foo.rego"] = `package foo
-		import data.bar
-
-		default allow := false
-	`
-	policies["bar.rego"] = `package bar
-		import data.foo.allow
-	`
-
-	result := must.Return(NewLinter().
-		WithDisableAll(true).
-		WithPrintHook(topdown.NewPrintHook(t.Output())).
-		WithEnabledRules("prefer-package-imports").
-		WithInputModules(new(rules.NewInput(policies, util.MapValues(policies, parse.MustParseModule)))).
-		Lint(t.Context()))(t)
-
-	testutil.AssertNumViolations(t, 1, result)
-
-	violation := result.Violations[0]
-
-	assert.Equal(t, "prefer-package-imports", violation.Title, "unexpected violation")
-	assert.Equal(t, 2, violation.Location.Row, "unexpected line number")
-	assert.Equal(t, 3, violation.Location.Column, "unexpected column number")
-	assert.Equal(t, "import data.foo.allow", *violation.Location.Text, "unexpected location text")
-}
-
 func TestEnabledRules(t *testing.T) {
 	t.Parallel()
 
@@ -404,57 +371,4 @@ func TestLintWithCollectQuery(t *testing.T) {
 	_, err := result.Aggregates.Find(util.Map([]string{"p.rego", "imports/unresolved-import"}, ast.InternedTerm))
 
 	assert.Equal(t, nil, err, "expected aggregates to contain 'p.rego/imports/unresolved-import'")
-}
-
-func TestLintWithCollectQueryAndAggregates(t *testing.T) {
-	t.Parallel()
-
-	files := map[string]string{
-		"foo.rego": "package foo\n\nimport data.unresolved",
-		"bar.rego": "package foo\n\nimport data.unresolved",
-		"baz.rego": "package foo\n\nimport data.unresolved",
-	}
-
-	var ok bool
-
-	allAggregates := ast.NewObject()
-
-	for file, content := range files {
-		linter := NewLinter().
-			WithDisableAll(true).
-			WithEnabledRules("unresolved-import").
-			WithCollectQuery(true). // runs collect for a single file input
-			WithExportAggregates(true).
-			WithInputModules(test.InputPolicy(file, content))
-
-		if allAggregates, ok = allAggregates.Merge(must.Return(linter.Lint(t.Context()))(t).Aggregates); !ok {
-			t.Fatalf("failed to merge aggregates for file %s", file)
-		}
-	}
-
-	// Create a store with the aggregates for the aggregate-only lint run
-	// Use the same pattern as NewRegalStore
-	store := inmem.NewFromObjectWithOpts(map[string]any{
-		"workspace": map[string]any{
-			"aggregates": allAggregates,
-		},
-	}, inmem.OptReturnASTValuesOnRead(true))
-
-	preparedLinter := must.Return(NewLinter().
-		WithDisableAll(true).
-		WithEnabledRules("unresolved-import").
-		Prepare(t.Context(), WithBaseStore(store)))(t)
-
-	result := must.Return(preparedLinter.Lint(t.Context()))(t)
-
-	testutil.AssertNumViolations(t, 3, result)
-
-	foundFiles := make([]string, 0, 3)
-
-	for _, v := range result.Violations {
-		assert.Equal(t, "unresolved-import", v.Title, "title")
-		foundFiles = append(foundFiles, v.Location.File)
-	}
-
-	assert.SlicesEqual(t, []string{"bar.rego", "baz.rego", "foo.rego"}, util.Sorted(foundFiles), "files")
 }

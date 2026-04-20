@@ -6,7 +6,6 @@
 package regal.rules.bugs["impossible-not"]
 
 import data.regal.ast
-import data.regal.main
 import data.regal.result
 import data.regal.util
 
@@ -145,5 +144,5 @@ _resolve(ref, pkg_path, imported_symbols) := concat(".", resolved) if {
 _aggregates[file] := agg if {
 	# only one aggregate exported per file, so this is safe
 	some file
-	agg := main.aggregates_internal[file]["bugs/impossible-not"][_]
+	agg := input.aggregates_internal[file]["bugs/impossible-not"][_]
 }

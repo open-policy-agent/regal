@@ -7,7 +7,6 @@ package regal.rules.imports["prefer-package-imports"]
 
 import data.regal.ast
 import data.regal.config
-import data.regal.main
 import data.regal.result
 import data.regal.util
 
@@ -78,5 +77,5 @@ _aggregates[file] := agg if {
 	# we know that there is only one aggregate of this type per file,
 	# so we can simplify things some for our callers
 	some file
-	agg := main.aggregates_internal[file]["imports/prefer-package-imports"][_]
+	agg := input.aggregates_internal[file]["imports/prefer-package-imports"][_]
 }

@@ -8,7 +8,6 @@
 package regal.rules.imports["circular-import"]
 
 import data.regal.ast
-import data.regal.main
 import data.regal.result
 import data.regal.util
 
@@ -118,5 +117,5 @@ _aggregated[file] := agg if {
 	# we know that there is only one aggregate of this type per file,
 	# so we can simplify things some for our callers
 	some file
-	agg := main.aggregates_internal[file]["imports/circular-import"][_]
+	agg := input.aggregates_internal[file]["imports/circular-import"][_]
 }
