@@ -2,11 +2,7 @@ package semantictokens
 
 import (
 	"context"
-	"encoding/json"
 	"slices"
-
-	"strconv"
-	"strings"
 
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 )
@@ -51,53 +47,6 @@ type Token struct {
 	Modifiers uint32
 }
 
-// Represents location data from the AST
-type ASTLocation struct {
-	Location LocationInfo `json:"location"`
-}
-
-type LocationInfo struct {
-	Line        uint32
-	StartColumn uint32
-	EndColumn   uint32
-	Length      uint32
-}
-
-func (loc *ASTLocation) UnmarshalJSON(data []byte) error {
-	var location struct {
-		Location string
-	}
-	if err := json.Unmarshal(data, &location); err != nil {
-		return err
-	}
-
-	parts := strings.Split(location.Location, ":")
-
-	row, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return err
-	}
-
-	startcol, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return err
-	}
-
-	endcol, err := strconv.Atoi(parts[3])
-	if err != nil {
-		return err
-	}
-
-	loc.Location = LocationInfo{
-		Line:        uint32(row),
-		StartColumn: uint32(startcol),
-		EndColumn:   uint32(endcol),
-		Length:      uint32(endcol - startcol),
-	}
-
-	return nil
-}
-
 // Represents the structured result from the Rego query
 type SemanticTokensResult struct {
 	PackageTokens []Token `json:"packages"`
@@ -107,28 +56,13 @@ type SemanticTokensResult struct {
 }
 
 func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticTokens, error) {
-	importTokens, err := processImportTokens(result.ImportTokens)
-	if err != nil {
-		return nil, err
-	}
-
 	tokens := slices.Concat(
 		result.PackageTokens,
 		result.Vars,
-		importTokens,
+		result.ImportTokens,
 	)
 
 	return encodeTokens(tokens), nil
-}
-
-func extractTokens(astLoc ASTLocation, tokenType uint32, modifiers uint32) (Token, error) {
-	return Token{
-		Line:      astLoc.Location.Line - 1,
-		Col:       astLoc.Location.StartColumn - 1,
-		Length:    astLoc.Location.Length,
-		Type:      tokenType,
-		Modifiers: modifiers,
-	}, nil
 }
 
 func encodeTokens(tokens []Token) *types.SemanticTokens {
