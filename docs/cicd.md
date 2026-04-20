@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: open-policy-agent/setup-regal@v1
+    - uses: open-policy-agent/setup-regal@v2
       with:
         # For production workflows, use a specific version, like v0.22.0
         version: latest
