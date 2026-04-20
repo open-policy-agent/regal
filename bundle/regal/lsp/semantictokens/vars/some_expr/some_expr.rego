@@ -1,12 +1,13 @@
 # METADATA
 # description: |
-#   Helper package for semantictokens that returns variable references and declarations in 'every' keyword domains
+#   Helper package for semantictokens that returns variable references and declarations in 'some' keyword domains
 # schemas:
 #   - input:        schema.regal.lsp.common
 #   - input.params: schema.regal.lsp.semantictokens
 package regal.lsp.semantictokens.vars.some_expr
 
 import data.regal.ast
+import data.regal.util
 
 # METADATA
 # description: Get the module from workspace
@@ -14,7 +15,7 @@ module := data.workspace.parsed[input.params.textDocument.uri]
 
 # METADATA
 # description: Extract variable declarations from some keyword domains
-result.declaration contains var if {
+result contains token if {
 	some context in {"somein", "some"}
 	some rule_index
 
@@ -22,11 +23,34 @@ result.declaration contains var if {
 	declared_vars := ast.found.vars[rule_index][context]
 
 	some var in declared_vars
+
+	tloc := util.to_location_object(var.location)
+
+	token := {
+		"line": tloc.row - 1,
+		"col": tloc.col - 1,
+		"length": tloc.end.col - tloc.col,
+		"type": 1,
+		"modifiers": bits.lsh(1, 0),
+	}
 }
 
 # METADATA
 # description: Extract variable references in some keyword domains
-result.reference contains var if {
+result contains token if {
+	some var in _some_var_refs
+	tloc := util.to_location_object(var.location)
+
+	token := {
+		"line": tloc.row - 1,
+		"col": tloc.col - 1,
+		"length": tloc.end.col - tloc.col,
+		"type": 1,
+		"modifiers": bits.lsh(1, 1),
+	}
+}
+
+_some_var_refs contains var if {
 	some rule_index, startpoint in _some_start_points
 	some context in {"somein", "some"}
 

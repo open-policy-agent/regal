@@ -32,10 +32,5 @@ default result["response"] := {}
 result["response"] := {
 	"packages": packages.result,
 	"imports": imports.result,
-	"vars": {
-		"function_args": function_args.result,
-		"comprehensions": comprehensions.result,
-		"every_expr": every_expr.result,
-		"some_expr": some_expr.result,
-	},
+	"vars": union({function_args.result, comprehensions.result, every_expr.result, some_expr.result}),
 }
