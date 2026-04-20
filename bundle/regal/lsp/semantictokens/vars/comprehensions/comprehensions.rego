@@ -14,8 +14,9 @@ _declared_var_names contains name if {
 
 	some expr in comprehension.value.body
 	some symbol in expr.terms.symbols
-	some var in array.slice(symbol.value, 1, count(symbol.value) - 1)
+	some var in array.slice(symbol.value, 1, 100)
 	var.type == "var"
+	not startswith(var.value, "$")
 	name := var.value
 }
 
@@ -26,7 +27,7 @@ result contains token if {
 
 	some expr in comprehension.value.body
 	some symbol in expr.terms.symbols
-	some var in array.slice(symbol.value, 1, count(symbol.value) - 1)
+	some var in array.slice(symbol.value, 1, 100)
 	var.type == "var"
 
 	tloc := util.to_location_object(var.location)

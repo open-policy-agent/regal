@@ -36,7 +36,7 @@ result contains token if {
 # description: Extract variable definitions from some-in keyword domain
 result contains token if {
 	some rule_index
-	declared_vars := ast.found.vars[rule_index]["somein"]
+	declared_vars := ast.found.vars[rule_index].somein
 
 	some var in declared_vars
 
