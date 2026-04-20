@@ -62,19 +62,15 @@ test_function(param1) := result if {
 			policy: `package regal.woo
 
 import data.regal.ast
-
-test_function(param1) := result if {
-      calc3 := 1
-      calc3 == param1
-	  ast.is_constant
-}
+import data.regal.util as uuuuutil
 `,
 			expectedTokens: []semanticTokenInstance{
 				{Length: 7, Type: 3},
 				{DeltaLine: 0, DeltaCol: 14, Length: 3},
-				{DeltaLine: 2, DeltaCol: 18, Length: 3, Type: 2},
-				{DeltaLine: 2, DeltaCol: 14, Length: 6, Type: 1, Modifier: 1},
-				{DeltaLine: 2, DeltaCol: 15, Length: 6, Type: 1, Modifier: 2},
+				{DeltaLine: 2, Length: 6, Type: 3},
+				{DeltaCol: 18, Length: 3, Type: 2},
+				{DeltaLine: 1, Length: 6, Type: 3},
+				{DeltaCol: 26, Length: 8, Type: 2},
 			},
 		},
 		"full policy with package, declarations and references": {

@@ -16,7 +16,10 @@ test_function(param1, param2) := result if {
 		with input.params.textDocument.uri as "file:///p.rego"
 
 	result == {"response": {
-		"imports": {{"location": "3:19:3:22", "type": "string", "value": "ast"}},
+		"imports": {
+			{"col": 0, "length": 6, "line": 2, "type": 3},
+			{"col": 18, "length": 3, "line": 2, "type": 2},
+		},
 		"packages": {
 			{"col": 0, "length": 7, "line": 0, "modifiers": 0, "type": 3},
 			{"col": 14, "length": 3, "line": 0, "modifiers": 0, "type": 0},
