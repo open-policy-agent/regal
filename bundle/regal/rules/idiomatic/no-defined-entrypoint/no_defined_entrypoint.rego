@@ -5,7 +5,6 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/no-defined-entrypoint
 package regal.rules.idiomatic["no-defined-entrypoint"]
 
-import data.regal.main
 import data.regal.result
 import data.regal.util
 
@@ -39,4 +38,4 @@ aggregate_report contains violation if {
 # METADATA
 # schemas:
 #   - input: schema.regal.aggregate
-_any_entrypoint if main.aggregates_internal[_]["idiomatic/no-defined-entrypoint"][_].entrypoint
+_any_entrypoint if input.aggregates_internal[_]["idiomatic/no-defined-entrypoint"][_].entrypoint

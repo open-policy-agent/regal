@@ -65,7 +65,6 @@ type Linter struct {
 	profiling         bool
 	instrumentation   bool
 	isPrepared        bool
-	usesSharedStore   bool // tracks if using a shared store (e.g., from LSP)
 
 	preparedQuery *ogre.Query
 }
@@ -307,37 +306,14 @@ func (l Linter) WithCollectQuery(enabled bool) Linter {
 	return l
 }
 
-// prepareOptions holds configuration options for Prepare.
-type prepareOptions struct {
-	baseStore storage.Store
-}
-
-// PrepareOption is a functional option for configuring Prepare.
-type PrepareOption func(*prepareOptions)
-
-// WithBaseStore configures Prepare to use an existing storage.Store
-// (e.g., from the LSP server) instead of creating a new one.
-// The linter will write its data to this store and clean it up after linting.
-func WithBaseStore(store storage.Store) PrepareOption {
-	return func(o *prepareOptions) {
-		o.baseStore = store
-	}
-}
-
 // Prepare stores linter preparation state, like the determined configuration,
 // and the query perpared for linting.
 // Experimental: while used internally, the details of what is prepared here
 // are very likely to change in the future, and this method should not yet be
 // relied on by external clients.
-func (l Linter) Prepare(ctx context.Context, opts ...PrepareOption) (Linter, error) {
+func (l Linter) Prepare(ctx context.Context) (Linter, error) {
 	l.startTimer(regalmetrics.RegalPrepare)
 	defer l.stopTimer(regalmetrics.RegalPrepare)
-
-	// Parse prepare options
-	prepOpts := &prepareOptions{}
-	for _, opt := range opts {
-		opt(prepOpts)
-	}
 
 	conf, err := l.GetConfig()
 	if err != nil {
@@ -354,21 +330,7 @@ func (l Linter) Prepare(ctx context.Context, opts ...PrepareOption) (Linter, err
 		l.printHook = topdown.NewPrintHook(os.Stderr)
 	}
 
-	var ogreStore *ogre.Store
-
-	if prepOpts.baseStore != nil {
-		// Use provided store and write linter data to it
-		if err := l.writeLinterDataToStore(ctx, prepOpts.baseStore, conf); err != nil {
-			return l, fmt.Errorf("failed to write linter data to store: %w", err)
-		}
-
-		ogreStore = ogre.WrapStore(prepOpts.baseStore)
-		l.usesSharedStore = true
-	} else {
-		// Create new store as before
-		ogreStore = ogre.NewStoreFromObject(ctx, l.prepareData(conf))
-		l.usesSharedStore = false
-	}
+	ogreStore := ogre.NewStoreFromObject(ctx, l.prepareData(conf))
 
 	l.preparedQuery, err = ogre.New(lintQuery).
 		WithModules(l.customModulesMap()).
@@ -412,15 +374,6 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 		if l, err = l.Prepare(ctx); err != nil {
 			return report.Report{}, fmt.Errorf("failed to prepare linter: %w", err)
 		}
-	}
-
-	// If using a shared store, clean up linter data when done
-	if l.usesSharedStore {
-		defer func() {
-			if err := l.cleanupLinterDataFromStore(ctx, l.preparedQuery.Store().Storage()); err != nil {
-				log.Printf("failed to cleanup linter data from shared store: %v", err)
-			}
-		}()
 	}
 
 	ignore := l.combinedCfg.Ignore.Files
@@ -474,11 +427,7 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 		l.stopTimer(regalmetrics.RegalFilterIgnoredModules)
 	}
 
-	// When using a shared store, aggregates are already in the store
-	// and we don't need input modules to run aggregate rules
-	usesAggregatesFromStore := l.usesSharedStore
-
-	if len(l.inputPaths) == 0 && l.inputModules == nil && !usesAggregatesFromStore {
+	if len(l.inputPaths) == 0 && l.inputModules == nil {
 		return report.Report{}, errors.New("nothing provided to lint")
 	}
 
@@ -487,26 +436,20 @@ func (l Linter) Lint(ctx context.Context) (report.Report, error) {
 		return report.Report{}, fmt.Errorf("failed to lint using Rego rules: %w", err)
 	}
 
-	var allAggregates ast.Object
+	if len(input.FileNames) > 1 {
+		allAggregates := regoReport.Aggregates
 
-	// When not using a shared store, get aggregates from the report.
-	// When using a shared store, aggregates are already at data.workspace.aggregates
-	// and the Rego code will access them directly via the fallback pattern.
-	if !usesAggregatesFromStore && len(input.FileNames) > 1 {
-		allAggregates = regoReport.Aggregates
-	}
+		if allAggregates != nil && allAggregates.Len() > 0 {
+			aggregateReport, err := l.lintWithAggregateRules(ctx, allAggregates, regoReport.IgnoreDirectives)
+			if err != nil {
+				return report.Report{}, fmt.Errorf("failed to lint using Rego aggregate rules: %w", err)
+			}
 
-	// Run aggregate rules if using shared store OR if we have aggregates from the report
-	if usesAggregatesFromStore || (allAggregates != nil && allAggregates.Len() > 0) {
-		aggregateReport, err := l.lintWithAggregateRules(ctx, allAggregates, regoReport.IgnoreDirectives)
-		if err != nil {
-			return report.Report{}, fmt.Errorf("failed to lint using Rego aggregate rules: %w", err)
-		}
+			regoReport.Violations = append(regoReport.Violations, aggregateReport.Violations...)
 
-		regoReport.Violations = append(regoReport.Violations, aggregateReport.Violations...)
-
-		if l.profiling {
-			regoReport.AggregateProfile = aggregateReport.AggregateProfile
+			if l.profiling {
+				regoReport.AggregateProfile = aggregateReport.AggregateProfile
+			}
 		}
 	}
 
@@ -777,80 +720,6 @@ func (l Linter) prepareData(conf *config.Config) ast.Object {
 	)
 }
 
-// writeLinterDataToStore writes the linter-specific data (eval and internal paths)
-// to an existing storage.Store. This allows the linter to adopt a shared store
-// (e.g., from the LSP server) and add its data temporarily.
-func (l Linter) writeLinterDataToStore(ctx context.Context, store storage.Store, conf *config.Config) error {
-	linterData := l.prepareData(conf)
-
-	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
-		// Write eval params at root level (not under /data)
-		evalValue := linterData.Get(ast.InternedTerm("eval"))
-		if evalValue != nil {
-			evalPath := storage.Path{"eval"}
-			// Try ReplaceOp first, fall back to AddOp if path doesn't exist.
-			// This handles both fresh stores (empty map) and reused stores (existing data).
-			err := store.Write(ctx, txn, storage.ReplaceOp, evalPath, evalValue.Value)
-			if err != nil {
-				var stErr *storage.Error
-				if errors.As(err, &stErr) && stErr.Code == storage.NotFoundErr {
-					err = store.Write(ctx, txn, storage.AddOp, evalPath, evalValue.Value)
-				}
-
-				if err != nil {
-					return fmt.Errorf("failed to write eval data: %w", err)
-				}
-			}
-		}
-
-		// Write internal data at root level (not under /data)
-		internalValue := linterData.Get(ast.InternedTerm("internal"))
-		if internalValue != nil {
-			internalPath := storage.Path{"internal"}
-			// Try ReplaceOp first, fall back to AddOp if path doesn't exist.
-			// This handles both fresh stores (empty map) and reused stores (existing data).
-			err := store.Write(ctx, txn, storage.ReplaceOp, internalPath, internalValue.Value)
-			if err != nil {
-				var stErr *storage.Error
-				if errors.As(err, &stErr) && stErr.Code == storage.NotFoundErr {
-					err = store.Write(ctx, txn, storage.AddOp, internalPath, internalValue.Value)
-				}
-
-				if err != nil {
-					return fmt.Errorf("failed to write internal data: %w", err)
-				}
-			}
-		}
-
-		return nil
-	})
-}
-
-// cleanupLinterDataFromStore removes the linter-specific data (eval and internal paths)
-// from a storage.Store. This should be called after linting is complete to restore
-// the store to its original state.
-func (Linter) cleanupLinterDataFromStore(ctx context.Context, store storage.Store) error {
-	// Remove eval path at root level
-	evalPath := storage.Path{"eval"}
-	if err := storage.WriteOne(ctx, store, storage.RemoveOp, evalPath, nil); err != nil {
-		var stErr *storage.Error
-		if !errors.As(err, &stErr) || stErr.Code != storage.NotFoundErr {
-			return fmt.Errorf("failed to remove eval data: %w", err)
-		}
-	}
-
-	// Remove internal path at root level
-	internalPath := storage.Path{"internal"}
-	if err := storage.WriteOne(ctx, store, storage.RemoveOp, internalPath, nil); err != nil {
-		var stErr *storage.Error
-		if !errors.As(err, &stErr) || stErr.Code != storage.NotFoundErr {
-			return fmt.Errorf("failed to remove internal data: %w", err)
-		}
-	}
-
-	return nil
-}
-
 func (l Linter) validate(conf *config.Config) error {
 	if l.customRuleError != nil {
 		return fmt.Errorf("failed to load custom rules: %w", l.customRuleError)
@@ -1030,9 +899,6 @@ func (l Linter) lintWithAggregateRules(
 		rast.Item("regal", aggregateRegalObject),
 	)
 
-	// When aggregates is nil or empty we might be using the shared store.
-	// Don't include aggregates_internal, rego will fall back to data.workspace.aggregates
-	// instead and use that.
 	if aggregates != nil && aggregates.Len() > 0 {
 		inputValue.Insert(ast.StringTerm("aggregates_internal"), ast.NewTerm(aggregates))
 	}

@@ -11,54 +11,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
-func TestLanguageServerLintsUsingAggregateState(t *testing.T) {
-	t.Parallel()
-
-	files := map[string]string{
-		"foo.rego":           "package foo\nimport data.bar\nimport data.baz",
-		"bar.rego":           "package bar",
-		"baz.rego":           "package baz",
-		".regal/config.yaml": "",
-	}
-
-	tempDir := testutil.TempDirectoryOf(t, files)
-	receivedMessages := createMessageChannels(files)
-	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
-
-	_, connClient, _ := createAndInitServer(t, tempDir, clientHandler)
-
-	timeout := time.NewTimer(determineTimeout())
-	defer timeout.Stop()
-
-	// no unresolved-imports at this stage
-	waitForViolations(t, "foo.rego", []string{}, []string{"unresolved-import"}, timeout, receivedMessages)
-
-	notifyDocumentChange(
-		t,
-		connClient,
-		uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego")),
-		"package qux",
-	)
-
-	// unresolved-imports is now expected
-	timeout.Reset(determineTimeout())
-	waitForViolations(t, "foo.rego", []string{"unresolved-import"}, []string{}, timeout, receivedMessages)
-
-	notifyDocumentChange(
-		t,
-		connClient,
-		uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "foo.rego")),
-		`package foo
-
-import data.baz
-import data.qux # new name for bar.rego package
-`)
-
-	// unresolved-imports is again not expected
-	timeout.Reset(determineTimeout())
-	waitForViolations(t, "foo.rego", []string{}, []string{"unresolved-import"}, timeout, receivedMessages)
-}
-
 // Test to ensure that annotations are parsed correctly.
 func TestRulesWithMetadataNotReportedForMissingMeta(t *testing.T) {
 	t.Parallel()

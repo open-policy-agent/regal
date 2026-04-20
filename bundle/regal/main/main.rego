@@ -233,7 +233,7 @@ _remove_empty_aggregates(aggregates) := {"aggregate": set()} if {
 #   - input: schema.regal.aggregate
 _aggregate_report_inputs[cat_title].aggregate contains formatted if {
 	some filename, cat_title
-	aggregate := aggregates_internal[filename][cat_title][_]
+	aggregate := input.aggregates_internal[filename][cat_title][_]
 	formatted := _format_aggregate(aggregate, filename)
 }
 
@@ -252,12 +252,3 @@ _ignored(violation, directives) if {
 	ignored_rules := directives[violation.location.row + 1]
 	violation.title in ignored_rules
 }
-
-# METADATA
-# description: |
-#   returns aggregates_internal from input if available, otherwise falls back to data.workspace.aggregates
-#   this allows aggregate rules to work both in normal linting mode and when aggregates are provided via data
-# scope: rule
-aggregates_internal := input.aggregates_internal
-
-aggregates_internal := data.workspace.aggregates if not input.aggregates_internal
