@@ -12,8 +12,8 @@ test_function(param1, param2) := result if {
 }`
 	module := regal.parse_module("p.rego", policy)
 	result := semantictokens.result with data.workspace.parsed["file:///p.rego"] as module
-		with input.regal as module.regal
 		with input.params.textDocument.uri as "file:///p.rego"
+		with input.regal.file.lines as split(policy, "\n")
 
 	result == {"response": {
 		"imports": {
@@ -25,22 +25,8 @@ test_function(param1, param2) := result if {
 			{"col": 14, "length": 3, "line": 0, "modifiers": 0, "type": 0},
 		},
 		"vars": {
-			"comprehensions": {
-				"declaration": set(),
-				"reference": set(),
-			},
-			"every_expr": {
-				"declaration": set(),
-				"reference": set(),
-			},
-			"function_args": {
-				"declaration": {
-					{"location": "5:15:5:21", "type": "var", "value": "param1"},
-					{"location": "5:23:5:29", "type": "var", "value": "param2"},
-				},
-				"reference": set(),
-			},
-			"some_expr": {"declaration": set(), "reference": set()},
+			{"col": 14, "length": 6, "line": 4, "modifiers": 1, "type": 1},
+			{"col": 22, "length": 6, "line": 4, "modifiers": 1, "type": 1},
 		},
 	}}
 }

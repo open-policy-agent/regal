@@ -13,15 +13,17 @@ test_function(param1, param2) := result if {
 	calc3 := 1
 	calc3 == param1
 }`
-	tokens := function_args.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
+	tokens := function_args.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.regal.file.lines as split(policy, "\n")
 
-	{"location": "3:15:3:21", "value": "param1", "type": "var"} in tokens.declaration
-	{"location": "3:23:3:29", "value": "param2", "type": "var"} in tokens.declaration
-
-	{"location": "4:11:4:17", "value": "param1", "type": "var"} in tokens.reference
-	{"location": "5:11:5:17", "value": "param2", "type": "var"} in tokens.reference
-	{"location": "9:11:9:17", "value": "param1", "type": "var"} in tokens.reference
+	tokens == {
+		{"col": 14, "length": 6, "line": 2, "modifiers": 1, "type": 1},
+		{"col": 22, "length": 6, "line": 2, "modifiers": 1, "type": 1},
+		{"col": 10, "length": 6, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 10, "length": 6, "line": 4, "modifiers": 2, "type": 1},
+		{"col": 10, "length": 6, "line": 8, "modifiers": 2, "type": 1},
+	}
 }
 
 test_function_args_declarations_only if {
@@ -30,12 +32,12 @@ test_function_args_declarations_only if {
 test_function(param1, param2) := result if {
 	true
 }`
-	tokens := function_args.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
+	tokens := function_args.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.regal.file.lines as split(policy, "\n")
 
-	{"location": "3:15:3:21", "value": "param1", "type": "var"} in tokens.declaration
-	{"location": "3:23:3:29", "value": "param2", "type": "var"} in tokens.declaration
-
-	# Should have no references since variables aren't used
-	count(tokens.reference) == 0
+	tokens == {
+		{"col": 14, "length": 6, "line": 2, "modifiers": 1, "type": 1},
+		{"col": 22, "length": 6, "line": 2, "modifiers": 1, "type": 1},
+	}
 }

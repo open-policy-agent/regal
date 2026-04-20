@@ -2,80 +2,63 @@ package regal.lsp.semantictokens.vars.comprehensions_test
 
 import data.regal.lsp.semantictokens.vars.comprehensions
 
-test_array_comprehension[note] if {
-	policy_one := `package regal.woo
+test_array_comprehension if {
+	policy := `package regal.woo
 
 array_comprehensions := [x |
 	some i, x in [1, 2, 3]
 	i == 2
 ]`
 
-	array_comp_tokens := comprehensions.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy_one)
+	tokens := comprehensions.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.regal.file.lines as split(policy, "\n")
 
-	some note, tc in {"array comprehensions": {
-		"declarations": {
-			{"location": "4:10:4:11", "type": "var", "value": "x"},
-			{"location": "4:7:4:8", "type": "var", "value": "i"},
-		},
-		"references": {
-			{"location": "3:26:3:27", "type": "var", "value": "x"},
-			{"location": "5:2:5:3", "type": "var", "value": "i"},
-		},
-	}}
-
-	tc.declarations == array_comp_tokens.declaration
-	tc.references == array_comp_tokens.reference
+	tokens == {
+		{"col": 6, "length": 1, "line": 3, "modifiers": 1, "type": 1},
+		{"col": 9, "length": 1, "line": 3, "modifiers": 1, "type": 1},
+		{"col": 25, "length": 1, "line": 2, "modifiers": 2, "type": 1},
+		{"col": 1, "length": 1, "line": 4, "modifiers": 2, "type": 1},
+	}
 }
 
-test_set_comprehensions[note] if {
-	policy_one := `package regal.woo
+test_set_comprehension if {
+	policy := `package regal.woo
 
 set_comprehensions := {x |
 	some i, x in [1, 2, 3]
 	i == 2
 }`
 
-	set_comp_tokens := comprehensions.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy_one)
+	tokens := comprehensions.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.regal.file.lines as split(policy, "\n")
 
-	some note, tc in {"set comprehensions": {
-		"declarations": {
-			{"location": "4:10:4:11", "type": "var", "value": "x"},
-			{"location": "4:7:4:8", "type": "var", "value": "i"},
-		},
-		"references": {
-			{"location": "3:24:3:25", "type": "var", "value": "x"},
-			{"location": "5:2:5:3", "type": "var", "value": "i"},
-		},
-	}}
-
-	tc.declarations == set_comp_tokens.declaration
-	tc.references == set_comp_tokens.reference
+	tokens == {
+		{"col": 6, "length": 1, "line": 3, "modifiers": 1, "type": 1},
+		{"col": 9, "length": 1, "line": 3, "modifiers": 1, "type": 1},
+		{"col": 23, "length": 1, "line": 2, "modifiers": 2, "type": 1},
+		{"col": 1, "length": 1, "line": 4, "modifiers": 2, "type": 1},
+	}
 }
 
-test_object_comprehension[note] if {
-	policy_one := `package regal.woo
+test_object_comprehension if {
+	policy := `package regal.woo
 
 object_comprehensions := {k: v |
 	some k, v in [1, 2, 3]
 	v == 2
 }`
-	object_comp_tokens := comprehensions.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy_one)
 
-	some note, tc in {"object comprehensions": {
-		"declarations": {
-			{"location": "4:10:4:11", "type": "var", "value": "v"},
-			{"location": "4:7:4:8", "type": "var", "value": "k"},
-		},
-		"references": {
-			{"location": "3:27:3:28", "type": "var", "value": "k"},
-			{"location": "3:30:3:31", "type": "var", "value": "v"},
-			{"location": "5:2:5:3", "type": "var", "value": "v"},
-		},
-	}}
+	tokens := comprehensions.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.regal.file.lines as split(policy, "\n")
 
-	tc.declarations == object_comp_tokens.declaration
-	tc.references == object_comp_tokens.reference
+	tokens == {
+		{"col": 6, "length": 1, "line": 3, "modifiers": 1, "type": 1},
+		{"col": 9, "length": 1, "line": 3, "modifiers": 1, "type": 1},
+		{"col": 26, "length": 1, "line": 2, "modifiers": 2, "type": 1},
+		{"col": 29, "length": 1, "line": 2, "modifiers": 2, "type": 1},
+		{"col": 1, "length": 1, "line": 4, "modifiers": 2, "type": 1},
+	}
 }
