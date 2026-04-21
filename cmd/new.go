@@ -213,6 +213,7 @@ func renderTemplates(params newRuleCommandParams, dir string) error {
 	if params.aggregate {
 		suffix = "_aggregate"
 	}
+
 	templates := []string{
 		fmt.Sprintf("templates/%[1]s/%[1]s%[2]s.rego.tpl", params.type_, suffix),
 		fmt.Sprintf("templates/%[1]s/%[1]s%[2]s_test.rego.tpl", params.type_, suffix),
