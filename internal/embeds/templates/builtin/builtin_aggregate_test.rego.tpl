@@ -1,6 +1,7 @@
 package regal.rules.{{.Category}}{{.NameTest}}
 
 import data.regal.ast
+import data.regal.util
 
 import data.regal.rules.{{.Category}}{{.Name}} as rule
 
@@ -8,7 +9,10 @@ import data.regal.rules.{{.Category}}{{.Name}} as rule
 test_aggregate_reports_violation if {
 	agg := rule.aggregate with input as ast.policy("foo := true")
 
-	r := rule.aggregate_report with input.aggregate as agg
+	r := rule.aggregate_report with input.aggregates_internal as util.with_source_files(
+		"{{.Category}}/{{.NameOriginal}}",
+		[agg],
+	)
 
 	# Use print(r) here to see the report. Great for development!
 
