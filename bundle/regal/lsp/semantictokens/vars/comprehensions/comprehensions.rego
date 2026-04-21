@@ -7,21 +7,43 @@
 package regal.lsp.semantictokens.vars.comprehensions
 
 import data.regal.ast
+import data.regal.util
 
-# METADATA
-# description: Extract comprehension variable declarations from array/set/object comprehensions
-result.declaration contains var if {
+_declared_var_names contains name if {
 	comprehension := ast.found.comprehensions[_][_]
 
 	some expr in comprehension.value.body
 	some symbol in expr.terms.symbols
-	some var in array.slice(symbol.value, 1, count(symbol.value) - 1)
+	some var in array.slice(symbol.value, 1, 100)
 	var.type == "var"
+	not startswith(var.value, "$")
+	name := var.value
+}
+
+# METADATA
+# description: Extract comprehension variable declarations from array/set/object comprehensions
+result contains token if {
+	comprehension := ast.found.comprehensions[_][_]
+
+	some expr in comprehension.value.body
+	some symbol in expr.terms.symbols
+	some var in array.slice(symbol.value, 1, 100)
+	var.type == "var"
+
+	tloc := util.to_location_object(var.location)
+
+	token := {
+		"line": tloc.row - 1,
+		"col": tloc.col - 1,
+		"length": tloc.end.col - tloc.col,
+		"type": 1,
+		"modifiers": bits.lsh(1, 1),
+	}
 }
 
 # METADATA
 # description: Extract comprehension variable references in the output
-result.reference contains var if {
+result contains token if {
 	comprehension := ast.found.comprehensions[_][_]
 
 	output_vars := array.flatten([
@@ -31,7 +53,17 @@ result.reference contains var if {
 	])
 	some var in output_vars
 	var.type == "var"
-	var.value in {v.value | some v in result.declaration}
+	var.value in _declared_var_names
+
+	tloc := util.to_location_object(var.location)
+
+	token := {
+		"line": tloc.row - 1,
+		"col": tloc.col - 1,
+		"length": tloc.end.col - tloc.col,
+		"type": 1,
+		"modifiers": bits.lsh(1, 2),
+	}
 }
 
 default _comprehension_value(_) := set()

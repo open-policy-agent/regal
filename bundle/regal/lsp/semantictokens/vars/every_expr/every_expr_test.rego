@@ -2,7 +2,7 @@ package regal.lsp.semantictokens.vars.every_expr_test
 
 import data.regal.lsp.semantictokens.vars.every_expr
 
-test_every_vars[note] if {
+test_every_two_vars if {
 	policy := `package regal.woo
 
 every_two_vars if {
@@ -12,25 +12,19 @@ every_two_vars if {
 	}
 }`
 
-	tokens := every_expr.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
+	tokens := every_expr.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.regal.file.lines as split(policy, "\n")
 
-	some note, tc in {"every expression variables": {
-		"declarations": {
-			{"location": "4:11:4:12", "type": "var", "value": "v"},
-			{"location": "4:8:4:9", "type": "var", "value": "k"},
-		},
-		"references": {
-			{"location": "5:13:5:14", "type": "var", "value": "k"},
-			{"location": "6:3:6:4", "type": "var", "value": "v"},
-		},
-	}}
-
-	tc.declarations == tokens.declaration
-	tc.references == tokens.reference
+	tokens == {
+		{"col": 7, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 10, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 12, "length": 1, "line": 4, "modifiers": 4, "type": 1},
+		{"col": 2, "length": 1, "line": 5, "modifiers": 4, "type": 1},
+	}
 }
 
-test_every_single_var_case if {
+test_every_single_var if {
 	policy := `package regal.woo
 
 every_one_var if {
@@ -39,14 +33,12 @@ every_one_var if {
 	}
 }`
 
-	tokens := every_expr.result with input as {"params": {"textDocument": {"uri": "file://p.rego"}}}
-		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", policy)
+	tokens := every_expr.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.regal.file.lines as split(policy, "\n")
 
-	some note, tc in {"every expression variables": {
-		"declarations": {{"location": "4:8:4:9", "type": "var", "value": "k"}},
-		"references": {{"location": "5:13:5:14", "type": "var", "value": "k"}},
-	}}
-
-	tc.declarations == tokens.declaration
-	tc.references == tokens.reference
+	tokens == {
+		{"col": 7, "length": 1, "line": 3, "modifiers": 2, "type": 1},
+		{"col": 12, "length": 1, "line": 4, "modifiers": 4, "type": 1},
+	}
 }
