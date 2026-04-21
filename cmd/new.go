@@ -24,10 +24,11 @@ import (
 )
 
 type newRuleCommandParams struct {
-	type_    string // 'type' is a keyword
-	category string
-	name     string
-	output   string
+	type_     string // 'type' is a keyword
+	category  string
+	name      string
+	output    string
+	aggregate bool
 }
 
 type TemplateValues struct {
@@ -107,6 +108,8 @@ regal new rule --type custom --category naming --name camel-case`,
 	newRuleCommand.Flags().StringVarP(&params.category, "category", "c", "", "category for rule")
 	newRuleCommand.Flags().StringVarP(&params.name, "name", "n", "", "name of rule")
 	newRuleCommand.Flags().StringVarP(&params.output, "output", "o", "", "output directory")
+	newRuleCommand.Flags().BoolVar(&params.aggregate, "aggregate", false,
+		"scaffold an aggregate rule (uses aggregate/aggregate_report instead of report)")
 
 	newCommand.AddCommand(newRuleCommand)
 	RootCommand.AddCommand(newCommand)
@@ -206,9 +209,13 @@ func scaffoldBuiltinRule(params newRuleCommandParams) error {
 }
 
 func renderTemplates(params newRuleCommandParams, dir string) error {
+	suffix := ""
+	if params.aggregate {
+		suffix = "_aggregate"
+	}
 	templates := []string{
-		fmt.Sprintf("templates/%[1]s/%[1]s.rego.tpl", params.type_),
-		fmt.Sprintf("templates/%[1]s/%[1]s_test.rego.tpl", params.type_),
+		fmt.Sprintf("templates/%[1]s/%[1]s%[2]s.rego.tpl", params.type_, suffix),
+		fmt.Sprintf("templates/%[1]s/%[1]s%[2]s_test.rego.tpl", params.type_, suffix),
 	}
 	for _, name := range templates {
 		tpl := filepath.Join(dir, templateFilename(params.name, name))
