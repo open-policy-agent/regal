@@ -127,33 +127,7 @@
           "$ref": "#/$defs/body"
         },
         "else": {
-          "description": "should reference #/$defs/rule. temporary workaround for https://github.com/open-policy-agent/opa/issues/6099",
-          "$ref": "#/$defs/else"
-        },
-        "location": {
-          "$ref": "#/$defs/location"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "head"
-      ]
-    },
-    "else": {
-      "properties": {
-        "default": {
-          "type": "boolean"
-        },
-        "head": {
-          "$ref": "#/$defs/head"
-        },
-        "body": {
-          "$ref": "#/$defs/body"
-        },
-        "else": {
-          "description": "temporary workaround for https://github.com/open-policy-agent/opa/issues/6099",
-          "type": "object"
+          "$ref": "#/$defs/rule"
         },
         "location": {
           "$ref": "#/$defs/location"
