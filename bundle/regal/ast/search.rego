@@ -54,10 +54,10 @@ has_term_var(terms) if {
 	term.type == "var"
 }
 
-# converting to string until https://github.com/open-policy-agent/opa/issues/6736 is fixed
-_rule_index(rule) := rule_index_strings[i] if {
-	some i
-	rule == _rules[i]
+_rule_index(rule) := i if {
+	some i, other in _rules
+
+	rule == other
 }
 
 # hack to work around the different input models of linting vs. the lsp package.. we
@@ -95,15 +95,15 @@ found.vars[rule_index].every contains term if {
 }
 
 found.vars[rule_index].args contains term if {
-	some i, rule_index in rule_index_strings
-	some term in _rules[i].head.args
+	some rule_index
+	term := _rules[rule_index].head.args[_]
 
 	term.type == "var"
 }
 
 found.vars[rule_index].args contains node if {
-	some i, rule_index in rule_index_strings
-	some term in _rules[i].head.args
+	some rule_index
+	term := _rules[rule_index].head.args[_]
 
 	term.type == "array" # only composite type that can contain vars in args position (right?)
 
@@ -184,9 +184,9 @@ found.vars[rule_index].some contains term if {
 # METADATA
 # description: all ref terms found in module
 found.refs[rule_index] contains term if {
-	some i, rule_index in rule_index_strings
+	some rule_index
 
-	walk(_rules[i], [_, term])
+	walk(_rules[rule_index], [_, term])
 
 	term.type == "ref"
 }
@@ -194,9 +194,9 @@ found.refs[rule_index] contains term if {
 # METADATA
 # description: all calls found in module
 found.calls[rule_index] contains value if {
-	some i, rule_index in rule_index_strings
+	some rule_index
 
-	walk(_rules[i], [_, value])
+	walk(_rules[rule_index], [_, value])
 
 	value[0].type == "ref"
 }
@@ -204,9 +204,9 @@ found.calls[rule_index] contains value if {
 # METADATA
 # description: all symbols found in module
 found.symbols[rule_index] contains value.symbols if {
-	some i, rule_index in rule_index_strings
+	some rule_index
 
-	walk(_rules[i], [_, value])
+	walk(_rules[rule_index], [_, value])
 }
 
 # METADATA
@@ -221,9 +221,9 @@ found.every[rule_index] contains terms if {
 # METADATA
 # description: all comprehensions found in module
 found.comprehensions[rule_index] contains value if {
-	some i, rule_index in rule_index_strings
+	some rule_index
 
-	walk(_rules[i], [_, value])
+	walk(_rules[rule_index], [_, value])
 
 	value.type in {"arraycomprehension", "objectcomprehension", "setcomprehension"}
 }
@@ -231,10 +231,10 @@ found.comprehensions[rule_index] contains value if {
 # METADATA
 # description: set containing all expressions in input AST
 found.expressions[rule_index] contains value if {
-	some i, rule_index in rule_index_strings
+	some rule_index, rule in _rules
 	some node in ["head", "body", "else"]
 
-	walk(_rules[i][node], [_, value])
+	walk(rule[node], [_, value])
 
 	value.terms
 }

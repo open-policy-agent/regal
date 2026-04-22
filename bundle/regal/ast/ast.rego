@@ -185,17 +185,11 @@ is_output_var(rule, var) if {
 
 # METADATA
 # description: |
-#   returns an array of all rule indices, as strings. this will be needed until
-#   https://github.com/open-policy-agent/opa/issues/6736 is fixed
-rule_index_strings := [sprintf("%d", [i]) | some i, _ in _rules]
-
-# METADATA
-# description: |
 #   a map containing all function calls (built-in and custom) in the input AST
 #   keyed by rule index
 function_calls[rule_index] contains call if {
-	some rule_index in rule_index_strings
-	some ref in found.calls[rule_index]
+	some rule_index
+	ref := found.calls[rule_index][_]
 
 	name := ref_to_string(ref[0].value)
 	call := {

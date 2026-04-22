@@ -12,9 +12,8 @@ import data.regal.util
 
 report contains violation if {
 	cfg := config.rules.style["prefer-some-in-iteration"]
-	some i, rule_index in ast.rule_index_strings
 
-	rule := input.rules[i]
+	some rule_index, rule in input.rules
 
 	not _possible_top_level_iteration(rule)
 

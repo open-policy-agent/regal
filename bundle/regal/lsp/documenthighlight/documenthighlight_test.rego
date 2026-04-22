@@ -135,10 +135,11 @@ fun(user, action, resource) := user if {
 		}],
 	]
 
-	items := documenthighlight.items with input as {
-		"params": {"textDocument": {"uri": "file://p.rego"}, "position": inp},
-		"regal": {"file": {"lines": split(file_content, "\n")}},
-	}
+	items := documenthighlight.items
+		with input as {
+			"params": {"textDocument": {"uri": "file://p.rego"}, "position": inp},
+			"regal": {"file": {"lines": split(file_content, "\n")}},
+		}
 		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", file_content)
 
 	items == exp

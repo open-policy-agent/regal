@@ -11,7 +11,8 @@ some_two_vars if {
 	item > 0
 }`
 
-	tokens := some_expr.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	tokens := some_expr.result
+		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as split(policy, "\n")
 
@@ -31,7 +32,8 @@ some_one_var if {
 	i < 10
 }`
 
-	tokens := some_expr.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	tokens := some_expr.result
+		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as split(policy, "\n")
 
