@@ -63,7 +63,7 @@ _first_named_arg_location(indices, name) := [arg.location |
 
 _arg_used_in_call(indices, name) if {
 	some i in indices
-	some call in ast.function_calls[ast.rule_index_strings[i]]
+	some call in ast.function_calls[i]
 	some arg in call.args
 
 	# only check for vars here, as refs are already dealt with
@@ -96,13 +96,13 @@ _functions[name] contains {"rule_index": i, "args_refs": args_refs} if {
 	variable_args != []
 
 	args_refs := {arg: ref_vals |
-		arg := ast.found.refs[ast.rule_index_strings[i]][_].value[0].value
+		arg := ast.found.refs[i][_].value[0].value
 		arg in variable_args
 		ref_vals := {vals |
 			some j
-			ast.found.refs[ast.rule_index_strings[i]][j].value[0].value == arg
+			ast.found.refs[i][j].value[0].value == arg
 
-			ref := ast.found.refs[ast.rule_index_strings[i]][j].value
+			ref := ast.found.refs[i][j].value
 			vals := [term.value | some term in array.slice(ref, 0, _first_var_pos(ref))]
 		}
 	}

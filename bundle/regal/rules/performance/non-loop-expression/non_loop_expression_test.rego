@@ -12,7 +12,7 @@ allow if {
 }
 `)
 
-	sps == {"0": {5: {
+	sps == {0: {5: {
 		{"location": "5:13:5:17", "type": "var", "value": "path"},
 		{"location": "5:19:5:24", "type": "var", "value": "value"},
 	}}}
@@ -28,7 +28,7 @@ allow if {
 }
 `)
 
-	sps == {"0": {
+	sps == {0: {
 		5: {
 			{"location": "5:10:5:11", "type": "var", "value": "v"},
 			{"location": "5:7:5:8", "type": "var", "value": "k"},
@@ -45,7 +45,7 @@ allow if {
 }
 `)
 
-	sps == {"0": {5: {
+	sps == {0: {5: {
 		{"location": "5:10:5:11", "type": "var", "value": "v"},
 		{"location": "5:7:5:8", "type": "var", "value": "k"},
 	}}}
@@ -60,7 +60,7 @@ allow if {
 }
 `)
 
-	sps == {"0": {5: {{"location": "5:7:5:11", "type": "var", "value": "user"}}}}
+	sps == {0: {5: {{"location": "5:7:5:11", "type": "var", "value": "user"}}}}
 }
 
 test_loop_start_points_wildcard if {
@@ -71,7 +71,7 @@ allow if {
 }
 `)
 
-	sps == {"0": {5: {{"location": "5:2:5:7", "type": "var", "value": "email"}}}}
+	sps == {0: {5: {{"location": "5:2:5:7", "type": "var", "value": "email"}}}}
 }
 
 test_assignment_index if {
@@ -88,7 +88,7 @@ allow if {
 }
 `)
 
-	ai == {"0": {
+	ai == {0: {
 		"baz": {12},
 		"email": {6},
 		"foo": {9},
@@ -112,7 +112,7 @@ allow if {
 	not bar
 }`)
 
-	ai == {"0": {
+	ai == {0: {
 		"foos": {5},
 		"bar": {9},
 		"baz": {9},

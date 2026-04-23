@@ -10,7 +10,8 @@ test_fail_simple_iteration if {
 		var := input.foo[_]
 	}`)
 
-	r := rule.report with config.rules as allow_nesting(2)
+	r := rule.report
+		with config.rules as allow_nesting(2)
 		with input as policy
 		with config.capabilities as capabilities.provided
 
@@ -31,7 +32,8 @@ test_fail_simple_iteration_comprehension if {
 		p := input.foo[_]
 	}`)
 
-	r := rule.report with config.rules as allow_nesting(2)
+	r := rule.report
+		with config.rules as allow_nesting(2)
 		with input as policy
 		with config.capabilities as capabilities.provided
 
@@ -52,7 +54,8 @@ test_fail_simple_iteration_output_var if {
 		input.foo[x]
 	}`)
 
-	r := rule.report with config.rules as allow_nesting(2)
+	r := rule.report
+		with config.rules as allow_nesting(2)
 		with input as policy
 		with config.capabilities as capabilities.provided
 
@@ -74,7 +77,8 @@ test_fail_simple_iteration_output_var_some_decl if {
 		input.foo[x]
 	}`)
 
-	r := rule.report with config.rules as allow_nesting(2)
+	r := rule.report
+		with config.rules as allow_nesting(2)
 		with input as policy
 		with config.capabilities as capabilities.provided
 
@@ -96,7 +100,8 @@ test_success_some_in_var_input if {
 		input.foo[x] == 1
 	}`)
 
-	r := rule.report with config.rules as allow_nesting(2)
+	r := rule.report
+		with config.rules as allow_nesting(2)
 		with input as policy
 		with config.capabilities as capabilities.provided
 
@@ -109,7 +114,8 @@ test_success_allow_nesting_zero if {
 		input.foo[_].bar[_]
 	}`)
 
-	r := rule.report with config.rules as allow_nesting(0)
+	r := rule.report
+		with config.rules as allow_nesting(0)
 		with input as policy
 		with config.capabilities as capabilities.provided
 
@@ -117,7 +123,8 @@ test_success_allow_nesting_zero if {
 }
 
 test_success_allow_nesting_one if {
-	r := rule.report with config.rules as allow_nesting(1)
+	r := rule.report
+		with config.rules as allow_nesting(1)
 		with input as ast.policy("allow if input.foo[_]")
 		with config.capabilities as capabilities.provided
 
@@ -125,7 +132,8 @@ test_success_allow_nesting_one if {
 }
 
 test_success_allow_nesting_two if {
-	r := rule.report with config.rules as allow_nesting(2)
+	r := rule.report
+		with config.rules as allow_nesting(2)
 		with input as ast.policy("allow if input.foo[_].bar[_]")
 		with config.capabilities as capabilities.provided
 
@@ -137,7 +145,8 @@ test_fail_allow_nesting_two if {
 		input.foo[_]
 	}`)
 
-	r := rule.report with config.rules as allow_nesting(2)
+	r := rule.report
+		with config.rules as allow_nesting(2)
 		with input as policy
 		with config.capabilities as capabilities.provided
 

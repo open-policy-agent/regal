@@ -30,6 +30,7 @@ test_fail_rule_named_if if {
 			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/rule-named-if",
 		}],
 		"title": "rule-named-if",
-	}} with input.regal.file.rego_version as "v0"
+	}}
+		with input.regal.file.rego_version as "v0"
 		with capabilities.is_opa_v1 as false
 }

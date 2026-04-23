@@ -36,7 +36,7 @@ ranges contains range.parse(arg.location) if [arg, _] := find.arg_at_position
 ranges contains range.parse(value.location) if {
 	[arg, i] := find.arg_at_position
 
-	some expr in ast.found.expressions[sprintf("%d", [i])]
+	some expr in ast.found.expressions[i]
 
 	walk(expr, [_, value])
 

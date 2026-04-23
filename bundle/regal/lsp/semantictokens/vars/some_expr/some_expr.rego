@@ -104,9 +104,9 @@ _some_start_points[rule_index][row] contains some_var if {
 }
 
 _rule_exprs[rule_index][row] contains expr if {
-	some i
-	expr := module.rules[i].body[_]
-	rule_index := ast.rule_index_strings[i]
+	some rule_index
+	expr := module.rules[rule_index].body[_]
+
 	row := to_number(substring(expr.location, 0, indexof(
 		expr.location,
 		":",

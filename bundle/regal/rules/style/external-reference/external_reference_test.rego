@@ -6,7 +6,8 @@ import data.regal.config
 import data.regal.rules.style["external-reference"] as rule
 
 test_fail_function_references_input if {
-	r := rule.report with input as ast.policy(`f(_) if { input.foo }`)
+	r := rule.report
+		with input as ast.policy(`f(_) if { input.foo }`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 
@@ -23,7 +24,8 @@ test_fail_function_references_input if {
 }
 
 test_fail_function_references_data if {
-	r := rule.report with input as ast.policy(`f(_) if { data.foo }`)
+	r := rule.report
+		with input as ast.policy(`f(_) if { data.foo }`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 

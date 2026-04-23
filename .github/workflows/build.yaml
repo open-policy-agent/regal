@@ -43,7 +43,7 @@ jobs:
           go-version-file: go.mod
       - uses: open-policy-agent/setup-opa@950f159a49aa91f9323f36f1de81c7f6b5de9576 # v2.3.0
         with:
-          version: latest
+          version: edge
           static: ${{ matrix.os.static }}
       - run: npm ci
         working-directory: build
@@ -115,7 +115,7 @@ jobs:
           go-version-file: go.mod
       - uses: open-policy-agent/setup-opa@950f159a49aa91f9323f36f1de81c7f6b5de9576 # v2.3.0
         with:
-          version: latest
+          version: edge
           static: true
       - run: |
           go run main.go test --coverage bundle \

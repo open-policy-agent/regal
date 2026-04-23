@@ -96,9 +96,8 @@ _vars_no_builtins(terms) := [term |
 ]
 
 _exprs[rule_index][row] contains expr if {
-	some i
-	expr := input.rules[i].body[_]
-	rule_index := ast.rule_index_strings[i]
+	some rule_index
+	expr := input.rules[rule_index].body[_]
 	row := to_number(substring(expr.location, 0, indexof(expr.location, ":")))
 }
 
@@ -170,7 +169,7 @@ _loop_refs[rule_index][ref.location] contains term if {
 
 	term := ast.found.refs[rule_index][ref].value[i]
 
-	ast.is_output_var(input.rules[to_number(rule_index)], term)
+	ast.is_output_var(input.rules[rule_index], term)
 }
 
 _assignment_index[rule_index][var_value] contains row if {
