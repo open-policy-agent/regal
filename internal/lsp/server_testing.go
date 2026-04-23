@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sync"
 	"time"
 
+	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/runtime/info"
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
@@ -13,15 +15,22 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/compile"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
 
+var runtimeInfo = sync.OnceValue(func() *ast.Term {
+	info, err := info.New()
+	if err != nil {
+		info = ast.InternedEmptyObject
+	}
+
+	return info
+})
+
 // handleRunTests handles the regal/runTests LSP request.
 // It runs OPA tests based on the provided parameters and returns results.
-func (l *LanguageServer) handleRunTests(
-	ctx context.Context,
-	params types.RunTestsParams,
-) (any, error) {
+func (l *LanguageServer) handleRunTests(ctx context.Context, params types.RunTestsParams) (any, error) {
 	// Ensure the target file is parsed before running tests.
 	// This handles the case where regal/runTests is called immediately after
 	// textDocument/didOpen, before the async diagnostics worker has parsed the file.
@@ -32,58 +41,19 @@ func (l *LanguageServer) handleRunTests(
 		}
 	}
 
-	// Create new isolated store for this test run (NO SHARED STATE)
-	testStore := inmem.NewWithOpts(
-		inmem.OptRoundTripOnWrite(false),
-		inmem.OptReturnASTValuesOnRead(true),
-	)
+	store, txn := newStoreAndTxn(ctx, l.getLoadedConfig())
 
-	txn, err := testStore.NewTransaction(ctx, storage.WriteParams)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create transaction: %w", err)
-	}
-
-	defer testStore.Abort(ctx, txn)
-
-	// TODO: make the loading of config and regal built-ins only happen
-	// in Regal repo
-	cfg := l.getLoadedConfig()
-
-	var caps *config.Capabilities
-	if cfg != nil && cfg.Capabilities != nil {
-		caps = cfg.Capabilities
-	} else {
-		caps = config.CapabilitiesForThisVersion()
-	}
-
-	_ = testStore.Write(ctx, txn, storage.AddOp, storage.MustParsePath("/internal"), map[string]any{})
-
-	if err := testStore.Write(
-		ctx,
-		txn,
-		storage.AddOp,
-		storage.MustParsePath("/internal/capabilities"),
-		caps,
-	); err != nil {
-		return nil, fmt.Errorf("failed to write capabilities: %w", err)
-	}
-
-	runtimeInfo, err := info.New()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create runtime info: %w", err)
-	}
+	defer store.Abort(ctx, txn)
 
 	filter := fmt.Sprintf("%s.%s$", regexp.QuoteMeta(params.Package), regexp.QuoteMeta(params.Name))
 
-	compiler := compile.NewCompilerWithRegalBuiltins().
-		WithEnablePrintStatements(true).
-		WithUseTypeCheckAnnotations(true)
-
 	runner := tester.NewRunner().
-		SetCompiler(compiler).
-		SetStore(testStore).
+		SetCompiler(compile.NewCompilerWithRegalBuiltins().
+			WithEnablePrintStatements(true).
+			WithUseTypeCheckAnnotations(true)).
+		SetStore(store).
 		SetBundles(l.assembleBundles()).
-		SetRuntime(runtimeInfo).
+		SetRuntime(runtimeInfo()).
 		CapturePrintOutput(true).
 		SetTimeout(5 * time.Second).
 		Filter(filter)
@@ -93,9 +63,7 @@ func (l *LanguageServer) handleRunTests(
 		return nil, fmt.Errorf("failed to run tests: %w", err)
 	}
 
-	results := collectTestResults(ch)
-
-	return results, nil
+	return collectTestResults(ch), nil
 }
 
 // collectTestResults collects test results from the runner's channel.
@@ -109,4 +77,16 @@ func collectTestResults(ch chan *tester.Result) []tester.Result {
 	}
 
 	return results
+}
+
+func newStoreAndTxn(ctx context.Context, cfg *config.Config) (storage.Store, storage.Transaction) {
+	store := inmem.NewFromObjectWithOpts(map[string]any{
+		"internal": map[string]any{
+			"capabilities": util.Or(cfg.Capabilities, config.CapabilitiesForThisVersion),
+		},
+	}, inmem.OptRoundTripOnWrite(false), inmem.OptReturnASTValuesOnRead(true))
+
+	txn, _ := store.NewTransaction(ctx, storage.WriteParams)
+
+	return store, txn
 }

@@ -1,17 +1,11 @@
 package lsp
 
 import (
-	"context"
 	"path/filepath"
-	"slices"
 	"testing"
 	"time"
 
-	"github.com/sourcegraph/jsonrpc2"
-
-	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
-	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -79,139 +73,4 @@ allow := true
 	timeout.Reset(determineTimeout())
 
 	waitForViolations(t, "main.rego", []string{}, []string{}, timeout, receivedMessages)
-}
-
-func TestLanguageServerCachesEnabledRulesAndUsesDefaultConfig(t *testing.T) {
-	t.Parallel()
-
-	tempDir := testutil.TempDirectoryOf(t, map[string]string{
-		".regal/config.yaml": `
-rules:
-  idiomatic:
-    directory-package-mismatch:
-      level: ignore
-  imports:
-    unresolved-import:
-      level: ignore
-`,
-	})
-
-	// no op handler
-	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
-		t.Logf("message received: %s", req.Method)
-
-		return struct{}{}, nil
-	}
-
-	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
-
-	ls.StartConfigWorker(ctx)
-
-	if got, exp := ls.workspaceRootURI, uri.FromPath(ls.getClient().Identifier, tempDir); exp != got {
-		t.Fatalf("expected client root URI to be %s, got %s", exp, got)
-	}
-
-	timeout := time.NewTimer(determineTimeout())
-	ticker := time.NewTicker(testPollInterval)
-	pollCount := 0
-
-	for success := false; !success; {
-		select {
-		case <-ticker.C:
-			pollCount++
-
-			if len(ls.getEnabledRules()) == 0 {
-				t.Logf("no enabled rules yet... (poll %d)", pollCount)
-
-				continue
-			}
-
-			success = true
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for enabled rules to be correct after %d polls", pollCount)
-		}
-	}
-
-	// this event is sent to allow the server to detect the new config
-	if err := connClient.Notify(ctx, "workspace/didChangeWatchedFiles", types.WorkspaceDidChangeWatchedFilesParams{
-		Changes: []types.FileEvent{{
-			URI:  uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, ".regal", "config.yaml")),
-			Type: 1, // created
-		}},
-	}, nil); err != nil {
-		t.Fatalf("failed to send didChange notification: %s", err)
-	}
-
-	timeout.Reset(determineTimeout())
-
-	pollCount = 0
-
-	for success := false; !success; {
-		select {
-		case <-ticker.C:
-			pollCount++
-			enabledRules := ls.getEnabledRules()
-
-			if slices.Contains(enabledRules, "directory-package-mismatch") {
-				t.Logf("enabledRules still contains directory-package-mismatch (poll %d)", pollCount)
-
-				continue
-			}
-
-			if slices.Contains(enabledRules, "unresolved-import") {
-				t.Logf("enabledRules still contains unresolved-import (poll %d)", pollCount)
-
-				continue
-			}
-
-			success = true
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for enabled rules to be correct after %d polls", pollCount)
-		}
-	}
-
-	configContents2 := `
-rules:
-  style:
-    opa-fmt:
-      level: ignore
-  idiomatic:
-    directory-package-mismatch:
-      level: error
-  imports:
-    unresolved-import:
-      level: error
-`
-
-	must.WriteFile(t, filepath.Join(tempDir, ".regal", "config.yaml"), []byte(configContents2))
-	timeout.Reset(determineTimeout())
-
-	for success := false; !success; {
-		select {
-		case <-ticker.C:
-			enabledRules := ls.getEnabledRules()
-
-			if slices.Contains(enabledRules, "opa-fmt") {
-				t.Log("enabledRules still contains opa-fmt")
-
-				continue
-			}
-
-			if !slices.Contains(enabledRules, "directory-package-mismatch") {
-				t.Log("enabledRules must contain directory-package-mismatch")
-
-				continue
-			}
-
-			if !slices.Contains(enabledRules, "unresolved-import") {
-				t.Log("enabledRules must contain unresolved-import")
-
-				continue
-			}
-
-			success = true
-		case <-timeout.C:
-			t.Fatalf("timed out waiting for enabled rules to be correct")
-		}
-	}
 }

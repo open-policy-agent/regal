@@ -5,7 +5,9 @@ import data.regal.ast
 import data.regal.rules.testing["test-outside-test-package"] as rule
 
 test_fail_test_outside_test_package if {
-	r := rule.report with input as ast.policy(`test_foo if { false }`) with input.regal.file.name as "p_test.rego"
+	r := rule.report
+		with input as ast.policy(`test_foo if { false }`)
+		with input.regal.file.name as "p_test.rego"
 
 	r == {{
 		"category": "testing",
