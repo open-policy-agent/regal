@@ -56,7 +56,8 @@ another_local_rule := `])
 		"regal": {"file": {"lines": split(current_file_contents, "\n")}},
 	}
 
-	items := provider.items with input as regal_module
+	items := provider.items
+		with input as regal_module
 		with data.workspace.parsed as parsed_modules
 		with data.workspace.defined_refs as defined_refs
 
@@ -85,7 +86,8 @@ another_local_rule := imp`])
 		"regal": {"file": {"lines": split(current_file_contents, "\n")}},
 	}
 
-	items := provider.items with input as regal_module
+	items := provider.items
+		with input as regal_module
 		with data.workspace.parsed as parsed_modules
 		with data.workspace.defined_refs as defined_refs
 
@@ -114,7 +116,8 @@ a`])
 		"regal": {"file": {"lines": lines}},
 	}
 
-	items := provider.items with input as regal_module
+	items := provider.items
+		with input as regal_module
 		with data.workspace.parsed as parsed_modules
 		with data.workspace.defined_refs as defined_refs
 
@@ -136,7 +139,8 @@ local_rule if local`])
 		"regal": {"file": {"lines": lines}},
 	}
 
-	items := provider.items with input as regal_module
+	items := provider.items
+		with input as regal_module
 		with data.workspace.parsed as parsed_modules
 		with data.workspace.defined_refs as defined_refs
 
@@ -162,7 +166,8 @@ local_func("foo") := local_f`])
 		"regal": {"file": {"lines": lines}},
 	}
 
-	items := provider.items with input as regal_module
+	items := provider.items
+		with input as regal_module
 		with data.workspace.parsed as parsed_modules
 		with data.workspace.defined_refs as defined_refs
 

@@ -36,6 +36,7 @@ test_success_test_inside_test_package if {
 	test_foo if { false }
 	`)
 	result := rule.report with input as ast
+
 	result == set()
 }
 
@@ -46,6 +47,7 @@ test_success_test_inside_test_package_named_just_test if {
 	test_foo if { false }
 	`)
 	result := rule.report with input as ast
+
 	result == set()
 }
 
@@ -57,5 +59,6 @@ test_success_test_prefixed_function if {
 	test_foo(x) if { x == 1 }
 	`)
 	result := rule.report with input as ast
+
 	result == set()
 }

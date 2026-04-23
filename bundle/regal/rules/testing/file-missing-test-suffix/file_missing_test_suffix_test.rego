@@ -27,8 +27,8 @@ test_success_test_in_file_with_test_suffix if {
 
 	test_foo if { false }
 	`)
-
 	r := rule.report with input as ast
+
 	r == set()
 }
 
@@ -37,7 +37,7 @@ test_success_test_in_file_named_test if {
 
 	test_foo if { false }
 	`)
-
 	r := rule.report with input as ast
+
 	r == set()
 }

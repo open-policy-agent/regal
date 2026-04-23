@@ -6,7 +6,8 @@ import data.regal.lsp.hover.keywords
 
 test_keywords_package if {
 	module := ast.policy("")
-	kwds := keywords.by_row with data.workspace.parsed["file:///p.rego"] as module
+	kwds := keywords.by_row
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.regal.file.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
@@ -25,7 +26,8 @@ test_keywords_package if {
 test_keywords_import if {
 	module := ast.policy(`import data.foo`)
 
-	kwds := keywords.by_row with data.workspace.parsed["file:///p.rego"] as module
+	kwds := keywords.by_row
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.regal.file.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
@@ -47,7 +49,8 @@ test_keywords_if if {
 	true
 }
 `)
-	kwds := keywords.by_row with data.workspace.parsed["file:///p.rego"] as module
+	kwds := keywords.by_row
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.regal.file.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
@@ -71,7 +74,8 @@ test_keywords_if_on_another_line if {
 	true
 }
 `)
-	kwds := keywords.by_row with data.workspace.parsed["file:///p.rego"] as module
+	kwds := keywords.by_row
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.regal.file.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
@@ -92,7 +96,8 @@ test_keywords_some_in if {
 	some e in [1,2,3]
 }`)
 
-	kwds := keywords.by_row with data.workspace.parsed["file:///p.rego"] as module
+	kwds := keywords.by_row
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.regal.file.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
@@ -116,7 +121,8 @@ test_keywords_some_no_body if {
 	some e in [1,2,3]
 ]`)
 
-	kwds := keywords.by_row with data.workspace.parsed["file:///p.rego"] as module
+	kwds := keywords.by_row
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.regal.file.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
@@ -146,7 +152,8 @@ test_keywords_some_in_func_arg if {
 	some part in ["a","b","c"]
 ])`)
 
-	kwds := keywords.by_row with data.workspace.parsed["file:///p.rego"] as module
+	kwds := keywords.by_row
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.regal.file.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
@@ -171,7 +178,8 @@ messages contains "hello" if {
 	1 == 1
 }`)
 
-	kwds := keywords.by_row with data.workspace.parsed["file:///p.rego"] as module
+	kwds := keywords.by_row
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.regal.file.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
@@ -198,7 +206,8 @@ allow if {
 	}
 }`)
 
-	kwds := keywords.by_row with data.workspace.parsed["file:///p.rego"] as module
+	kwds := keywords.by_row
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.regal.file.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 

@@ -9,16 +9,17 @@ test_inlayhints_rendered_correctly_no_tooltip_resolve if {
 		startswith(text, sub)
 	}`)
 
-	res := inlayhint.result.response with input as {
-		"regal": {"file": {
-			"parse_errors": [],
-			"uri": "file:///p.rego",
-		}},
-		"params": {"range": {
-			"start": {"line": 0, "character": 0},
-			"end": {"line": 100, "character": 100},
-		}},
-	}
+	res := inlayhint.result.response
+		with input as {
+			"regal": {"file": {
+				"parse_errors": [],
+				"uri": "file:///p.rego",
+			}},
+			"params": {"range": {
+				"start": {"line": 0, "character": 0},
+				"end": {"line": 100, "character": 100},
+			}},
+		}
 		with data.workspace.parsed["file:///p.rego"] as module
 		with data.workspace.builtins as _builtins
 
@@ -57,19 +58,20 @@ test_inlayhints_rendered_correctly_tooltip_resolve if {
 		startswith(text, sub)
 	}`)
 
-	res := inlayhint.result.response with input as {
-		"regal": {
-			"client": {"capabilities": {"textDocument": {"inlayHint": {"resolveSupport": {"properties": ["tooltip"]}}}}},
-			"file": {
-				"parse_errors": [],
-				"uri": "file:///p.rego",
+	res := inlayhint.result.response
+		with input as {
+			"regal": {
+				"client": {"capabilities": {"textDocument": {"inlayHint": {"resolveSupport": {"properties": ["tooltip"]}}}}},
+				"file": {
+					"parse_errors": [],
+					"uri": "file:///p.rego",
+				},
 			},
-		},
-		"params": {"range": {
-			"start": {"line": 0, "character": 0},
-			"end": {"line": 100, "character": 100},
-		}},
-	}
+			"params": {"range": {
+				"start": {"line": 0, "character": 0},
+				"end": {"line": 100, "character": 100},
+			}},
+		}
 		with data.workspace.parsed["file:///p.rego"] as module
 		with data.workspace.builtins as _builtins
 
@@ -111,16 +113,17 @@ test_inlayhints_rendered_correctly_custom_function if {
 
 	inlay_hints if custom(a, b)`)
 
-	res := inlayhint.result.response with input as {
-		"regal": {"file": {
-			"parse_errors": [],
-			"uri": "file:///p.rego",
-		}},
-		"params": {"range": {
-			"start": {"line": 0, "character": 0},
-			"end": {"line": 100, "character": 100},
-		}},
-	}
+	res := inlayhint.result.response
+		with input as {
+			"regal": {"file": {
+				"parse_errors": [],
+				"uri": "file:///p.rego",
+			}},
+			"params": {"range": {
+				"start": {"line": 0, "character": 0},
+				"end": {"line": 100, "character": 100},
+			}},
+		}
 		with data.workspace.parsed["file:///p.rego"] as module
 		with data.workspace.builtins as _builtins
 
@@ -160,16 +163,17 @@ test_inlayhints_rendered_correctly_custom_function_non_var_argument if {
 
 	inlay_hints if custom(a, b)`)
 
-	res := inlayhint.result.response with input as {
-		"regal": {"file": {
-			"parse_errors": [],
-			"uri": "file:///p.rego",
-		}},
-		"params": {"range": {
-			"start": {"line": 0, "character": 0},
-			"end": {"line": 100, "character": 100},
-		}},
-	}
+	res := inlayhint.result.response
+		with input as {
+			"regal": {"file": {
+				"parse_errors": [],
+				"uri": "file:///p.rego",
+			}},
+			"params": {"range": {
+				"start": {"line": 0, "character": 0},
+				"end": {"line": 100, "character": 100},
+			}},
+		}
 		with data.workspace.parsed["file:///p.rego"] as module
 		with data.workspace.builtins as _builtins
 
@@ -210,16 +214,17 @@ test_only_calls_in_range if {
 		startswith(text2, sub2)
 	}`)
 
-	res := inlayhint.result.response with input as {
-		"regal": {"file": {
-			"parse_errors": [],
-			"uri": "file:///p.rego",
-		}},
-		"params": {"range": {
-			"start": {"line": 0, "character": 0},
-			"end": {"line": 3, "character": 100},
-		}},
-	}
+	res := inlayhint.result.response
+		with input as {
+			"regal": {"file": {
+				"parse_errors": [],
+				"uri": "file:///p.rego",
+			}},
+			"params": {"range": {
+				"start": {"line": 0, "character": 0},
+				"end": {"line": 3, "character": 100},
+			}},
+		}
 		with data.workspace.parsed["file:///p.rego"] as module
 		with data.workspace.builtins as _builtins
 
@@ -258,16 +263,17 @@ test_null_if_parse_errors if {
 		startswith(text, sub)
 	}`)
 
-	res := inlayhint.result.response with input as {
-		"regal": {"file": {
-			"parse_errors": ["some error"],
-			"uri": "file:///p.rego",
-		}},
-		"params": {"range": {
-			"start": {"line": 0, "character": 0},
-			"end": {"line": 100, "character": 100},
-		}},
-	}
+	res := inlayhint.result.response
+		with input as {
+			"regal": {"file": {
+				"parse_errors": ["some error"],
+				"uri": "file:///p.rego",
+			}},
+			"params": {"range": {
+				"start": {"line": 0, "character": 0},
+				"end": {"line": 100, "character": 100},
+			}},
+		}
 		with data.workspace.parsed["file:///p.rego"] as module
 		with data.workspace.builtins as _builtins
 

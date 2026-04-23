@@ -90,7 +90,8 @@ test_success_unresolved_imports_with_wildcards_are_excepted if {
 
 	x := 1
 	`)
-	r := rule.aggregate_report with input as {"aggregate": agg1}
+	r := rule.aggregate_report
+		with input as {"aggregate": agg1}
 		with config.rules as {"imports": {"unresolved-import": {"except-imports": ["data.bar.*"]}}}
 
 	r == set()

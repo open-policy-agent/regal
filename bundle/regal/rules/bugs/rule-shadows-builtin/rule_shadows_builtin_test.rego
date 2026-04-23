@@ -6,7 +6,9 @@ import data.regal.config
 import data.regal.rules.bugs["rule-shadows-builtin"] as rule
 
 test_fail_rule_name_shadows_builtin if {
-	r := rule.report with input as ast.policy(`or := 1`) with config.capabilities as {"builtins": {"or": {}}}
+	r := rule.report
+		with input as ast.policy(`or := 1`)
+		with config.capabilities as {"builtins": {"or": {}}}
 
 	r == {{
 		"category": "bugs",
@@ -31,7 +33,8 @@ test_fail_rule_name_shadows_builtin if {
 }
 
 test_fail_rule_name_shadows_builtin_namespace if {
-	r := rule.report with input as ast.policy(`http := "yes"`)
+	r := rule.report
+		with input as ast.policy(`http := "yes"`)
 		with config.capabilities as {"builtins": {"http.send": {}}}
 
 	r == {{

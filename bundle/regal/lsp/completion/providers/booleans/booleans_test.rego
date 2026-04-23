@@ -16,7 +16,9 @@ allow := f`}
 		"regal": {"file": {"lines": split(workspace["file:///p.rego"], "\n")}},
 	}
 
-	items := provider.items with input as regal_module with data.workspace.parsed as utils.parsed_modules(workspace)
+	items := provider.items
+		with input as regal_module
+		with data.workspace.parsed as utils.parsed_modules(workspace)
 
 	count(items) == 1
 
@@ -40,7 +42,9 @@ allow if {
 		"regal": {"file": {"lines": split(workspace["file:///p.rego"], "\n")}},
 	}
 
-	items := provider.items with input as regal_module with data.workspace.parsed as utils.parsed_modules(workspace)
+	items := provider.items
+		with input as regal_module
+		with data.workspace.parsed as utils.parsed_modules(workspace)
 
 	count(items) == 1
 
@@ -64,7 +68,9 @@ allow if {
 		"regal": {"file": {"lines": split(workspace["file:///p.rego"], "\n")}},
 	}
 
-	items := provider.items with input as regal_module with data.workspace.parsed as utils.parsed_modules(workspace)
+	items := provider.items
+		with input as regal_module
+		with data.workspace.parsed as utils.parsed_modules(workspace)
 
 	count(items) == 1
 
@@ -88,7 +94,9 @@ allow if {
 		"regal": {"file": {"lines": split(workspace["file:///p.rego"], "\n")}},
 	}
 
-	items := provider.items with input as regal_module with data.workspace.parsed as utils.parsed_modules(workspace)
+	items := provider.items
+		with input as regal_module
+		with data.workspace.parsed as utils.parsed_modules(workspace)
 
 	count(items) == 0
 }

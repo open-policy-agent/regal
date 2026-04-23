@@ -12,6 +12,7 @@ _allow := true
 	`)
 
 	r := rule.report with input as module
+
 	r == {{
 		"category": "bugs",
 		"description": "Entrypoint can't be marked internal",

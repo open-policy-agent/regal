@@ -84,7 +84,9 @@ test_success_too_long_for_a_one_liner_configured_line_length if {
 		some_really_long_rule_name_in_fact_53_characters_long
 	}
 	`)
-	r := rule.report with input as module with config.rules as {"custom": {"one-liner-rule": {"max-line-length": 50}}}
+	r := rule.report
+		with input as module
+		with config.rules as {"custom": {"one-liner-rule": {"max-line-length": 50}}}
 
 	r == set()
 }

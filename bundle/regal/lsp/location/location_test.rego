@@ -68,7 +68,9 @@ another if {
 		[{"row": 16, "col": 1}, {"x", "y", "z"}],
 	}
 
-	r := location.find_locals(module.rules, loc) with input as module with input.regal.file.lines as lines
+	r := location.find_locals(module.rules, loc)
+		with input as module
+		with input.regal.file.lines as lines
 
 	r == want
 }

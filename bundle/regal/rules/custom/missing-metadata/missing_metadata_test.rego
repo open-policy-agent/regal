@@ -51,16 +51,18 @@ test_success_not_missing_package_metadata_report if {
 package foo.bar
 `)
 	a := rule.aggregate with input as module
-	r := rule.aggregate_report with input.aggregate as a with config.rules as {"custom": {"missing-metadata": {}}}
+	r := rule.aggregate_report
+		with input.aggregate as a
+		with config.rules as {"custom": {"missing-metadata": {}}}
 
 	r == set()
 }
 
 test_fail_missing_package_metadata_report if {
 	a := rule.aggregate with input as regal.parse_module("p1.rego", "package foo.bar")
-	aggs := util.with_source_files("custom/missing-metadata", [a])
 
-	r := rule.aggregate_report with input.aggregates_internal as aggs
+	r := rule.aggregate_report
+		with input.aggregates_internal as util.with_source_files("custom/missing-metadata", [a])
 		with input.aggregates_internal["p1.rego"].common.package_name as "foo.bar"
 		with config.rules as {"custom": {"missing-metadata": {}}}
 
@@ -100,7 +102,8 @@ package foo.bar
 		agg := object.union(old, {"aggregate_source": {"file": "p.rego"}})
 	}
 
-	r := rule.aggregate_report with input.aggregate as aggregates
+	r := rule.aggregate_report
+		with input.aggregate as aggregates
 		with config.rules as {"custom": {"missing-metadata": {}}}
 
 	r == set()
@@ -117,7 +120,9 @@ baz := true
 `)
 
 	a := rule.aggregate with input as module
-	r := rule.aggregate_report with input.aggregate as a with config.rules as {"custom": {"missing-metadata": {}}}
+	r := rule.aggregate_report
+		with input.aggregate as a
+		with config.rules as {"custom": {"missing-metadata": {}}}
 
 	r == set()
 }
@@ -131,7 +136,8 @@ baz := true
 `)
 	a := rule.aggregate with input as module
 	f := util.with_source_files("custom/missing-metadata", [a])
-	r := rule.aggregate_report with input.aggregates_internal as f
+	r := rule.aggregate_report
+		with input.aggregates_internal as f
 		with config.rules as {"custom": {"missing-metadata": {}}}
 
 	r == {{
@@ -173,7 +179,8 @@ rule := false
 	agg1 := rule.aggregate with input as module1
 	agg2 := rule.aggregate with input as module2
 
-	r := rule.aggregate_report with input.aggregate as {agg1, agg2}
+	r := rule.aggregate_report
+		with input.aggregate as {agg1, agg2}
 		with config.rules as {"custom": {"missing-metadata": {}}}
 
 	r == set()

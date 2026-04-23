@@ -85,7 +85,8 @@ f(x, y) if {
 }
 
 test_fail_external_reference_in_head_assignment if {
-	r := rule.report with input as ast.policy(`f(_) := r`)
+	r := rule.report
+		with input as ast.policy(`f(_) := r`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 
@@ -102,7 +103,8 @@ test_fail_external_reference_in_head_assignment if {
 }
 
 test_fail_external_reference_in_head_terms if {
-	r := rule.report with input as ast.policy(`f(_) := {"r": r}`)
+	r := rule.report
+		with input as ast.policy(`f(_) := {"r": r}`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 
@@ -119,7 +121,8 @@ test_fail_external_reference_in_head_terms if {
 }
 
 test_success_function_references_no_input_or_data if {
-	r := rule.report with input as ast.policy(`f(x) if { x == true }`)
+	r := rule.report
+		with input as ast.policy(`f(x) if { x == true }`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 
@@ -127,7 +130,8 @@ test_success_function_references_no_input_or_data if {
 }
 
 test_success_function_references_no_input_or_data_reverse if {
-	r := rule.report with input as ast.policy(`f(x) if { true == x }`)
+	r := rule.report
+		with input as ast.policy(`f(x) if { true == x }`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 
@@ -135,7 +139,8 @@ test_success_function_references_no_input_or_data_reverse if {
 }
 
 test_success_function_references_only_own_vars if {
-	r := rule.report with input as ast.policy(`f(x) if { y := x; y == 10 }`)
+	r := rule.report
+		with input as ast.policy(`f(x) if { y := x; y == 10 }`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 
@@ -143,7 +148,8 @@ test_success_function_references_only_own_vars if {
 }
 
 test_success_function_references_only_own_vars_nested if {
-	r := rule.report with input as ast.policy(`f(x, z) if { y := x; y == [1, 2, z]}`)
+	r := rule.report
+		with input as ast.policy(`f(x, z) if { y := x; y == [1, 2, z]}`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 
@@ -151,7 +157,8 @@ test_success_function_references_only_own_vars_nested if {
 }
 
 test_success_function_references_only_own_vars_and_wildcard if {
-	r := rule.report with input as ast.policy(`f(x, y) if { _ = x + y }`)
+	r := rule.report
+		with input as ast.policy(`f(x, y) if { _ = x + y }`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 
@@ -159,7 +166,8 @@ test_success_function_references_only_own_vars_and_wildcard if {
 }
 
 test_success_function_references_return_var if {
-	r := rule.report with input as ast.policy(`f(x) := y if { y = true }`)
+	r := rule.report
+		with input as ast.policy(`f(x) := y if { y = true }`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 
@@ -167,7 +175,8 @@ test_success_function_references_return_var if {
 }
 
 test_success_function_references_return_vars if {
-	r := rule.report with input as ast.policy(`f(x) := [x, y] if { x = false; y = true }`)
+	r := rule.report
+		with input as ast.policy(`f(x) := [x, y] if { x = false; y = true }`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 
@@ -175,7 +184,8 @@ test_success_function_references_return_vars if {
 }
 
 test_success_function_references_external_function if {
-	r := rule.report with input as ast.policy(`f(x) if { data.foo.bar(x) }`)
+	r := rule.report
+		with input as ast.policy(`f(x) if { data.foo.bar(x) }`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 
@@ -183,7 +193,8 @@ test_success_function_references_external_function if {
 }
 
 test_success_function_references_external_function_in_expr if {
-	r := rule.report with input as ast.policy(`f(x) := y if { y := data.foo.bar(x) }`)
+	r := rule.report
+		with input as ast.policy(`f(x) := y if { y := data.foo.bar(x) }`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 
@@ -198,13 +209,15 @@ test_external_references_max_allowed_configuration if {
 		data.a
 	}`)
 
-	r1 := rule.report with input as module
+	r1 := rule.report
+		with input as module
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 4}}}
 
 	r1 == set()
 
-	r2 := rule.report with input as module
+	r2 := rule.report
+		with input as module
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 2}}}
 
@@ -215,7 +228,8 @@ test_external_references_max_allowed_configuration if {
 
 # verify fix for https://github.com/open-policy-agent/regal/issues/1283
 test_success_variable_from_nested_arg_term if {
-	r := rule.report with input as ast.policy(`f([x]) := to_number(x)`)
+	r := rule.report
+		with input as ast.policy(`f([x]) := to_number(x)`)
 		with config.capabilities as capabilities.provided
 		with config.rules as {"style": {"external-reference": {"max-allowed": 0}}}
 

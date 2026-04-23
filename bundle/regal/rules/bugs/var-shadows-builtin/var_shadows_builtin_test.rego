@@ -8,7 +8,9 @@ import data.regal.rules.bugs["var-shadows-builtin"] as rule
 
 test_fail_var_shadows_builtin if {
 	module := ast.with_rego_v1(`allow if http := "yes"`)
-	r := rule.report with input as module with config.capabilities as capabilities.provided
+	r := rule.report
+		with input as module
+		with config.capabilities as capabilities.provided
 
 	r == {{
 		"category": "bugs",

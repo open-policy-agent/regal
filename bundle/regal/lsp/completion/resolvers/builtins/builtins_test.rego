@@ -2,7 +2,8 @@ package regal.lsp.completion.resolvers.builtins_test
 
 test_resolve_builtin_documentation if {
 	input_count := {"params": {"label": "count", "data": {"resolver": "builtins"}}}
-	result_count := data.regal.lsp.completion.resolvers.builtins.resolve with input as input_count
+	result_count := data.regal.lsp.completion.resolvers.builtins.resolve
+		with input as input_count
 		with data.workspace.builtins as _builtins
 
 	result_count == {
@@ -14,7 +15,8 @@ test_resolve_builtin_documentation if {
 		"data": {"resolver": "builtins"},
 	}
 	input_hmac := {"params": {"label": "crypto.hmac.md5", "data": {"resolver": "builtins"}}}
-	result_hmac := data.regal.lsp.completion.resolvers.builtins.resolve with input as input_hmac
+	result_hmac := data.regal.lsp.completion.resolvers.builtins.resolve
+		with input as input_hmac
 		with data.workspace.builtins as _builtins
 
 	result_hmac == {

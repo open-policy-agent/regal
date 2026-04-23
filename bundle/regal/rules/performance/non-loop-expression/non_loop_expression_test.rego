@@ -400,10 +400,11 @@ test_fail_non_loop_assignment_with_expression if {
 }
 
 test_success_non_loop_assignment_with_expression if {
-	r := rule.report with input as ast.policy(`r if {
-		some a in input.b
-		c := lower(foo) with input as {"foo": a}
-	}`)
+	r := rule.report
+		with input as ast.policy(`r if {
+			some a in input.b
+			c := lower(foo) with input as {"foo": a}
+		}`)
 		with ast.builtin_names as {"lower"}
 
 	r == set()

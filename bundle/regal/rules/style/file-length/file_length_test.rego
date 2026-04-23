@@ -11,7 +11,9 @@ test_fail_configured_file_length_exceeded if {
 	rule2 := "bar"
 	`)
 
-	r := rule.report with input as module with config.rules as {"style": {"file-length": {"max-file-length": 2}}}
+	r := rule.report
+		with input as module
+		with config.rules as {"style": {"file-length": {"max-file-length": 2}}}
 
 	r == {{
 		"category": "style",
@@ -42,6 +44,9 @@ test_success_configured_file_length_within_limit if {
 	rule2 := "bar"
 	`)
 
-	r := rule.report with input as module with config.rules as {"style": {"file-length": {"max-file-length": 10}}}
+	r := rule.report
+		with input as module
+		with config.rules as {"style": {"file-length": {"max-file-length": 10}}}
+
 	r == set()
 }

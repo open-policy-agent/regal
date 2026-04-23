@@ -56,5 +56,6 @@ test_fail_fixme_comment if {
 
 test_success_no_todo_comment if {
 	r := rule.report with input as ast.policy(`# This code is great`)
+
 	r == set()
 }

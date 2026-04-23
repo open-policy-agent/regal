@@ -10,7 +10,8 @@ foo(bar, baz) := baz if {
 }`
 
 	# querying 'ranges' directly to test without the experimental flag logic
-	ranges := linkededitingrange.ranges with input as text_document_position(2, 6)
+	ranges := linkededitingrange.ranges
+		with input as text_document_position(2, 6)
 		with input.regal.file.lines as split(file_content, "\n")
 		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", file_content)
 
@@ -50,7 +51,8 @@ foo(bar, baz) := baz if {
 }`
 
 	# querying 'ranges' directly to test without the experimental flag logic
-	ranges := linkededitingrange.result.response.ranges with input as text_document_position(2, 6)
+	ranges := linkededitingrange.result.response.ranges
+		with input as text_document_position(2, 6)
 		with input.regal.file.lines as split(file_content, "\n")
 		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", file_content)
 
@@ -65,7 +67,8 @@ foo(bar, baz) := baz if {
 }`
 
 	# querying 'ranges' directly to test without the experimental flag logic
-	ranges := linkededitingrange.result.response.ranges with input as text_document_position(2, 6)
+	ranges := linkededitingrange.result.response.ranges
+		with input as text_document_position(2, 6)
 		with input.regal.file.lines as split(file_content, "\n")
 		with data.workspace.parsed["file://p.rego"] as regal.parse_module("p.rego", file_content)
 		with opa.runtime as {"env": {"REGAL_EXPERIMENTAL": "true"}}
