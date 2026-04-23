@@ -3,7 +3,8 @@ package regal.notices_test
 import data.regal.notices
 
 test_promoted_notices_with_level_error if {
-	result := notices.promoted_notices with data.regal.rules.imports["use-rego-v1"].notices as {_example_notice}
+	result := notices.promoted_notices
+		with data.regal.rules.imports["use-rego-v1"].notices as {_example_notice}
 		with data.internal.user_config as {"rules": {"imports": {"use-rego-v1": {"level": "error"}}}}
 
 	# With user config level set to error, the severity should be promoted to error
@@ -11,7 +12,8 @@ test_promoted_notices_with_level_error if {
 }
 
 test_promoted_notices_with_level_ignore if {
-	result := notices.promoted_notices with data.regal.rules.imports["use-rego-v1"].notices as {_example_notice}
+	result := notices.promoted_notices
+		with data.regal.rules.imports["use-rego-v1"].notices as {_example_notice}
 		with data.internal.user_config as {"rules": {"imports": {"use-rego-v1": {"level": "ignore"}}}}
 
 	# With user config level set to ignore, the severity should stay none
@@ -19,7 +21,8 @@ test_promoted_notices_with_level_ignore if {
 }
 
 test_promoted_notices_with_level_warning if {
-	result := notices.promoted_notices with data.regal.rules.imports["use-rego-v1"].notices as {_example_notice}
+	result := notices.promoted_notices
+		with data.regal.rules.imports["use-rego-v1"].notices as {_example_notice}
 		with data.internal.user_config as {"rules": {"imports": {"use-rego-v1": {"level": "warning"}}}}
 
 	# With user config level set to warning, the severity should be promoted to warning
@@ -28,7 +31,8 @@ test_promoted_notices_with_level_warning if {
 
 test_promoted_notices_configured_without_level if {
 	# Rule is configured but level field is not present
-	result := notices.promoted_notices with data.regal.rules.imports["use-rego-v1"].notices as {_example_notice}
+	result := notices.promoted_notices
+		with data.regal.rules.imports["use-rego-v1"].notices as {_example_notice}
 		with data.internal.user_config as {"rules": {"imports": {"use-rego-v1": {}}}}
 
 	# When configured without level, should default to error
@@ -52,7 +56,8 @@ test_promoted_notices_mixed_configured_and_unconfigured if {
 		"severity": "none",
 	}
 
-	result := notices.promoted_notices with data.regal.rules.imports["use-rego-v1"].notices as {notice_configured_rule}
+	result := notices.promoted_notices
+		with data.regal.rules.imports["use-rego-v1"].notices as {notice_configured_rule}
 		with data.regal.rules.bugs["deprecated-builtin"].notices as {notice_unconfigured_rule}
 		with data.internal.user_config as {"rules": {"imports": {"use-rego-v1": {"level": "error"}}}}
 

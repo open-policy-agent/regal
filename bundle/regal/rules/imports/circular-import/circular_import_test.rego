@@ -17,14 +17,16 @@ test_aggregate_rule_empty_if_no_static_refs if {
 }
 
 test_aggregate_rule_contains_single_self_ref if {
-	aggregate := rule.aggregate with input as ast.policy("import data.example")
+	aggregate := rule.aggregate
+		with input as ast.policy("import data.example")
 		with ast.package_name_full as "data.policy"
 
 	aggregate == {{"refs": {"data.example": {"3:8:3:20"}}, "package_name": "data.policy"}}
 }
 
 test_aggregate_rule_surfaces_refs if {
-	aggregate := rule.aggregate with ast.package_name_full as "data.policy.foo"
+	aggregate := rule.aggregate
+		with ast.package_name_full as "data.policy.foo"
 		with input as regal.parse_module("example.rego", `
     package policy.foo
 

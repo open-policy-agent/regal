@@ -15,13 +15,15 @@ test_rule_name_completion[title] if {
 	]
 
 	title := $"typing '{case.typed}' suggests: {concat(", ", case.expect)}"
-	items := provider.items with data.workspace.parsed as cache with input as {
-		"params": {
-			"textDocument": {"uri": "file:///ws/p.rego"},
-			"position": {"line": 2, "character": count(case.typed)},
-		},
-		"regal": {"file": {"lines": split(concat("", [above, case.typed, below]), "\n")}},
-	}
+	items := provider.items
+		with data.workspace.parsed as cache
+		with input as {
+			"params": {
+				"textDocument": {"uri": "file:///ws/p.rego"},
+				"position": {"line": 2, "character": count(case.typed)},
+			},
+			"regal": {"file": {"lines": split(concat("", [above, case.typed, below]), "\n")}},
+		}
 
 	count(items) == count(case.expect)
 
@@ -35,13 +37,15 @@ test_rule_name_completion_only_start_of_line if {
 	below := "\n\nconstant := 5\n\nfunction(_) := true\n\nrule if 1 + 1 == 3\n\nrule if true\n"
 	cache := {"file:///ws/p.rego": regal.parse_module("p.rego", $"{above}{below}")}
 	typed := "foo r"
-	items := provider.items with data.workspace.parsed as cache with input as {
-		"params": {
-			"textDocument": {"uri": "file:///ws/p.rego"},
-			"position": {"line": 2, "character": count(typed)},
-		},
-		"regal": {"file": {"lines": split(concat("", [above, typed, below]), "\n")}},
-	}
+	items := provider.items
+		with data.workspace.parsed as cache
+		with input as {
+			"params": {
+				"textDocument": {"uri": "file:///ws/p.rego"},
+				"position": {"line": 2, "character": count(typed)},
+			},
+			"regal": {"file": {"lines": split(concat("", [above, typed, below]), "\n")}},
+		}
 
 	count(items) == 0
 }
@@ -51,13 +55,15 @@ test_rule_name_completion_no_tests if {
 	below := "\n\ntest_foo if true\n\n"
 	cache := {"file:///ws/p.rego": regal.parse_module("p.rego", $"{above}{below}")}
 	typed := "t"
-	items := provider.items with data.workspace.parsed as cache with input as {
-		"params": {
-			"textDocument": {"uri": "file:///ws/p.rego"},
-			"position": {"line": 2, "character": count(typed)},
-		},
-		"regal": {"file": {"lines": split($"{above}{typed}{below}", "\n")}},
-	}
+	items := provider.items
+		with data.workspace.parsed as cache
+		with input as {
+			"params": {
+				"textDocument": {"uri": "file:///ws/p.rego"},
+				"position": {"line": 2, "character": count(typed)},
+			},
+			"regal": {"file": {"lines": split($"{above}{typed}{below}", "\n")}},
+		}
 
 	count(items) == 0
 }

@@ -23,7 +23,9 @@ rule2 if {
 		[text_document_position(7, 5), "rule2", 1],
 	]
 
-	[rule, i] := find.rule_at_position with input as tdp with data.workspace.parsed["file:///p.rego"] as module
+	[rule, i] := find.rule_at_position
+		with input as tdp
+		with data.workspace.parsed["file:///p.rego"] as module
 
 	i == exp_index
 	rule.head.ref[0].value == exp_name
@@ -43,7 +45,9 @@ import data.alpha["be-ta"].gamma`
 		[text_document_position(3, 15), "data.alpha[\"be-ta\"].gamma"],
 	]
 
-	imp := find.import_at_position with input as tdp with data.workspace.parsed["file:///p.rego"] as module
+	imp := find.import_at_position
+		with input as tdp
+		with data.workspace.parsed["file:///p.rego"] as module
 
 	ast.ref_static_to_string(imp.path.value) == exp_path
 }

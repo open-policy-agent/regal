@@ -3,19 +3,20 @@ package regal.lsp.completion.providers.builtins_test
 import data.regal.lsp.completion.providers.builtins
 
 test_simple_builtin_completion if {
-	items := builtins.items with input as {
-		"params": {
-			"textDocument": {"uri": "file:///p.rego"},
-			"position": {"line": 3, "character": 10},
-		},
-		"regal": {"file": {"lines": [
-			"package p",
-			"",
-			"allow if {",
-			"    b := c",
-			"}",
-		]}},
-	}
+	items := builtins.items
+		with input as {
+			"params": {
+				"textDocument": {"uri": "file:///p.rego"},
+				"position": {"line": 3, "character": 10},
+			},
+			"regal": {"file": {"lines": [
+				"package p",
+				"",
+				"allow if {",
+				"    b := c",
+				"}",
+			]}},
+		}
 		with data.workspace.builtins as _builtins
 
 	items == {
@@ -49,19 +50,20 @@ test_simple_builtin_completion if {
 }
 
 test_simple_builtin_completion_single_match if {
-	items := builtins.items with input as {
-		"params": {
-			"textDocument": {"uri": "file:///p.rego"},
-			"position": {"line": 3, "character": 11},
-		},
-		"regal": {"file": {"lines": [
-			"package p",
-			"",
-			"allow if {",
-			"    b := co",
-			"}",
-		]}},
-	}
+	items := builtins.items
+		with input as {
+			"params": {
+				"textDocument": {"uri": "file:///p.rego"},
+				"position": {"line": 3, "character": 11},
+			},
+			"regal": {"file": {"lines": [
+				"package p",
+				"",
+				"allow if {",
+				"    b := co",
+				"}",
+			]}},
+		}
 		with data.workspace.builtins as _builtins
 
 	items == {{
@@ -80,19 +82,20 @@ test_simple_builtin_completion_single_match if {
 }
 
 test_simple_builtin_completion_single_match_longer_ref if {
-	items := builtins.items with input as {
-		"params": {
-			"textDocument": {"uri": "file:///p.rego"},
-			"position": {"line": 3, "character": 17},
-		},
-		"regal": {"file": {"lines": [
-			"package p",
-			"",
-			"allow if {",
-			"    b := crypto.h",
-			"}",
-		]}},
-	}
+	items := builtins.items
+		with input as {
+			"params": {
+				"textDocument": {"uri": "file:///p.rego"},
+				"position": {"line": 3, "character": 17},
+			},
+			"regal": {"file": {"lines": [
+				"package p",
+				"",
+				"allow if {",
+				"    b := crypto.h",
+				"}",
+			]}},
+		}
 		with data.workspace.builtins as _builtins
 
 	items == {{
@@ -112,54 +115,59 @@ test_simple_builtin_completion_single_match_longer_ref if {
 
 test_no_completion_of_deprecated_builtin if {
 	builtins_deprecated := [object.union(_builtins[0], {"deprecated": true})]
-	items := builtins.items with data.workspace.builtins as builtins_deprecated with input as {
-		"params": {
-			"textDocument": {"uri": "file:///p.rego"},
-			"position": {"line": 3, "character": 10},
-		},
-		"regal": {"file": {"lines": [
-			"package p",
-			"",
-			"allow if {",
-			"    b := c",
-			"}",
-		]}},
-	}
+	items := builtins.items
+		with data.workspace.builtins as builtins_deprecated
+		with input as {
+			"params": {
+				"textDocument": {"uri": "file:///p.rego"},
+				"position": {"line": 3, "character": 10},
+			},
+			"regal": {"file": {"lines": [
+				"package p",
+				"",
+				"allow if {",
+				"    b := c",
+				"}",
+			]}},
+		}
 
 	count(items) == 0
 }
 
 test_no_completion_of_infix_builtin if {
 	builtins_deprecated := [object.union(_builtins[0], {"infix": "🔄"})]
-	items := builtins.items with data.workspace.builtins as builtins_deprecated with input as {
-		"params": {
-			"textDocument": {"uri": "file:///p.rego"},
-			"position": {"line": 3, "character": 10},
-		},
-		"regal": {"file": {"lines": [
-			"package p",
-			"",
-			"allow if {",
-			"    b := c",
-			"}",
-		]}},
-	}
+	items := builtins.items
+		with data.workspace.builtins as builtins_deprecated
+		with input as {
+			"params": {
+				"textDocument": {"uri": "file:///p.rego"},
+				"position": {"line": 3, "character": 10},
+			},
+			"regal": {"file": {"lines": [
+				"package p",
+				"",
+				"allow if {",
+				"    b := c",
+				"}",
+			]}},
+		}
 
 	count(items) == 0
 }
 
 test_no_completion_in_default_rule if {
-	items := builtins.items with input as {
-		"params": {
-			"textDocument": {"uri": "file:///p.rego"},
-			"position": {"line": 2, "character": 16},
-		},
-		"regal": {"file": {"lines": [
-			"package p",
-			"",
-			"default foo := c",
-		]}},
-	}
+	items := builtins.items
+		with input as {
+			"params": {
+				"textDocument": {"uri": "file:///p.rego"},
+				"position": {"line": 2, "character": 16},
+			},
+			"regal": {"file": {"lines": [
+				"package p",
+				"",
+				"default foo := c",
+			]}},
+		}
 		with data.workspace.builtins as _builtins
 
 	count(items) == 0

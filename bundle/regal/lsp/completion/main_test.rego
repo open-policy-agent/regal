@@ -8,28 +8,22 @@ test_completion_entrypoint if {
 	items == {{"_regal": {"provider": "test"}, "foo": "bar"}}
 }
 
-test_inside_comment if {
-	_data := {"file:///p.rego": {"comments": [
+test_inside_comment if completion.inside_comment
+	with input as {"params": {
+		"textDocument": {"uri": "file:///p.rego"},
+		"position": {"line": 3, "character": 4},
+	}}
+	with data.workspace.parsed as {"file:///p.rego": {"comments": [
 		{"location": "2:1:2:10"},
 		{"location": "4:1:4:10"},
 	]}}
-	_input := {"params": {
+
+test_not_inside_comment if not completion.inside_comment
+	with input as {"params": {
 		"textDocument": {"uri": "file:///p.rego"},
 		"position": {"line": 3, "character": 4},
 	}}
-
-	completion.inside_comment with input as _input with data.workspace.parsed as _data
-}
-
-test_not_inside_comment if {
-	_data := {"file:///p.rego": {"comments": [
+	with data.workspace.parsed as {"file:///p.rego": {"comments": [
 		{"location": "2:1:2:10"},
 		{"location": "4:8:4:10"},
 	]}}
-	_input := {"params": {
-		"textDocument": {"uri": "file:///p.rego"},
-		"position": {"line": 3, "character": 4},
-	}}
-
-	not completion.inside_comment with input as _input with data.workspace.parsed as _data
-}

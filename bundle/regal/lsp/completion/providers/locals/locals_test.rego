@@ -27,7 +27,9 @@ bar if {
 			"lines": split(workspace["file:///p.rego"], "\n"),
 		}},
 	}
-	items := provider.items with input as _input with data.workspace.parsed as utils.parsed_modules(workspace)
+	items := provider.items
+		with input as _input
+		with data.workspace.parsed as utils.parsed_modules(workspace)
 
 	count(items) == 0
 }
@@ -56,7 +58,9 @@ function(bar) if {
 		}},
 	}
 
-	items := provider.items with input as _input with data.workspace.parsed as utils.parsed_modules(workspace)
+	items := provider.items
+		with input as _input
+		with data.workspace.parsed as utils.parsed_modules(workspace)
 
 	count(items) == 2
 	_expect_item(items, "bar", {"end": {"character": 9, "line": 8}, "start": {"character": 8, "line": 8}})
@@ -87,7 +91,9 @@ function(bar) if {
 		}},
 	}
 
-	items := provider.items with input as _input with data.workspace.parsed as utils.parsed_modules(workspace)
+	items := provider.items
+		with input as _input
+		with data.workspace.parsed as utils.parsed_modules(workspace)
 
 	count(items) == 2
 	_expect_item(items, "bar", {"end": {"character": 24, "line": 8}, "start": {"character": 23, "line": 8}})
@@ -114,7 +120,9 @@ function(bar) := f if {
 			"lines": split(workspace["file:///p.rego"], "\n"),
 		}},
 	}
-	items := provider.items with input as _input with data.workspace.parsed as utils.parsed_modules(workspace)
+	items := provider.items
+		with input as _input
+		with data.workspace.parsed as utils.parsed_modules(workspace)
 
 	count(items) == 1
 	_expect_item(items, "foo", {"end": {"character": 18, "line": 4}, "start": {"character": 17, "line": 4}})
@@ -130,17 +138,18 @@ function() if {
 }
 `}
 
-	_input := {
-		"params": {
-			"textDocument": {"uri": "file:///p.rego"},
-			"position": {"line": 4, "character": 9},
-		},
-		"regal": {"file": {
-			"uri": "file:///p.rego",
-			"lines": split(workspace["file:///p.rego"], "\n"),
-		}},
-	}
-	items := provider.items with input as _input with data.workspace.parsed as utils.parsed_modules(workspace)
+	items := provider.items
+		with data.workspace.parsed as utils.parsed_modules(workspace)
+		with input as {
+			"params": {
+				"textDocument": {"uri": "file:///p.rego"},
+				"position": {"line": 4, "character": 9},
+			},
+			"regal": {"file": {
+				"uri": "file:///p.rego",
+				"lines": split(workspace["file:///p.rego"], "\n"),
+			}},
+		}
 
 	count(items) == 0
 }
@@ -166,7 +175,9 @@ allow if {
 			"lines": split(workspace["file:///p.rego"], "\n"),
 		}},
 	}
-	items := provider.items with input as _input with data.workspace.parsed as utils.parsed_modules(workspace)
+	items := provider.items
+		with input as _input
+		with data.workspace.parsed as utils.parsed_modules(workspace)
 
 	util.single_set_item(items).label == "xyz"
 }
@@ -191,7 +202,9 @@ no_completion if {
 		}},
 	}
 
-	items := provider.items with input as _input with data.workspace.parsed as utils.parsed_modules(workspace)
+	items := provider.items
+		with input as _input
+		with data.workspace.parsed as utils.parsed_modules(workspace)
 
 	count(items) == 0
 }

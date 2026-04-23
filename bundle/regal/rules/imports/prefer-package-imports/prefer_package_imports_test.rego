@@ -74,8 +74,6 @@ test_success_aggregate_report_on_import_with_matching_package if {
 	r == set()
 }
 
-# unresolved imports should be flagged by an `unresolved-import`
-# rule instead. see https://github.com/open-policy-agent/regal/issues/300
 test_success_aggregate_report_on_import_with_unresolved_path if {
 	r := rule.aggregate_report with input.aggregate as {
 		{"aggregate_data": {
@@ -103,7 +101,8 @@ test_success_aggregate_report_ignored_import_path if {
 		}},
 	}
 
-	r := rule.aggregate_report with input.aggregate as aggregate
+	r := rule.aggregate_report
+		with input.aggregate as aggregate
 		with config.rules as {"imports": {"prefer-package-imports": {
 			"level": "error",
 			"ignore-import-paths": ["data.b.c"],

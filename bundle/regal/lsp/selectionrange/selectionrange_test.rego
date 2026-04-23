@@ -3,22 +3,24 @@ package regal.lsp.selectionrange_test
 import data.regal.lsp.selectionrange
 
 test_selection_range_no_position if {
-	result := selectionrange.result.response with input as {"params": {
-		"textDocument": {"uri": "file://test.regal"},
-		"positions": [],
-	}}
+	result := selectionrange.result.response
+		with input as {"params": {
+			"textDocument": {"uri": "file://test.regal"},
+			"positions": [],
+		}}
 
 	result == null
 }
 
 test_selection_range_single_position_rule if {
-	result := selectionrange.result.response with input as {"params": {
-		"textDocument": {"uri": "file:///p.rego"},
-		"positions": [{
-			"line": 2,
-			"character": 7,
-		}],
-	}}
+	result := selectionrange.result.response
+		with input as {"params": {
+			"textDocument": {"uri": "file:///p.rego"},
+			"positions": [{
+				"line": 2,
+				"character": 7,
+			}],
+		}}
 		with data.workspace.parsed as {"file:///p.rego": regal.parse_module("p.rego", `package p
 rule if {
     x := input.foo.bar
@@ -40,13 +42,14 @@ rule if {
 }
 
 test_selection_range_multiple_positions_rule if {
-	result := selectionrange.result.response with input as {"params": {
-		"textDocument": {"uri": "file:///p.rego"},
-		"positions": [
-			{"line": 2, "character": 7},
-			{"line": 6, "character": 12},
-		],
-	}}
+	result := selectionrange.result.response
+		with input as {"params": {
+			"textDocument": {"uri": "file:///p.rego"},
+			"positions": [
+				{"line": 2, "character": 7},
+				{"line": 6, "character": 12},
+			],
+		}}
 		with data.workspace.parsed as {"file:///p.rego": regal.parse_module("p.rego", `package p
 rule if {
     x := input.foo.bar
@@ -83,13 +86,14 @@ another if {
 }
 
 test_selection_range_position_import if {
-	result := selectionrange.result.response with input as {"params": {
-		"textDocument": {"uri": "file:///p.rego"},
-		"positions": [{
-			"line": 1,
-			"character": 15,
-		}],
-	}}
+	result := selectionrange.result.response
+		with input as {"params": {
+			"textDocument": {"uri": "file:///p.rego"},
+			"positions": [{
+				"line": 1,
+				"character": 15,
+			}],
+		}}
 		with data.workspace.parsed as {"file:///p.rego": regal.parse_module("p.rego", `package p
 import data.foo.bar as baz
 `)}
@@ -107,13 +111,14 @@ import data.foo.bar as baz
 }
 
 test_selection_range_position_package if {
-	result := selectionrange.result.response with input as {"params": {
-		"textDocument": {"uri": "file:///p.rego"},
-		"positions": [{
-			"line": 0,
-			"character": 10,
-		}],
-	}}
+	result := selectionrange.result.response
+		with input as {"params": {
+			"textDocument": {"uri": "file:///p.rego"},
+			"positions": [{
+				"line": 0,
+				"character": 10,
+			}],
+		}}
 		with data.workspace.parsed as {"file:///p.rego": regal.parse_module("p.rego", `package data.foo.bar.baz
 `)}
 

@@ -12,7 +12,10 @@ test_fail_call_to_deprecated_builtin_function if {
 	}
 	`)
 
-	r := rule.report with input as module with config.capabilities as {"builtins": {"any": {}}}
+	r := rule.report
+		with input as module
+		with config.capabilities as {"builtins": {"any": {}}}
+
 	r == {{
 		"category": "bugs",
 		"description": "Avoid using deprecated built-in functions",
@@ -36,12 +39,13 @@ test_fail_call_to_deprecated_builtin_function if {
 }
 
 test_success_deprecated_builtin_not_in_capabilities if {
-	module := ast.with_rego_v1(`
-	allow if {
-		any([true, false])
-	}
-	`)
+	r := rule.report
+		with input as ast.with_rego_v1(`
+			allow if {
+				any([true, false])
+			}
+		`)
+		with config.capabilities as {"builtins": {"http.send": {}}}
 
-	r := rule.report with input as module with config.capabilities as {"builtins": {"http.send": {}}}
 	r == set()
 }

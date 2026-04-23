@@ -14,10 +14,11 @@ test_multiple_failures if {
 	# both camel case and unification operator
 	default camelCase = "yes"
 	`
-	report := main.report with input as regal.parse_module("p.rego", policy) with config.rules as {"style": {
-		"prefer-snake-case": {"level": "error"},
-		"use-assignment-operator": {"level": "error"},
-	}}
+	report := main.report
+		with input as regal.parse_module("p.rego", policy) with config.rules as {"style": {
+			"prefer-snake-case": {"level": "error"},
+			"use-assignment-operator": {"level": "error"},
+		}}
 		with data.internal.prepared.rules_to_run as {"style": {
 			"prefer-snake-case",
 			"use-assignment-operator",
@@ -31,7 +32,8 @@ test_expect_failure if {
 
 	camelCase := "yes"
 	`
-	report := main.report with input as regal.parse_module("p.rego", policy)
+	report := main.report
+		with input as regal.parse_module("p.rego", policy)
 		with config.rules as {"style": {"prefer-snake-case": {"level": "error"}}}
 		with data.internal.prepared.rules_to_run as {"style": {"prefer-snake-case"}}
 
@@ -48,7 +50,8 @@ test_main_lint if {
 
 	cfg := {"style": {"use-assignment-operator": {"level": "error"}}}
 
-	result := main.lint with input as mock_input
+	result := main.lint
+		with input as mock_input
 		with config.rules as cfg
 		with data.internal.prepared.rules_to_run as {"style": {"use-assignment-operator"}}
 
@@ -79,7 +82,8 @@ test_main_lint if {
 test_rules_to_run_not_excluded if {
 	cfg := {"rules": {"testing": {"test": {"level": "error"}}}}
 
-	rules_to_run := main._rules_to_run with config.merged_config as cfg
+	rules_to_run := main._rules_to_run
+		with config.merged_config as cfg
 		with input.regal.file.name as "p.rego"
 		with data.internal.prepared.rules_to_run as {"testing": {"test"}}
 		with config.excluded_file as false
@@ -99,7 +103,8 @@ test_main_fail_when_input_not_object if {
 }
 
 test_report_custom_rule_failure if {
-	report := main.report with data.custom.regal.rules as {"testing": {"testme": {"report": {{"title": "fail!"}}}}}
+	report := main.report
+		with data.custom.regal.rules as {"testing": {"testme": {"report": {{"title": "fail!"}}}}}
 		with input as {"package": {}, "regal": {"file": {"name": "p.rego"}}}
 		with config.excluded_file as false
 
@@ -109,7 +114,8 @@ test_report_custom_rule_failure if {
 test_aggregate_bundled_rule if {
 	prep := data.regal.prepared.prepare with config.rules as {"foo": {"bar": {"level": "error"}}}
 
-	agg := main.aggregate with data.internal.prepared as prep
+	agg := main.aggregate
+		with data.internal.prepared as prep
 		with data.regal.rules as {"foo": {"bar": {"aggregate": {"baz"}}}}
 		with input.regal.file.name as "p.rego"
 
@@ -117,7 +123,8 @@ test_aggregate_bundled_rule if {
 }
 
 test_aggregate_custom_rule if {
-	agg := main.aggregate with data.custom.regal.rules as {"foo": {"bar": {"aggregate": {"baz"}}}}
+	agg := main.aggregate
+		with data.custom.regal.rules as {"foo": {"bar": {"aggregate": {"baz"}}}}
 		with config.excluded_file as false
 		with input.regal.file.name as "custom.rego"
 
@@ -139,12 +146,14 @@ test_aggregate_report_custom_rule if {
 		"title": "test",
 	}}}}}
 
-	report := main.aggregate_report with input as mock_input
+	report := main.aggregate_report
+		with input as mock_input
 		with data.custom.regal.rules as mock_rules
 
 	report == {{"category": "custom", "title": "test"}}
 
-	violations := main.lint.aggregate.violations with input as mock_input
+	violations := main.lint.aggregate.violations
+		with input as mock_input
 		with data.custom.regal.rules as mock_rules
 
 	violations == report

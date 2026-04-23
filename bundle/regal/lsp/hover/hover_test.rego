@@ -3,13 +3,14 @@ package regal.lsp.hover_test
 import data.regal.lsp.hover
 
 test_builtin_indexof if {
-	res := hover.result.response with input as {
-		"params": {"position": {
-			"line": 0,
-			"character": 4,
-		}},
-		"regal": {"file": {"lines": ["indexof([1,2,3], 2)"]}},
-	}
+	res := hover.result.response
+		with input as {
+			"params": {"position": {
+				"line": 0,
+				"character": 4,
+			}},
+			"regal": {"file": {"lines": ["indexof([1,2,3], 2)"]}},
+		}
 		with data.workspace.builtins.indexof as {
 			"name": "indexof",
 			"categories": ["strings"],
@@ -53,13 +54,11 @@ test_builtin_indexof if {
 }
 
 test_builtin_graph_reachable if {
-	res := hover.result.response with input as {
-		"params": {"position": {
-			"line": 0,
-			"character": 4,
-		}},
-		"regal": {"file": {"lines": ["graph.reachable(graph, initial)"]}},
-	}
+	res := hover.result.response
+		with input as {
+			"params": {"position": {"line": 0, "character": 4}},
+			"regal": {"file": {"lines": ["graph.reachable(graph, initial)"]}},
+		}
 		with data.workspace.builtins["graph.reachable"] as {
 			"name": "graph.reachable",
 			"categories": ["graph"],
@@ -119,10 +118,11 @@ test_builtin_json_filter if {
 		"will result in `{\"a\": {\"b\": \"x\"}}`). ",
 		"Paths are not filtered in-order and are deduplicated before being evaluated.",
 	])
-	res := hover.result.response with input as {
-		"params": {"position": {"line": 2, "character": 11}},
-		"regal": {"file": {"lines": ["foo", "bar", "allow if json.filter(object, paths)"]}},
-	}
+	res := hover.result.response
+		with input as {
+			"params": {"position": {"line": 2, "character": 11}},
+			"regal": {"file": {"lines": ["foo", "bar", "allow if json.filter(object, paths)"]}},
+		}
 		with data.workspace.builtins["json.filter"] as {
 			"name": "json.filter",
 			"categories": ["object"],
@@ -173,13 +173,14 @@ test_builtin_json_filter if {
 }
 
 test_builtin_url_override if {
-	res := hover.result.response with input as {
-		"params": {"position": {
-			"line": 0,
-			"character": 0,
-		}},
-		"regal": {"file": {"lines": ["foo.bar(arg1, arg2)"]}},
-	}
+	res := hover.result.response
+		with input as {
+			"params": {"position": {
+				"line": 0,
+				"character": 0,
+			}},
+			"regal": {"file": {"lines": ["foo.bar(arg1, arg2)"]}},
+		}
 		with data.workspace.builtins["foo.bar"] as {
 			"name": "foo.bar",
 			"categories": ["foo", "url=https://example.com"],
@@ -223,16 +224,17 @@ test_builtin_url_override if {
 }
 
 test_keyword_hover if {
-	res := hover.result.response with input as {
-		"params": {"position": {
-			"line": 0,
-			"character": 3,
-		}},
-		"regal": {"file": {
-			"lines": ["package foo", ""],
-			"uri": "file:///p.rego",
-		}},
-	}
+	res := hover.result.response
+		with input as {
+			"params": {"position": {
+				"line": 0,
+				"character": 3,
+			}},
+			"regal": {"file": {
+				"lines": ["package foo", ""],
+				"uri": "file:///p.rego",
+			}},
+		}
 		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", "package foo\n")
 
 	res.range.start.line == 0

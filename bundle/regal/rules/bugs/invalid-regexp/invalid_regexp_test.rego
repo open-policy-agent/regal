@@ -8,7 +8,8 @@ import data.regal.util
 import data.regal.rules.bugs["invalid-regexp"] as rule
 
 test_fail_invalid_regexp if {
-	r := rule.report with input as ast.policy("r := regex.match(`(`, input.string)")
+	r := rule.report
+		with input as ast.policy("r := regex.match(`(`, input.string)")
 		with config.capabilities as capabilities.provided
 
 	r == {{
@@ -46,14 +47,16 @@ test_fail_invalid_regexp_for_pattern_function[call] if {
 		"regex.template_match(`(`, input.x, `<`, `>`)",
 	]
 
-	r := rule.report with input as ast.policy($"r := {call}")
+	r := rule.report
+		with input as ast.policy($"r := {call}")
 		with config.capabilities as capabilities.provided
 
 	util.single_set_item(r).location.text == $"r := {call}"
 }
 
 test_pass_valid_regexp if {
-	r := rule.report with input as ast.policy("r := regex.match(`[abc]`, input.string)")
+	r := rule.report
+		with input as ast.policy("r := regex.match(`[abc]`, input.string)")
 		with config.capabilities as capabilities.provided
 
 	r == set()

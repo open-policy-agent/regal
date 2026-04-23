@@ -5,7 +5,8 @@ import data.regal.config
 import data.regal.rules.custom["naming-convention"] as rule
 
 test_fail_package_name_does_not_match_pattern if {
-	r := rule.report with input as regal.parse_module("policy.rego", "package foo.bar")
+	r := rule.report
+		with input as regal.parse_module("policy.rego", "package foo.bar")
 		with config.rules as conventions([{"targets": ["package"], "pattern": `^foo\.bar\..+$`}])
 
 	r == {expected(
@@ -24,14 +25,16 @@ test_fail_package_name_does_not_match_pattern if {
 }
 
 test_success_package_name_matches_pattern if {
-	r := rule.report with input as regal.parse_module("policy.rego", "package foo.bar")
+	r := rule.report
+		with input as regal.parse_module("policy.rego", "package foo.bar")
 		with config.rules as conventions([{"targets": ["package"], "pattern": `^foo\.bar$`}])
 
 	r == set()
 }
 
 test_fail_rule_name_does_not_match_pattern if {
-	r := rule.report with input as ast.policy(`FOO := true`)
+	r := rule.report
+		with input as ast.policy(`FOO := true`)
 		with config.rules as conventions([{"targets": ["rule"], "pattern": "^[a-z]+$"}])
 
 	r == {expected(
@@ -50,14 +53,16 @@ test_fail_rule_name_does_not_match_pattern if {
 }
 
 test_success_rule_name_matches_pattern if {
-	r := rule.report with input as ast.policy(`foo := true`)
+	r := rule.report
+		with input as ast.policy(`foo := true`)
 		with config.rules as conventions([{"targets": ["rule"], "pattern": "^[a-z]+$"}])
 
 	r == set()
 }
 
 test_fail_function_name_does_not_match_pattern if {
-	r := rule.report with input as ast.policy(`fooBar(_) := true`)
+	r := rule.report
+		with input as ast.policy(`fooBar(_) := true`)
 		with config.rules as conventions([{"targets": ["function"], "pattern": "^[a-z]+$"}])
 
 	r == {expected(
@@ -76,7 +81,8 @@ test_fail_function_name_does_not_match_pattern if {
 }
 
 test_success_function_name_matches_pattern if {
-	r := rule.report with input as ast.policy(`foo_bar(_) := true`)
+	r := rule.report
+		with input as ast.policy(`foo_bar(_) := true`)
 		with config.rules as conventions([{"targets": ["function"], "pattern": "^[a-z_]+$"}])
 
 	r == set()
@@ -89,7 +95,8 @@ test_fail_var_name_does_not_match_pattern if {
 		fooBar == true
 	}
 	`)
-	r := rule.report with input as policy
+	r := rule.report
+		with input as policy
 		with config.rules as conventions([{"targets": ["variable"], "pattern": "^[a-z_]+$"}])
 
 	r == {expected(
@@ -115,7 +122,8 @@ test_success_var_name_matches_pattern if {
 		foo_bar == "works"
 	}
 	`)
-	r := rule.report with input as policy
+	r := rule.report
+		with input as policy
 		with config.rules as conventions([{"targets": ["variable"], "pattern": "^[a-z_]+$"}])
 
 	r == set()
@@ -131,7 +139,8 @@ test_fail_multiple_conventions if {
 		fooBar == true
 	}
 	`)
-	r := rule.report with input as policy
+	r := rule.report
+		with input as policy
 		with config.rules as conventions([
 			{"targets": ["package"], "pattern": `^acmecorp\.[a-z_\.]+$`},
 			{"targets": ["rule", "variable"], "pattern": "^bar$|^foo_bar$"},
@@ -187,7 +196,8 @@ test_fail_variable_name_does_not_match_name_in_list if {
 		fooBar == true
 	}
 	`)
-	r := rule.report with input as policy
+	r := rule.report
+		with input as policy
 		with config.rules as conventions([{"targets": ["var"], "names": ["foo_bar"]}])
 
 	r == {expected(
@@ -212,7 +222,8 @@ test_success_variable_name_matches_name_in_list if {
 		foo_bar == true
 	}
 	`)
-	r := rule.report with input as policy
+	r := rule.report
+		with input as policy
 		with config.rules as conventions([{"targets": ["variable"], "names": ["foo_bar"]}])
 
 	r == set()

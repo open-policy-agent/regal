@@ -19,9 +19,11 @@ test_ref_names if {
 		startswith("hey", "h")
 
 		imp.foo == data.x
-	}
-	`)
-	ref_names := completion.ref_names with input as module with config.capabilities as capabilities.provided
+	}`)
+
+	ref_names := completion.ref_names
+		with config.capabilities as capabilities.provided
+		with input as module
 
 	ref_names == {
 		"imp",
