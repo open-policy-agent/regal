@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -13,10 +16,15 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
+	rio "github.com/open-policy-agent/regal/internal/io"
+	rrego "github.com/open-policy-agent/regal/internal/lsp/rego"
 	rquery "github.com/open-policy-agent/regal/internal/lsp/rego/query"
+	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	rparse "github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
+	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 
 	_ "github.com/open-policy-agent/regal/pkg/builtins"
@@ -29,6 +37,7 @@ var (
 		Roots:    &[]string{"workspace"}, // no data in this bundle so no roots are used, however, roots must be set
 		Metadata: map[string]any{"name": "workspace"},
 	}
+	regalEvalUseAsInputComment = regexp.MustCompile(`^\s*regal eval:\s*use-as-input`)
 )
 
 type EvalResult struct {
@@ -43,6 +52,131 @@ type PrintHook struct {
 	// because rego files are evaluated with relative paths (so errors match
 	// OPA CLI format) but print hook output consumers need full URIs.
 	FileNameBase string
+}
+
+func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.CommandArgs) error {
+	if args.Target == "" || args.Query == "" {
+		l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
+
+		return nil
+	}
+
+	contents, module, ok := l.cache.GetContentAndModule(args.Target)
+	if !ok {
+		l.log.Message("failed to get content or module for file %q", args.Target)
+
+		return nil
+	}
+
+	var pq *rquery.Prepared
+
+	pq, err := l.queryCache.GetOrSet(ctx, l.regoStore, rquery.RuleHeadLocations)
+	if err != nil {
+		l.log.Message("failed to prepare query %s", rquery.RuleHeadLocations, err)
+
+		return nil
+	}
+
+	var allRuleHeadLocations rrego.RuleHeads
+
+	allRuleHeadLocations, err = rrego.AllRuleHeadLocations(
+		ctx, pq, filepath.Base(uri.ToPath(args.Target)), contents, module,
+	)
+	if err != nil {
+		l.log.Message("failed to get rule head locations: %s", err)
+
+		return nil
+	}
+
+	// if there are none, then it's a package evaluation
+	ruleHeadLocations := allRuleHeadLocations[args.Query]
+
+	var inputMap map[string]any
+
+	var inputPath string
+
+	// When the first comment in the file is `regal eval: use-as-input`, the AST of that module is
+	// used as the input rather than the contents of input.json/yaml. This is a development feature for
+	// working on rules (built-in or custom), allowing querying the AST of the module directly.
+	if len(module.Comments) > 0 && regalEvalUseAsInputComment.Match(module.Comments[0].Text) {
+		//nolint:staticcheck
+		inputMap, err = rparse.PrepareAST(l.toRelativePath(args.Target), contents, module)
+		if err != nil {
+			l.log.Message("failed to prepare module: %s", err)
+
+			return nil
+		}
+	} else {
+		// Normal mode — try to find the input.json/yaml file in the workspace and use as input
+		// NOTE that we don't break on missing input, as some rules don't depend on that, and should
+		// still be evaluable. We may consider returning some notice to the user though.
+		inputPath, inputMap = rio.FindInput(uri.ToPath(args.Target), l.workspacePath())
+
+		ruleName := strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
+
+		if inputPath == "" && !l.supressInputPrompt {
+			created, err := l.handleInputSkeletonPrompt(ctx, args.Target, ruleName, args.Row)
+			// Bubbling up an error here if input.json creation fails for any reason.
+			if err != nil {
+				return err
+			}
+
+			if created {
+				return nil
+			}
+		}
+	}
+
+	var result EvalResult
+
+	if result, err = l.EvalInWorkspace(ctx, args.Query, inputMap); err != nil {
+		return fmt.Errorf("failed to evaluate workspace path: %w", err)
+	}
+
+	target := "package"
+	if len(ruleHeadLocations) > 0 {
+		target = strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
+	}
+
+	if l.featureFlags.InlineEvaluationProvider && l.getClient().SupportsEvalCodelensDisplayInline() {
+		responseParams := map[string]any{
+			"result": result,
+			"line":   args.Row,
+			"target": target,
+			// only used when the target is 'package'
+			"package": strings.TrimPrefix(module.Package.Path.String(), "data."),
+			// only used when the target is a rule
+			"rule_head_locations": ruleHeadLocations,
+		}
+
+		responseResult := map[string]any{}
+
+		// Use a timeout context for RPC to ensure it completes during graceful shutdown
+		rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
+
+		//nolint:contextcheck
+		if err = l.conn.Call(rpcCtx, "regal/showEvalResult", responseParams, &responseResult); err != nil {
+			l.log.Message("regal/showEvalResult failed: %v", err.Error())
+		}
+
+		rpcCancel()
+	} else {
+		output := filepath.Join(l.workspacePath(), "output.json")
+
+		var f *os.File
+		if f, err = os.OpenFile(output, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755); err == nil {
+			value := result.Value
+			if result.IsUndefined {
+				value = emptyStringAnyMap // undefined displays as an empty object
+			}
+
+			err = encoding.NewIndentEncoder(f, "", "  ").Encode(value)
+
+			rio.CloseIgnore(f)
+		}
+	}
+
+	return err
 }
 
 func (l *LanguageServer) Eval(

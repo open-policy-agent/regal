@@ -318,6 +318,22 @@ func Reversed[T any](s []T) []T {
 	return s
 }
 
+// Or works like [cmp.Or] but allows supplier functions to be tried rather than
+// alternative values. This allows deferring computation of the alternatives to
+// only when needed.
+func Or[T comparable](val T, suppliers ...func() T) T {
+	var zero T
+	if val == zero {
+		for _, f := range suppliers {
+			if alt := f(); alt != zero {
+				return alt
+			}
+		}
+	}
+
+	return val
+}
+
 // LineContents returns the contents on line lineNum (0-indexed) from document.
 // This function assumes the lineNum is known to be contained within the document.
 func LineContents(document []byte, lineNum uint) []byte {

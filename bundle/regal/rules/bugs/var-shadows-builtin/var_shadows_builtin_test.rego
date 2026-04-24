@@ -35,14 +35,18 @@ test_fail_var_shadows_builtin if {
 }
 
 test_success_var_does_not_shadow_builtin if {
-	r := rule.report with input as ast.policy(`allow if a := "yes"`) with config.capabilities as capabilities.provided
+	r := rule.report
+		with input as ast.policy(`allow if a := "yes"`)
+		with config.capabilities as capabilities.provided
 
 	r == set()
 }
 
 # https://github.com/open-policy-agent/regal/issues/1163
 test_success_print_excluded if {
-	r := rule.report with input as ast.policy(`x if print([y - 1])`) with config.capabilities as capabilities.provided
+	r := rule.report
+		with input as ast.policy(`x if print([y - 1])`)
+		with config.capabilities as capabilities.provided
 
 	r == set()
 }

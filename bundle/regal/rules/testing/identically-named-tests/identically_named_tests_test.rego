@@ -42,5 +42,6 @@ test_success_differently_named_tests if {
 	test_baz if { 1 == 1 }
 	`)
 	r := rule.report with input as ast
+
 	r == set()
 }

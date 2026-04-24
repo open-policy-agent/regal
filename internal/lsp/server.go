@@ -43,7 +43,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
-	rparse "github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/roast/transforms"
 	"github.com/open-policy-agent/regal/internal/update"
 	"github.com/open-policy-agent/regal/internal/util"
@@ -83,8 +82,7 @@ var (
 	noDiagnostics = make([]types.Diagnostic, 0)
 	orc           = oracle.New()
 
-	regalEvalUseAsInputComment = regexp.MustCompile(`^\s*regal eval:\s*use-as-input`)
-	validPathComponentPattern  = regexp.MustCompile(`^\w+[\w\-]*\w+$`)
+	validPathComponentPattern = regexp.MustCompile(`^\w+[\w\-]*\w+$`)
 
 	fixFmt                    = &fixes.Fmt{OPAFmtOpts: format.Opts{}}
 	fixUseRegoV1              = &fixes.Fmt{OPAFmtOpts: format.Opts{RegoVersion: ast.RegoV0CompatV1}}
@@ -144,7 +142,6 @@ type LanguageServer struct {
 	loadedConfig  *config.Config
 	// this is also used to lock the updates to the cache of enabled rules
 	loadedConfigLock            sync.RWMutex
-	loadedConfigEnabledRules    []string
 	loadedConfigAllRegoVersions *concurrent.Map[string, ast.RegoVersion]
 	loadedBuiltins              *concurrent.Map[string, map[string]*ast.Builtin]
 
@@ -208,10 +205,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 	store := NewRegalStore()
 
 	// Use provided feature flags, or defaults if not set
-	featureFlags := opts.FeatureFlags
-	if featureFlags == nil {
-		featureFlags = DefaultServerFeatureFlags()
-	}
+	featureFlags := util.Or(opts.FeatureFlags, DefaultServerFeatureFlags)
 
 	ls := &LanguageServer{
 		cache:              c,
@@ -420,7 +414,6 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 						Cache:            l.cache,
 						RegalConfig:      l.getLoadedConfig(),
 						WorkspaceRootURI: l.getWorkspaceRootURI(),
-						UpdateForRules:   l.getEnabledRules(),
 						CustomRulesPath:  l.getCustomRulesPath(),
 					})
 					if err != nil {
@@ -654,13 +647,11 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 
 					rpcCancel()
 				case "regal.config.disable-rule":
-					err = l.handleIgnoreRuleCommand(ctx, args)
-					if err != nil {
+					if err = l.handleIgnoreRuleCommand(ctx, args); err != nil {
 						l.log.Message("failed to ignore rule: %s", err)
 					}
 
-					// handle this ourselves as it's a config edit
-					fixed = false
+					fixed = false // handle this ourselves as it's a config edit
 				}
 
 				if err != nil {
@@ -796,13 +787,6 @@ func (l *LanguageServer) setClient(client types.Client) {
 	l.client = client
 }
 
-func (l *LanguageServer) getEnabledRules() []string {
-	l.loadedConfigLock.RLock()
-	defer l.loadedConfigLock.RUnlock()
-
-	return l.loadedConfigEnabledRules
-}
-
 func (l *LanguageServer) getCustomRulesPath() string {
 	if l.getWorkspaceRootURI() != "" {
 		if customRulesPath := filepath.Join(l.workspacePath(), ".regal", "rules"); rio.IsDir(customRulesPath) {
@@ -834,11 +818,6 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
 				l.loadedConfigAllRegoVersions.Set(k, v)
 			}
 		}
-	}
-
-	// Enabled rules might have changed with the new config, so reload.
-	if err := l.loadEnabledRulesFromConfig(ctx, conf); err != nil {
-		l.log.Message("failed to cache enabled rules: %s", err)
 	}
 
 	// Capabilities URL may have changed, so we should reload it.
@@ -900,24 +879,6 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
 
 		l.cache.ClearIgnoredFileContents(k)
 	}
-}
-
-// loadEnabledRulesFromConfig is used to cache the enabled rules for the current
-// config. These take some time to compute and only change when config changes,
-// so we can store them on the server to speed up diagnostic runs.
-func (l *LanguageServer) loadEnabledRulesFromConfig(ctx context.Context, cfg config.Config) error {
-	lint := linter.NewLinter().WithUserConfig(cfg).WithCustomRulesPaths(l.getCustomRulesPath())
-
-	rules, err := lint.DetermineEnabledRules(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to determine enabled rules: %w", err)
-	}
-
-	l.loadedConfigLock.Lock()
-	l.loadedConfigEnabledRules = rules
-	l.loadedConfigLock.Unlock()
-
-	return nil
 }
 
 // processTemplateJob handles the templating of a newly created Rego file.
@@ -1713,7 +1674,7 @@ func (l *LanguageServer) handleWorkspaceDiagnostic() (any, error) {
 	}}}, nil
 }
 
-func (l *LanguageServer) handleInitialize(ctx context.Context, params types.InitializeParams) (any, error) {
+func (l *LanguageServer) handleInitialize(_ context.Context, params types.InitializeParams) (any, error) {
 	if bundle.DevModeEnabled() {
 		path := os.Getenv("REGAL_BUNDLE_PATH")
 		fmt.Fprintln(os.Stderr, "Development mode enabled. Will attempt to build bundle from:", path)
@@ -1862,10 +1823,6 @@ func (l *LanguageServer) handleInitialize(ctx context.Context, params types.Init
 	l.loadedConfigLock.Lock()
 	l.loadedConfig = &defaultConfig
 	l.loadedConfigLock.Unlock()
-
-	if err := l.loadEnabledRulesFromConfig(ctx, defaultConfig); err != nil {
-		l.log.Message("failed to cache enabled rules: %s", err)
-	}
 
 	if params.RootURI != "" {
 		err := l.updateRootURI(params.RootURI)
@@ -2540,131 +2497,6 @@ func (l *LanguageServer) handleInputSkeletonPrompt(
 	}
 
 	return false, nil
-}
-
-func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.CommandArgs) error {
-	if args.Target == "" || args.Query == "" {
-		l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
-
-		return nil
-	}
-
-	contents, module, ok := l.cache.GetContentAndModule(args.Target)
-	if !ok {
-		l.log.Message("failed to get content or module for file %q", args.Target)
-
-		return nil
-	}
-
-	var pq *query.Prepared
-
-	pq, err := l.queryCache.GetOrSet(ctx, l.regoStore, query.RuleHeadLocations)
-	if err != nil {
-		l.log.Message("failed to prepare query %s", query.RuleHeadLocations, err)
-
-		return nil
-	}
-
-	var allRuleHeadLocations rego.RuleHeads
-
-	allRuleHeadLocations, err = rego.AllRuleHeadLocations(
-		ctx, pq, filepath.Base(uri.ToPath(args.Target)), contents, module,
-	)
-	if err != nil {
-		l.log.Message("failed to get rule head locations: %s", err)
-
-		return nil
-	}
-
-	// if there are none, then it's a package evaluation
-	ruleHeadLocations := allRuleHeadLocations[args.Query]
-
-	var inputMap map[string]any
-
-	var inputPath string
-
-	// When the first comment in the file is `regal eval: use-as-input`, the AST of that module is
-	// used as the input rather than the contents of input.json/yaml. This is a development feature for
-	// working on rules (built-in or custom), allowing querying the AST of the module directly.
-	if len(module.Comments) > 0 && regalEvalUseAsInputComment.Match(module.Comments[0].Text) {
-		//nolint:staticcheck
-		inputMap, err = rparse.PrepareAST(l.toRelativePath(args.Target), contents, module)
-		if err != nil {
-			l.log.Message("failed to prepare module: %s", err)
-
-			return nil
-		}
-	} else {
-		// Normal mode — try to find the input.json/yaml file in the workspace and use as input
-		// NOTE that we don't break on missing input, as some rules don't depend on that, and should
-		// still be evaluable. We may consider returning some notice to the user though.
-		inputPath, inputMap = rio.FindInput(uri.ToPath(args.Target), l.workspacePath())
-
-		ruleName := strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
-
-		if inputPath == "" && !l.supressInputPrompt {
-			created, err := l.handleInputSkeletonPrompt(ctx, args.Target, ruleName, args.Row)
-			// Bubbling up an error here if input.json creation fails for any reason.
-			if err != nil {
-				return err
-			}
-
-			if created {
-				return nil
-			}
-		}
-	}
-
-	var result EvalResult
-
-	if result, err = l.EvalInWorkspace(ctx, args.Query, inputMap); err != nil {
-		return fmt.Errorf("failed to evaluate workspace path: %w", err)
-	}
-
-	target := "package"
-	if len(ruleHeadLocations) > 0 {
-		target = strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
-	}
-
-	if l.featureFlags.InlineEvaluationProvider && l.getClient().SupportsEvalCodelensDisplayInline() {
-		responseParams := map[string]any{
-			"result": result,
-			"line":   args.Row,
-			"target": target,
-			// only used when the target is 'package'
-			"package": strings.TrimPrefix(module.Package.Path.String(), "data."),
-			// only used when the target is a rule
-			"rule_head_locations": ruleHeadLocations,
-		}
-
-		responseResult := map[string]any{}
-
-		// Use a timeout context for RPC to ensure it completes during graceful shutdown
-		rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
-
-		//nolint:contextcheck
-		if err = l.conn.Call(rpcCtx, "regal/showEvalResult", responseParams, &responseResult); err != nil {
-			l.log.Message("regal/showEvalResult failed: %v", err.Error())
-		}
-
-		rpcCancel()
-	} else {
-		output := filepath.Join(l.workspacePath(), "output.json")
-
-		var f *os.File
-		if f, err = os.OpenFile(output, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755); err == nil {
-			value := result.Value
-			if result.IsUndefined {
-				value = emptyStringAnyMap // undefined displays as an empty object
-			}
-
-			err = encoding.NewIndentEncoder(f, "", "  ").Encode(value)
-
-			rio.CloseIgnore(f)
-		}
-	}
-
-	return err
 }
 
 func positionToOffset(text string, p types.Position) int {

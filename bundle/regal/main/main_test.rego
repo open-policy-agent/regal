@@ -15,7 +15,8 @@ test_multiple_failures if {
 	default camelCase = "yes"
 	`
 	report := main.report
-		with input as regal.parse_module("p.rego", policy) with config.rules as {"style": {
+		with input as regal.parse_module("p.rego", policy)
+		with config.rules as {"style": {
 			"prefer-snake-case": {"level": "error"},
 			"use-assignment-operator": {"level": "error"},
 		}}

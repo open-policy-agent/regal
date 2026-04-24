@@ -23,6 +23,7 @@ var (
 func NewRegalStore() storage.Store {
 	return inmem.NewFromObjectWithOpts(map[string]any{
 		"workspace": map[string]any{
+			"config": map[string]any{},
 			"parsed": map[string]any{},
 			// should map[string][]string{}, but since we don't round trip on write,
 			// we'll need to conform to the most basic "JSON" format understood by the store

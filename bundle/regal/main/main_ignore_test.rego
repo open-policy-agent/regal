@@ -91,7 +91,8 @@ test_ignore_directive_multiple_success if {
 	default camelCase = "yes"
 	`
 	report := main.report
-		with input as regal.parse_module("p.rego", policy) with config.rules as {"style": {
+		with input as regal.parse_module("p.rego", policy)
+		with config.rules as {"style": {
 			"prefer-snake-case": {"level": "error"},
 			"use-assignment-operator": {"level": "error"},
 		}}
@@ -110,7 +111,8 @@ test_ignore_directive_multiple_mixed_success if {
 	default camelCase = "yes"
 	`
 	report := main.report
-		with input as regal.parse_module("p.rego", policy) with config.rules as {"style": {
+		with input as regal.parse_module("p.rego", policy)
+		with config.rules as {"style": {
 			"prefer-snake-case": {"level": "error"},
 			"use-assignment-operator": {"level": "error"},
 		}}
