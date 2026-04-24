@@ -25,10 +25,9 @@ aggregate contains entry if {
 # schemas:
 #   - input: schema.regal.aggregate
 aggregate_report contains violation if {
-	# Built-in aggregate rules read the collected entries from
-	# input.aggregates_internal, keyed by "category/name".
+	# Correlate the collected entries across modules and emit a violation.
 	# Replace this example with your own cross-module condition.
-	some entry in input.aggregates_internal["{{.Category}}/{{.NameOriginal}}"][_]
+	some entry in input.aggregate
 
 	violation := result.fail(rego.metadata.chain(), entry.aggregate_source)
 }
