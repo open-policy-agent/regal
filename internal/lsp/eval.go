@@ -68,8 +68,6 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		return nil
 	}
 
-	var pq *rquery.Prepared
-
 	pq, err := l.queryCache.GetOrSet(ctx, l.regoStore, rquery.RuleHeadLocations)
 	if err != nil {
 		l.log.Message("failed to prepare query %s", rquery.RuleHeadLocations, err)
@@ -77,11 +75,9 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		return nil
 	}
 
-	var allRuleHeadLocations rrego.RuleHeads
+	file := filepath.Base(uri.ToPath(args.Target))
 
-	allRuleHeadLocations, err = rrego.AllRuleHeadLocations(
-		ctx, pq, filepath.Base(uri.ToPath(args.Target)), contents, module,
-	)
+	allRuleHeadLocations, err := rrego.AllRuleHeadLocations(ctx, pq, file, contents, module)
 	if err != nil {
 		l.log.Message("failed to get rule head locations: %s", err)
 

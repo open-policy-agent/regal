@@ -44,7 +44,6 @@ func TestFormatting(t *testing.T) {
 
 	res := must.Return(ls.handleTextDocumentFormatting(ctx, types.DocumentFormattingParams{
 		TextDocument: types.TextDocumentIdentifier{URI: mainRegoURI},
-		Options:      types.FormattingOptions{},
 	}))(t)
 
 	edits := must.Be[[]types.TextEdit](t, res)

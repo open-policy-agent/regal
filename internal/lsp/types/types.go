@@ -66,11 +66,6 @@ type (
 		Type    uint   `json:"type"`
 	}
 
-	StaleRequestSupportClientCapabilities struct {
-		RetryOnContentModified []string `json:"retryOnContentModified"`
-		Cancel                 bool     `json:"cancel"`
-	}
-
 	ServerInfo struct {
 		Name    string `json:"name"`
 		Version string `json:"version"`
@@ -111,6 +106,7 @@ type (
 	DefinitionParams         = TextDocumentPositionParams
 	HoverParams              = TextDocumentPositionParams
 	LinkedEditingRangeParams = TextDocumentPositionParams
+	DocumentHighlightParams  = TextDocumentPositionParams
 
 	CompletionParams struct {
 		TextDocument TextDocumentIdentifier `json:"textDocument"`
@@ -182,8 +178,6 @@ type (
 		Tooltip   string `json:"tooltip"`
 		Command   string `json:"command"`
 	}
-
-	DocumentHighlightParams = TextDocumentPositionParams
 
 	DocumentLink struct {
 		Range   Range  `json:"range"`
@@ -284,18 +278,20 @@ type (
 		Range   Range  `json:"range"`
 	}
 
-	DocumentFormattingParams struct {
-		TextDocument TextDocumentIdentifier `json:"textDocument"`
-		Options      FormattingOptions      `json:"options"`
-	}
-
 	TextDocumentParams struct {
 		TextDocument TextDocumentIdentifier `json:"textDocument"`
 	}
-	DocumentSymbolParams = TextDocumentParams
-	FoldingRangeParams   = TextDocumentParams
-	DocumentLinkParams   = TextDocumentParams
-	CodeLensParams       = TextDocumentParams
+
+	// Note(anderseknert): The LSP spec allows additional 'options' for formatting, like the number of
+	// spaces to use for indentation, etc. Since we don't support any formatter other than
+	// 'opa fmt' (and 'opa fmt'-compatible fixers), we don't represent that in DocumentFormattingParams.
+
+	DocumentFormattingParams = TextDocumentParams
+	DocumentSymbolParams     = TextDocumentParams
+	FoldingRangeParams       = TextDocumentParams
+	SemanticTokensParams     = TextDocumentParams
+	DocumentLinkParams       = TextDocumentParams
+	CodeLensParams           = TextDocumentParams
 
 	DocumentSymbol struct {
 		Detail         *string            `json:"detail,omitempty"`
@@ -323,14 +319,6 @@ type (
 		Kind           string `json:"kind"`
 		StartLine      uint   `json:"startLine"`
 		EndLine        uint   `json:"endLine"`
-	}
-
-	FormattingOptions struct {
-		TabSize                uint `json:"tabSize"`
-		InsertSpaces           bool `json:"insertSpaces"`
-		TrimTrailingWhitespace bool `json:"trimTrailingWhitespace"`
-		InsertFinalNewline     bool `json:"insertFinalNewline"`
-		TrimFinalNewlines      bool `json:"trimFinalNewlines"`
 	}
 
 	FileOperationsServerCapabilities struct {
@@ -522,10 +510,6 @@ type (
 	SemanticTokens struct {
 		ResultID *string  `json:"resultId,omitempty"`
 		Data     []uint32 `json:"data"`
-	}
-
-	SemanticTokensParams struct {
-		TextDocument TextDocumentIdentifier `json:"textDocument"`
 	}
 
 	SemanticTokensLegend struct {
