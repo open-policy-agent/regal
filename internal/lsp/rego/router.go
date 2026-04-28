@@ -8,6 +8,7 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
+	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/storage"
 
 	"github.com/open-policy-agent/regal/internal/io"
@@ -16,6 +17,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	ruri "github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
@@ -43,9 +45,10 @@ type (
 	}
 
 	RegoRouter struct {
-		routes    map[string]Route
-		providers Providers
-		qc        *query.Cache
+		routes         map[string]Route
+		resultHandlers map[string]ResultHandler
+		providers      Providers
+		qc             *query.Cache
 	}
 
 	Route struct {
@@ -54,8 +57,23 @@ type (
 		requires *Requirements
 	}
 
+	ResultHandler      = func(context.Context, any) (any, error)
 	regoHandler        = func(context.Context, *query.Prepared, Providers, *jsonrpc2.Request) (any, error)
 	regoContextHandler = func(context.Context, *RegalContext, *jsonrpc2.Request) (any, error)
+
+	InitializeResponse struct {
+		Response struct {
+			ServerInfo   types.ServerInfo `json:"serverInfo"`
+			Capabilities any              `json:"capabilities"`
+		} `json:"response"`
+		Regal struct {
+			Client    types.Client `json:"client"`
+			Workspace struct {
+				URI string `json:"uri"`
+			} `json:"workspace"`
+			Warnings []string `json:"warnings"`
+		} `json:"regal"`
+	}
 )
 
 func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, prvs Providers) *RegoRouter {
@@ -122,22 +140,45 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 		},
 	}
 
-	router := &RegoRouter{routes: routes, providers: prvs, qc: qc}
+	return &RegoRouter{routes: routes, providers: prvs, qc: qc}
+}
 
-	return router
+func (m *RegoRouter) RegisterResultHandler(method string, handler ResultHandler) {
+	if m.resultHandlers == nil {
+		m.resultHandlers = make(map[string]ResultHandler)
+	}
+
+	if _, ok := m.resultHandlers[method]; ok {
+		panic("result handler already registered for method: " + method)
+	}
+
+	m.resultHandlers[method] = handler
 }
 
 func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
-	if route, ok := m.routes[req.Method]; ok {
-		pq := m.qc.Get(query.MainEval)
-		if pq == nil {
-			return nil, fmt.Errorf("no prepared query for %s", query.MainEval)
+	pq := m.qc.Get(query.MainEval)
+	if pq == nil {
+		return nil, fmt.Errorf("no prepared query for %s", query.MainEval)
+	}
+
+	if req.Method == "initialize" {
+		result, err := initialize(ctx, pq, m.providers, req)
+		if err != nil {
+			return nil, err
 		}
 
-		if strings.HasSuffix(req.Method, "/resolve") && route.resolver != nil {
-			resolve := resolverFor(route)
+		if handler, ok := m.resultHandlers["initialize"]; ok {
+			return handler(ctx, result)
+		} else {
+			// this could be removed, but since this is currently a hard dependency
+			// for the server, better be safe and error out here in case it's missing
+			return nil, errors.New("no result handler registered for initialize")
+		}
+	}
 
-			return resolve(ctx, pq, m.providers, req)
+	if route, ok := m.routes[req.Method]; ok {
+		if strings.HasSuffix(req.Method, "/resolve") && route.resolver != nil {
+			return resolverFor(route)(ctx, pq, m.providers, req)
 		}
 
 		return handlerFor(route)(ctx, pq, m.providers, req)
@@ -146,8 +187,8 @@ func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2
 	return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound, Message: "method not supported: " + req.Method}
 }
 
-// handlerFor wraps a regoHandler which first verifies that the text document URI isn't ignored
-// and then goes on to ensure that any custom requirements the handler may have are met.
+// handlerFor wraps a regoHandler which first verifies that the text document URI isn't
+// ignored, and ensures that any custom requirements the handler may have are met.
 func handlerFor(route Route) regoHandler {
 	return func(ctx context.Context, query *query.Prepared, prvs Providers, req *jsonrpc2.Request) (any, error) {
 		// This is mandatory requirement for all routes managed here.
@@ -187,7 +228,6 @@ func resolverFor(route Route) regoHandler {
 func regalContextForRequirements(prvs Providers, uri string, reqs *Requirements) (*RegalContext, error) {
 	// Set up a basic RegalContext, which while not used by all routes, is provided for all.
 	rctx := prvs.ContextProvider(uri, reqs)
-
 	if reqs == nil {
 		return rctx, nil
 	}
@@ -267,22 +307,30 @@ func textDocument[P, R any](ctx context.Context, rctx *RegalContext, req *jsonrp
 }
 
 func semanticTokensHandler(ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request) (any, error) {
-	params, err := decodeParams[types.SemanticTokensParams](req)
-	if err != nil {
-		return nil, err
-	}
-
-	result, err := QueryEval[types.SemanticTokensParams, semantictokens.SemanticTokensResult](
-		ctx,
-		rctx.Query,
-		NewInput(req.Method, rctx, params))
+	res, err := textDocument[types.SemanticTokensParams, semantictokens.SemanticTokensResult](ctx, rctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate prepared query: %w", err)
 	}
 
-	response, err := semantictokens.Full(ctx, result.Response)
+	return semantictokens.Full(ctx, res.(semantictokens.SemanticTokensResult)) //nolint:forcetypeassert
+}
 
-	return response, err
+func initialize(ctx context.Context, pq *query.Prepared, prvs Providers, req *jsonrpc2.Request) (any, error) {
+	var result InitializeResponse
+
+	paramsValue, err := transform.AnyToValue(req.Params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode initialize params: %w", err)
+	}
+
+	err = CachedQueryEval(ctx, pq, ast.NewObject(
+		rast.Item("method", ast.InternedTerm(req.Method)),
+		rast.Item("id", ast.NewTerm(rast.StructToValue(req.ID))),
+		rast.Item("params", ast.NewTerm(paramsValue)),
+		rast.Item("regal", ast.NewTerm(rast.StructToValue(prvs.ContextProvider("initialize", nil)))),
+	), &result)
+
+	return result, err
 }
 
 // resolve handlers return the same type they receive as parameter, but enriched with data it resolves.

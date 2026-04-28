@@ -70,15 +70,6 @@ func (fw *Walker) WithSkipFunc(skipFunc filter.Func) *Walker {
 	return fw
 }
 
-// WithStatBeforeWalk sets whether to stat the root directory before walking.
-// The underlying filepath.WalkDir implementation panics on non-existent paths,
-// so this is useful when the input isn't guaranteed to exist.
-func (fw *Walker) WithStatBeforeWalk(statRoot bool) *Walker {
-	fw.statRoot = statRoot
-
-	return fw
-}
-
 // Walk walks the file system rooted at the root, calling f for each file
 // not filtered out by the filters.
 func (fw *Walker) Walk(f func(string) error) error {

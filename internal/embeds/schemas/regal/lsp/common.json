@@ -49,6 +49,10 @@
           "type": "object",
           "description": "LSP server config and state",
           "properties": {
+            "version": {
+              "type": "string",
+              "description": "Version of the Regal server"
+            },
             "feature_flags": {
               "type": "object",
               "description": "Feature flags state",
@@ -61,9 +65,13 @@
                   "type": "boolean",
                   "description": "If the server is configured to operate as an explorer provider"
                 },
-                "inline_eval_provider": {
+                "inline_evaluation_provider": {
                   "type": "boolean",
-                  "description": "If the server is configured to operate as an inline eval provider"
+                  "description": "If the server is configured to operate as an inline evaluation provider"
+                },
+                "opa_test_provider": {
+                  "type": "boolean",
+                  "description": "If the server is configured to operate as an OPA test API provider"
                 }
               },
               "required": [

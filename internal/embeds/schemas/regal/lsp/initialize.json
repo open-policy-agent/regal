@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "regal.lsp.initialize",
+  "$ref": "#/$defs/params",
+  "$defs": {
+    "params": {
+      "type": "object",
+      "properties": {
+        "processId": {
+          "type": "integer"
+        },
+        "clientInfo": {
+          "type": "object",
+          "description": "Information about the client",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "locale": {
+          "type": "string"
+        },
+        "initializationOptions": {
+          "type": "object"
+        },
+        "capabilities": {
+          "type": "object",
+          "description": "The capabilities supported by the client"
+        },
+        "rootUri": {
+          "type": "string"
+        },
+        "workspaceFolders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "uri": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "processId",
+        "capabilities"
+      ]
+    }
+  }
+}

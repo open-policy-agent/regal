@@ -78,21 +78,6 @@ func (w *Watcher) Stop() error {
 	return nil
 }
 
-func (w *Watcher) IsWatching() bool {
-	if w == nil {
-		return false
-	}
-
-	w.fsWatcherLock.Lock()
-	defer w.fsWatcherLock.Unlock()
-
-	if w.fsWatcher == nil {
-		return false
-	}
-
-	return len(w.fsWatcher.WatchList()) > 0
-}
-
 func (w *Watcher) loop(ctx context.Context) {
 	for {
 		select {
