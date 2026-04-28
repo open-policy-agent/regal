@@ -98,6 +98,14 @@ func AnyToValue(x any) (ast.Value, error) {
 		}
 
 		return ast.NewObject(tuples...), nil
+	case *json.RawMessage:
+		var v any
+
+		if err := json.Unmarshal(*x, &v); err != nil {
+			return nil, fmt.Errorf("unmarshal raw message: %w", err)
+		}
+
+		return AnyToValue(v)
 	default:
 		return nil, fmt.Errorf("unsupported type: %T", x)
 	}

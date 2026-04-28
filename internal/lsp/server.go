@@ -40,10 +40,8 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
-	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
-	"github.com/open-policy-agent/regal/internal/roast/transforms"
 	"github.com/open-policy-agent/regal/internal/update"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/internal/web"
@@ -138,9 +136,8 @@ type LanguageServer struct {
 	regoStore storage.Store
 	conn      *jsonrpc2.Conn
 
-	configWatcher *lsconfig.Watcher
-	loadedConfig  *config.Config
-	// this is also used to lock the updates to the cache of enabled rules
+	configWatcher               *lsconfig.Watcher
+	loadedConfig                *config.Config
 	loadedConfigLock            sync.RWMutex
 	loadedConfigAllRegoVersions *concurrent.Map[string, ast.RegoVersion]
 	loadedBuiltins              *concurrent.Map[string, map[string]*ast.Builtin]
@@ -237,6 +234,8 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		SuccessfulParseCountProvider: ls.cache.GetSuccessfulParseLineCount,
 	})
 
+	ls.regoRouter.RegisterResultHandler("initialize", ls.initializeResultHandler)
+
 	merged, _ := config.WithDefaultsFromBundle(bundle.Embedded(), cfg)
 
 	// Even though user configuration (if provided) will overwrite some of the default configuration,
@@ -256,8 +255,6 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	}
 
 	switch req.Method {
-	case "initialize":
-		return handler.WithContextAndParams(ctx, req, l.handleInitialize)
 	case "initialized":
 		return l.handleInitialized(ctx)
 	case "textDocument/definition":
@@ -321,6 +318,7 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	}
 
 	// Handles:
+	// - initialize
 	// - textDocument/codeAction
 	// - textDocument/codeLens
 	// - textDocument/completion
@@ -606,7 +604,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 				case "regal.eval":
 					err = l.handleEvalCommand(ctx, args)
 				case "regal.debug":
-					if !l.getClient().SupportsDebugCodeLens() {
+					if !l.getClient().InitOptions.EnableDebugCodelens {
 						l.log.Message("regal.debug command called but client does not support debug functionality")
 
 						break
@@ -728,7 +726,7 @@ func (l *LanguageServer) StartWorkspaceStateWorker(ctx context.Context) {
 					parseSuccess, err := updateParse(ctx, l.parseOpts(cnURI, l.builtinsForCurrentCapabilities()))
 					if err != nil {
 						l.log.Message("failed to update module for %s: %s", cnURI, err)
-					} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+					} else if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
 						l.testLocationJobs <- fileJob{URI: cnURI}
 					}
 
@@ -782,9 +780,8 @@ func (l *LanguageServer) getClient() types.Client {
 // This should only be called during initialization in handleInitialize().
 func (l *LanguageServer) setClient(client types.Client) {
 	l.clientLock.Lock()
-	defer l.clientLock.Unlock()
-
 	l.client = client
+	l.clientLock.Unlock()
 }
 
 func (l *LanguageServer) getCustomRulesPath() string {
@@ -1318,7 +1315,7 @@ func (l *LanguageServer) handleTextDocumentDidOpen(
 		parseSuccess, err := updateParse(ctx, l.parseOpts(params.TextDocument.URI, l.builtinsForCurrentCapabilities()))
 		if err != nil {
 			l.log.Message("failed to update module for %s: %s", params.TextDocument.URI, err)
-		} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+		} else if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
 			l.testLocationJobs <- fileJob{URI: params.TextDocument.URI}
 		}
 
@@ -1368,7 +1365,7 @@ func (l *LanguageServer) handleTextDocumentDidChange(
 		parseSuccess, err := updateParse(ctx, l.parseOpts(params.TextDocument.URI, l.builtinsForCurrentCapabilities()))
 		if err != nil {
 			l.log.Message("failed to update module for %s: %s", params.TextDocument.URI, err)
-		} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+		} else if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
 			l.testLocationJobs <- fileJob{URI: params.TextDocument.URI}
 		}
 
@@ -1489,7 +1486,7 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 		parseSuccess, err := updateParse(ctx, l.parseOpts(params.TextDocument.URI, l.builtinsForCurrentCapabilities()))
 		if err != nil {
 			l.log.Message("failed to update module for %s: %s", params.TextDocument.URI, err)
-		} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+		} else if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
 			l.testLocationJobs <- fileJob{URI: params.TextDocument.URI}
 		}
 
@@ -1499,10 +1496,7 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 	}
 
 	// opa-fmt is the default formatter if not set in the client options
-	formatter := "opa-fmt"
-	if l.getClient().InitOptions.Formatter != nil {
-		formatter = *l.getClient().InitOptions.Formatter
-	}
+	formatter := cmp.Or(l.getClient().InitOptions.Formatter, "opa-fmt")
 
 	var newContent string
 
@@ -1586,7 +1580,7 @@ func (l *LanguageServer) handleWorkspaceDidCreateFiles(
 		parseSuccess, err := updateParse(ctx, l.parseOpts(createOp.URI, l.builtinsForCurrentCapabilities()))
 		if err != nil {
 			l.log.Message("failed to update module for %s: %s", createOp.URI, err)
-		} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+		} else if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
 			l.testLocationJobs <- fileJob{URI: createOp.URI}
 		}
 
@@ -1643,7 +1637,7 @@ func (l *LanguageServer) handleWorkspaceDidRenameFiles(
 		parseSuccess, err := updateParse(ctx, l.parseOpts(renameOp.NewURI, l.builtinsForCurrentCapabilities()))
 		if err != nil {
 			l.log.Message("failed to update module for %s: %s", renameOp.NewURI, err)
-		} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+		} else if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
 			l.testLocationJobs <- fileJob{URI: renameOp.NewURI}
 		}
 
@@ -1674,174 +1668,33 @@ func (l *LanguageServer) handleWorkspaceDiagnostic() (any, error) {
 	}}}, nil
 }
 
-func (l *LanguageServer) handleInitialize(_ context.Context, params types.InitializeParams) (any, error) {
+func (l *LanguageServer) initializeResultHandler(_ context.Context, result any) (any, error) {
 	if bundle.DevModeEnabled() {
-		path := os.Getenv("REGAL_BUNDLE_PATH")
-		fmt.Fprintln(os.Stderr, "Development mode enabled. Will attempt to build bundle from:", path)
-
-		bundle.Dev.SetPath(path)
+		l.log.Message("Development mode enabled. Will attempt to build bundle from:", os.Getenv("REGAL_BUNDLE_PATH"))
+		bundle.Dev.SetPath(os.Getenv("REGAL_BUNDLE_PATH"))
 	}
 
 	if os.Getenv("REGAL_DEBUG") != "" {
-		fmt.Fprintln(os.Stderr, "Debug mode enabled")
 		l.log.SetLevel(log.LevelDebug)
+		l.log.Message("Debug mode enabled")
 	}
 
-	var capsValue ast.Value
-
-	if params.Capabilities != nil {
-		m, err := encoding.JSONUnmarshalTo[map[string]any](*params.Capabilities)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal client capabilities: %w", err)
-		}
-
-		if capsValue, err = transforms.AnyToValue(m); err != nil {
-			return nil, err
-		}
+	response, ok := result.(rego.InitializeResponse)
+	if !ok {
+		panic(fmt.Errorf("unexpected result type for initialize: %T", result))
 	}
 
-	l.setClient(types.Client{
-		Identifier:   clients.DetermineIdentifier(params.ClientInfo.Name),
-		InitOptions:  cmp.Or(params.InitializationOptions, &types.InitializationOptions{}),
-		Capabilities: capsValue,
-	})
+	l.setClient(response.Regal.Client)
 
-	if l.getClient().Identifier == clients.IdentifierGeneric {
-		l.log.Message(
-			"unable to match client identifier for initializing client, using generic functionality: %s",
-			params.ClientInfo.Name,
-		)
+	if err := l.updateRootURI(response.Regal.Workspace.URI); err != nil {
+		l.log.Message("failed to set rootURI: %w", err)
 	}
 
-	regoFilter := types.FileOperationFilter{Scheme: "file", Pattern: types.FileOperationPattern{Glob: "**/*.rego"}}
-	fileOpOpts := types.FileOperationRegistrationOptions{Filters: []types.FileOperationFilter{regoFilter}}
-
-	// set enabled commands based on server feature flags
-	enabledCommands := []string{
-		"regal.eval",
-		"regal.fix.opa-fmt",
-		"regal.fix.use-rego-v1",
-		"regal.fix.use-assignment-operator",
-		"regal.fix.no-whitespace-comment",
-		"regal.fix.directory-package-mismatch",
-		"regal.fix.non-raw-regex-pattern",
-		"regal.fix.prefer-equals-comparison",
-		"regal.fix.constant-condition",
-		"regal.fix.redundant-existence-check",
-		"regal.config.disable-rule",
+	for _, warning := range response.Regal.Warnings {
+		l.log.Message(warning)
 	}
 
-	if l.featureFlags.DebugProvider {
-		enabledCommands = append(enabledCommands, "regal.debug")
-	}
-
-	if l.featureFlags.ExplorerProvider {
-		enabledCommands = append(enabledCommands, "regal.explorer")
-	}
-
-	initializeResult := types.InitializeResult{
-		Capabilities: types.ServerCapabilities{
-			TextDocumentSyncOptions: types.TextDocumentSyncOptions{
-				OpenClose: true,
-				// For now, send full document on change, but this is something we should improve.
-				// See https://github.com/open-policy-agent/regal/issues/1651
-				Change: 1,
-				Save:   types.SaveOptions{IncludeText: true},
-			},
-			DiagnosticProvider: types.DiagnosticOptions{
-				Identifier:            "rego",
-				InterFileDependencies: true,
-				WorkspaceDiagnostics:  true,
-			},
-			Workspace: types.WorkspaceOptions{
-				FileOperations: types.FileOperationsServerCapabilities{
-					DidCreate: fileOpOpts,
-					DidRename: fileOpOpts,
-					DidDelete: fileOpOpts,
-				},
-				WorkspaceFolders: types.WorkspaceFoldersServerCapabilities{
-					// NOTE(anders): The language server protocol doesn't go into detail about what this is meant to
-					// entail, and there's nothing else in the request/response payloads that carry workspace folder
-					// information. The best source I've found on the this topic is this example repo from VS Code,
-					// where they have the client start one instance of the server per workspace folder:
-					// https://github.com/microsoft/vscode-extension-samples/tree/main/lsp-multi-server-sample
-					// That seems like a reasonable approach to take, and means we won't have to deal with workspace
-					// folders throughout the rest of the codebase. But the question then is — what is the point of
-					// this capability, and what does it mean to say we support it? Clearly we don't in the server as
-					// *there is no way* to support it here.
-					Supported: true,
-				},
-			},
-			InlayHintProvider: types.ResolveProviderOption{
-				ResolveProvider: true,
-			},
-			HoverProvider: true,
-			SignatureHelpProvider: types.SignatureHelpOptions{
-				TriggerCharacters: []string{"(", ","},
-			},
-			CodeActionProvider: types.CodeActionOptions{CodeActionKinds: []string{"quickfix", "source"}},
-			ExecuteCommandProvider: types.ExecuteCommandOptions{
-				Commands: enabledCommands,
-			},
-			DocumentFormattingProvider: true,
-			FoldingRangeProvider:       true,
-			DefinitionProvider:         true,
-			DocumentSymbolProvider:     true,
-			WorkspaceSymbolProvider:    true,
-			CompletionProvider: types.CompletionOptions{
-				CompletionItem: types.CompletionItemOptions{LabelDetailsSupport: true},
-				// Note: these are characters that trigger completions *in addition to* the client's default characters.
-				TriggerCharacters: []string{
-					":", // to suggest :=
-					".", // for refs
-				},
-				ResolveProvider: true,
-			},
-			CodeLensProvider:           types.ResolveProviderOption{},
-			DocumentLinkProvider:       types.ResolveProviderOption{},
-			DocumentHighlightProvider:  true,
-			SelectionRangeProvider:     true,
-			LinkedEditingRangeProvider: true,
-			SemanticTokensProvider: types.SemanticTokensOptions{
-				Legend: semantictokens.Legend,
-				Full:   true,
-			},
-			// 'Experimental' is LSP terminology, we are using these to be
-			// 'custom' additions that are ready for use, but not in the base
-			// spec.
-			Experimental: &types.ExperimentalCapabilities{
-				ExplorerProvider:   l.featureFlags.ExplorerProvider,
-				InlineEvalProvider: l.featureFlags.InlineEvaluationProvider,
-				DebugProvider:      l.featureFlags.DebugProvider,
-				OPATestProvider:    l.featureFlags.OPATestProvider,
-			},
-		},
-	}
-
-	defaultConfig, _ := config.WithDefaultsFromBundle(bundle.Loaded(), nil)
-
-	l.loadedConfigLock.Lock()
-	l.loadedConfig = &defaultConfig
-	l.loadedConfigLock.Unlock()
-
-	if params.RootURI != "" {
-		err := l.updateRootURI(params.RootURI)
-		if err != nil {
-			l.log.Message("failed to set rootURI: %w", err)
-		}
-	} else if params.WorkspaceFolders != nil && len(*params.WorkspaceFolders) != 0 {
-		// note, using workspace folders is untested, and is based on the spec alone.
-		if len(*params.WorkspaceFolders) > 1 {
-			l.log.Message("cannot operate with more than one workspace folder, using: %s", (*params.WorkspaceFolders)[0].URI)
-		}
-
-		err := l.updateRootURI((*params.WorkspaceFolders)[0].URI)
-		if err != nil {
-			l.log.Message("failed to set rootURI to workspace folder: %w", err)
-		}
-	}
-
-	return initializeResult, nil
+	return response.Response, nil
 }
 
 func (l *LanguageServer) updateRootURI(rootURI string) error {
@@ -2025,7 +1878,7 @@ func (l *LanguageServer) handleInitialized(ctx context.Context) (any, error) {
 			parseSuccess, err := updateParse(ctx, l.parseOpts(cnURI, l.builtinsForCurrentCapabilities()))
 			if err != nil {
 				l.log.Message("failed to update module for %s: %s", cnURI, err)
-			} else if l.getClient().SupportsOPATestProvider() && parseSuccess {
+			} else if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
 				l.testLocationJobs <- fileJob{URI: cnURI}
 			}
 		}
@@ -2071,7 +1924,7 @@ func (l *LanguageServer) handleWorkspaceDidChangeWatchedFiles(
 			continue
 		}
 
-		if l.getClient().SupportsOPATestProvider() && parseSuccess {
+		if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
 			l.testLocationJobs <- fileJob{URI: change.URI}
 		}
 
@@ -2196,28 +2049,34 @@ func (l *LanguageServer) parseOpts(fileURI string, bis map[string]*ast.Builtin) 
 }
 
 func (l *LanguageServer) regalContext(fileURI string, _ *rego.Requirements) *rego.RegalContext {
-	return &rego.RegalContext{
-		Client: l.client,
-		Server: types.ServerContext{
-			FeatureFlags: l.featureFlags,
-		},
-		File: rego.File{
-			Name:        l.toRelativePath(fileURI),
-			RegoVersion: l.regoVersionForURI(fileURI).String(),
-			Abs:         uri.ToPath(fileURI),
-			URI:         fileURI,
-		},
-		Environment: rego.Environment{
-			PathSeparator:     string(os.PathSeparator),
-			WebServerBaseURI:  l.webServer.GetBaseURL(),
-			WorkspaceRootURI:  l.getWorkspaceRootURI(),
-			WorkspaceRootPath: l.workspacePath(),
-		},
+	rctx := &rego.RegalContext{Server: types.ServerContext{
+		FeatureFlags: l.featureFlags,
+		Version:      version.Version,
+	}}
+
+	if fileURI == "initialize" {
+		return rctx
 	}
+
+	rctx.Client = l.client
+	rctx.File = rego.File{
+		Name:        l.toRelativePath(fileURI),
+		RegoVersion: l.regoVersionForURI(fileURI).String(),
+		Abs:         uri.ToPath(fileURI),
+		URI:         fileURI,
+	}
+	rctx.Environment = rego.Environment{
+		PathSeparator:     string(os.PathSeparator),
+		WebServerBaseURI:  l.webServer.GetBaseURL(),
+		WorkspaceRootURI:  l.getWorkspaceRootURI(),
+		WorkspaceRootPath: l.workspacePath(),
+	}
+
+	return rctx
 }
 
 func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types.ExecuteCommandParams) error {
-	if !l.getClient().SupportsExplorer() {
+	if !l.getClient().InitOptions.EnableExplorer {
 		l.log.Message("regal.explorer command called but client does not support explorer functionality")
 
 		return errors.New("client does not support explorer functionality")

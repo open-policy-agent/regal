@@ -138,7 +138,7 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		target = strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
 	}
 
-	if l.featureFlags.InlineEvaluationProvider && l.getClient().SupportsEvalCodelensDisplayInline() {
+	if l.featureFlags.InlineEvaluationProvider && l.getClient().InitOptions.EvalCodelensDisplayInline {
 		responseParams := map[string]any{
 			"result": result,
 			"line":   args.Row,

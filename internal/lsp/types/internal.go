@@ -1,9 +1,15 @@
 package types
 
 import (
+	"encoding/json"
+	"errors"
+
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/roast/transforms"
+	"github.com/open-policy-agent/regal/internal/util"
+	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
 // Ref is a generic construct for an object found in a Rego module.
@@ -44,41 +50,44 @@ type CommandArgs struct {
 }
 
 type Client struct {
-	Identifier   clients.Identifier     `json:"identifier"`
-	InitOptions  *InitializationOptions `json:"init_options,omitempty"`
-	Capabilities ast.Value              `json:"capabilities,omitempty"`
+	Identifier   clients.Identifier    `json:"identifier"`
+	InitOptions  InitializationOptions `json:"init_options"`
+	Capabilities ast.Value             `json:"capabilities,omitempty"`
 }
 
 func NewGenericClient() Client {
 	return Client{Identifier: clients.IdentifierGeneric}
 }
 
-func (c Client) SupportsExplorer() bool {
-	return c.InitOptions != nil &&
-		c.InitOptions.EnableExplorer != nil &&
-		*c.InitOptions.EnableExplorer
-}
+func (c *Client) UnmarshalJSON(data []byte) (err error) {
+	var m map[string]any
+	if err := encoding.SafeNumberConfig.Unmarshal(data, &m); err != nil {
+		return err
+	}
 
-func (c Client) SupportsDebugCodeLens() bool {
-	return c.InitOptions != nil &&
-		c.InitOptions.EnableDebugCodelens != nil &&
-		*c.InitOptions.EnableDebugCodelens
-}
+	idNum, ok := m["identifier"].(json.Number)
+	if !ok {
+		return errors.New("invalid identifier type")
+	}
 
-func (c Client) SupportsEvalCodelensDisplayInline() bool {
-	return c.InitOptions != nil &&
-		c.InitOptions.EvalCodelensDisplayInline != nil &&
-		*c.InitOptions.EvalCodelensDisplayInline
-}
+	idInt, _ := idNum.Int64()
 
-func (c Client) SupportsOPATestProvider() bool {
-	return c.InitOptions != nil &&
-		c.InitOptions.EnableServerTesting != nil &&
-		*c.InitOptions.EnableServerTesting
+	c.Identifier = clients.Identifier(util.SafeIntToUint(int(idInt))) //nolint: gosec
+
+	if initOptions, ok := m["initializationOptions"]; ok {
+		if err := encoding.JSONRoundTrip(initOptions, &c.InitOptions); err != nil {
+			return err
+		}
+	}
+
+	c.Capabilities, err = transforms.AnyToValue(m["capabilities"])
+
+	return err
 }
 
 // ServerContext is a type which is used to contain things from the server's
 // state that is needed in RegalContext.
 type ServerContext struct {
 	FeatureFlags ServerFeatureFlags `json:"feature_flags"`
+	Version      string             `json:"version"`
 }

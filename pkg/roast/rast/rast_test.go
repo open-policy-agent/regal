@@ -1,6 +1,7 @@
 package rast_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -21,6 +22,25 @@ func TestStructToValue(t *testing.T) {
 	// Field2 should be omitted due to omitempty
 	got := rast.StructToValue(testStruct{Field1: "value1", Field2: 0, Field3: true})
 	exp := ast.NewObject(rast.Item("field1", ast.InternedTerm("value1")), rast.Item("field3", ast.InternedTerm(true)))
+
+	assert.Equal(t, 0, got.Compare(exp))
+}
+
+func TestStructToValueWithRawJSONMessage(t *testing.T) {
+	t.Parallel()
+
+	got := rast.StructToValue(struct {
+		ID  string           `json:"id"`
+		Raw *json.RawMessage `json:"raw"`
+	}{
+		ID:  "test",
+		Raw: new(json.RawMessage(`{"key": "value"}`)),
+	})
+
+	exp := ast.NewObject(
+		rast.Item("id", ast.InternedTerm("test")),
+		rast.Item("raw", ast.ObjectTerm(rast.Item("key", ast.InternedTerm("value")))),
+	)
 
 	assert.Equal(t, 0, got.Compare(exp))
 }

@@ -193,6 +193,39 @@ func TestRouteCompletionItemResolve(t *testing.T) {
 	must.Equal(t, "markdown", cmi.Documentation.Kind, "documentation kind")
 }
 
+func TestRouteInitialize(t *testing.T) {
+	t.Parallel()
+
+	mgr := rego.NewRegoRouter(t.Context(), nil, query.NewCache(), rego.Providers{
+		ContextProvider: func(string, *rego.Requirements) *rego.RegalContext {
+			return &rego.RegalContext{Server: types.ServerContext{
+				FeatureFlags: *lsp.DefaultServerFeatureFlags(),
+				Version:      "0.2.0",
+			}}
+		},
+	})
+	mgr.RegisterResultHandler("initialize", func(_ context.Context, result any) (any, error) {
+		rsp, ok := result.(rego.InitializeResponse)
+
+		must.Equal(t, true, ok, "initialize response", rsp)
+		must.Equal(t, "Regal", rsp.Response.ServerInfo.Name, "server name")
+		must.Equal(t, "0.2.0", rsp.Response.ServerInfo.Version, "server version")
+		must.Equal(t, true, rsp.Regal.Client.InitOptions.EnableExplorer, "client supports explorer")
+
+		return rsp, nil
+	})
+
+	req := request("initialize", testutil.ToJSONRawMessage(t, map[string]any{
+		"processId":             12345,
+		"rootUri":               "file:///workspace",
+		"clientInfo":            map[string]any{"name": "Visual Studio Code"},
+		"initializationOptions": map[string]any{"enableExplorer": true},
+	}))
+	rsp := must.Return(mgr.Handle(t.Context(), nil, req))(t)
+
+	must.Be[rego.InitializeResponse](t, rsp)
+}
+
 func docPositionParams(t *testing.T, uri string, position types.Position) *json.RawMessage {
 	t.Helper()
 

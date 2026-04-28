@@ -166,10 +166,10 @@ func createAndInitServerWithClientName(
 		RootURI:    rootURI,
 		ClientInfo: types.ClientInfo{Name: clientName},
 		InitializationOptions: &types.InitializationOptions{
-			EnableDebugCodelens:       new(true),
-			EnableExplorer:            new(true),
-			EvalCodelensDisplayInline: new(true),
-			EnableServerTesting:       new(true),
+			EnableDebugCodelens:       true,
+			EnableExplorer:            true,
+			EvalCodelensDisplayInline: true,
+			EnableServerTesting:       true,
 		},
 	}
 

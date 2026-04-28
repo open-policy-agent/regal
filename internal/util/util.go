@@ -73,16 +73,6 @@ func MapKeys[K comparable, V any, U any](m map[K]V, f func(K) U) []U {
 	return keys
 }
 
-// MapValues applies the function f to each value in the map m and returns a new map with the same keys.
-func MapValues[K comparable, V, R any](m map[K]V, f func(V) R) map[K]R {
-	mapped := make(map[K]R, len(m))
-	for k, v := range m {
-		mapped[k] = f(v)
-	}
-
-	return mapped
-}
-
 // Filter returns a new slice containing only the elements of s that
 // satisfy the predicate f. This function runs each element of s through
 // f twice in order to allocate exactly what is needed. This is commonly
@@ -264,13 +254,6 @@ func WrapErr(err error, msg string) error {
 	}
 
 	return fmt.Errorf("%s: %w", msg, err)
-}
-
-// SendToAll sends the provided value to all provided channels.
-func SendToAll[T any](val T, ch ...chan T) {
-	for _, c := range ch {
-		c <- val
-	}
 }
 
 // GetMapValue extracts a typed value from a map[string]any, returning the value if the type matched,

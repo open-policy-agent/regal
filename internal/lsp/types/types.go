@@ -24,19 +24,19 @@ type (
 	InitializationOptions struct {
 		// Formatter specifies the formatter to use. Options: 'opa fmt' (default),
 		// 'opa fmt --rego-v1' or 'regal fix'.
-		Formatter *string `json:"formatter,omitempty"`
+		Formatter string `json:"formatter,omitempty"`
 		// EnableDebugCodelens, if set, will enable debug codelens
 		// when clients request code lenses for a file.
-		EnableDebugCodelens *bool `json:"enableDebugCodelens,omitempty"`
+		EnableDebugCodelens bool `json:"enableDebugCodelens,omitempty"`
 		// EvalCodelensDisplayInline, if set, will show evaluation results natively
 		// in the calling editor, rather than in an output file.
-		EvalCodelensDisplayInline *bool `json:"evalCodelensDisplayInline,omitempty"`
+		EvalCodelensDisplayInline bool `json:"evalCodelensDisplayInline,omitempty"`
 		// EnableExplorer, if set, will enable the regal.explorer command
 		// and related functionality.
-		EnableExplorer *bool `json:"enableExplorer,omitempty"`
+		EnableExplorer bool `json:"enableExplorer,omitempty"`
 		// EnableServerTesting, if set, will enable test location notifications
 		// via the regal/testLocations and test running handler.
-		EnableServerTesting *bool `json:"enableServerTesting,omitempty"`
+		EnableServerTesting bool `json:"enableServerTesting,omitempty"`
 	}
 
 	InitializeParams struct {
@@ -71,32 +71,18 @@ type (
 		Cancel                 bool     `json:"cancel"`
 	}
 
+	ServerInfo struct {
+		Name    string `json:"name"`
+		Version string `json:"version"`
+	}
+
 	InitializeResult struct {
-		Capabilities ServerCapabilities `json:"capabilities"`
+		Capabilities any        `json:"capabilities"`
+		ServerInfo   ServerInfo `json:"serverInfo,omitzero"`
 	}
 
 	ServerCapabilities struct {
-		CodeLensProvider           ResolveProviderOption     `json:"codeLensProvider"`
-		Workspace                  WorkspaceOptions          `json:"workspace"`
-		DiagnosticProvider         DiagnosticOptions         `json:"diagnosticProvider"`
-		CodeActionProvider         CodeActionOptions         `json:"codeActionProvider"`
-		ExecuteCommandProvider     ExecuteCommandOptions     `json:"executeCommandProvider"`
-		TextDocumentSyncOptions    TextDocumentSyncOptions   `json:"textDocumentSync"`
-		CompletionProvider         CompletionOptions         `json:"completionProvider"`
-		InlayHintProvider          ResolveProviderOption     `json:"inlayHintProvider"`
-		DocumentLinkProvider       ResolveProviderOption     `json:"documentLinkProvider"`
-		SignatureHelpProvider      SignatureHelpOptions      `json:"signatureHelpProvider"`
-		SemanticTokensProvider     SemanticTokensOptions     `json:"semanticTokensProvider"`
-		DocumentHighlightProvider  bool                      `json:"documentHighlightProvider"`
-		HoverProvider              bool                      `json:"hoverProvider"`
-		DocumentFormattingProvider bool                      `json:"documentFormattingProvider"`
-		FoldingRangeProvider       bool                      `json:"foldingRangeProvider"`
-		DocumentSymbolProvider     bool                      `json:"documentSymbolProvider"`
-		WorkspaceSymbolProvider    bool                      `json:"workspaceSymbolProvider"`
-		DefinitionProvider         bool                      `json:"definitionProvider"`
-		SelectionRangeProvider     bool                      `json:"selectionRangeProvider"`
-		LinkedEditingRangeProvider bool                      `json:"linkedEditingRangeProvider"`
-		Experimental               *ExperimentalCapabilities `json:"experimental,omitempty"`
+		Experimental *ExperimentalCapabilities `json:"experimental,omitempty"`
 	}
 
 	// ExperimentalCapabilities contains Regal-specific custom LSP features
@@ -125,16 +111,6 @@ type (
 	DefinitionParams         = TextDocumentPositionParams
 	HoverParams              = TextDocumentPositionParams
 	LinkedEditingRangeParams = TextDocumentPositionParams
-
-	CompletionOptions struct {
-		CompletionItem    CompletionItemOptions `json:"completionItem"`
-		ResolveProvider   bool                  `json:"resolveProvider"`
-		TriggerCharacters []string              `json:"triggerCharacters,omitempty"`
-	}
-
-	CompletionItemOptions struct {
-		LabelDetailsSupport bool `json:"labelDetailsSupport"`
-	}
 
 	CompletionParams struct {
 		TextDocument TextDocumentIdentifier `json:"textDocument"`
@@ -172,15 +148,6 @@ type (
 
 	WorkspaceFoldersServerCapabilities struct {
 		Supported bool `json:"supported"`
-	}
-
-	WorkspaceOptions struct {
-		FileOperations   FileOperationsServerCapabilities   `json:"fileOperations"`
-		WorkspaceFolders WorkspaceFoldersServerCapabilities `json:"workspaceFolders"`
-	}
-
-	CodeActionOptions struct {
-		CodeActionKinds []string `json:"codeActionKinds"`
 	}
 
 	CodeActionParams struct {
@@ -242,10 +209,6 @@ type (
 	SelectionRange struct {
 		Range  Range           `json:"range"`
 		Parent *SelectionRange `json:"parent,omitempty"`
-	}
-
-	ExecuteCommandOptions struct {
-		Commands []string `json:"commands"`
 	}
 
 	ExecuteCommandParams struct {
@@ -388,19 +351,6 @@ type (
 		Glob string `json:"glob"`
 	}
 
-	DiagnosticOptions struct {
-		Identifier            string `json:"identifier"`
-		InterFileDependencies bool   `json:"interFileDependencies"`
-		WorkspaceDiagnostics  bool   `json:"workspaceDiagnostics"`
-	}
-
-	// ResolveProviderOption is used by a number of providers in place of a boolean value.
-	// Note that at this point in time, we don't see a need for using resolver providers,
-	// so this option is always set to false.
-	ResolveProviderOption struct {
-		ResolveProvider bool `json:"resolveProvider"`
-	}
-
 	InlayHint struct {
 		Tooltip      MarkupContent `json:"tooltip"`
 		Position     Position      `json:"position"`
@@ -416,19 +366,9 @@ type (
 		Range        Range                  `json:"range"`
 	}
 
-	SaveOptions struct {
-		IncludeText bool `json:"includeText"`
-	}
-
 	DidSaveTextDocumentParams struct {
 		Text         *string                `json:"text,omitempty"`
 		TextDocument TextDocumentIdentifier `json:"textDocument"`
-	}
-
-	TextDocumentSyncOptions struct {
-		Change    uint        `json:"change"`
-		OpenClose bool        `json:"openClose"`
-		Save      SaveOptions `json:"save"`
 	}
 
 	TextDocumentIdentifier struct {
@@ -548,10 +488,6 @@ type (
 		Value string `json:"value"`
 	}
 
-	SignatureHelpOptions struct {
-		TriggerCharacters []string `json:"triggerCharacters,omitempty"`
-	}
-
 	SignatureHelpParams struct {
 		TextDocument TextDocumentIdentifier `json:"textDocument"`
 		Position     Position               `json:"position"`
@@ -595,11 +531,6 @@ type (
 	SemanticTokensLegend struct {
 		TokenTypes     []string `json:"tokenTypes"`
 		TokenModifiers []string `json:"tokenModifiers"`
-	}
-
-	SemanticTokensOptions struct {
-		Legend SemanticTokensLegend `json:"legend"`
-		Full   bool                 `json:"full,omitempty"`
 	}
 
 	ExplorerCommandArgs struct {
