@@ -24,7 +24,7 @@ test_initialize_experimental_capabilities if {
 
 test_initialize_client_identifier[client_name] if {
 	some identifier, client_name in [
-		"Space Editor!!1!",
+		"Space Editor!!1! (unknown client)",
 		"Visual Studio Code",
 		"go test",
 		"Zed",
