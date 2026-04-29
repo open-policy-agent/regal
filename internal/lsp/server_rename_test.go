@@ -21,7 +21,7 @@ func TestLanguageServerFixRenameParams(t *testing.T) {
 
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
-	ls.setClient(types.Client{Identifier: clients.IdentifierGeneric})
+	ls.setClient(t.Context(), types.Client{Identifier: clients.IdentifierGeneric})
 	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
 	ls.loadedConfig = &config.Config{
 		Rules: map[string]config.Category{"idiomatic": {
@@ -54,7 +54,7 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
-	ls.setClient(types.Client{Identifier: clients.IdentifierGeneric})
+	ls.setClient(t.Context(), types.Client{Identifier: clients.IdentifierGeneric})
 	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
 	ls.loadedConfig = &config.Config{
 		Rules: map[string]config.Category{"idiomatic": {
@@ -110,7 +110,7 @@ func TestLanguageServerFixRenameParamsWhenTargetOutsideRoot(t *testing.T) {
 
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
-	ls.setClient(types.Client{Identifier: clients.IdentifierGeneric})
+	ls.setClient(t.Context(), types.Client{Identifier: clients.IdentifierGeneric})
 	// the root where the client stated the workspace is
 	// this is what would be set if a config file were in the parent instead
 	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))

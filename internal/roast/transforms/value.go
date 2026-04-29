@@ -35,8 +35,8 @@ func AnyToValue(x any) (ast.Value, error) {
 
 		return ast.Number(strconv.Itoa(x)), nil
 	case json.Number:
-		if interned := ast.InternedTerm(string(x)); interned != nil {
-			return interned.Value, nil
+		if ix, err := x.Int64(); err == nil {
+			return ast.InternedValue(ix), nil
 		}
 
 		return ast.Number(x), nil

@@ -33,7 +33,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	lsconfig "github.com/open-policy-agent/regal/internal/lsp/config"
 	"github.com/open-policy-agent/regal/internal/lsp/documentsymbol"
-	"github.com/open-policy-agent/regal/internal/lsp/foldingrange"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
@@ -67,13 +66,11 @@ const (
 
 var (
 	noDocumentSymbols                       any = make([]types.DocumentSymbol, 0)
-	noFoldingRanges                         any = make([]types.FoldingRange, 0)
 	noTextEdits                             any = make([]types.TextEdit, 0)
 	noWorkspaceFullDocumentDiagnosticReport any = make([]types.WorkspaceFullDocumentDiagnosticReport, 0)
 	emptyStruct                             any = struct{}{}
 
 	noDiagnostics = make([]types.Diagnostic, 0)
-	orc           = oracle.New()
 
 	validPathComponentPattern = regexp.MustCompile(`^\w+[\w\-]*\w+$`)
 
@@ -266,8 +263,6 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return handler.WithParams(req, l.handleTextDocumentDocumentSymbol)
 	case "textDocument/didChange":
 		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentDidChange)
-	case "textDocument/foldingRange":
-		return handler.WithParams(req, l.handleTextDocumentFoldingRange)
 	case "textDocument/formatting":
 		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentFormatting)
 	case "workspace/didChangeWatchedFiles":
@@ -320,6 +315,7 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	//   - completionItem/resolve
 	// - textDocument/documentLink
 	// - textDocument/documentHighlight
+	// - textDocument/foldingRange
 	// - textDocument/hover
 	// - textDocument/inlayHint
 	//   - inlayHint/resolve
@@ -610,9 +606,15 @@ func (l *LanguageServer) getClient() types.Client {
 
 // setClient sets the client information.
 // This should only be called during initialization in handleInitialize().
-func (l *LanguageServer) setClient(client types.Client) {
+func (l *LanguageServer) setClient(ctx context.Context, client types.Client) {
 	l.clientLock.Lock()
 	l.client = client
+
+	if err := PutClient(ctx, l.regoStore, client); err != nil {
+		l.clientLock.Unlock()
+		panic(fmt.Sprintf("failed to store client in rego store: %s", err))
+	}
+
 	l.clientLock.Unlock()
 }
 
@@ -893,15 +895,15 @@ func (l *LanguageServer) handleTextDocumentDefinition(params types.DefinitionPar
 		return nil, fmt.Errorf("failed to filter ignored paths: %w", err)
 	}
 
-	query := oracle.DefinitionQuery{
-		// The value of Filename is used if the defn in the current buffer.
-		Filename: l.toRelativePath(params.TextDocument.URI),
-		Pos:      positionToOffset(contents, params.Position),
-		Modules:  modules,
-		Buffer:   outil.StringToByteSlice(contents),
-	}
-
-	definition, err := orc.WithCompiler(compile.NewCompilerWithRegalBuiltins()).FindDefinition(query)
+	definition, err := oracle.New().
+		WithCompiler(compile.NewCompilerWithRegalBuiltins()).
+		FindDefinition(oracle.DefinitionQuery{
+			// The value of Filename is used if the defn in the current buffer.
+			Filename: l.toRelativePath(params.TextDocument.URI),
+			Pos:      positionToOffset(contents, params.Position),
+			Modules:  modules,
+			Buffer:   outil.StringToByteSlice(contents),
+		})
 	if err != nil {
 		if !util.IsAnyError(err, oracle.ErrNoDefinitionFound, oracle.ErrNoMatchFound) {
 			l.log.Message("failed to find definition: %s", err)
@@ -1086,15 +1088,6 @@ func (l *LanguageServer) handleTextDocumentDocumentSymbol(params types.DocumentS
 	}
 
 	return documentsymbol.All(contents, module, l.builtinsForCurrentCapabilities()), nil
-}
-
-func (l *LanguageServer) handleTextDocumentFoldingRange(params types.FoldingRangeParams) (any, error) {
-	text, module, ok := l.cache.GetContentAndModule(params.TextDocument.URI)
-	if !ok {
-		return noFoldingRanges, nil
-	}
-
-	return foldingrange.FindAll(text, module), nil
 }
 
 func (l *LanguageServer) handleTextDocumentFormatting(
@@ -1303,7 +1296,7 @@ func (l *LanguageServer) handleWorkspaceDiagnostic() (any, error) {
 	}}}, nil
 }
 
-func (l *LanguageServer) initializeResultHandler(_ context.Context, result any) (any, error) {
+func (l *LanguageServer) initializeResultHandler(ctx context.Context, result any) (any, error) {
 	if bundle.DevModeEnabled() {
 		l.log.Message("Development mode enabled. Will attempt to build bundle from:", os.Getenv("REGAL_BUNDLE_PATH"))
 		bundle.Dev.SetPath(os.Getenv("REGAL_BUNDLE_PATH"))
@@ -1319,7 +1312,7 @@ func (l *LanguageServer) initializeResultHandler(_ context.Context, result any) 
 		panic(fmt.Errorf("unexpected result type for initialize: %T", result))
 	}
 
-	l.setClient(response.Regal.Client)
+	l.setClient(ctx, response.Regal.Client)
 
 	if err := l.updateRootURI(response.Regal.Workspace.URI); err != nil {
 		l.log.Message("failed to set rootURI: %w", err)
@@ -1693,7 +1686,6 @@ func (l *LanguageServer) regalContext(fileURI string, _ *rego.Requirements) *reg
 		return rctx
 	}
 
-	rctx.Client = l.client
 	rctx.File = rego.File{
 		Name:        l.toRelativePath(fileURI),
 		RegoVersion: l.regoVersionForURI(fileURI).String(),
@@ -1790,7 +1782,7 @@ func (l *LanguageServer) handleInputSkeletonPrompt(
 
 			var showResult types.ShowDocumentResult
 			if err = l.conn.Call(ctx, "window/showDocument", types.ShowDocumentParams{
-				URI:       uri.FromPath(l.client.Identifier, inputFile),
+				URI:       uri.FromPath(l.getClient().Identifier, inputFile),
 				TakeFocus: &takeFocus,
 			}, &showResult); err != nil {
 				l.log.Message("window/showDocument failed: %v", err)

@@ -60,18 +60,16 @@ test_inlayhints_rendered_correctly_tooltip_resolve if {
 
 	res := inlayhint.result.response
 		with input as {
-			"regal": {
-				"client": {"capabilities": {"textDocument": {"inlayHint": {"resolveSupport": {"properties": ["tooltip"]}}}}},
-				"file": {
-					"parse_errors": [],
-					"uri": "file:///p.rego",
-				},
-			},
+			"regal": {"file": {
+				"parse_errors": [],
+				"uri": "file:///p.rego",
+			}},
 			"params": {"range": {
 				"start": {"line": 0, "character": 0},
 				"end": {"line": 100, "character": 100},
 			}},
 		}
+		with data.client.capabilities.textDocument.inlayHint.resolveSupport.properties as ["tooltip"]
 		with data.workspace.parsed["file:///p.rego"] as module
 		with data.workspace.builtins as _builtins
 

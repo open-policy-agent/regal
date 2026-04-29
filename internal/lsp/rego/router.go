@@ -35,6 +35,46 @@ var (
 	errIgnored = errors.New("ignored URI")
 )
 
+func init() {
+	ast.InternStringTerm(
+		"textDocument/codeAction",
+		"textDocument/codeLens",
+		"textDocument/completion",
+		"textDocument/documentLink",
+		"textDocument/documentHighlight",
+		"textDocument/foldingRange",
+		"textDocument/hover",
+		"textDocument/inlayHint",
+		"textDocument/linkedEditingRange",
+		"textDocument/selectionRange",
+		"textDocument/semanticTokens/full",
+		"textDocument/signatureHelp",
+		"completionItem/resolve",
+		"inlayHint/resolve",
+
+		"method",
+		"params",
+		"regal",
+		"identifier",
+
+		"feature_flags",
+		"debug_provider",
+		"explorer_provider",
+		"inline_evaluation_provider",
+		"opa_test_provider",
+		"server",
+		"content",
+		"successful_parse_count",
+		"parse_errors",
+		"workspace_root_path",
+		"foldingRange",
+		"foldingrange",
+		"bundle",
+		"lineFoldingOnly",
+		"init_options",
+	)
+}
+
 type (
 	Providers struct {
 		ContextProvider              func(uri string, reqs *Requirements) *RegalContext
@@ -108,6 +148,9 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 		"textDocument/documentHighlight": {
 			handler:  textDocument[types.DocumentHighlightParams, []types.DocumentHighlight],
 			requires: &Requirements{File: FileRequirements{Lines: true}},
+		},
+		"textDocument/foldingRange": {
+			handler: undecoded,
 		},
 		"textDocument/hover": {
 			handler:  textDocument[types.HoverParams, *types.Hover],
@@ -198,12 +241,12 @@ func handlerFor(route Route) regoHandler {
 				return emptyResponse[req.Method], nil
 			}
 
-			return nil, err
+			return nil, fmt.Errorf("error handling route %s: %w", req.Method, err)
 		}
 
 		rctx, err := regalContextForRequirements(prvs, uri, route.requires)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error handling route %s: %w", req.Method, err)
 		}
 
 		if rctx == nil {
@@ -306,13 +349,47 @@ func textDocument[P, R any](ctx context.Context, rctx *RegalContext, req *jsonrp
 	return result.Response, nil
 }
 
+// undecoded passes the input as is to the query.
+func undecoded(ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request) (any, error) {
+	params, err := transform.AnyToValue(req.Params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode params: %w", err)
+	}
+
+	paramsTerm := ast.TermPtrPool.Get()
+	regctxTerm := ast.TermPtrPool.Get()
+
+	defer ast.TermPtrPool.Put(paramsTerm)
+	defer ast.TermPtrPool.Put(regctxTerm)
+
+	paramsTerm.Value = params
+	regctxTerm.Value = rast.StructToValue(rctx)
+
+	inputValue := ast.NewObject(
+		rast.Item("method", ast.InternedTerm(req.Method)),
+		rast.Item("params", paramsTerm),
+		rast.Item("regal", regctxTerm),
+	)
+
+	res, err := CachedQueryEvalUndecoded(ctx, rctx.Query, inputValue)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate prepared query: %w", err)
+	}
+
+	if rsp, ok := res.(map[string]any)["response"]; ok {
+		return rsp, nil
+	}
+
+	return nil, fmt.Errorf("unexpected query result format: %v", res)
+}
+
 func semanticTokensHandler(ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request) (any, error) {
 	res, err := textDocument[types.SemanticTokensParams, semantictokens.SemanticTokensResult](ctx, rctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate prepared query: %w", err)
 	}
 
-	return semantictokens.Full(ctx, res.(semantictokens.SemanticTokensResult)) //nolint:forcetypeassert
+	return semantictokens.Full(res.(semantictokens.SemanticTokensResult)) //nolint:forcetypeassert
 }
 
 func initialize(ctx context.Context, pq *query.Prepared, prvs Providers, req *jsonrpc2.Request) (any, error) {
@@ -325,7 +402,6 @@ func initialize(ctx context.Context, pq *query.Prepared, prvs Providers, req *js
 
 	err = CachedQueryEval(ctx, pq, ast.NewObject(
 		rast.Item("method", ast.InternedTerm(req.Method)),
-		rast.Item("id", ast.NewTerm(rast.StructToValue(req.ID))),
 		rast.Item("params", ast.NewTerm(paramsValue)),
 		rast.Item("regal", ast.NewTerm(rast.StructToValue(prvs.ContextProvider("initialize", nil)))),
 	), &result)

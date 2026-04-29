@@ -150,6 +150,7 @@ rules:
         - data.eval.**
         - data.internal**
         - data.schema.**
+        - data.client.**
         - data.workspace.**
         - data.regal.config.provided**
         - data.custom.regal**

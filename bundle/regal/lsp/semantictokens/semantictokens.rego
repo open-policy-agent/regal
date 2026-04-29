@@ -10,7 +10,7 @@
 #   - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_semanticTokens
 # schemas:
 #   - input:        schema.regal.lsp.common
-#   - input.params: schema.regal.lsp.semantictokens
+#   - input.params: schema.regal.lsp.textdocument
 package regal.lsp.semantictokens
 
 import data.regal.lsp.semantictokens.vars.comprehensions
