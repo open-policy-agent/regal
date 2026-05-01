@@ -1,7 +1,6 @@
 package semantictokens
 
 import (
-	"context"
 	"slices"
 
 	"github.com/open-policy-agent/regal/internal/lsp/types"
@@ -25,6 +24,8 @@ const (
 	ModifierReference
 )
 
+// Legend
+// NOTE: Changes here must be reflected in initialize.rego too!
 var Legend = types.SemanticTokensLegend{
 	TokenTypes: []string{
 		Namespace: "namespace",
@@ -47,7 +48,7 @@ type Token struct {
 	Modifiers uint32
 }
 
-// Represents the structured result from the Rego query
+// SemanticTokensResult represents the structured result from the Rego query.
 type SemanticTokensResult struct {
 	PackageTokens []Token `json:"packages"`
 	ImportTokens  []Token `json:"imports"`
@@ -55,19 +56,10 @@ type SemanticTokensResult struct {
 	DebugInfo     any     `json:"debug_info"`
 }
 
-func Full(ctx context.Context, result SemanticTokensResult) (*types.SemanticTokens, error) {
-	tokens := slices.Concat(
-		result.PackageTokens,
-		result.Vars,
-		result.ImportTokens,
-	)
-
-	return encodeTokens(tokens), nil
-}
-
-func encodeTokens(tokens []Token) *types.SemanticTokens {
+func Full(result SemanticTokensResult) (*types.SemanticTokens, error) {
+	tokens := slices.Concat(result.PackageTokens, result.Vars, result.ImportTokens)
 	if len(tokens) == 0 {
-		return &types.SemanticTokens{Data: []uint32{}}
+		return &types.SemanticTokens{Data: []uint32{}}, nil
 	}
 
 	// Sort tokens by position (line first, then column)
@@ -75,6 +67,7 @@ func encodeTokens(tokens []Token) *types.SemanticTokens {
 		if a.Line != b.Line {
 			return int(a.Line) - int(b.Line)
 		}
+
 		return int(a.Col) - int(b.Col)
 	})
 
@@ -103,5 +96,5 @@ func encodeTokens(tokens []Token) *types.SemanticTokens {
 		prevCol = tok.Col
 	}
 
-	return &types.SemanticTokens{Data: data}
+	return &types.SemanticTokens{Data: data}, nil
 }

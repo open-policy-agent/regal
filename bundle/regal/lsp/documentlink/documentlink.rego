@@ -11,7 +11,7 @@
 #   - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentLink
 # schemas:
 #   - input:        schema.regal.lsp.common
-#   - input.params: schema.regal.lsp.documentlink
+#   - input.params: schema.regal.lsp.textdocument
 package regal.lsp.documentlink
 
 import data.regal.util

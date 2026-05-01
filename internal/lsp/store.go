@@ -9,6 +9,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 
+	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
@@ -18,6 +19,7 @@ var (
 	pathWorkspaceDefinedRefs = storage.Path{"workspace", "defined_refs"}
 	pathWorkspaceBuiltins    = storage.Path{"workspace", "builtins"}
 	pathWorkspaceConfig      = storage.Path{"workspace", "config"}
+	pathClient               = storage.Path{"client"}
 )
 
 func NewRegalStore() storage.Store {
@@ -55,6 +57,10 @@ func PutBuiltins(ctx context.Context, store storage.Store, builtins map[string]*
 
 func PutConfig(ctx context.Context, store storage.Store, config *config.Config) error {
 	return Put(ctx, store, pathWorkspaceConfig, config)
+}
+
+func PutClient(ctx context.Context, store storage.Store, client types.Client) error {
+	return Put(ctx, store, pathClient, client)
 }
 
 func Put[T any](ctx context.Context, store storage.Store, path storage.Path, value T) error {

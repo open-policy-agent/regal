@@ -10,6 +10,7 @@ import data.regal.ast
 import data.regal.result
 import data.regal.util
 
+import data.regal.lsp.client
 import data.regal.lsp.util.range
 
 # METADATA
@@ -35,7 +36,7 @@ lenses := array.concat(
 # METADATA
 # description: Debug lens included in response only when client supports it
 debug_supported if {
-	input.regal.client.init_options.enableDebugCodelens == true
+	client.init_options.enableDebugCodelens == true
 	input.regal.server.feature_flags.debug_provider == true
 }
 

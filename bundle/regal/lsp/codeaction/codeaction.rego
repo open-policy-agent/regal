@@ -8,7 +8,7 @@
 #   - input.params: schema.regal.lsp.codeaction
 package regal.lsp.codeaction
 
-import data.regal.lsp.clients
+import data.regal.lsp.client
 
 # METADATA
 # entrypoint: true
@@ -73,7 +73,7 @@ actions contains action if {
 #  only works for VSCode clients, via their `vscode.open` command. If we learn about
 #  other clients that support this, we'll add them here.
 actions contains action if {
-	input.regal.client.identifier == clients.vscode
+	client.identifier == client.identifiers.vscode
 	"quickfix" in only
 
 	some diagnostic in input.params.context.diagnostics

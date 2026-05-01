@@ -1,12 +1,12 @@
 package regal.lsp.codeaction_test
 
-import data.regal.lsp.clients
+import data.regal.lsp.client
 import data.regal.lsp.codeaction
 
 test_actions_reported_in_expected_format if {
 	r := codeaction.actions with input as {
 		"regal": {
-			"client": {"identifier": clients.generic},
+			"client": {"identifier": client.identifiers.generic},
 			"environment": {"workspace_root_uri": "file:///irrelevant"},
 		},
 		"params": {
@@ -74,19 +74,19 @@ test_code_action_returned_for_every_linter[rule] if {
 test_code_actions_specific_to_vscode_reported_on_client_match if {
 	diagnostic := _diagnostics["use-assignment-operator"]
 
-	r := codeaction.actions with input as {
-		"regal": {
-			"client": {"identifier": clients.vscode},
-			"environment": {"workspace_root_uri": "file:///workspace"},
-		},
-		"params": {
-			"textDocument": {"uri": "file:///workspace/policy.rego"},
-			"context": {
-				"diagnostics": [diagnostic],
-				"only": ["quickfix"],
+	r := codeaction.actions
+		with input as {
+			"regal": {"environment": {"workspace_root_uri": "file:///workspace"}},
+			"params": {
+				"textDocument": {"uri": "file:///workspace/policy.rego"},
+				"context": {
+					"diagnostics": [diagnostic],
+					"only": ["quickfix"],
+				},
 			},
-		},
-	}
+		}
+		with data.client.identifier as client.identifiers.vscode
+
 	r == {
 		{
 			"title": "Replace = with := in assignment",
@@ -117,20 +117,19 @@ test_code_actions_specific_to_vscode_reported_on_client_match if {
 test_code_actions_only_quickfix if {
 	diagnostic := _diagnostics["use-assignment-operator"]
 
-	r := codeaction.actions with input as {
-		"regal": {
-			"client": {"identifier": clients.vscode},
-			"environment": {"workspace_root_uri": "file:///workspace"},
-		},
-		"params": {
-			"textDocument": {"uri": "file:///workspace/policy.rego"},
-			"context": {
-				"diagnostics": [diagnostic],
-				# this is the only field different from the previous test
-				"only": ["quickfix"],
+	r := codeaction.actions
+		with input as {
+			"regal": {"environment": {"workspace_root_uri": "file:///workspace"}},
+			"params": {
+				"textDocument": {"uri": "file:///workspace/policy.rego"},
+				"context": {
+					"diagnostics": [diagnostic],
+					# this is the only field different from the previous test
+					"only": ["quickfix"],
+				},
 			},
-		},
-	}
+		}
+		with data.client.identifier as client.identifiers.vscode
 
 	r == {
 		{
@@ -162,7 +161,7 @@ test_code_actions_only_quickfix if {
 test_code_actions_only_source if {
 	r := codeaction.actions with input as {
 		"regal": {
-			"client": {"identifier": clients.generic},
+			"client": {"identifier": client.identifiers.generic},
 			"environment": {"workspace_root_uri": "file:///workspace"},
 		},
 		"params": {
@@ -189,7 +188,7 @@ test_code_actions_only_source if {
 test_code_actions_source_explore_in_default if {
 	r := codeaction.actions with input as {
 		"regal": {
-			"client": {"identifier": clients.generic},
+			"client": {"identifier": client.identifiers.generic},
 			"environment": {"workspace_root_uri": "file:///workspace"},
 		},
 		"params": {
@@ -204,20 +203,12 @@ test_code_actions_source_explore_in_default if {
 }
 
 test_code_actions_empty_only_means_all if {
-	diagnostic := _diagnostics["use-assignment-operator"]
-	r := codeaction.actions with input as {
-		"regal": {
-			"client": {"identifier": clients.vscode},
-			"environment": {"workspace_root_uri": "file:///workspace"},
-		},
-		"params": {
-			"textDocument": {"uri": "file:///workspace/policy.rego"},
-			"context": {
-				"diagnostics": [diagnostic],
-				"only": [],
-			},
-		},
-	}
+	r := codeaction.actions
+		with input.regal.environment.workspace_root_uri as "file:///workspace"
+		with input.params.textDocument.uri as "file:///workspace/policy.rego"
+		with input.params.context.diagnostics as [_diagnostics["use-assignment-operator"]]
+		with input.params.context.only as []
+		with data.client.identifier as client.identifiers.vscode
 
 	count(r) == 4
 }

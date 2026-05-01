@@ -3,7 +3,7 @@
 #   Helper package for semantictokens that returns variable references and declarations in 'some' keyword domains
 # schemas:
 #   - input:        schema.regal.lsp.common
-#   - input.params: schema.regal.lsp.semantictokens
+#   - input.params: schema.regal.lsp.textdocument
 package regal.lsp.semantictokens.vars.some_expr
 
 import data.regal.ast

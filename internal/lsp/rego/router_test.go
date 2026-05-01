@@ -11,7 +11,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 
 	"github.com/open-policy-agent/regal/internal/lsp"
-	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
@@ -279,7 +278,6 @@ func providers(rc *rego.RegalContext, content, ignored string) rego.Providers {
 
 func regalContext() *rego.RegalContext {
 	return &rego.RegalContext{
-		Client: types.Client{Identifier: clients.IdentifierVSCode},
 		Server: types.ServerContext{
 			FeatureFlags: *lsp.DefaultServerFeatureFlags(),
 		},

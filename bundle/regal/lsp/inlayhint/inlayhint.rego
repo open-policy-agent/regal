@@ -11,6 +11,7 @@ package regal.lsp.inlayhint
 import data.regal.ast
 import data.regal.util
 
+import data.regal.lsp.client
 import data.regal.lsp.inlayhint_resolve
 
 # METADATA
@@ -86,9 +87,7 @@ _args_info(name) := builtin.decl.args if {
 	# TBD: consider caching this
 } else := ast.function_decls[name].decl.args
 
-_tooltip_resolve_supported if {
-	"tooltip" in input.regal.client.capabilities.textDocument.inlayHint.resolveSupport.properties
-}
+_tooltip_resolve_supported if "tooltip" in client.capabilities.textDocument.inlayHint.resolveSupport.properties
 
 _calls_in_range contains call if {
 	call := ast.found.calls[_][_]

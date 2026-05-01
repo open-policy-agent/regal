@@ -261,7 +261,7 @@ func setupLanguageServerWithPolicy(tb testing.TB, policy string) (*LanguageServe
 	l := NewLanguageServer(tb.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, tb.Output())})
 
 	l.workspaceRootURI = "file:///foo"
-	l.setClient(types.Client{Identifier: clients.IdentifierVSCode})
+	l.setClient(tb.Context(), types.Client{Identifier: clients.IdentifierVSCode})
 	l.webServer = webServer
 	l.loadedConfig = &config.Config{}
 

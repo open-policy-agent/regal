@@ -188,3 +188,19 @@ func TestFromRelativePath(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkFromPath(b *testing.B) {
+	uri := "/workspace/foo/bar.rego"
+
+	b.Run("Generic client", func(b *testing.B) {
+		for b.Loop() {
+			FromPath(clients.IdentifierGeneric, uri)
+		}
+	})
+
+	b.Run("VSCode client", func(b *testing.B) {
+		for b.Loop() {
+			FromPath(clients.IdentifierVSCode, uri)
+		}
+	})
+}

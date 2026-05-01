@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "regal.lsp.documentlink",
+  "$id": "regal.lsp.textdocument",
   "$ref": "#/$defs/params",
   "$defs": {
     "params": {

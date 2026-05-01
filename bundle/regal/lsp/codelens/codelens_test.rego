@@ -17,9 +17,7 @@ test_code_lenses_for_module if {
 	lenses := codelens.lenses
 		with input as {
 			"params": {"textDocument": {"uri": "file://policy.rego"}},
-			# Ugh, why did we make enableDebugCodelens camel case 😭
 			"regal": {
-				"client": {"init_options": {"enableDebugCodelens": true}},
 				"server": {"feature_flags": {"debug_provider": true}},
 				"file": {
 					"name": "policy.rego",
@@ -27,6 +25,7 @@ test_code_lenses_for_module if {
 				},
 			},
 		}
+		with data.client.init_options.enableDebugCodelens as true
 		with data.workspace.parsed as {"file://policy.rego": module}
 
 	lenses == [

@@ -1,19 +1,25 @@
 package regal.ast
 
-import data.regal.util
-
 # METADATA
 # description: all comments in the input AST with their `text` attribute base64 decoded
 comments_decoded := [decoded |
-	some comment in input.comments
+	some comment in _comments
 
 	text_decoded := base64.decode(comment.text)
-	decoded := object.union_n([
-		comment,
-		{"text": text_decoded},
-		{"location": util.to_location_no_text(comment.location)},
-		{"location": {"text": $"#{text_decoded}"}},
-	])
+	[row_str, col_str, end_row_str, end_col_str] := split(comment.location, ":")
+
+	decoded := {
+		"text": text_decoded,
+		"location": {
+			"row": to_number(row_str),
+			"col": to_number(col_str),
+			"end": {
+				"row": to_number(end_row_str),
+				"col": to_number(end_col_str),
+			},
+			"text": $"#{text_decoded}",
+		},
+	}
 ]
 
 # METADATA
@@ -87,6 +93,15 @@ comment_blocks(comments_decoded) := blocks if {
 			]
 		}
 	]
+}
+
+# see _rules for information about this hack and why we need it for now
+_comments := input.comments
+
+_comments := data.workspace.parsed[uri].comments if {
+	not input.comments
+
+	uri := object.get(input, ["params", "textDocument", "uri"], null)
 }
 
 _splits(rows) := array.flatten([

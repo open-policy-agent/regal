@@ -3,7 +3,7 @@
 #   Helper package for semantictokens that returns packages
 # schemas:
 #   - input:        schema.regal.lsp.common
-#   - input.params: schema.regal.lsp.semantictokens
+#   - input.params: schema.regal.lsp.textdocument
 package regal.lsp.semantictokens.vars.packages
 
 import data.regal.util

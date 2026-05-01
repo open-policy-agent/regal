@@ -217,10 +217,23 @@ func StructToValue(input any) ast.Value {
 		}
 
 		iface := value.Interface()
-		if vi, ok := iface.(*ast.Term); ok {
-			kvs = append(kvs, ast.Item(ast.InternedTerm(tag), vi))
-		} else {
-			kvs = append(kvs, ast.Item(ast.InternedTerm(tag), ast.NewTerm(toAstValue(iface))))
+
+		val := toAstValue(iface)
+		switch v := val.(type) {
+		case ast.Null:
+			kvs = append(kvs, Item(tag, ast.InternedNullTerm))
+		case ast.Boolean:
+			kvs = append(kvs, Item(tag, ast.InternedTerm(bool(v))))
+		case ast.String:
+			kvs = append(kvs, Item(tag, ast.InternedTerm(string(v))))
+		case ast.Number:
+			if i, ok := v.Int64(); ok {
+				kvs = append(kvs, Item(tag, ast.InternedTerm(int(i))))
+			} else {
+				kvs = append(kvs, Item(tag, ast.NewTerm(val)))
+			}
+		default:
+			kvs = append(kvs, Item(tag, ast.NewTerm(val)))
 		}
 	}
 

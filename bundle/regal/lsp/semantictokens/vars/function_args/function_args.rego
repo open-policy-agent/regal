@@ -3,7 +3,7 @@
 #   Helper package for semantictokens that returns function argument references and declarations
 # schemas:
 #   - input:        schema.regal.lsp.common
-#   - input.params: schema.regal.lsp.semantictokens
+#   - input.params: schema.regal.lsp.textdocument
 package regal.lsp.semantictokens.vars.function_args
 
 import data.regal.ast

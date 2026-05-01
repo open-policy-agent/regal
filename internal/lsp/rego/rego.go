@@ -60,7 +60,6 @@ type (
 	}
 
 	RegalContext struct {
-		Client      types.Client        `json:"client"`
 		Server      types.ServerContext `json:"server"`
 		File        File                `json:"file"`
 		Environment Environment         `json:"environment"`
@@ -141,6 +140,15 @@ func CachedQueryEval[T any](ctx context.Context, pq *query.Prepared, input ast.V
 	}
 
 	return util.WrapErr(encoding.JSONRoundTrip(result.Expressions[0].Value, toValue), "failed to unmarshal value")
+}
+
+func CachedQueryEvalUndecoded(ctx context.Context, pq *query.Prepared, input ast.Value) (any, error) {
+	result, err := toValidResult(pq.EvalQuery().Eval(ctx, rego.EvalParsedInput(input)))
+	if err != nil {
+		return nil, err
+	}
+
+	return result.Expressions[0].Value, nil
 }
 
 func policyToValue[T any](ctx context.Context, pq *query.Prepared, policy policy, toValue *T) error {

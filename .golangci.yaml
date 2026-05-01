@@ -110,9 +110,6 @@ linters:
       - common-false-positives
       - legacy
       - std-error-handling
-    paths:
-      - scanner.go
-      - tokens.go
     warn-unused: true
 formatters:
   enable:

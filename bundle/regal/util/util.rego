@@ -71,8 +71,6 @@ to_location_no_text(loc) := {
 		"col": to_number(end_col_str),
 	},
 } if {
-	is_string(loc)
-
 	[row_str, col_str, end_row_str, end_col_str] := split(loc, ":")
 }
 
