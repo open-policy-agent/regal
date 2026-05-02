@@ -157,9 +157,6 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (e
 		return errors.New("FileURI should not be set for updateAllDiagnostics")
 	}
 
-	modules := opts.Cache.GetAllModules()
-	files := opts.Cache.GetAllFiles()
-
 	regalInstance := linter.NewLinter().
 		WithPathPrefix(opts.WorkspaceRootURI).
 		WithCustomRulesPaths(opts.CustomRulesPath)
@@ -168,7 +165,7 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (e
 		regalInstance = regalInstance.WithUserConfig(*opts.RegalConfig)
 	}
 
-	input := rules.NewInput(files, modules)
+	input := rules.NewInput(opts.Cache.GetAllFiles(), opts.Cache.GetAllModules())
 	regalInstance = regalInstance.WithInputModules(&input)
 
 	preparedInstance, err := regalInstance.Prepare(ctx)
@@ -183,18 +180,10 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (e
 
 	fileDiags := convertReportToDiagnostics(&rpt, opts.WorkspaceRootURI)
 
-	for uri := range files {
-		parseErrs, ok := opts.Cache.GetParseErrors(uri)
-		if ok && len(parseErrs) > 0 {
-			continue
+	for _, fileURI := range input.FileNames {
+		if parseErrs, _ := opts.Cache.GetParseErrors(fileURI); len(parseErrs) == 0 {
+			opts.Cache.SetFileDiagnostics(fileURI, util.MapGetOr(fileDiags, fileURI, emptyDiagnostics))
 		}
-
-		fd, ok := fileDiags[uri]
-		if !ok {
-			fd = emptyDiagnostics
-		}
-
-		opts.Cache.SetFileDiagnostics(uri, fd)
 	}
 
 	return nil

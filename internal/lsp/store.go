@@ -10,8 +10,9 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/roast/transforms/module"
 	"github.com/open-policy-agent/regal/pkg/config"
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
 
 var (
@@ -20,6 +21,7 @@ var (
 	pathWorkspaceBuiltins    = storage.Path{"workspace", "builtins"}
 	pathWorkspaceConfig      = storage.Path{"workspace", "config"}
 	pathClient               = storage.Path{"client"}
+	pathServer               = storage.Path{"server"}
 )
 
 func NewRegalStore() storage.Store {
@@ -32,6 +34,8 @@ func NewRegalStore() storage.Store {
 			"defined_refs": map[string]any{},
 			"builtins":     map[string]any{},
 		},
+		"client": map[string]any{},
+		"server": map[string]any{},
 	}, inmem.OptRoundTripOnWrite(false), inmem.OptReturnASTValuesOnRead(true))
 }
 
@@ -48,7 +52,12 @@ func PutFileRefs(ctx context.Context, store storage.Store, fileURI string, refs 
 }
 
 func PutFileMod(ctx context.Context, store storage.Store, fileURI string, mod *ast.Module) error {
-	return Put(ctx, store, append(pathWorkspaceParsed, fileURI), mod)
+	value, err := module.ToValue(mod)
+	if err != nil {
+		return fmt.Errorf("failed to convert module to value: %w", err)
+	}
+
+	return Put(ctx, store, append(pathWorkspaceParsed, fileURI), value)
 }
 
 func PutBuiltins(ctx context.Context, store storage.Store, builtins map[string]*ast.Builtin) error {
@@ -56,22 +65,20 @@ func PutBuiltins(ctx context.Context, store storage.Store, builtins map[string]*
 }
 
 func PutConfig(ctx context.Context, store storage.Store, config *config.Config) error {
-	return Put(ctx, store, pathWorkspaceConfig, config)
+	return Put(ctx, store, pathWorkspaceConfig, rast.StructToValue(config))
 }
 
 func PutClient(ctx context.Context, store storage.Store, client types.Client) error {
-	return Put(ctx, store, pathClient, client)
+	return Put(ctx, store, pathClient, rast.StructToValue(client))
+}
+
+func PutServer(ctx context.Context, store storage.Store, server types.ServerContext) error {
+	return Put(ctx, store, pathServer, rast.StructToValue(server))
 }
 
 func Put[T any](ctx context.Context, store storage.Store, path storage.Path, value T) error {
 	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
-		// TODO: Since we use the AST backend, we should not have to round trip via JSON here.
-		asMap, err := encoding.JSONRoundTripTo[map[string]any](value)
-		if err != nil {
-			return fmt.Errorf("failed to marshal value to JSON: %w", err)
-		}
-
-		return write(ctx, store, txn, path, asMap)
+		return write(ctx, store, txn, path, value)
 	})
 }
 

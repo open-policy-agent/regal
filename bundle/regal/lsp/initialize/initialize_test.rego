@@ -9,7 +9,7 @@ test_initialize_experimental_capabilities if {
 			"initializationOptions": {},
 			"clientInfo": {"name": "go test"},
 		}
-		with input.regal.server.feature_flags as {
+		with data.server.feature_flags as {
 			"explorer_provider": true,
 			"inline_evaluation_provider": true,
 			"debug_provider": true,

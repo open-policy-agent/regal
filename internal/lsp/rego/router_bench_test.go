@@ -14,40 +14,57 @@ import (
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
-// 227279 ns/op  131120 B/op    3466 allocs/op
-// 217259 ns/op  125051 B/op    3340 allocs/op
+// 214834 ns/op	  116999 B/op	    3187 allocs/op
+// 224618 ns/op	  122690 B/op	    3292 allocs/op
 func BenchmarkFoldingRangeHandler(b *testing.B) {
 	doc := newDocument("file:///p.rego", must.ReadFile(b, "testdata/foldingranges.rego"))
-
 	req := request("textDocument/foldingRange", testutil.ToJSONRawMessage(b, map[string]any{
-		"textDocument": map[string]any{
-			"uri": doc.uri,
+		"textDocument": map[string]any{"uri": doc.uri},
+	}))
+
+	for name, lineFoldingOnly := range map[string]bool{
+		"lineFoldingOnly=false": false,
+		"lineFoldingOnly=true":  true,
+	} {
+		b.Run(name, func(b *testing.B) {
+			router := rego.NewRegoRouter(b.Context(), store(doc, lineFoldingOnly), query.NewCache(), emptyContext())
+			runBenchmark(b, router, req)
+		})
+	}
+}
+
+// 68920 ns/op	   56301 B/op	    1123 allocs/op
+// 58037 ns/op	   48892 B/op	    1002 allocs/op - using 'undecoded' handler
+// 55144 ns/op	   46362 B/op	     977 allocs/op - using 'undecoded' handler and custom Value decoder
+// 53628 ns/op	   43976 B/op	     791 allocs/op - using 'undecoded' handler and custom Value encoder
+func BenchmarkCodeActionHandler(b *testing.B) {
+	doc := newDocument("file:///p.rego", "package ignored")
+	req := request("textDocument/codeAction", testutil.ToJSONRawMessage(b, map[string]any{
+		"textDocument": map[string]any{"uri": doc.uri},
+		"context": map[string]any{
+			"diagnostics": []map[string]any{{
+				"code":    "use-assignment-operator",
+				"message": "foobar",
+				"range": map[string]any{
+					"start": map[string]any{"line": 2, "character": 4},
+					"end":   map[string]any{"line": 2, "character": 10},
+				},
+				"source": "regal/style",
+			}},
 		},
 	}))
 
-	b.Run("lineFoldingOnly = false", func(b *testing.B) {
-		runBenchmark(b, rego.NewRegoRouter(b.Context(), store(doc, false), query.NewCache(), emptyContext()), req)
-	})
-
-	b.Run("lineFoldingOnly = true", func(b *testing.B) {
-		runBenchmark(b, rego.NewRegoRouter(b.Context(), store(doc, true), query.NewCache(), emptyContext()), req)
-	})
+	router := rego.NewRegoRouter(b.Context(), store(doc, false), query.NewCache(), emptyContext())
+	runBenchmark(b, router, req)
 }
 
 func runBenchmark(b *testing.B, mgr *rego.RegoRouter, req *jsonrpc2.Request) {
 	b.Helper()
 
-	var rsp any
-
 	for b.Loop() {
-		var err error
-		if rsp, err = mgr.Handle(b.Context(), nil, req); err != nil {
+		if _, err := mgr.Handle(b.Context(), nil, req); err != nil {
 			b.Fatal(err)
 		}
-	}
-
-	if ranges := must.Be[[]any](b, rsp); len(ranges) != 8 {
-		b.Fatalf("expected 8 folding ranges, got %d", len(ranges))
 	}
 }
 

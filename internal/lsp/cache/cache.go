@@ -96,17 +96,13 @@ func (c *Cache) SetModule(fileURI string, module *ast.Module) {
 }
 
 func (c *Cache) GetContentAndModule(fileURI string) (string, *ast.Module, bool) {
-	content, ok := c.GetFileContents(fileURI)
-	if !ok {
-		return "", nil, false
+	if content, ok := c.GetFileContents(fileURI); ok {
+		if module, ok := c.GetModule(fileURI); ok {
+			return content, module, true
+		}
 	}
 
-	module, ok := c.GetModule(fileURI)
-	if !ok {
-		return "", nil, false
-	}
-
-	return content, module, true
+	return "", nil, false
 }
 
 func (c *Cache) Rename(oldKey, newKey string) {

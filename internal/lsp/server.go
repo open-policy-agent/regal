@@ -193,8 +193,9 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 	qc := query.NewCache()
 	store := NewRegalStore()
 
-	// Use provided feature flags, or defaults if not set
 	featureFlags := util.Or(opts.FeatureFlags, DefaultServerFeatureFlags)
+
+	_ = PutServer(ctx, store, types.ServerContext{FeatureFlags: *featureFlags, Version: version.Version})
 
 	ls := &LanguageServer{
 		cache:              c,
@@ -1677,29 +1678,19 @@ func (l *LanguageServer) parseOpts(fileURI string, bis map[string]*ast.Builtin) 
 }
 
 func (l *LanguageServer) regalContext(fileURI string, _ *rego.Requirements) *rego.RegalContext {
-	rctx := &rego.RegalContext{Server: types.ServerContext{
-		FeatureFlags: l.featureFlags,
-		Version:      version.Version,
-	}}
-
-	if fileURI == "initialize" {
-		return rctx
+	return &rego.RegalContext{
+		File: rego.File{
+			Name:        l.toRelativePath(fileURI),
+			RegoVersion: l.regoVersionForURI(fileURI).String(),
+			Abs:         uri.ToPath(fileURI),
+			URI:         fileURI,
+		},
+		Environment: rego.Environment{
+			PathSeparator:     string(os.PathSeparator),
+			WorkspaceRootURI:  l.getWorkspaceRootURI(),
+			WorkspaceRootPath: l.workspacePath(),
+		},
 	}
-
-	rctx.File = rego.File{
-		Name:        l.toRelativePath(fileURI),
-		RegoVersion: l.regoVersionForURI(fileURI).String(),
-		Abs:         uri.ToPath(fileURI),
-		URI:         fileURI,
-	}
-	rctx.Environment = rego.Environment{
-		PathSeparator:     string(os.PathSeparator),
-		WebServerBaseURI:  l.webServer.GetBaseURL(),
-		WorkspaceRootURI:  l.getWorkspaceRootURI(),
-		WorkspaceRootPath: l.workspacePath(),
-	}
-
-	return rctx
 }
 
 func (l *LanguageServer) handleInputSkeletonPrompt(

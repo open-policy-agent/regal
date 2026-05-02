@@ -37,7 +37,7 @@ lenses := array.concat(
 # description: Debug lens included in response only when client supports it
 debug_supported if {
 	client.init_options.enableDebugCodelens == true
-	input.regal.server.feature_flags.debug_provider == true
+	data.server.feature_flags.debug_provider == true
 }
 
 _module := data.workspace.parsed[input.params.textDocument.uri]

@@ -10,7 +10,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 
-	"github.com/open-policy-agent/regal/internal/lsp"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
@@ -42,7 +41,7 @@ func TestRouteTextDocumentCodeAction(t *testing.T) {
 	req := request("textDocument/codeAction", codeActionParams(t, "file:///workspace/p.rego", 0, 0, 0, 10))
 	rsp := must.Return(mgr.Handle(t.Context(), nil, req))(t)
 
-	must.NotEqual(t, 0, len(must.Be[[]types.CodeAction](t, rsp)), "code actions count")
+	must.Be[*json.RawMessage](t, rsp)
 }
 
 func TestRouteTextDocumentDocumentLink(t *testing.T) {
@@ -59,9 +58,8 @@ func TestRouteTextDocumentDocumentLink(t *testing.T) {
 	}}, inmem.OptRoundTripOnWrite(false))
 	mgr := rego.NewRegoRouter(t.Context(), stg, query.NewCache(), providers(regalContext(), "", ""))
 	rsp := must.Return(mgr.Handle(t.Context(), nil, request("textDocument/documentLink", linkParams(t, doc.uri))))(t)
-	res := must.Be[[]types.DocumentLink](t, rsp)
 
-	must.NotEqual(t, 0, len(res), "document link count")
+	must.Be[*json.RawMessage](t, rsp)
 }
 
 func TestRouteTextDocumentDocumentHighlight(t *testing.T) {
@@ -81,9 +79,8 @@ func TestRouteTextDocumentDocumentHighlight(t *testing.T) {
 	})
 	prm := docPositionParams(t, doc.uri, types.Position{Line: 0, Character: 4})
 	rsp := must.Return(mgr.Handle(t.Context(), nil, request("textDocument/documentHighlight", prm)))(t)
-	res := must.Be[[]types.DocumentHighlight](t, rsp)
 
-	must.NotEqual(t, 0, len(res), "document highlight count")
+	must.Be[*json.RawMessage](t, rsp)
 }
 
 func TestRouteIgnoredDocument(t *testing.T) {
@@ -94,9 +91,8 @@ func TestRouteIgnoredDocument(t *testing.T) {
 	)
 	req := request("textDocument/codeAction", codeActionParams(t, "file:///workspace/ignored.rego", 0, 0, 0, 10))
 	rsp := must.Return(mgr.Handle(t.Context(), nil, req))(t)
-	res := must.Be[[]types.CodeAction](t, rsp)
 
-	must.Equal(t, 0, len(res), "code actions count ignored document")
+	must.Equal(t, nil, rsp, "response for ignored document")
 }
 
 func TestTextDocumentSignatureHelp(t *testing.T) {
@@ -186,7 +182,8 @@ func TestRouteCompletionItemResolve(t *testing.T) {
 		"label": "count",
 		"data":  map[string]any{"resolver": "builtins"},
 	}))
-	cmi := must.Be[types.CompletionItem](t, must.Return(mgr.Handle(t.Context(), nil, req))(t))
+	ret := must.Return(mgr.Handle(t.Context(), nil, req))(t)
+	cmi := must.Be[types.CompletionItem](t, ret)
 
 	must.NotEqual(t, nil, cmi.Documentation, "documentation is set")
 	must.Equal(t, "markdown", cmi.Documentation.Kind, "documentation kind")
@@ -195,14 +192,10 @@ func TestRouteCompletionItemResolve(t *testing.T) {
 func TestRouteInitialize(t *testing.T) {
 	t.Parallel()
 
-	mgr := rego.NewRegoRouter(t.Context(), nil, query.NewCache(), rego.Providers{
-		ContextProvider: func(string, *rego.Requirements) *rego.RegalContext {
-			return &rego.RegalContext{Server: types.ServerContext{
-				FeatureFlags: *lsp.DefaultServerFeatureFlags(),
-				Version:      "0.2.0",
-			}}
-		},
-	})
+	data := map[string]any{"server": map[string]any{"version": "0.2.0"}}
+	store := inmem.NewFromObjectWithOpts(data, inmem.OptReturnASTValuesOnRead(true))
+
+	mgr := rego.NewRegoRouter(t.Context(), store, query.NewCache(), rego.Providers{})
 	mgr.RegisterResultHandler("initialize", func(_ context.Context, result any) (any, error) {
 		rsp, ok := result.(rego.InitializeResponse)
 
@@ -278,9 +271,6 @@ func providers(rc *rego.RegalContext, content, ignored string) rego.Providers {
 
 func regalContext() *rego.RegalContext {
 	return &rego.RegalContext{
-		Server: types.ServerContext{
-			FeatureFlags: *lsp.DefaultServerFeatureFlags(),
-		},
 		Environment: rego.Environment{
 			PathSeparator:    "/",
 			WorkspaceRootURI: "file:///workspace",

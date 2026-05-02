@@ -133,6 +133,11 @@ func Item(key string, value *ast.Term) [2]*ast.Term {
 	return ast.Item(ast.InternedTerm(key), value)
 }
 
+// Insert works like ast.Object.Insert but with an interned string key.
+func Insert(obj ast.Object, key string, value *ast.Term) {
+	obj.Insert(ast.InternedTerm(key), value)
+}
+
 // GetValue works like ast.Object.Get but with type assertion for the return value,
 // and a boolean return indicator.
 func GetValue[T ast.Value](obj ast.Object, key string) (T, bool) {

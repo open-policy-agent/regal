@@ -3,7 +3,8 @@
 #   Information about the client making the request,
 #   and metadata related to language server clients.
 # schemas:
-#   - input: schema.regal.lsp.common
+#   - input:       schema.regal.lsp.common
+#   - data.client: schema.regal.lsp.client
 package regal.lsp.client
 
 # METADATA

@@ -8,10 +8,8 @@ import (
 	"github.com/open-policy-agent/regal/pkg/report"
 )
 
-// NewDefaultFixes returns a list of default fixes that are applied by the fix command.
-// When a new fix is added, it should be added to this list.
-func NewDefaultFixes() []Fix {
-	return []Fix{
+var (
+	defaultFixes = [...]Fix{
 		&Fmt{},
 		&Fmt{
 			// this effectively maps the fix for violations from the
@@ -26,12 +24,7 @@ func NewDefaultFixes() []Fix {
 		&RedundantExistenceCheck{},
 		&ConstantCondition{},
 	}
-}
-
-// NewDefaultFormatterFixes returns a list of default fixes that are applied by the formatter.
-// Notably, this does not include fixers that move files around.
-func NewDefaultFormatterFixes() []Fix {
-	return []Fix{
+	defaultFormatterFixes = [...]Fix{
 		&Fmt{},
 		&UseAssignmentOperator{},
 		&NoWhitespaceComment{},
@@ -40,6 +33,17 @@ func NewDefaultFormatterFixes() []Fix {
 		&RedundantExistenceCheck{},
 		&ConstantCondition{},
 	}
+)
+
+// NewDefaultFixes returns a list of default fixes that are applied by the fix command.
+func NewDefaultFixes() []Fix {
+	return defaultFixes[:]
+}
+
+// NewDefaultFormatterFixes returns a list of default fixes that are applied by the formatter.
+// Notably, this does not include fixers that move files around.
+func NewDefaultFormatterFixes() []Fix {
+	return defaultFormatterFixes[:]
 }
 
 // Fix is the interface that must be implemented by all fixes.

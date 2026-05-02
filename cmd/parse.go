@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"log"
 	"os"
@@ -11,6 +13,7 @@ import (
 
 	rp "github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
+	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
 func init() {
@@ -42,7 +45,7 @@ func init() {
 	RootCommand.AddCommand(parseCommand)
 }
 
-func parse(args []string) error {
+func parse(args []string) (err error) {
 	filename := args[0]
 
 	bs, err := os.ReadFile(filename)
@@ -57,11 +60,18 @@ func parse(args []string) error {
 		return err
 	}
 
-	//nolint:staticcheck
-	enhancedAST, err := rp.PrepareAST(filename, content, module)
+	value, err := transform.ToAST(filename, content, module, false)
 	if err != nil {
 		return err
 	}
 
-	return encoding.NewIndentEncoder(os.Stdout, "", "  ").Encode(enhancedAST)
+	var buf bytes.Buffer
+	if err = encoding.OfValue().Encode(&buf, value); err == nil {
+		dst := new(bytes.Buffer)
+		if err = json.Indent(dst, buf.Bytes(), "", "  "); err == nil {
+			_, err = dst.WriteTo(os.Stdout)
+		}
+	}
+
+	return err
 }

@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"github.com/open-policy-agent/opa/v1/ast"
+
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
@@ -14,6 +16,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/util"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
 
 func TestEvalWorkspacePath(t *testing.T) {
@@ -53,7 +56,7 @@ func TestEvalWorkspacePath(t *testing.T) {
 	ls.cache.SetModule(policy1URI, module1)
 	ls.cache.SetModule(policy2URI, module2)
 
-	input := map[string]any{"exists": true}
+	input := ast.NewObject(rast.Item("exists", ast.InternedTerm(true)))
 
 	res := must.Return(ls.EvalInWorkspace(t.Context(), "data.policy1.allow", input))(t)
 	assert.True(t, must.Be[bool](t, res.Value))
@@ -67,7 +70,7 @@ func TestEvalWorkspacePathInternalData(t *testing.T) {
 
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
-	res := must.Return(ls.EvalInWorkspace(t.Context(), "object.keys(data.internal)", map[string]any{}))(t)
+	res := must.Return(ls.EvalInWorkspace(t.Context(), "object.keys(data.internal)", ast.InternedEmptyObjectValue))(t)
 	val := must.Be[[]any](t, res.Value)
 	act := util.Sorted(must.Return(util.AnySliceTo[string](val))(t))
 
@@ -119,26 +122,26 @@ func TestFindInput(t *testing.T) {
 
 			must.MkdirAll(t, workspacePath, "foo", "bar")
 
-			path, content := rio.FindInput(file, workspacePath)
+			path, value := rio.FindInput(file, workspacePath)
 			must.Equal(t, "", path, "expected no input path to be found")
-			assert.MapsEqual(t, map[string]any{}, content, "expected no input content")
+			must.Equal(t, nil, value)
 
 			inputPath := filepath.Join(workspacePath, "foo", "bar", "input."+tc.fileType)
 
 			createWithContent(t, inputPath, tc.fileContent)
 
-			path, content = rio.FindInput(file, workspacePath)
+			path, value = rio.FindInput(file, workspacePath)
 			assert.Equal(t, inputPath, path, "input path")
-			assert.MapsEqual(t, map[string]any{"x": true}, content, "input content")
+			assert.Equal(t, 0, ast.NewObject(rast.Item("x", ast.InternedTerm(true))).Compare(value))
 
 			must.Remove(t, inputPath)
 
 			workspaceInputPath := filepath.Join(workspacePath, "input."+tc.fileType)
 			createWithContent(t, workspaceInputPath, tc.fileContent)
 
-			path, content = rio.FindInput(file, workspacePath)
+			path, value = rio.FindInput(file, workspacePath)
 			assert.Equal(t, workspaceInputPath, path, "input path")
-			assert.MapsEqual(t, map[string]any{"x": true}, content, "input content")
+			assert.Equal(t, 0, ast.NewObject(rast.Item("x", ast.InternedTerm(true))).Compare(value))
 		})
 	}
 }

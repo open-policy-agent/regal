@@ -173,7 +173,10 @@ func createAndInitServerWithClientName(
 		},
 	}
 
-	var response types.InitializeResult
+	var response struct {
+		Capabilities any              `json:"capabilities"`
+		ServerInfo   types.ServerInfo `json:"serverInfo,omitzero"`
+	}
 	testutil.NoErr(connClient.Call(ctx, "initialize", request, &response))(t)
 
 	// 2. Client sends initialized notification

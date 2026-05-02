@@ -18,7 +18,7 @@ _serverInfo.name := "Regal"
 
 default _serverInfo.version := "unknown"
 
-_serverInfo.version := input.regal.server.version
+_serverInfo.version := data.server.version
 
 # METADATA
 # description: The capabilities of Regal's language server, as defined in the LSP specification
@@ -90,8 +90,8 @@ _commands contains "regal.fix.prefer-equals-comparison"
 _commands contains "regal.fix.constant-condition"
 _commands contains "regal.fix.redundant-existence-check"
 _commands contains "regal.config.disable-rule"
-_commands contains "regal.explorer" if input.regal.server.feature_flags.explorer_provider
-_commands contains "regal.debug" if input.regal.server.feature_flags.debug_provider
+_commands contains "regal.explorer" if data.server.feature_flags.explorer_provider
+_commands contains "regal.debug" if data.server.feature_flags.debug_provider
 
 _capabilities.documentFormattingProvider := true
 
@@ -145,12 +145,34 @@ _capabilities.semanticTokensProvider := {
 	"full": true,
 }
 
-# Note: 'experimental' is LSP terminology. We are using these to mean
-# custom additions that are ready for use, but not in the base spec.
-_capabilities.experimental.explorerProvider := input.regal.server.feature_flags.explorer_provider
-_capabilities.experimental.inlineEvalProvider := input.regal.server.feature_flags.inline_evaluation_provider
-_capabilities.experimental.debugProvider := input.regal.server.feature_flags.debug_provider
-_capabilities.experimental.opaTestProvider := input.regal.server.feature_flags.opa_test_provider
+# ExperimentalCapabilities contains Regal-specific custom LSP features
+# that are not part of the base LSP specification. 'Experimental' comes
+# from the field name in the spec, rather than their status. 'Experimental'
+# features are more like 'custom' features we have built on the LSP.
+
+# METADATA
+# description: |
+#   explorerProvider indicates whether the server supports the regal.explorer
+#   command and the regal/showExplorerResult notification.
+_capabilities.experimental.explorerProvider := data.server.feature_flags.explorer_provider
+
+# METADATA
+# description: |
+#   inlineEvalProvider indicates whether the server supports the regal.eval
+#   command response being sent rather than written to file.
+_capabilities.experimental.inlineEvalProvider := data.server.feature_flags.inline_evaluation_provider
+
+# METADATA
+# description: |
+#   debugProvider indicates whether the server supports the regal.debug
+#   command and regal/startDebugging request.
+_capabilities.experimental.debugProvider := data.server.feature_flags.debug_provider
+
+# METADATA
+# description: |
+#   opaTestProvider indicates whether the server supports testing-related features
+#   including running Rego tests via LSP command and test location notifications.
+_capabilities.experimental.opaTestProvider := data.server.feature_flags.opa_test_provider
 
 # METADATA
 # description: The server's identifier for the client, based on the clientInfo sent in the request

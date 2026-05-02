@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "regal.lsp.client",
+  "$ref": "#/$defs/client",
+  "$defs": {
+    "client": {
+      "type": "object",
+      "description": "LSP client properties",
+      "properties": {
+        "capabilities": {
+          "type": "object",
+          "description": "Capabilities of the LSP client"
+        },
+        "identifier": {
+          "type": "integer",
+          "description": "Numeric identifier for the LSP client"
+        },
+        "init_options": {
+          "type": "object",
+          "description": "Initialization options for the LSP client",
+          "properties": {
+            "enableDebugCodelens": {
+              "type": "boolean",
+              "description": "Enable the debug code lens on packages and rules. This requires client support."
+            }
+          }
+        }
+      }
+    }
+  }
+}

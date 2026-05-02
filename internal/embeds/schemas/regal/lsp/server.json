@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "regal.lsp.server",
+  "$ref": "#/$defs/server",
+  "$defs": {
+    "server": {
+      "type": "object",
+      "description": "LSP server config and state",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Version of the Regal server"
+        },
+        "feature_flags": {
+          "type": "object",
+          "description": "Feature flags state",
+          "properties": {
+            "debug_provider": {
+              "type": "boolean",
+              "description": "If the server is configured to operate as a debug provider"
+            },
+            "explorer_provider": {
+              "type": "boolean",
+              "description": "If the server is configured to operate as an explorer provider"
+            },
+            "inline_evaluation_provider": {
+              "type": "boolean",
+              "description": "If the server is configured to operate as an inline evaluation provider"
+            },
+            "opa_test_provider": {
+              "type": "boolean",
+              "description": "If the server is configured to operate as an OPA test API provider"
+            }
+          }
+        }
+      },
+      "required": [
+        "version",
+        "feature_flags"
+      ]
+    }
+  }
+}

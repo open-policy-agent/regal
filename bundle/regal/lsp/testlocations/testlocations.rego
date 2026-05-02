@@ -3,6 +3,8 @@
 #   This returns a set of test_ rule locations in a given module.
 #   Used by the regal/testLocations method in the LSP to have clients know
 #   where tests are.
+# schemas:
+#   - input: schema.regal.ast
 package regal.lsp.testlocations
 
 import data.regal.ast

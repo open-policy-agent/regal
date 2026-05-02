@@ -13,20 +13,14 @@ test_code_lenses_for_module if {
 
 	rule2 if 1 + rule1 == 2
 	`
-	module := regal.parse_module("policy.rego", policy)
+
 	lenses := codelens.lenses
-		with input as {
-			"params": {"textDocument": {"uri": "file://policy.rego"}},
-			"regal": {
-				"server": {"feature_flags": {"debug_provider": true}},
-				"file": {
-					"name": "policy.rego",
-					"lines": split(policy, "\n"),
-				},
-			},
-		}
+		with input.params.textDocument.uri as "file://policy.rego"
+		with input.regal.file.name as "policy.rego"
+		with input.regal.file.lines as split(policy, "\n")
+		with data.server.feature_flags.debug_provider as true
 		with data.client.init_options.enableDebugCodelens as true
-		with data.workspace.parsed as {"file://policy.rego": module}
+		with data.workspace.parsed as {"file://policy.rego": regal.parse_module("policy.rego", policy)}
 
 	lenses == [
 		{

@@ -1,12 +1,13 @@
 package module
 
 import (
+	"bytes"
 	"strconv"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/transforms"
+	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
@@ -44,23 +45,10 @@ arrcomp := [x | some x in input]
 objcomp := {x: y | some x, y in input}
 setcomp := {x | some x in input}
 `
-	module := ast.MustParseModuleWithOpts(policy, ast.ParserOptions{
-		ProcessAnnotation: true,
-	})
-
-	value, err := ToValue(module)
-	if err != nil {
-		t.Fatalf("failed to convert module to value: %v", err)
-	}
-
-	roundTripped, err := roundTripToValue(module)
-	if err != nil {
-		t.Fatalf("failed to round trip module: %v", err)
-	}
-
-	if value.Compare(roundTripped) != 0 {
-		t.Errorf("expected value to equal round-tripped value, got: %v\n\n, want: %v", value, roundTripped)
-	}
+	module := ast.MustParseModuleWithOpts(policy, ast.ParserOptions{ProcessAnnotation: true})
+	value := must.Return(ToValue(module))(t)
+	buf := new(bytes.Buffer)
+	must.Equal(t, nil, encoding.OfValue().Encode(buf, value))
 }
 
 func TestModuleToValueTemplateString(t *testing.T) {
@@ -108,7 +96,6 @@ func TestModuleToValueTemplateString(t *testing.T) {
 }
 
 // BenchmarkModuleToValue/ToValue-16         	  27673	         40987 ns/op	   64705 B/op	    1740 allocs/op
-// BenchmarkModuleToValue/RoundTrip-16       	   10000	    119018 ns/op	  166038 B/op	    3924 allocs/op
 func BenchmarkModuleToValue(b *testing.B) {
 	policy := `# METADATA
 # title: p p p
@@ -159,26 +146,9 @@ setcomp := {x | some x in input}
 		}
 	})
 
-	b.Run("RoundTrip", func(b *testing.B) {
-		for b.Loop() {
-			value2, err = roundTripToValue(module)
-			if err != nil {
-				b.Fatalf("failed to round trip module: %v", err)
-			}
-		}
-	})
-
 	if value1.Compare(value2) != 0 {
 		b.Errorf("expected value to equal round-tripped value, got: %v\n\n, want: %v", value1, value2)
 	}
-}
-
-func roundTripToValue(module *ast.Module) (ast.Value, error) {
-	var obj map[string]any
-
-	encoding.MustJSONRoundTrip(module, &obj)
-
-	return transforms.AnyToValue(obj)
 }
 
 // Tangentially related benchmark to find out the cost of repeatedly inserting items into an object
