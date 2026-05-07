@@ -36,8 +36,8 @@ items contains item if {
 	}
 }
 
-_base(uri) := str if {
-	end := trim_prefix(uri, "file://")
+_base(u) := str if {
+	end := trim_prefix(u, "file://")
 	str := substring(end, 0, regal.last(indexof_n(end, input.regal.environment.path_separator)))
 }
 

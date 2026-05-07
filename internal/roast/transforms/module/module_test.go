@@ -95,6 +95,29 @@ func TestModuleToValueTemplateString(t *testing.T) {
 	}
 }
 
+func TestModuleToValueNotImport(t *testing.T) {
+	t.Parallel()
+
+	module := ast.MustParseModule(`package test
+		import future.keywords.not
+		
+		p if {
+			not input.denied
+		}
+		
+		q if {
+			not {
+				x := input.role
+				x == "banned"
+			}
+		}
+	`)
+
+	value := must.Return(ToValue(module))(t)
+	buf := new(bytes.Buffer)
+	must.Equal(t, nil, encoding.OfValue().Encode(buf, value))
+}
+
 // BenchmarkModuleToValue/ToValue-16         	  27673	         40987 ns/op	   64705 B/op	    1740 allocs/op
 func BenchmarkModuleToValue(b *testing.B) {
 	policy := `# METADATA

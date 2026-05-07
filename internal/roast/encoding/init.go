@@ -20,6 +20,7 @@ func init() {
 	jsoniter.RegisterTypeEncoder("ast.SomeDecl", &someDeclCodec{})
 	jsoniter.RegisterTypeEncoder("ast.Every", &everyCodec{})
 	jsoniter.RegisterTypeEncoder("ast.With", &withCodec{})
+	jsoniter.RegisterTypeEncoder("ast.Not", &notCodec{})
 	jsoniter.RegisterTypeEncoder("ast.Comment", &commentCodec{})
 
 	jsoniter.RegisterTypeEncoder("ast.Location", &locationCodec{})
