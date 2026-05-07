@@ -112,6 +112,7 @@ func DefaultServerFeatureFlags() *types.ServerFeatureFlags {
 		InlineEvaluationProvider: true,
 		DebugProvider:            true,
 		OPATestProvider:          true,
+		TestCreationProvider:     true,
 	}
 }
 
