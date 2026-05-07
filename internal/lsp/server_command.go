@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/open-policy-agent/opa/v1/ast"
 	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/explorer"
@@ -589,7 +590,7 @@ func (l *LanguageServer) handleCreateTestCommand(ctx context.Context, params typ
 		}
 
 		args = types.CommandArgs{
-			Target: util.GetMapValue[string](arg, "target"),
+			Target: util.MapGet[string](arg, "target"),
 		}
 	}
 
@@ -601,8 +602,14 @@ func (l *LanguageServer) handleCreateTestCommand(ctx context.Context, params typ
 
 	filePath := uri.ToPath(args.Target)
 
-	inputPath, inputMap := rio.FindInput(filePath, l.workspacePath())
-	if inputPath == "" || len(inputMap) == 0 {
+	inputPath, inputValue := rio.FindInput(filePath, l.workspacePath())
+
+	inputEmpty := inputValue == nil
+	if obj, ok := inputValue.(ast.Object); ok {
+		inputEmpty = obj.Len() == 0
+	}
+
+	if inputPath == "" || inputEmpty {
 		if err := l.conn.Notify(ctx, "window/showMessage", types.ShowMessageParams{
 			Type:    3,
 			Message: "No input.json or input.yaml file found. Create one to provide test input data.",

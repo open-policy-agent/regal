@@ -125,10 +125,7 @@ actions contains action if {
 			"title": "Create tests for this file",
 			"command": "regal.createTest",
 			"tooltip": "Create test cases for all rules in this file",
-			"arguments": [{
-				"target": input.params.textDocument.uri,
-				"row": input.params.range.start.line,
-			}],
+			"arguments": [{"target": input.params.textDocument.uri}],
 		},
 	}
 }
