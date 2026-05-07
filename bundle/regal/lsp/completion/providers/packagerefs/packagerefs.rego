@@ -37,10 +37,10 @@ items contains item if {
 }
 
 _package_paths contains str if {
-	some uri
-	path := data.workspace.parsed[uri].package.path
+	some u
+	path := data.workspace.parsed[u].package.path
 
-	uri != input.params.textDocument.uri # don't suggest the package of the current file
+	u != input.params.textDocument.uri # don't suggest the package of the current file
 	not endswith(regal.last(path).value, "_test") # importing tests makes no sense
 
 	str := ast.ref_to_string(path)

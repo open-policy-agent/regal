@@ -208,8 +208,8 @@ result.regal.workspace.uri := input.params.rootUri if {
 # METADATA
 # description: Any warnings to log from initialization
 # scope: document
-result.regal.warnings contains $"multiple workspace folders provided, only the first one will be used: {uri}" if {
+result.regal.warnings contains $"multiple workspace folders provided, only the first one will be used: {u}" if {
 	count(input.params.workspaceFolders) > 1
 
-	uri := input.params.workspaceFolders[0].uri
+	u := input.params.workspaceFolders[0].uri
 }

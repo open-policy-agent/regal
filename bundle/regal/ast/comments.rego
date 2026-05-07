@@ -99,10 +99,10 @@ comment_blocks(comments_decoded) := blocks if {
 # see _rules for information about this hack and why we need it for now
 _comments := input.comments
 
-_comments := data.workspace.parsed[uri].comments if {
+_comments := data.workspace.parsed[u].comments if {
 	not input.comments
 
-	uri := object.get(input, ["params", "textDocument", "uri"], null)
+	u := object.get(input, ["params", "textDocument", "uri"], null)
 }
 
 _splits(rows) := array.flatten([

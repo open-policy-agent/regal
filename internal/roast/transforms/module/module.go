@@ -497,6 +497,15 @@ func bodyToArray(body ast.Body) *ast.Term {
 				insert(terms, "domain", termToObject(t.Domain))
 				insert(terms, "body", bodyToArray(t.Body))
 				insert(exprObj, "terms", ast.NewTerm(terms))
+			case *ast.Not:
+				terms := objectWithLocationAndCap(t.Location, 3)
+				insert(terms, "type", ast.InternedTerm("not"))
+				insert(terms, "body", bodyToArray(t.Body))
+				insert(exprObj, "terms", ast.NewTerm(terms))
+
+				if t.ExplicitBody {
+					insert(terms, "explicit_body", ast.BooleanTerm(true))
+				}
 			}
 		}
 

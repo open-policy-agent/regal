@@ -52,6 +52,8 @@ func (*exprCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 			stream.WriteVal(t)
 		case *ast.Every:
 			stream.WriteVal(t)
+		case *ast.Not:
+			stream.WriteVal(t)
 		}
 	}
 
