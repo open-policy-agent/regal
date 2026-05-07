@@ -30,6 +30,10 @@
             "opa_test_provider": {
               "type": "boolean",
               "description": "If the server is configured to operate as an OPA test API provider"
+            },
+            "test_creation_provider": {
+              "type": "boolean",
+              "description": "If the server is configured to operate as a test creation provider"
             }
           }
         }

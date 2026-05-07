@@ -104,7 +104,16 @@ func analyzeDependencies(opts TestCreationOptions) ([]string, error) {
 	refs = append(refs, headRefs...)
 
 	filePath := uri.ToPath(opts.FileURI)
-	_, inputData := rio.FindInput(filePath, opts.WorkspacePath)
+	_, inputValue := rio.FindInput(filePath, opts.WorkspacePath)
+
+	var inputData map[string]any
+
+	if inputValue != nil {
+		if raw, err := ast.JSON(inputValue); err == nil {
+			inputData, _ = raw.(map[string]any)
+		}
+	}
+
 	dataData := findDataFile(opts.WorkspacePath)
 
 	var withClauses []string
