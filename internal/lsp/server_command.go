@@ -387,11 +387,11 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 		}
 
 		args = types.ExplorerCommandArgs{
-			Target:      util.GetMapValue[string](arg, "target"),
-			Strict:      util.GetMapValue[bool](arg, "strict"),
-			Annotations: util.GetMapValue[bool](arg, "annotations"),
-			Print:       util.GetMapValue[bool](arg, "print"),
-			Format:      util.GetMapValue[bool](arg, "format"),
+			Target:      util.MapGet[string](arg, "target"),
+			Strict:      util.MapGet[bool](arg, "strict"),
+			Annotations: util.MapGet[bool](arg, "annotations"),
+			Print:       util.MapGet[bool](arg, "print"),
+			Format:      util.MapGet[bool](arg, "format"),
 		}
 	}
 

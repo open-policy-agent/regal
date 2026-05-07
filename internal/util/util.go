@@ -73,6 +73,26 @@ func MapKeys[K comparable, V any, U any](m map[K]V, f func(K) U) []U {
 	return keys
 }
 
+// MapGetOr returns the value for key in m if found, else defaultVal.
+func MapGetOr[K comparable, V any](m map[K]V, key K, defaultVal V) V {
+	if val, ok := m[key]; ok {
+		return val
+	}
+
+	return defaultVal
+}
+
+// MapGet returns the value for key in m if found, else the zero value for V.
+func MapGet[T any](m map[string]any, key string) (typed T) {
+	if val, ok := m[key]; ok {
+		if found, ok := val.(T); ok {
+			typed = found
+		}
+	}
+
+	return typed
+}
+
 // Filter returns a new slice containing only the elements of s that
 // satisfy the predicate f. This function runs each element of s through
 // f twice in order to allocate exactly what is needed. This is commonly
@@ -254,20 +274,6 @@ func WrapErr(err error, msg string) error {
 	}
 
 	return fmt.Errorf("%s: %w", msg, err)
-}
-
-// GetMapValue extracts a typed value from a map[string]any, returning the value if the type matched,
-// or the zero values of correct type.
-func GetMapValue[T any](m map[string]any, key string) T {
-	if val, ok := m[key]; ok {
-		if typed, ok := val.(T); ok {
-			return typed
-		}
-	}
-
-	var zero T
-
-	return zero
 }
 
 // AnySliceTo converts a slice of any to a slice of T, returning an error if any element cannot be casted.

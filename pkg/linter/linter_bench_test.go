@@ -1,4 +1,4 @@
-package linter
+package linter_test
 
 import (
 	"path/filepath"
@@ -8,7 +8,9 @@ import (
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/config"
+	regal "github.com/open-policy-agent/regal/pkg/linter"
 	"github.com/open-policy-agent/regal/pkg/report"
+	"github.com/open-policy-agent/regal/pkg/reporter"
 )
 
 // 736486708 ns/op	2348230496 B/op	51198148 allocs/op // OPA v1.12.2
@@ -16,7 +18,7 @@ import (
 // 461607500 ns/op	1543793525 B/op	36938279 allocs/op // Performance refactor + follow-up
 func BenchmarkRegalLintingItself(b *testing.B) {
 	for b.Loop() {
-		linter := NewLinter().
+		linter := regal.NewLinter().
 			WithInputPaths([]string{"../../bundle"}).
 			WithUserConfig(must.Return(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b))
 
@@ -81,10 +83,10 @@ func BenchmarkEachRule(b *testing.B) {
 	}
 }
 
-func bundleLinter(b *testing.B, withConfig bool) Linter {
+func bundleLinter(b *testing.B, withConfig bool) regal.Linter {
 	b.Helper()
 
-	linter := NewLinter().WithInputPaths([]string{"../../bundle"})
+	linter := regal.NewLinter().WithInputPaths([]string{"../../bundle"})
 
 	if withConfig {
 		config := must.Return(config.FromPath(filepath.Join("..", "..", ".regal", "config.yaml")))(b)
@@ -94,13 +96,17 @@ func bundleLinter(b *testing.B, withConfig bool) Linter {
 	return linter
 }
 
-func benchmarkLint(b *testing.B, linter Linter) {
+func benchmarkLint(b *testing.B, l regal.Linter) {
 	b.Helper()
 
 	var rep report.Report
 	for b.Loop() {
-		rep = must.Return(linter.Lint(b.Context()))(b)
+		rep = must.Return(l.Lint(b.Context()))(b)
 	}
 
-	testutil.AssertNumViolations(b, 0, rep)
+	if len(rep.Violations) > 0 {
+		_ = reporter.NewCompactReporter(b.Output()).Publish(b.Context(), rep)
+
+		b.Fatalf("Expected no violations, but got %d", len(rep.Violations))
+	}
 }

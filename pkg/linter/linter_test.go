@@ -1,4 +1,4 @@
-package linter
+package linter_test
 
 import (
 	"bytes"
@@ -16,6 +16,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
+	regal "github.com/open-policy-agent/regal/pkg/linter"
 )
 
 func TestLintWithDefaultBundle(t *testing.T) {
@@ -30,7 +31,7 @@ camelCase if {
 }
 `)
 
-	linter := NewLinter().WithEnableAll(true).WithInputModules(input)
+	linter := regal.NewLinter().WithEnableAll(true).WithInputModules(input)
 	result := must.Return(linter.Lint(t.Context()))(t)
 
 	testutil.AssertNumViolations(t, 2, result)
@@ -52,7 +53,7 @@ func TestLintWithUserConfig(t *testing.T) {
 	input := test.InputPolicy("p/p.rego", "package p\n\nr := input.foo[_]\n")
 	rules := map[string]config.Category{"bugs": {"rule-shadows-builtin": config.Rule{Level: "ignore"}}}
 
-	result := must.Return(NewLinter().
+	result := must.Return(regal.NewLinter().
 		WithUserConfig(config.Config{Rules: rules}).
 		WithInputModules(input).
 		Lint(t.Context()))(t)
@@ -172,7 +173,7 @@ or := 1
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			linter := NewLinter().
+			linter := regal.NewLinter().
 				WithPathPrefix(tc.rootDir).
 				WithIgnore(tc.ignoreFilesFlag).
 				WithInputModules(test.InputPolicy(tc.filename, policy))
@@ -203,7 +204,7 @@ or := 1
 func TestLintWithCustomRule(t *testing.T) {
 	t.Parallel()
 
-	result := must.Return(NewLinter().
+	result := must.Return(regal.NewLinter().
 		WithCustomRulesPaths(filepath.Join("testdata", "custom.rego")).
 		WithInputModules(test.InputPolicy("p/p.rego", "package p\n\nimport rego.v1\n")).
 		Lint(t.Context()))(t)
@@ -215,7 +216,7 @@ func TestLintWithCustomRule(t *testing.T) {
 func TestLintWithErrorInEnable(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewLinter().
+	_, err := regal.NewLinter().
 		WithCustomRulesPaths(filepath.Join("testdata", "custom.rego")).
 		WithEnabledRules("foo").
 		WithInputModules(test.InputPolicy("p/p.rego", "package p")).
@@ -230,7 +231,7 @@ var testLintWithCustomEmbeddedRulesFS embed.FS
 func TestLintWithCustomEmbeddedRules(t *testing.T) {
 	t.Parallel()
 
-	result := must.Return(NewLinter().
+	result := must.Return(regal.NewLinter().
 		WithCustomRulesFromFS(testLintWithCustomEmbeddedRulesFS, "testdata").
 		WithInputModules(test.InputPolicy("p/p.rego", "package p\n\nimport rego.v1\n")).
 		Lint(t.Context()))(t)
@@ -242,7 +243,7 @@ func TestLintWithCustomEmbeddedRules(t *testing.T) {
 func TestLintWithCustomRuleAndCustomConfig(t *testing.T) {
 	t.Parallel()
 
-	linter := NewLinter().
+	linter := regal.NewLinter().
 		WithUserConfig(config.Config{Rules: map[string]config.Category{
 			"naming": {"acme-corp-package": config.Rule{Level: "ignore"}},
 		}}).
@@ -256,7 +257,7 @@ func TestLintMergedConfigInheritsLevelFromProvided(t *testing.T) {
 	t.Parallel()
 
 	// Note that the user configuration does not provide a level
-	linter := NewLinter().
+	linter := regal.NewLinter().
 		WithUserConfig(config.Config{Rules: map[string]config.Category{
 			"style": {"file-length": config.Rule{Extra: config.ExtraAttributes{"max-file-length": 1}}},
 		}}).
@@ -285,7 +286,7 @@ func TestLintMergedConfigUsesProvidedDefaults(t *testing.T) {
 		Rules: map[string]config.Category{"style": {"opa-fmt": config.Rule{Level: "warning"}}},
 	}
 
-	mergedConfig := must.Return(NewLinter().
+	mergedConfig := must.Return(regal.NewLinter().
 		WithUserConfig(userConfig).
 		WithInputModules(test.InputPolicy("p.rego", `package p`)).
 		GetConfig())(t)
@@ -308,7 +309,7 @@ func TestLintWithPrintHook(t *testing.T) {
 
 	var bb bytes.Buffer
 
-	must.Return(NewLinter().
+	must.Return(regal.NewLinter().
 		WithCustomRulesPaths(filepath.Join("testdata", "printer.rego")).
 		WithPrintHook(topdown.NewPrintHook(&bb)).
 		WithInputModules(test.InputPolicy("p.rego", "package p")).
@@ -320,7 +321,7 @@ func TestLintWithPrintHook(t *testing.T) {
 func TestEnabledRules(t *testing.T) {
 	t.Parallel()
 
-	enabledRules, err := NewLinter().
+	enabledRules, err := regal.NewLinter().
 		WithDisableAll(true).
 		WithEnabledRules("opa-fmt", "no-whitespace-comment").
 		DetermineEnabledRules(t.Context())
@@ -346,7 +347,7 @@ rules:
     directory-package-mismatch: # non agg rule
       level: ignore
 `))
-	enabledRules, err := NewLinter().WithUserConfig(config).DetermineEnabledRules(t.Context())
+	enabledRules, err := regal.NewLinter().WithUserConfig(config).DetermineEnabledRules(t.Context())
 
 	must.Equal(t, nil, err, "unexpected error")
 	must.NotEqual(t, 0, len(enabledRules), "enabled aggregate rules")
@@ -358,7 +359,7 @@ rules:
 func TestLintWithCollectQuery(t *testing.T) {
 	t.Parallel()
 
-	result := must.Return(NewLinter().
+	result := must.Return(regal.NewLinter().
 		WithDisableAll(true).
 		WithEnabledRules("unresolved-import").
 		WithCollectQuery(true).     // needed since we have a single file input

@@ -22,6 +22,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
+	"github.com/open-policy-agent/regal/pkg/roast/transform"
 
 	_ "github.com/open-policy-agent/regal/pkg/builtins/regal"
 )
@@ -203,26 +204,25 @@ func FindInputPath(file, workspacePath string) string {
 // Note that:
 // - This function doesn't do error handling. If the file can't be read, nothing is returned.
 // - While the input data theoretically could be anything JSON/YAML value, we only support an object.
-func FindInput(file, workspacePath string) (inputPath string, input map[string]any) {
+func FindInput(file, workspacePath string) (inputPath string, input ast.Value) {
 	inputPath = FindInputPath(file, workspacePath)
 	if content, err := os.ReadFile(inputPath); err == nil {
-		if err = unmarshallerFor(filepath.Base(inputPath))(content, &input); err == nil {
-			return inputPath, input
+		switch filepath.Base(inputPath) {
+		case "input.json":
+			value, _ := encoding.OfValue().Decode(content)
+
+			return inputPath, value
+		case "input.yaml", "input.yml":
+			var raw any
+			if err = yaml.Unmarshal(content, &raw); err == nil {
+				value, _ := transform.AnyToValue(raw)
+
+				return inputPath, value
+			}
 		}
 	}
 
 	return "", nil
-}
-
-func unmarshallerFor(name string) func([]byte, any) error {
-	switch name {
-	case "input.json":
-		return encoding.JSON().Unmarshal
-	case "input.yaml", "input.yml":
-		return yaml.Unmarshal
-	}
-
-	panic("no decoder for file type: " + name)
 }
 
 // FindManifestLocations walks the file system rooted at root, and returns the

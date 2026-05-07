@@ -1,8 +1,7 @@
 # METADATA
 # description: |
-#   Main entrypoint for the parts of the language server implemented in Rego
-# schemas:
-#   - input: schema.regal.lsp.common
+#   Main entrypoint for the parts of the language server implemented in Rego.
+#   See the `regal.lsp` package for schemas used for all requests.
 package regal.lsp.main
 
 # TBD:
@@ -12,7 +11,7 @@ package regal.lsp.main
 # METADATA
 # entrypoint: true
 eval := response if {
-	handler := _handler_for(input.method)
+	handler := _handlers[input.method]
 	result := data.regal.lsp[handler].result
 
 	response := {
@@ -25,12 +24,20 @@ eval := response if {
 	}
 }
 
-_handler_for("initialize") := "initialize"
-
-_handler_for(method) := lower(name) if ["textDocument", name] = split(method, "/")
-
-_handler_for("completionItem/resolve") := "completion"
-
-_handler_for("inlayHint/resolve") := "inlayhint_resolve"
-
-_handler_for("textDocument/semanticTokens/full") := "semantictokens"
+_handlers := {
+	"initialize": "initialize",
+	"textDocument/codeAction": "codeaction",
+	"textDocument/codeLens": "codelens",
+	"textDocument/completion": "completion",
+	"textDocument/documentLink": "documentlink",
+	"textDocument/documentHighlight": "documenthighlight",
+	"textDocument/foldingRange": "foldingrange",
+	"textDocument/hover": "hover",
+	"textDocument/inlayHint": "inlayhint",
+	"textDocument/linkedEditingRange": "linkededitingrange",
+	"textDocument/selectionRange": "selectionrange",
+	"textDocument/signatureHelp": "signaturehelp",
+	"completionItem/resolve": "completion",
+	"inlayHint/resolve": "inlayhint_resolve",
+	"textDocument/semanticTokens/full": "semantictokens",
+}

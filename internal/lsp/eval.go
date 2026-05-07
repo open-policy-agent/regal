@@ -21,7 +21,6 @@ import (
 	rquery "github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
-	rparse "github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
@@ -87,16 +86,17 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 	// if there are none, then it's a package evaluation
 	ruleHeadLocations := allRuleHeadLocations[args.Query]
 
-	var inputMap map[string]any
-
-	var inputPath string
+	var (
+		inputValue ast.Value
+		inputPath  string
+	)
 
 	// When the first comment in the file is `regal eval: use-as-input`, the AST of that module is
 	// used as the input rather than the contents of input.json/yaml. This is a development feature for
 	// working on rules (built-in or custom), allowing querying the AST of the module directly.
+
 	if len(module.Comments) > 0 && regalEvalUseAsInputComment.Match(module.Comments[0].Text) {
-		//nolint:staticcheck
-		inputMap, err = rparse.PrepareAST(l.toRelativePath(args.Target), contents, module)
+		inputValue, err = transform.ToAST(l.toRelativePath(args.Target), contents, module, false)
 		if err != nil {
 			l.log.Message("failed to prepare module: %s", err)
 
@@ -106,7 +106,7 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		// Normal mode — try to find the input.json/yaml file in the workspace and use as input
 		// NOTE that we don't break on missing input, as some rules don't depend on that, and should
 		// still be evaluable. We may consider returning some notice to the user though.
-		inputPath, inputMap = rio.FindInput(uri.ToPath(args.Target), l.workspacePath())
+		inputPath, inputValue = rio.FindInput(uri.ToPath(args.Target), l.workspacePath())
 
 		ruleName := strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
 
@@ -125,7 +125,7 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 
 	var result EvalResult
 
-	if result, err = l.EvalInWorkspace(ctx, args.Query, inputMap); err != nil {
+	if result, err = l.EvalInWorkspace(ctx, args.Query, inputValue); err != nil {
 		return fmt.Errorf("failed to evaluate workspace path: %w", err)
 	}
 
@@ -176,7 +176,7 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 }
 
 func (l *LanguageServer) Eval(
-	ctx context.Context, query string, input map[string]any, printHook print.Hook,
+	ctx context.Context, query string, input ast.Value, printHook print.Hook,
 ) (rego.ResultSet, error) {
 	regoArgs := prepareRegoArgs(ast.MustParseBody(query), l.assembleBundles(), printHook, l.getLoadedConfig())
 
@@ -188,17 +188,13 @@ func (l *LanguageServer) Eval(
 	}
 
 	if input != nil {
-		if inputValue, err := transform.ToOPAInputValue(input); err != nil {
-			return nil, fmt.Errorf("failed converting input to value: %w", err)
-		} else {
-			return pq.Eval(ctx, rego.EvalParsedInput(inputValue))
-		}
+		return pq.Eval(ctx, rego.EvalParsedInput(input))
 	}
 
 	return pq.Eval(ctx)
 }
 
-func (l *LanguageServer) EvalInWorkspace(ctx context.Context, query string, input map[string]any) (EvalResult, error) {
+func (l *LanguageServer) EvalInWorkspace(ctx context.Context, query string, input ast.Value) (EvalResult, error) {
 	resultQuery := "result := " + query
 	hook := PrintHook{
 		Output:       make(map[string]map[int][]string),

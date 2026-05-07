@@ -17,69 +17,6 @@
     },
     "regal": {
       "properties": {
-        "client": {
-          "type": "object",
-          "description": "LSP client properties",
-          "properties": {
-            "capabilities": {
-              "type": "object",
-              "description": "Capabilities of the LSP client",
-              "additionalProperties": true
-            },
-            "identifier": {
-              "type": "integer",
-              "description": "Numeric identifier for the LSP client"
-            },
-            "init_options": {
-              "type": "object",
-              "description": "Initialization options for the LSP client",
-              "properties": {
-                "enableDebugCodelens": {
-                  "type": "boolean",
-                  "description": "Enable the debug code lens on packages and rules. This requires client support."
-                }
-              },
-              "required": [
-                "debug_supported"
-              ]
-            }
-          }
-        },
-        "server": {
-          "type": "object",
-          "description": "LSP server config and state",
-          "properties": {
-            "version": {
-              "type": "string",
-              "description": "Version of the Regal server"
-            },
-            "feature_flags": {
-              "type": "object",
-              "description": "Feature flags state",
-              "properties": {
-                "debug_provider": {
-                  "type": "boolean",
-                  "description": "If the server is configured to operate as a debug provider"
-                },
-                "explorer_provider": {
-                  "type": "boolean",
-                  "description": "If the server is configured to operate as an explorer provider"
-                },
-                "inline_evaluation_provider": {
-                  "type": "boolean",
-                  "description": "If the server is configured to operate as an inline evaluation provider"
-                },
-                "opa_test_provider": {
-                  "type": "boolean",
-                  "description": "If the server is configured to operate as an OPA test API provider"
-                }
-              },
-              "required": [
-                "feature_flags"
-              ]
-            }
-          }
-        },
         "environment": {
           "type": "object",
           "description": "Environment properties for the LSP client",
@@ -91,10 +28,6 @@
             "workspace_root_path": {
               "type": "string",
               "description": "File system path of the workspace root"
-            },
-            "web_server_base_uri": {
-              "type": "string",
-              "description": "Base URI for Regal's local web server server"
             },
             "input_dot_json_path": {
               "type": [
@@ -117,7 +50,6 @@
           },
           "required": [
             "workspace_root_uri",
-            "web_server_base_uri",
             "path_separator"
           ]
         },

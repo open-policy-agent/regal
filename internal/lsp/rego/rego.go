@@ -1,7 +1,9 @@
 package rego
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -60,9 +62,8 @@ type (
 	}
 
 	RegalContext struct {
-		Server      types.ServerContext `json:"server"`
-		File        File                `json:"file"`
-		Environment Environment         `json:"environment"`
+		File        File        `json:"file"`
+		Environment Environment `json:"environment"`
 
 		Query *query.Prepared `json:"-"` // for now, might expose to Rego later
 	}
@@ -100,15 +101,6 @@ func NewInput[T any](method string, regal *RegalContext, params T) Input[T] {
 	return Input[T]{Method: method, Regal: regal, Params: params}
 }
 
-func (c Input[T]) String() string { // For debugging only
-	s, err := encoding.JSON().MarshalToString(&c)
-	if err != nil {
-		return fmt.Sprintf("Input marshalling error: %v", err)
-	}
-
-	return s
-}
-
 // AllRuleHeadLocations returns mapping of rules names to the head locations.
 func AllRuleHeadLocations(
 	ctx context.Context, pq *query.Prepared, fileName, contents string, module *ast.Module,
@@ -137,6 +129,15 @@ func CachedQueryEval[T any](ctx context.Context, pq *query.Prepared, input ast.V
 	result, err := toValidResult(pq.EvalQuery().Eval(ctx, rego.EvalParsedInput(input)))
 	if err != nil {
 		return err
+	}
+
+	if val, ok := result.Expressions[0].Value.(ast.Value); ok {
+		buf := new(bytes.Buffer)
+		if err := encoding.OfValue().Encode(buf, val); err != nil {
+			return fmt.Errorf("failed to marshal value: %w", err)
+		}
+
+		return util.WrapErr(json.Unmarshal(buf.Bytes(), toValue), "failed to unmarshal value")
 	}
 
 	return util.WrapErr(encoding.JSONRoundTrip(result.Expressions[0].Value, toValue), "failed to unmarshal value")

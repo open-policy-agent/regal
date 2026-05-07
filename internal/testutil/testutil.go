@@ -143,7 +143,5 @@ func ToJSONRawMessage(tb testing.TB, msg any) *json.RawMessage {
 		tb.Fatalf("failed to marshal message: %v", err)
 	}
 
-	jraw := json.RawMessage(data)
-
-	return &jraw
+	return new(json.RawMessage(data))
 }

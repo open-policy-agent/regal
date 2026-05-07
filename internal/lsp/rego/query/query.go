@@ -169,6 +169,9 @@ func prepareQueryArgs(
 		rego.ParsedQuery(query), rego.ParsedBundle("regal", rb),
 		// For debugging, but we should probably make this conditional
 		rego.EnablePrintStatements(true), rego.PrintHook(topdown.NewPrintHook(os.Stderr)),
+		rego.GenerateJSON(func(term *ast.Term, _ *rego.EvalContext) (any, error) {
+			return term.Value, nil
+		}),
 	}
 	args = append(args, SchemaResolvers()...)
 

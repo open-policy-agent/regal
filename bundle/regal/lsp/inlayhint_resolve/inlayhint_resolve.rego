@@ -12,6 +12,7 @@ package regal.lsp.inlayhint_resolve
 # description: |
 #   Resolve inlay hint tooltip information on demand using argument
 #   `data` passed from the initial inlay hint response
+# scope: document
 result["response"] := resolved if {
 	tooltip := object.union(input.params, {"tooltip": {
 		"kind": "markdown",
@@ -20,6 +21,11 @@ result["response"] := resolved if {
 
 	resolved := object.remove(tooltip, ["data"])
 }
+
+# METADATA
+# description: no data = nothing to resolve, return params as is
+# scope: rule
+result["response"] := input.params if not input.params.data
 
 # METADATA
 # description: |

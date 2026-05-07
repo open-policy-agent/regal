@@ -4,19 +4,12 @@ import data.regal.lsp.client
 import data.regal.lsp.codeaction
 
 test_actions_reported_in_expected_format if {
-	r := codeaction.actions with input as {
-		"regal": {
-			"client": {"identifier": client.identifiers.generic},
-			"environment": {"workspace_root_uri": "file:///irrelevant"},
-		},
-		"params": {
-			"textDocument": {"uri": "policy.rego"},
-			"context": {
-				"diagnostics": [_diagnostics["opa-fmt"], _diagnostics["use-assignment-operator"]],
-				"only": ["quickfix"],
-			},
-		},
-	}
+	r := codeaction.actions
+		with data.client.identifier as client.identifiers.generic
+		with input.regal.environment.workspace_root_uri as "file:///irrelevant"
+		with input.params.textDocument.uri as "policy.rego"
+		with input.params.context.diagnostics as [_diagnostics["opa-fmt"], _diagnostics["use-assignment-operator"]]
+		with input.params.context.only as ["quickfix"]
 
 	r == {
 		{
@@ -51,23 +44,18 @@ test_actions_reported_in_expected_format if {
 
 test_code_action_returned_for_every_linter[rule] if {
 	some rule, _ in codeaction.rules
-	r := codeaction.actions with input as {
-		"regal": {
-			"client": {"identifier": 0},
-			"environment": {"workspace_root_uri": "file:///irrelevant"},
-		},
-		"params": {
-			"textDocument": {"uri": "policy.rego"},
-			"context": {
-				"diagnostics": [{
-					"code": rule,
-					"message": "irrelevant",
-					"range": {},
-				}],
-				"only": ["quickfix"],
-			},
-		},
-	}
+
+	r := codeaction.actions
+		with data.client.identifier as client.identifiers.generic
+		with input.regal.environment.workspace_root_uri as "file:///irrelevant"
+		with input.params.textDocument.uri as "file:///irrelevant"
+		with input.params.context.only as ["quickfix"]
+		with input.params.context.diagnostics as [{
+			"code": rule,
+			"message": "irrelevant",
+			"range": {},
+		}]
+
 	count(r) == 2
 }
 
@@ -75,16 +63,10 @@ test_code_actions_specific_to_vscode_reported_on_client_match if {
 	diagnostic := _diagnostics["use-assignment-operator"]
 
 	r := codeaction.actions
-		with input as {
-			"regal": {"environment": {"workspace_root_uri": "file:///workspace"}},
-			"params": {
-				"textDocument": {"uri": "file:///workspace/policy.rego"},
-				"context": {
-					"diagnostics": [diagnostic],
-					"only": ["quickfix"],
-				},
-			},
-		}
+		with input.regal.environment.workspace_root_uri as "file:///workspace"
+		with input.params.textDocument.uri as "file:///workspace/policy.rego"
+		with input.params.context.diagnostics as [diagnostic]
+		with input.params.context.only as ["quickfix"]
 		with data.client.identifier as client.identifiers.vscode
 
 	r == {
@@ -118,17 +100,10 @@ test_code_actions_only_quickfix if {
 	diagnostic := _diagnostics["use-assignment-operator"]
 
 	r := codeaction.actions
-		with input as {
-			"regal": {"environment": {"workspace_root_uri": "file:///workspace"}},
-			"params": {
-				"textDocument": {"uri": "file:///workspace/policy.rego"},
-				"context": {
-					"diagnostics": [diagnostic],
-					# this is the only field different from the previous test
-					"only": ["quickfix"],
-				},
-			},
-		}
+		with input.regal.environment.workspace_root_uri as "file:///workspace"
+		with input.params.textDocument.uri as "file:///workspace/policy.rego"
+		with input.params.context.diagnostics as [diagnostic]
+		with input.params.context.only as ["quickfix"]
 		with data.client.identifier as client.identifiers.vscode
 
 	r == {
@@ -159,23 +134,17 @@ test_code_actions_only_quickfix if {
 }
 
 test_code_actions_only_source if {
-	r := codeaction.actions with input as {
-		"regal": {
-			"client": {"identifier": client.identifiers.generic},
-			"environment": {"workspace_root_uri": "file:///workspace"},
-		},
-		"params": {
-			"textDocument": {"uri": "file:///workspace/policy.rego"},
-			"context": {
-				"diagnostics": [],
-				"only": ["source"],
-			},
-		},
-	}
+	r := codeaction.actions
+		with data.client.identifier as client.identifiers.generic
+		with input.regal.environment.workspace_root_uri as "file:///workspace"
+		with input.params.textDocument.uri as "file:///workspace/policy.rego"
+		with input.params.context.diagnostics as []
+		with input.params.context.only as ["source"]
 
 	count(r) == 1
 
 	some action in r
+
 	action.title == "Explore compiler stages for this policy"
 	action.kind == "source.explore"
 	action.command.command == "regal.explorer"
@@ -186,18 +155,14 @@ test_code_actions_only_source if {
 }
 
 test_code_actions_source_explore_in_default if {
-	r := codeaction.actions with input as {
-		"regal": {
-			"client": {"identifier": client.identifiers.generic},
-			"environment": {"workspace_root_uri": "file:///workspace"},
-		},
-		"params": {
-			"textDocument": {"uri": "file:///workspace/policy.rego"},
-			"context": {"diagnostics": []},
-		},
-	}
+	r := codeaction.actions
+		with data.client.identifier as client.identifiers.generic
+		with input.regal.environment.workspace_root_uri as "file:///workspace"
+		with input.params.textDocument.uri as "file:///workspace/policy.rego"
+		with input.params.context.diagnostics as []
 
 	some action in r
+
 	action.kind == "source.explore"
 	action.command.command == "regal.explorer"
 }

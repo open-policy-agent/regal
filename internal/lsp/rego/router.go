@@ -1,10 +1,13 @@
 package rego
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/sourcegraph/jsonrpc2"
 
@@ -17,45 +20,41 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	ruri "github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
 var (
 	emptyResponse = map[string]any{
-		"textDocument/codeAction":        make([]types.CodeAction, 0),
-		"textDocument/documentLink":      make([]types.DocumentLink, 0),
-		"textDocument/documentHighlight": make([]types.DocumentHighlight, 0),
+		"textDocument/codeAction":        nil,
+		"textDocument/documentLink":      nil,
+		"textDocument/documentHighlight": nil,
 		"textDocument/documentSymbol":    make([]types.DocumentSymbol, 0),
 		"textDocument/codeLens":          make([]types.CodeLens, 0),
 		"textDocument/hover":             make([]types.Hover, 0),
 		"textDocument/signatureHelp":     nil,
 	}
+	errIgnored   = errors.New("ignored URI")
+	valueDecoder = encoding.OfValue()
 
-	errIgnored = errors.New("ignored URI")
+	inputValuePool = &sync.Pool{New: func() any {
+		return ast.NewObjectWithCapacity(3)
+	}}
+
+	bufPool = &sync.Pool{New: func() any {
+		return new(bytes.Buffer)
+	}}
 )
 
 func init() {
 	ast.InternStringTerm(
-		"textDocument/codeAction",
-		"textDocument/codeLens",
-		"textDocument/completion",
-		"textDocument/documentLink",
-		"textDocument/documentHighlight",
-		"textDocument/foldingRange",
-		"textDocument/hover",
-		"textDocument/inlayHint",
-		"textDocument/linkedEditingRange",
-		"textDocument/selectionRange",
-		"textDocument/semanticTokens/full",
-		"textDocument/signatureHelp",
-		"completionItem/resolve",
-		"inlayHint/resolve",
+		"textDocument/codeAction", "textDocument/codeLens", "textDocument/completion", "textDocument/documentLink",
+		"textDocument/documentHighlight", "textDocument/foldingRange", "textDocument/hover", "textDocument/inlayHint",
+		"textDocument/linkedEditingRange", "textDocument/selectionRange", "textDocument/semanticTokens/full",
+		"textDocument/signatureHelp", "completionItem/resolve", "inlayHint/resolve",
 
-		"method",
-		"params",
-		"regal",
-		"identifier",
+		"method", "params", "identifier",
 
 		"feature_flags",
 		"debug_provider",
@@ -122,9 +121,7 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 	}
 
 	routes := map[string]Route{
-		"textDocument/codeAction": {
-			handler: textDocument[types.CodeActionParams, []types.CodeAction],
-		},
+		"textDocument/codeAction": {handler: passthrough},
 		"textDocument/codeLens": {
 			handler: textDocument[types.CodeLensParams, []types.CodeLens],
 			requires: &Requirements{
@@ -142,16 +139,12 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 				InputDotJSON: true,
 			},
 		},
-		"textDocument/documentLink": {
-			handler: textDocument[types.DocumentLinkParams, []types.DocumentLink],
-		},
+		"textDocument/documentLink": {handler: passthrough},
 		"textDocument/documentHighlight": {
-			handler:  textDocument[types.DocumentHighlightParams, []types.DocumentHighlight],
+			handler:  passthrough,
 			requires: &Requirements{File: FileRequirements{Lines: true}},
 		},
-		"textDocument/foldingRange": {
-			handler: undecoded,
-		},
+		"textDocument/foldingRange": {handler: passthrough},
 		"textDocument/hover": {
 			handler:  textDocument[types.HoverParams, *types.Hover],
 			requires: &Requirements{File: FileRequirements{Lines: true}},
@@ -164,9 +157,7 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 			handler:  textDocument[types.LinkedEditingRangeParams, types.LinkedEditingRanges],
 			requires: &Requirements{File: FileRequirements{Lines: true}},
 		},
-		"textDocument/selectionRange": {
-			handler: textDocument[types.SelectionRangeParams, []types.SelectionRange],
-		},
+		"textDocument/selectionRange": {handler: passthrough},
 		"textDocument/semanticTokens/full": {
 			handler:  semanticTokensHandler,
 			requires: &Requirements{File: FileRequirements{Lines: true}},
@@ -205,7 +196,7 @@ func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2
 	}
 
 	if req.Method == "initialize" {
-		result, err := initialize(ctx, pq, m.providers, req)
+		result, err := initialize(ctx, pq, req)
 		if err != nil {
 			return nil, err
 		}
@@ -349,35 +340,61 @@ func textDocument[P, R any](ctx context.Context, rctx *RegalContext, req *jsonrp
 	return result.Response, nil
 }
 
-// undecoded passes the input as is to the query.
-func undecoded(ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request) (any, error) {
-	params, err := transform.AnyToValue(req.Params)
+// passthrough is a handler that:
+//  1. Parses provided input directly to an ast.Value without having 'params' roundtrip to an LSP Go type
+//  2. Returns the result of evaluation as the Rego handler provides it, without an intermediate Go type in between
+//
+// This is much more efficient compared to the textDocument handler — which does both of those things — at the cost of
+// potentially letting invalid input or output through. Runtime validation of types can however be done in Rego too,
+// and that's where future handlers validation should take place when needed.
+func passthrough(ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request) (any, error) {
+	if req.Params == nil {
+		bs, _ := req.MarshalJSON()
+
+		return nil, fmt.Errorf("expected request containing 'params', got %v", string(bs))
+	}
+
+	params, err := valueDecoder.Decode(*req.Params)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode params: %w", err)
+		return nil, fmt.Errorf("failed to decode params: %w\n%s", err, string(*req.Params))
 	}
 
 	paramsTerm := ast.TermPtrPool.Get()
 	regctxTerm := ast.TermPtrPool.Get()
+	inputValue := inputValuePool.Get().(ast.Object) //nolint:forcetypeassert
 
-	defer ast.TermPtrPool.Put(paramsTerm)
-	defer ast.TermPtrPool.Put(regctxTerm)
+	defer func() {
+		inputValuePool.Put(inputValue)
+		ast.TermPtrPool.Put(paramsTerm)
+		ast.TermPtrPool.Put(regctxTerm)
+	}()
 
 	paramsTerm.Value = params
 	regctxTerm.Value = rast.StructToValue(rctx)
 
-	inputValue := ast.NewObject(
-		rast.Item("method", ast.InternedTerm(req.Method)),
-		rast.Item("params", paramsTerm),
-		rast.Item("regal", regctxTerm),
-	)
+	rast.Insert(inputValue, "method", ast.InternedTerm(req.Method))
+	rast.Insert(inputValue, "params", paramsTerm)
+	rast.Insert(inputValue, "regal", regctxTerm)
 
 	res, err := CachedQueryEvalUndecoded(ctx, rctx.Query, inputValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate prepared query: %w", err)
 	}
 
-	if rsp, ok := res.(map[string]any)["response"]; ok {
-		return rsp, nil
+	if obj, ok := res.(ast.Object); ok {
+		rsp := obj.Get(ast.InternedTerm("response")).Value
+		buf := bufPool.Get().(*bytes.Buffer) //nolint:forcetypeassert
+
+		buf.Reset()
+		defer bufPool.Put(buf)
+
+		if err := encoding.OfValue().Encode(buf, rsp); err != nil {
+			return nil, fmt.Errorf("failed to marshal response: %w", err)
+		}
+
+		raw := json.RawMessage(buf.Bytes())
+
+		return &raw, nil
 	}
 
 	return nil, fmt.Errorf("unexpected query result format: %v", res)
@@ -392,7 +409,7 @@ func semanticTokensHandler(ctx context.Context, rctx *RegalContext, req *jsonrpc
 	return semantictokens.Full(res.(semantictokens.SemanticTokensResult)) //nolint:forcetypeassert
 }
 
-func initialize(ctx context.Context, pq *query.Prepared, prvs Providers, req *jsonrpc2.Request) (any, error) {
+func initialize(ctx context.Context, pq *query.Prepared, req *jsonrpc2.Request) (any, error) {
 	var result InitializeResponse
 
 	paramsValue, err := transform.AnyToValue(req.Params)
@@ -403,7 +420,6 @@ func initialize(ctx context.Context, pq *query.Prepared, prvs Providers, req *js
 	err = CachedQueryEval(ctx, pq, ast.NewObject(
 		rast.Item("method", ast.InternedTerm(req.Method)),
 		rast.Item("params", ast.NewTerm(paramsValue)),
-		rast.Item("regal", ast.NewTerm(rast.StructToValue(prvs.ContextProvider("initialize", nil)))),
 	), &result)
 
 	return result, err

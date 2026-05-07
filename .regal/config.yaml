@@ -151,6 +151,7 @@ rules:
         - data.internal**
         - data.schema.**
         - data.client.**
+        - data.server.**
         - data.workspace.**
         - data.regal.config.provided**
         - data.custom.regal**

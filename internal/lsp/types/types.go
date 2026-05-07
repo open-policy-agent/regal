@@ -71,34 +71,6 @@ type (
 		Version string `json:"version"`
 	}
 
-	InitializeResult struct {
-		Capabilities any        `json:"capabilities"`
-		ServerInfo   ServerInfo `json:"serverInfo,omitzero"`
-	}
-
-	ServerCapabilities struct {
-		Experimental *ExperimentalCapabilities `json:"experimental,omitempty"`
-	}
-
-	// ExperimentalCapabilities contains Regal-specific custom LSP features
-	// that are not part of the base LSP specification. 'Experimental' comes
-	// from the field name in the spec, rather than their status. 'Experimental'
-	// features are more just 'custom' features we have build on the LSP.
-	ExperimentalCapabilities struct {
-		// ExplorerProvider indicates whether the server supports the regal.explorer
-		// command and regal/showExplorerResult notification.
-		ExplorerProvider bool `json:"explorerProvider"`
-		// InlineEvalProvider indicates whether the server supports the regal.eval
-		// command response being sent rather than written to file.
-		InlineEvalProvider bool `json:"inlineEvalProvider"`
-		// DebugProvider indicates whether the server supports the regal.debug
-		// command and regal/startDebugging request.
-		DebugProvider bool `json:"debugProvider"`
-		// OPATestProvider indicates whether the server supports testing-related features
-		// including running Rego tests via LSP command and test location notifications.
-		OPATestProvider bool `json:"opaTestProvider"`
-	}
-
 	TextDocumentPositionParams struct {
 		TextDocument TextDocumentIdentifier `json:"textDocument"`
 		Position     Position               `json:"position"`
@@ -106,7 +78,6 @@ type (
 	DefinitionParams         = TextDocumentPositionParams
 	HoverParams              = TextDocumentPositionParams
 	LinkedEditingRangeParams = TextDocumentPositionParams
-	DocumentHighlightParams  = TextDocumentPositionParams
 
 	CompletionParams struct {
 		TextDocument TextDocumentIdentifier `json:"textDocument"`
@@ -146,26 +117,6 @@ type (
 		Supported bool `json:"supported"`
 	}
 
-	CodeActionParams struct {
-		TextDocument TextDocumentIdentifier `json:"textDocument"`
-		Context      CodeActionContext      `json:"context"`
-		Range        Range                  `json:"range"`
-	}
-
-	CodeActionContext struct {
-		Diagnostics []Diagnostic `json:"diagnostics"`
-		Only        []string     `json:"only,omitempty"`
-		TriggerKind *uint8       `json:"triggerKind,omitempty"`
-	}
-
-	CodeAction struct {
-		Command     Command      `json:"command"`
-		IsPreferred *bool        `json:"isPreferred,omitempty"`
-		Title       string       `json:"title"`
-		Kind        string       `json:"kind"`
-		Diagnostics []Diagnostic `json:"diagnostics,omitempty"`
-	}
-
 	CodeLens struct {
 		Command *Command `json:"command,omitempty"`
 		Data    *any     `json:"data,omitempty"`
@@ -179,30 +130,9 @@ type (
 		Command   string `json:"command"`
 	}
 
-	DocumentLink struct {
-		Range   Range  `json:"range"`
-		Target  string `json:"target,omitempty"`
-		Tooltip string `json:"tooltip,omitempty"`
-	}
-
-	DocumentHighlight struct {
-		Range Range `json:"range"`
-		Kind  uint  `json:"kind"`
-	}
-
 	LinkedEditingRanges struct {
 		Ranges      []Range `json:"ranges"`
 		WordPattern *string `json:"wordPattern,omitempty"`
-	}
-
-	SelectionRangeParams struct {
-		TextDocument TextDocumentIdentifier `json:"textDocument"`
-		Positions    []Position             `json:"positions"`
-	}
-
-	SelectionRange struct {
-		Range  Range           `json:"range"`
-		Parent *SelectionRange `json:"parent,omitempty"`
 	}
 
 	ExecuteCommandParams struct {
@@ -288,9 +218,7 @@ type (
 
 	DocumentFormattingParams = TextDocumentParams
 	DocumentSymbolParams     = TextDocumentParams
-	FoldingRangeParams       = TextDocumentParams
 	SemanticTokensParams     = TextDocumentParams
-	DocumentLinkParams       = TextDocumentParams
 	CodeLensParams           = TextDocumentParams
 
 	DocumentSymbol struct {
@@ -311,32 +239,6 @@ type (
 		Name          string             `json:"name"`
 		Location      Location           `json:"location"`
 		Kind          symbols.SymbolKind `json:"kind"`
-	}
-
-	FoldingRange struct {
-		StartCharacter *uint  `json:"startCharacter,omitempty"`
-		EndCharacter   *uint  `json:"endCharacter,omitempty"`
-		Kind           string `json:"kind"`
-		StartLine      uint   `json:"startLine"`
-		EndLine        uint   `json:"endLine"`
-	}
-
-	FileOperationsServerCapabilities struct {
-		DidCreate FileOperationRegistrationOptions `json:"didCreate"`
-		DidRename FileOperationRegistrationOptions `json:"didRename"`
-		DidDelete FileOperationRegistrationOptions `json:"didDelete"`
-	}
-
-	FileOperationRegistrationOptions struct {
-		Filters []FileOperationFilter `json:"filters"`
-	}
-
-	FileOperationFilter struct {
-		Scheme  string               `json:"scheme"`
-		Pattern FileOperationPattern `json:"pattern"`
-	}
-	FileOperationPattern struct {
-		Glob string `json:"glob"`
 	}
 
 	InlayHint struct {

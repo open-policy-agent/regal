@@ -30,7 +30,6 @@ import (
 	"github.com/sourcegraph/jsonrpc2"
 
 	"github.com/open-policy-agent/regal/internal/lsp/log"
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
 )
 
@@ -128,11 +127,10 @@ func logRequest(cfg LoggingConfig, req *jsonrpc2.Request) {
 		return
 	}
 
-	params, _ := encoding.JSON().Marshal(req.Params)
-	if req.Notif {
-		cfg.Logger.Message("--> notif: %s: %s\n", req.Method, params)
-	} else {
-		cfg.Logger.Message("--> request #%s: %s: %s\n", req.ID, req.Method, params)
+	if req.Notif && req.Params != nil {
+		cfg.Logger.Message("--> notif: %s: %s\n", req.Method, *req.Params)
+	} else if req.Params != nil {
+		cfg.Logger.Message("--> request #%s: %s: %s\n", req.ID, req.Method, *req.Params)
 	}
 }
 
@@ -142,10 +140,8 @@ func logResponse(cfg LoggingConfig, resp *jsonrpc2.Response, method string) {
 	}
 
 	if resp.Result != nil {
-		result, _ := encoding.JSON().Marshal(resp.Result)
-		cfg.Logger.Message("<-- response #%s: %s: %s\n", resp.ID, method, result)
+		cfg.Logger.Message("<-- response #%s: %s: %s\n", resp.ID, method, *resp.Result)
 	} else {
-		errBs, _ := encoding.JSON().Marshal(resp.Error)
-		cfg.Logger.Message("<-- response error #%s: %s: %s\n", resp.ID, method, errBs)
+		cfg.Logger.Message("<-- response error #%s: %s: %s\n", resp.ID, method, resp.Error)
 	}
 }

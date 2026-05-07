@@ -1,9 +1,6 @@
 package parse
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -11,7 +8,6 @@ import (
 
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
 // ParserOptions provides parser options with annotation processing. JSONOptions are not included,
@@ -90,30 +86,4 @@ func MustParseModule(policy string) *ast.Module {
 // the policy is unknown, use ModuleUnknownVersionWithOpts instead.
 func Module(filename, policy string) (*ast.Module, error) {
 	return util.Wrap(ast.ParseModuleWithOpts(filename, policy, ParserOptions()))("failed to parse module")
-}
-
-// PrepareAST prepares the AST to be used as linter input.
-//
-// Deprecated: New code should use the `transform` package from roast, as this avoids an
-// expensive intermediate step in module -> ast.Value conversions.
-func PrepareAST(name, content string, module *ast.Module) (preparedAST map[string]any, err error) {
-	if err = encoding.JSONRoundTrip(module, &preparedAST); err != nil {
-		return nil, fmt.Errorf("JSON rountrip failed for module: %w", err)
-	}
-
-	abs, _ := filepath.Abs(name)
-
-	preparedAST["regal"] = map[string]any{
-		"file": map[string]any{
-			"name":         name,
-			"lines":        strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n"),
-			"abs":          abs,
-			"rego_version": module.RegoVersion().String(),
-		},
-		"environment": map[string]any{
-			"path_separator": string(os.PathSeparator),
-		},
-	}
-
-	return preparedAST, nil
 }
