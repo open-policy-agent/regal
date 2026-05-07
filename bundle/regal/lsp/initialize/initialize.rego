@@ -57,25 +57,17 @@ _capabilities.workspace.fileOperations[operation].filters := filters if {
 ## *there is no way* to support it here.
 _capabilities.workspace.workspaceFolders.supported := true
 
-_capabilities.inlayHintProvider := {
-	# inlayHint/resolve request supported
-	"resolveProvider": true,
-}
+_capabilities.inlayHintProvider := {"resolveProvider": true} # inlayHint/resolve request supported
 
 _capabilities.hoverProvider := true
 
-_capabilities.signatureHelpProvider := {
-	# In additional to the client's default trigger characters for signature help
-	"triggerCharacters": ["(", ","]
-}
+# In additional to the client's default trigger characters for signature help
+_capabilities.signatureHelpProvider := {"triggerCharacters": ["(", ","]}
 
-_capabilities.codeActionProvider := {
-	# Currently supported code action kinds
-	"codeActionKinds": [
-		"quickfix",
-		"source"
-	],
-}
+_capabilities.codeActionProvider := {"codeActionKinds": [
+	"quickfix", # Currently supported code action kinds
+	"source",
+]}
 
 _capabilities.executeCommandProvider.commands := _commands
 
@@ -92,6 +84,7 @@ _commands contains "regal.fix.redundant-existence-check"
 _commands contains "regal.config.disable-rule"
 _commands contains "regal.explorer" if data.server.feature_flags.explorer_provider
 _commands contains "regal.debug" if data.server.feature_flags.debug_provider
+_commands contains "regal.createTest" if data.server.feature_flags.test_creation_provider
 
 _capabilities.documentFormattingProvider := true
 
@@ -112,15 +105,9 @@ _capabilities.completionProvider := {
 	"completionItem": {"labelDetailsSupport": true},
 }
 
-_capabilities.codeLensProvider := {
-	# codeLens/resolve to be implemented
-	"resolveProvider": false,
-}
+_capabilities.codeLensProvider := {"resolveProvider": false} # codeLens/resolve to be implemented
 
-_capabilities.documentLinkProvider := {
-	# documentLink/resolve to be implemented
-	"resolveProvider": false,
-}
+_capabilities.documentLinkProvider := {"resolveProvider": false} # documentLink/resolve to be implemented
 
 _capabilities.documentHighlightProvider := true
 

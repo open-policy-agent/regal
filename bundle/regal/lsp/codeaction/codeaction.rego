@@ -113,6 +113,27 @@ actions contains action if {
 }
 
 # METADATA
+# description: |
+#   Code action to create a test from the current rule evaluation state.
+actions contains action if {
+	strings.any_prefix_match("source.createTest", only)
+
+	action := {
+		"title": "Create tests for this file",
+		"kind": "source.createTest",
+		"command": {
+			"title": "Create tests for this file",
+			"command": "regal.createTest",
+			"tooltip": "Create test cases for all rules in this file",
+			"arguments": [{
+				"target": input.params.textDocument.uri,
+				"row": input.params.range.start.line,
+			}],
+		},
+	}
+}
+
+# METADATA
 # description: All code actions for fixing reported diagnostics
 rules := {
 	"opa-fmt": ["Format using opa-fmt", ["target"]],
@@ -135,6 +156,6 @@ rules := {
 #   be hierarchical — if only contains "source" it matches all source actions,
 #   while "source.foo" matches only source actions with a "foo" prefix.
 # scope: document
-default only := ["quickfix", "source.explore"]
+default only := ["quickfix", "source.explore", "source.createTest"]
 
 only := input.params.context.only if input.params.context.only != []
