@@ -225,24 +225,18 @@ test_builtin_url_override if {
 
 test_keyword_hover if {
 	res := hover.result.response
-		with input as {
-			"params": {
-				"textDocument": {"uri": "file:///p.rego"},
-				"position": {
-					"line": 0,
-					"character": 3,
-				},
-			},
-			"regal": {"file": {"lines": ["package foo", ""]}},
-		}
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", "package foo\n")
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position.line as 2
+		with input.params.position.character as 3
+		with input.regal.file.lines as ["package p", "", "import data.foo"]
+		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", "package p\n\nimport data.foo")
 
-	res.range.start.line == 0
+	res.range.start.line == 2
 	res.range.start.character == 0
-	res.range.end.line == 0
+	res.range.end.line == 2
 	res.range.end.character == 5
 
-	exp := "[View Usage Examples](https://www.openpolicyagent.org/docs/policy-reference//keywords/package)\n\n"
+	exp := "[View Usage Examples](https://www.openpolicyagent.org/docs/policy-reference//keywords/import)\n\n"
 
 	res.contents.value == exp
 }

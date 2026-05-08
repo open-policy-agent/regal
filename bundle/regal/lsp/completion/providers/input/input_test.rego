@@ -13,7 +13,7 @@ allow if {
 
 	items == {{
 		"detail": "input document",
-		"data": {"resolver": "input"},
+		"data": "input",
 		"kind": 14,
 		"label": "input",
 		"textEdit": {

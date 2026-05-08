@@ -1,0 +1,27 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/open-policy-agent/regal/internal/lsp/rego
+cpu: Apple M4 Max
+BenchmarkRegoHandlers/completionItem/resolve/builtin.md-16                          13208	     91125 ns/op	   67031 B/op	    1378 allocs/op
+BenchmarkRegoHandlers/completionItem/resolve/input.md-16                            48417	     24869 ns/op	   18473 B/op	     391 allocs/op
+BenchmarkRegoHandlers/inlayHint/resolve/resolve.md-16                               39475	     29915 ns/op	   23126 B/op	     498 allocs/op
+BenchmarkRegoHandlers/textDocument/codeAction/diagnostic.md-16                      23610	     51091 ns/op	   35440 B/op	     769 allocs/op
+BenchmarkRegoHandlers/textDocument/codeAction/explorer.md-16                        39252	     30296 ns/op	   22252 B/op	     467 allocs/op
+BenchmarkRegoHandlers/textDocument/codeLens/codelens.md-16                           7095	    153061 ns/op	  101165 B/op	    2218 allocs/op
+BenchmarkRegoHandlers/textDocument/completion/completion.md-16                       1562	    769583 ns/op	  459411 B/op	   13073 allocs/op
+BenchmarkRegoHandlers/textDocument/completion/item_defaults.md-16                    1616	    704195 ns/op	  410989 B/op	   11917 allocs/op
+BenchmarkRegoHandlers/textDocument/documentHighlight/metadata.md-16                 12028	     99882 ns/op	   66194 B/op	    1352 allocs/op
+BenchmarkRegoHandlers/textDocument/documentLink/documentlink.md-16                  21961	     54528 ns/op	   35930 B/op	     730 allocs/op
+BenchmarkRegoHandlers/textDocument/hover/builtin.md-16                               9844	    105142 ns/op	   84738 B/op	    1629 allocs/op
+BenchmarkRegoHandlers/textDocument/hover/empty.md-16                                21474	     55809 ns/op	   37106 B/op	     755 allocs/op
+BenchmarkRegoHandlers/textDocument/hover/keyword.md-16                              10000	    101763 ns/op	   71297 B/op	    1471 allocs/op
+BenchmarkRegoHandlers/textDocument/inlayHint/inlayhint.md-16                        10000	    100495 ns/op	   64190 B/op	    1503 allocs/op
+BenchmarkRegoHandlers/textDocument/signatureHelp/signature_help.md-16               15886	     75584 ns/op	   46021 B/op	    1005 allocs/op
+BenchmarkRegoHandlers/textDocument/semanticTokens/full/argsdecl.md-16                5644	    198066 ns/op	  117550 B/op	    3003 allocs/op
+BenchmarkRegoHandlers/textDocument/semanticTokens/full/comprehensions.md-16          1236	    939873 ns/op	  485247 B/op	   15016 allocs/op
+BenchmarkRegoHandlers/textDocument/semanticTokens/full/every.md-16                   2367	    491467 ns/op	  262828 B/op	    8004 allocs/op
+BenchmarkRegoHandlers/textDocument/semanticTokens/full/fullpolicy.md-16              2305	    504095 ns/op	  261704 B/op	    8457 allocs/op
+BenchmarkRegoHandlers/textDocument/semanticTokens/full/imports.md-16                 6939	    166224 ns/op	  104193 B/op	    2283 allocs/op
+BenchmarkRegoHandlers/textDocument/semanticTokens/full/package.md-16                 9694	    109698 ns/op	   70406 B/op	    1536 allocs/op
+BenchmarkRegoHandlers/textDocument/semanticTokens/full/some.md-16                    1874	    635312 ns/op	  333518 B/op	   10453 allocs/op
+BenchmarkRegoHandlers/textDocument/semanticTokens/full/varrefs.md-16                 4399	    269828 ns/op	  151288 B/op	    4206 allocs/op

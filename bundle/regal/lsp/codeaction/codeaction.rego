@@ -12,7 +12,9 @@ import data.regal.lsp.client
 
 # METADATA
 # entrypoint: true
-result["response"] := actions
+default result["response"] := null
+
+result["response"] := actions if actions != set()
 
 # METADATA
 # description: A set of all code actions applicable in the current document

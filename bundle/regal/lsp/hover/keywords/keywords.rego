@@ -35,20 +35,6 @@ by_row[row] contains keyword if {
 }
 
 # METADATA
-# description: collects the `package` keyword
-by_row[loc.row] contains keyword if {
-	loc := util.to_location_object(_module.package.location)
-
-	keyword := {
-		"name": "package",
-		"location": {
-			"row": loc.row,
-			"col": loc.col,
-		},
-	}
-}
-
-# METADATA
 # description: collects the `import` keyword
 by_row[loc.row] contains keyword if {
 	location := _module.imports[_].location

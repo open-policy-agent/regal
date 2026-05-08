@@ -37,6 +37,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
+	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/update"
@@ -228,6 +229,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 	})
 
 	ls.regoRouter.RegisterResultHandler("initialize", ls.initializeResultHandler)
+	ls.regoRouter.RegisterResultHandler("textDocument/semanticTokens/full", semantictokens.ResultHandler)
 
 	merged, _ := config.WithDefaultsFromBundle(bundle.Embedded(), cfg)
 
@@ -1677,12 +1679,11 @@ func (l *LanguageServer) parseOpts(fileURI string, bis map[string]*ast.Builtin) 
 	}
 }
 
-func (l *LanguageServer) regalContext(fileURI string, _ *rego.Requirements) *rego.RegalContext {
+func (l *LanguageServer) regalContext(fileURI string, _ rego.Requirements) *rego.RegalContext {
 	return &rego.RegalContext{
 		File: rego.File{
 			Name:        l.toRelativePath(fileURI),
 			RegoVersion: l.regoVersionForURI(fileURI).String(),
-			Abs:         uri.ToPath(fileURI),
 			URI:         fileURI,
 		},
 		Environment: rego.Environment{

@@ -8,7 +8,6 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
-	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -151,7 +150,10 @@ allow := neo4j.q
 			reqCtx, reqCtxCancel := context.WithTimeout(ctx, determineTimeout())
 
 			resp := make(map[string]any)
-			params := types.NewCompletionParams(mainRegoURI, 5, 16, nil)
+			params := map[string]any{
+				"textDocument": map[string]any{"uri": mainRegoURI},
+				"position":     map[string]any{"line": 5, "character": 16},
+			}
 			err := connClient.Call(reqCtx, "textDocument/completion", params, &resp)
 
 			reqCtxCancel()

@@ -68,6 +68,15 @@ func Write(tb testing.TB, w io.Writer, contents string) {
 	}
 }
 
+func ReadDir(tb testing.TB, path string) []os.DirEntry {
+	tb.Helper()
+
+	entries, err := os.ReadDir(path)
+	Equal(tb, nil, err, "failed to read directory %s", path)
+
+	return entries
+}
+
 func ReadFile(tb testing.TB, path string) string {
 	tb.Helper()
 

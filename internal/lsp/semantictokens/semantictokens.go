@@ -1,15 +1,15 @@
 package semantictokens
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"slices"
 
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 )
 
-type (
-	TokenType     = uint32
-	TokenModifier = uint32
-)
+type TokenType = uint32
 
 const (
 	Namespace TokenType = iota
@@ -17,28 +17,6 @@ const (
 	Import
 	Keyword
 )
-
-const (
-	ModifierDeclaration TokenModifier = 1 << iota
-	ModifierDefinition
-	ModifierReference
-)
-
-// Legend
-// NOTE: Changes here must be reflected in initialize.rego too!
-var Legend = types.SemanticTokensLegend{
-	TokenTypes: []string{
-		Namespace: "namespace",
-		Variable:  "variable",
-		Import:    "import",
-		Keyword:   "keyword",
-	},
-	TokenModifiers: []string{
-		"declaration",
-		"definition",
-		"reference",
-	},
-}
 
 type Token struct {
 	Line      uint32
@@ -97,4 +75,30 @@ func Full(result SemanticTokensResult) (*types.SemanticTokens, error) {
 	}
 
 	return &types.SemanticTokens{Data: data}, nil
+}
+
+func ResultHandler(_ context.Context, result any) (any, error) {
+	if raw, ok := result.(*json.RawMessage); ok {
+		var semTokRes SemanticTokensResult
+		// this looks like a false positive as the struct fields are tagged
+		// "the given struct should be annotated with the `json` tag"
+		//nolint: musttag
+		if err := json.Unmarshal(*raw, &semTokRes); err != nil {
+			return nil, err
+		}
+
+		full, err := Full(semTokRes)
+		if err != nil {
+			return nil, err
+		}
+
+		bs, err := json.Marshal(full)
+		if err != nil {
+			return nil, err
+		}
+
+		return new(json.RawMessage(bs)), nil
+	}
+
+	return nil, fmt.Errorf("expected *json.RawMessage, got: %T", result)
 }

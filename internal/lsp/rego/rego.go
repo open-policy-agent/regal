@@ -14,7 +14,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
-	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
@@ -56,7 +55,6 @@ type (
 		PathSeparator     string    `json:"path_separator"`
 		WorkspaceRootURI  string    `json:"workspace_root_uri"`
 		WorkspaceRootPath string    `json:"workspace_root_path"`
-		WebServerBaseURI  string    `json:"web_server_base_uri"`
 		InputDotJSON      ast.Value `json:"input_dot_json,omitempty"`
 		InputDotJSONPath  *string   `json:"input_dot_json_path,omitempty"`
 	}
@@ -79,27 +77,12 @@ type (
 		ParseErrors              bool `json:"parse_errors"`
 	}
 
-	Input[T any] struct {
-		Method string        `json:"method"`
-		Params T             `json:"params"`
-		Regal  *RegalContext `json:"regal"`
-	}
-
-	Result[R any] struct {
-		Response R   `json:"response"`
-		Regal    any `json:"regal"`
-	}
-
 	policy struct {
 		module   *ast.Module
 		fileName string
 		contents string
 	}
 )
-
-func NewInput[T any](method string, regal *RegalContext, params T) Input[T] {
-	return Input[T]{Method: method, Regal: regal, Params: params}
-}
 
 // AllRuleHeadLocations returns mapping of rules names to the head locations.
 func AllRuleHeadLocations(
@@ -113,16 +96,6 @@ func AllRuleHeadLocations(
 	}
 
 	return locations, nil
-}
-
-func QueryEval[P any, R any](ctx context.Context, pq *query.Prepared, input Input[P]) (Result[R], error) {
-	var result Result[R]
-
-	if err := CachedQueryEval(ctx, pq, rast.StructToValue(input), &result); err != nil {
-		return result, fmt.Errorf("failed querying %q: %w", pq, err)
-	}
-
-	return result, nil
 }
 
 func CachedQueryEval[T any](ctx context.Context, pq *query.Prepared, input ast.Value, toValue *T) error {

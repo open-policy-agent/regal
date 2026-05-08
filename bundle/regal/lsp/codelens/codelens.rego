@@ -15,7 +15,7 @@ import data.regal.lsp.util.range
 
 # METADATA
 # entrypoint: true
-default result["response"] := []
+default result["response"] := null
 
 result["response"] := lenses if input.regal.file.parse_errors == []
 

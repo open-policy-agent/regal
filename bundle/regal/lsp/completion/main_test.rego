@@ -5,7 +5,7 @@ import data.regal.lsp.completion
 test_completion_entrypoint if {
 	items := completion.items with completion.providers as {"test": {"items": {{"foo": "bar"}}}}
 
-	items == {{"_regal": {"provider": "test"}, "foo": "bar"}}
+	items == {{"foo": "bar"}}
 }
 
 test_inside_comment if completion.inside_comment
