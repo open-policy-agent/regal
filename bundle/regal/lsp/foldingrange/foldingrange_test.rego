@@ -82,6 +82,7 @@ import data.h
 test_folding_comment_blocks if {
 	result := foldingrange.result
 		with input.params.textDocument.uri as "file:///p.rego"
+		with input.regal.file.lines as comment_blocks_module.regal.file.lines
 		with data.workspace.parsed["file:///p.rego"] as comment_blocks_module
 
 	result.response == {
@@ -105,6 +106,7 @@ test_folding_comment_blocks if {
 test_folding_comment_blocks_only_lines if {
 	result := foldingrange.result
 		with input.params.textDocument.uri as "file:///p.rego"
+		with input.regal.file.lines as comment_blocks_module.regal.file.lines
 		with data.client.capabilities.textDocument.foldingRange.lineFoldingOnly as true
 		with data.workspace.parsed["file:///p.rego"] as comment_blocks_module
 
@@ -236,6 +238,7 @@ test_folding_limit_honored[limit] if {
 
 	result := foldingrange.result
 		with input.params.textDocument.uri as "file:///p.rego"
+		with input.regal.file.lines as comment_blocks_module.regal.file.lines
 		with data.client.capabilities.textDocument.foldingRange.rangeLimit as limit
 		with data.workspace.parsed["file:///p.rego"] as comment_blocks_module
 

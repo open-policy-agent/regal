@@ -41,7 +41,7 @@ _negated_refs contains negated_ref if {
 		path.type == "string"
 	}
 
-	rule := input.rules[to_number(rule_index)]
+	rule := input.rules[rule_index]
 	ref_head := ref[0]
 
 	# ignore negated local vars

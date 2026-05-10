@@ -38,7 +38,7 @@ ranges contains range if {
 	count(block) > 1
 
 	# note: the comment locations have already been deserialized in ast.comments.blocks
-	range := _block_range(block[0].location, regal.last(block).location, only_lines)
+	range := _block_range(block[0], regal.last(block), only_lines)
 }
 
 # METADATA

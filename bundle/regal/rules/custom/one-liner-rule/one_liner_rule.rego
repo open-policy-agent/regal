@@ -5,6 +5,9 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/custom/one-liner-rule
 package regal.rules.custom["one-liner-rule"]
 
+import future.keywords.not
+
+import data.regal.ast
 import data.regal.capabilities
 import data.regal.config
 import data.regal.result
@@ -41,7 +44,14 @@ report contains violation if {
 	# redundant parens added by `opa fmt` :/
 	((4 + count(lines[0])) + count(lines[1])) - 1 < _max_line_length
 
-	not _comment_in_body(rule_location.row, object.get(input, "comments", []), lines)
+	not {
+		num_lines := count(lines)
+
+		some location in ast.comments_decoded
+
+		location.row > rule_location.row
+		location.row < rule_location.row + num_lines
+	}
 
 	violation := result.fail(rego.metadata.chain(), result.location(rule.head))
 }
@@ -57,15 +67,4 @@ _rule_body_brackets(lines) if regex.match(`.*if\s*{$`, lines[0])
 _rule_body_brackets(lines) if {
 	not endswith(lines[0], "{")
 	startswith(lines[1], "{")
-}
-
-_comment_in_body(rule_row, comments, lines) if {
-	num_lines := count(lines)
-
-	some comment in comments
-
-	comment_row := to_number(util.substring_to(comment.location, 0, ":"))
-
-	comment_row > rule_row
-	comment_row < rule_row + num_lines
 }

@@ -1,8 +1,13 @@
+# METADATA
+# schemas:
+#   - input:        schema.regal.lsp.common
+#   - input.params: schema.regal.lsp.textdocument
 package regal.lsp.hover.keywords
 
+import data.regal.ast
 import data.regal.util
 
-_module := data.workspace.parsed[input.regal.file.uri]
+_module := data.workspace.parsed[input.params.textDocument.uri]
 
 # METADATA
 # description: collects keywords from input module by the line that they appear on
@@ -116,4 +121,4 @@ _in_on_row(row) := [keyword |
 	}
 ]
 
-_comment_row_index contains util.to_location_object(comment.location).row if some comment in _module.comments
+_comment_row_index contains location.row if some location in ast.comments_decoded

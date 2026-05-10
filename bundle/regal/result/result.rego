@@ -145,11 +145,15 @@ _fail_annotated_custom(metadata, details) := violation if {
 	violation := object.remove(with_category, ["custom", "scope", "schemas"])
 }
 
-# Note that the `text` attribute always returns the entire line and *not*
-# based on the location range. This is intentional, as the context is often
-# needed when this is printed out in the console. LSP diagnostics however use
-# the range and will highlight based on that rather than `text`.
-_with_text(loc_obj) := loc if {
+# METADATA
+# description: |
+#   same as `location` for known location objects
+#
+## Note that the `text` attribute always returns the entire line and *not*
+## based on the location range. This is intentional, as the context is often
+## needed when this is printed out in the console. LSP diagnostics however use
+## the range and will highlight based on that rather than `text`.
+with_text(loc_obj) := loc if {
 	loc := {"location": object.union(loc_obj, {
 		"file": input.regal.file.name,
 		"text": input.regal.file.lines[loc_obj.row - 1],
@@ -162,9 +166,9 @@ _with_text(loc_obj) := loc if {
 #   new code should most often use one of the ranged_ location functions instead, as
 #   that will also include an `"end"` location attribute
 # scope: document
-location(node) := _with_text(util.to_location_object(node.location))
-location(node) := _with_text(util.to_location_object(node[0].location)) if is_array(node)
-location(node) := _with_text(util.to_location_object(node)) if is_string(node)
+location(node) := with_text(util.to_location_object(node.location))
+location(node) := with_text(util.to_location_object(node[0].location)) if is_array(node)
+location(node) := with_text(util.to_location_object(node)) if is_string(node)
 
 # METADATA
 # description: |

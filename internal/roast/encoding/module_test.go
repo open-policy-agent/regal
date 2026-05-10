@@ -143,7 +143,7 @@ func TestSerializedModuleSize(t *testing.T) {
 	// This test will fail whenever the size of the serialized module changes,
 	// which not often and when it happens it's good to know about it, update
 	// and move on.
-	must.Equal(t, 85981, len(roast), "serialized module size")
+	must.Equal(t, 79213, len(roast), "serialized module size")
 }
 
 // 234775 ns/op	  112048 B/op	    2715 allocs/op

@@ -226,14 +226,14 @@ test_builtin_url_override if {
 test_keyword_hover if {
 	res := hover.result.response
 		with input as {
-			"params": {"position": {
-				"line": 0,
-				"character": 3,
-			}},
-			"regal": {"file": {
-				"lines": ["package foo", ""],
-				"uri": "file:///p.rego",
-			}},
+			"params": {
+				"textDocument": {"uri": "file:///p.rego"},
+				"position": {
+					"line": 0,
+					"character": 3,
+				},
+			},
+			"regal": {"file": {"lines": ["package foo", ""]}},
 		}
 		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", "package foo\n")
 

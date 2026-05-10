@@ -167,21 +167,7 @@
       "type": "array"
     },
     "comment": {
-      "properties": {
-        "text": {
-          "type": "string",
-          "contentEncoding": "base64"
-        },
-        "location": {
-          "$ref": "#/$defs/location"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "text",
-        "location"
-      ]
+      "$ref": "#/$defs/location"
     },
     "expr": {
       "properties": {

@@ -5712,7 +5712,7 @@
       "decl": {
         "args": [
           {
-            "description": "a duration like \"3m\"; see the [Go `time` package documentation](https://golang.org/pkg/time/#ParseDuration) for more details",
+            "description": "a duration like \"3m\"; see the [OPA `Duration Parsing` documentation](https://www.openpolicyagent.org/docs/latest/policy-reference/builtins/time#duration-parsing) for more details",
             "name": "duration",
             "type": "string"
           }
@@ -6132,6 +6132,52 @@
       }
     },
     {
+      "name": "uri.is_valid",
+      "description": "Returns true if the input can be parsed as a URI.",
+      "decl": {
+        "args": [
+          {
+            "description": "the URI string to validate",
+            "name": "uri",
+            "type": "string"
+          }
+        ],
+        "result": {
+          "description": "true if `uri` is a valid URI, false otherwise",
+          "name": "result",
+          "type": "boolean"
+        },
+        "type": "function"
+      }
+    },
+    {
+      "name": "uri.parse",
+      "description": "Parses a URI and returns an object containing its components according to RFC 3986. Empty components are omitted. In addition to the standard components, `raw_query` is returned for use with `urlquery` builtins, and `raw_path` is returned to allow detection of path-based exploits using percent-encoded characters.",
+      "decl": {
+        "args": [
+          {
+            "description": "the URI string to parse",
+            "name": "uri",
+            "type": "string"
+          }
+        ],
+        "result": {
+          "description": "object containing URI components",
+          "dynamic": {
+            "key": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "name": "output",
+          "type": "object"
+        },
+        "type": "function"
+      }
+    },
+    {
       "name": "urlquery.decode",
       "description": "Decodes a URL-encoded input string.",
       "categories": [
@@ -6402,6 +6448,9 @@
         "type": "function"
       }
     }
+  ],
+  "future_keywords": [
+    "not"
   ],
   "features": [
     "keywords_in_refs",

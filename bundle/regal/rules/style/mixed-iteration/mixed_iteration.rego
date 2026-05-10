@@ -19,7 +19,7 @@ report contains violation if {
 
 	i > 0
 	term.type == "var"
-	ast.is_output_var(input.rules[to_number(rule_index)], term)
+	ast.is_output_var(input.rules[rule_index], term)
 
 	violation := result.fail(rego.metadata.chain(), result.location(last))
 }
