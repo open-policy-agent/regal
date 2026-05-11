@@ -30,10 +30,10 @@ comments["blocks"] := comment_blocks(comments_decoded)
 # METADATA
 # description: set of all the standard metadata attribute names, as provided by OPA
 comments["metadata_attributes"] := {
-	"id",
 	"scope",
 	"title",
 	"description",
+	"labels",
 	"related_resources",
 	"authors",
 	"organizations",
@@ -46,7 +46,7 @@ comments["metadata_attributes"] := {
 # METADATA
 # description: true if comment matches a metadata annotation attribute
 comments["annotation_match"](str) if regex.match(
-	`^\s*(id|scope|title|description|related_resources|authors|organizations|schemas|entrypoint|custom|compile)\s*:`,
+	`^\s*(scope|title|description|labels|related_resources|authors|organizations|schemas|entrypoint|custom|compile)\s*:`,
 	str,
 )
 
