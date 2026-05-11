@@ -50,7 +50,7 @@ _inconsistent_args(position) if {
 	named_vars := {arg.value |
 		some arg in position
 		arg.type == "var"
-		not ast.is_wildcard(arg)
+		not startswith(arg.value, "$")
 	}
 	count(named_vars) > 1
 }

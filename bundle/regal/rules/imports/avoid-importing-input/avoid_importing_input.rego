@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/avoid-importing-input
 package regal.rules.imports["avoid-importing-input"]
 
+import future.keywords.not
+
 import data.regal.result
 
 report contains violation if {
@@ -12,7 +14,10 @@ report contains violation if {
 	input.imports[i].path.value[0].value == "input"
 
 	# Allow aliasing input, eg `import input as tfplan`:
-	not _aliased_input(input.imports[i])
+	not {
+		count(input.imports[i].path.value) == 1
+		input.imports[i].alias
+	}
 
 	violation := result.fail(rego.metadata.chain(), result.location(input.imports[i].path.value[0]))
 }

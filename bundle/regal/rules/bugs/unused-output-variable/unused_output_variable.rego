@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/unused-output-variable
 package regal.rules.bugs["unused-output-variable"]
 
+import future.keywords.not
+
 import data.regal.ast
 import data.regal.result
 
@@ -28,19 +30,22 @@ report contains violation if {
 
 	count(var_refs) == 1
 
-	some var in var_refs
+	some term in var_refs
 
-	not ast.is_wildcard(var)
-	not ast.var_in_head(input.rules[to_number(rule_index)].head, var.value)
-	not ast.var_in_call(ast.function_calls, rule_index, var.value)
-	not _ref_base_vars[rule_index][var.value]
-	not _comprehension_term_vars[rule_index][var.value]
+	not {
+		term.type == "var"
+		startswith(term.value, "$")
+	}
+	not ast.var_in_head(input.rules[rule_index].head, term.value)
+	not ast.var_in_call(ast.function_calls, rule_index, term.value)
+	not _ref_base_vars[rule_index][term.value]
+	not _comprehension_term_vars[rule_index][term.value]
 
 	# this is by far the most expensive condition to check, so only do
 	# so when all other conditions apply
-	ast.is_output_var(input.rules[to_number(rule_index)], var)
+	ast.is_output_var(input.rules[rule_index], term)
 
-	violation := result.fail(rego.metadata.chain(), result.location(var))
+	violation := result.fail(rego.metadata.chain(), result.location(term))
 }
 
 # "a" in "a[foo]", and not foo

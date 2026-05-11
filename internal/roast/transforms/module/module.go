@@ -1,17 +1,12 @@
 package module
 
 import (
-	"bytes"
-	"encoding/base64"
-
 	"github.com/open-policy-agent/opa/v1/ast"
 	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
-
-var metadataBytes = []byte(" METADATA")
 
 // ToValue converts an AST module to RoAST value representation.
 // This is much more efficient than using a JSON encode/decode round trip.
@@ -49,14 +44,8 @@ func ToValue(mod *ast.Module) (ast.Value, error) {
 
 	if len(mod.Comments) > 0 {
 		comments := make([]*ast.Term, len(mod.Comments))
-
 		for i, comment := range mod.Comments {
-			encoded := "IE1FVEFEQVRB" // " METADATA"
-			if !bytes.Equal(comment.Text, metadataBytes) {
-				encoded = base64.StdEncoding.EncodeToString(comment.Text)
-			}
-
-			comments[i] = ast.ObjectTerm(item("text", ast.InternedTerm(encoded)), locationItem(comment.Location))
+			comments[i] = ast.InternedTerm(outil.ByteSliceToString(rast.AppendLocation(nil, comment.Location)))
 		}
 
 		value.Insert(ast.InternedTerm("comments"), ast.ArrayTerm(comments...))

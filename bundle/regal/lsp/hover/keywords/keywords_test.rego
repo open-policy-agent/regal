@@ -8,7 +8,7 @@ test_keywords_package if {
 	module := ast.policy("")
 	kwds := keywords.by_row
 		with data.workspace.parsed["file:///p.rego"] as module
-		with input.regal.file.uri as "file:///p.rego"
+		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
 	count(kwds) == 1 # lines with keywords
@@ -28,7 +28,7 @@ test_keywords_import if {
 
 	kwds := keywords.by_row
 		with data.workspace.parsed["file:///p.rego"] as module
-		with input.regal.file.uri as "file:///p.rego"
+		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
 	count(kwds) == 2 # lines with keywords
@@ -51,7 +51,7 @@ test_keywords_if if {
 `)
 	kwds := keywords.by_row
 		with data.workspace.parsed["file:///p.rego"] as module
-		with input.regal.file.uri as "file:///p.rego"
+		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
 	count(kwds) == 2 # lines with keywords
@@ -76,7 +76,7 @@ test_keywords_if_on_another_line if {
 `)
 	kwds := keywords.by_row
 		with data.workspace.parsed["file:///p.rego"] as module
-		with input.regal.file.uri as "file:///p.rego"
+		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
 	count(kwds) == 3 # lines with keywords
@@ -98,7 +98,7 @@ test_keywords_some_in if {
 
 	kwds := keywords.by_row
 		with data.workspace.parsed["file:///p.rego"] as module
-		with input.regal.file.uri as "file:///p.rego"
+		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
 	count(kwds) == 3 # lines with keywords
@@ -123,7 +123,7 @@ test_keywords_some_no_body if {
 
 	kwds := keywords.by_row
 		with data.workspace.parsed["file:///p.rego"] as module
-		with input.regal.file.uri as "file:///p.rego"
+		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
 	count(kwds) == 2 # lines with keywords
@@ -154,7 +154,7 @@ test_keywords_some_in_func_arg if {
 
 	kwds := keywords.by_row
 		with data.workspace.parsed["file:///p.rego"] as module
-		with input.regal.file.uri as "file:///p.rego"
+		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
 	count(kwds) == 2 # lines with keywords
@@ -180,7 +180,7 @@ messages contains "hello" if {
 
 	kwds := keywords.by_row
 		with data.workspace.parsed["file:///p.rego"] as module
-		with input.regal.file.uri as "file:///p.rego"
+		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
 	count(kwds) == 2 # lines with keywords
@@ -208,7 +208,7 @@ allow if {
 
 	kwds := keywords.by_row
 		with data.workspace.parsed["file:///p.rego"] as module
-		with input.regal.file.uri as "file:///p.rego"
+		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
 	count(kwds) == 3 # lines with keywords

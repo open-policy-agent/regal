@@ -56,7 +56,14 @@ func TestRouteTextDocumentDocumentLink(t *testing.T) {
 			},
 		},
 	}}, inmem.OptRoundTripOnWrite(false))
-	mgr := rego.NewRegoRouter(t.Context(), stg, query.NewCache(), providers(regalContext(), "", ""))
+
+	rct := &rego.RegalContext{
+		File: rego.File{
+			Name:  "workspace/p.rego",
+			Lines: []string{"# regal ignore:prefer-snake-case", "package p"},
+		},
+	}
+	mgr := rego.NewRegoRouter(t.Context(), stg, query.NewCache(), providers(rct, "", ""))
 	rsp := must.Return(mgr.Handle(t.Context(), nil, request("textDocument/documentLink", linkParams(t, doc.uri))))(t)
 
 	must.Be[*json.RawMessage](t, rsp)

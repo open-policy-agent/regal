@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/unresolved-import
 package regal.rules.imports["unresolved-import"]
 
+import future.keywords.not
+
 import data.regal.ast
 import data.regal.config
 import data.regal.result
@@ -19,12 +21,16 @@ aggregate contains entry if {
 		_import.path.value[0].value == "data"
 		len := count(_import.path.value)
 		len > 1
-		path := [term.value | some term in array.slice(_import.path.value, 1, len)]
 
 		# Special case for custom rules, where we don't want to flag e.g. `import data.regal.ast`
 		# as unknown, even though it's not a package included in evaluation.
-		not _custom_regal_package_and_import(ast.package_path, path[0])
+		not {
+			_import.path.value[1].value == "regal"
+			ast.package_path[0] == "custom"
+			ast.package_path[1] == "regal"
+		}
 
+		path := [term.value | some term in array.slice(_import.path.value, 1, len)]
 		imp := [path, _import.location]
 	]
 
@@ -63,11 +69,6 @@ aggregate_report contains violation if {
 		"file": file,
 		"text": $"import data.{concat(".", path)}",
 	})})
-}
-
-_custom_regal_package_and_import(pkg_path, "regal") if {
-	pkg_path[0] == "custom"
-	pkg_path[1] == "regal"
 }
 
 # the package part will always be included exported refs

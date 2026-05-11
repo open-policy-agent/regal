@@ -1,14 +1,13 @@
 package encoding
 
 import (
-	"encoding/base64"
 	"unsafe"
 
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
 
 type commentCodec struct{}
@@ -20,9 +19,11 @@ func (*commentCodec) IsEmpty(_ unsafe.Pointer) bool {
 func (*commentCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	comment := *((*ast.Comment)(ptr))
 
-	write.ObjectStart(stream, comment.Location)
+	// Use location string — text is retrieved dynamically via regal.file.lines
+	buf := stream.Buffer()
+	buf = append(buf, '"')
+	buf = rast.AppendLocation(buf, comment.Location)
+	buf = append(buf, '"')
 
-	stream.WriteObjectField("text")
-	stream.SetBuffer(append(base64.StdEncoding.AppendEncode(append(stream.Buffer(), '"'), comment.Text), '"'))
-	stream.WriteObjectEnd()
+	stream.SetBuffer(buf)
 }

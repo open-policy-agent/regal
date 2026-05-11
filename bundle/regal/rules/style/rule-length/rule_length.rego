@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/style/rule-length
 package regal.rules.style["rule-length"]
 
+import future.keywords.not
+
 import data.regal.config
 import data.regal.result
 import data.regal.util
@@ -24,15 +26,12 @@ report contains violation if {
 	rule_length > max_length
 
 	_line_count(cfg, text, rule_length) > max_length
-
-	not _no_body_exception(cfg, rule)
+	not {
+		cfg["except-empty-body"] == true
+		not rule.body
+	}
 
 	violation := result.fail(rego.metadata.chain(), result.location(rule.head))
-}
-
-_no_body_exception(cfg, rule) if {
-	cfg["except-empty-body"] == true
-	not rule.body
 }
 
 _line_count(cfg, _, rule_length) := rule_length if cfg["count-comments"] == true

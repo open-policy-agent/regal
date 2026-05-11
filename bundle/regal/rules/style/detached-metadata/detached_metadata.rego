@@ -11,16 +11,16 @@ import data.regal.result
 report contains violation if {
 	some i, block in ast.comments.blocks
 
-	regex.match(`^\s*METADATA`, block[0].text)
+	regex.match(`^#\s*METADATA`, block[0].text)
 
-	last_row := regal.last(block).location.row
+	last_row := regal.last(block).row
 
 	# no need to +1 the index here as rows start counting from 1
 	trim_space(input.regal.file.lines[last_row]) == ""
 
 	not _allow_detached(last_row, i, ast.comments.blocks, input.regal.file.lines)
 
-	violation := result.fail(rego.metadata.chain(), result.location(block[0]))
+	violation := result.fail(rego.metadata.chain(), result.with_text(block[0]))
 }
 
 # detached metadata is allowed only if another metadata block follows
@@ -28,9 +28,9 @@ report contains violation if {
 _allow_detached(last_row, i, blocks, lines) if {
 	next_block_start := blocks[i + 1][0]
 
-	regex.match(`^\s*METADATA`, next_block_start.text)
+	regex.match(`^#\s*METADATA`, next_block_start.text)
 
-	next_block_row := next_block_start.location.row
+	next_block_row := next_block_start.row
 	lines_between := array.slice(lines, last_row, next_block_row - 1)
 
 	every line in lines_between {

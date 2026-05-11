@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/custom/narrow-argument
 package regal.rules.custom["narrow-argument"]
 
+import future.keywords.not
+
 import data.regal.ast
 import data.regal.config
 import data.regal.result
@@ -89,7 +91,7 @@ _functions[name] contains {"rule_index": i, "args_refs": args_refs} if {
 		some arg in args
 		arg.type == "var"
 		not startswith(arg.value, "$")
-		not _exclude_arg(arg.value)
+		not arg.value in config.rules.custom["narrow-argument"]["exclude-args"]
 	}
 
 	# we don't care for functions without named variable arguments
@@ -117,8 +119,6 @@ _first_var_pos(ref) := pos if {
 		i > 0
 	][0]
 } else := count(ref) + 1
-
-_exclude_arg(name) if name in config.rules.custom["narrow-argument"]["exclude-args"]
 
 _to_terms(arr) := [_to_term(item) | some item in arr]
 

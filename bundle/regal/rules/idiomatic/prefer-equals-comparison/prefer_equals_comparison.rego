@@ -30,8 +30,7 @@ _unassignable(term, _) if {
 
 _unassignable(term, rule_index) if {
 	term.type == "var"
-	i := to_number(rule_index)
-	not ast.is_output_var(input.rules[i], term)
+	not ast.is_output_var(input.rules[rule_index], term)
 	not _is_declared_comp_term(term, rule_index)
 }
 

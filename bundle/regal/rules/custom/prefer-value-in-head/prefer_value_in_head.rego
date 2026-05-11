@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/custom/prefer-value-in-head
 package regal.rules.custom["prefer-value-in-head"]
 
+import future.keywords.not
+
 import data.regal.ast
 import data.regal.config
 import data.regal.result
@@ -24,7 +26,7 @@ report contains violation if {
 	][0]
 
 	not _scalar_fail(terms[2].type, _scalar_types)
-	not _excepted_var_name(terms[1].value)
+	not terms[1].value in config.rules.custom["prefer-value-in-head"]["except-var-names"]
 
 	violation := result.fail(rego.metadata.chain(), result.location(terms[2]))
 }
@@ -33,8 +35,6 @@ _scalar_fail(term_type, scalar_types) if {
 	config.rules.custom["prefer-value-in-head"]["only-scalars"] == true
 	not term_type in scalar_types
 }
-
-_excepted_var_name(name) if name in config.rules.custom["prefer-value-in-head"]["except-var-names"]
 
 _scalar_types contains type if some type in ast.scalar_types
 _scalar_types contains "templatestring" if config.rules.custom["prefer-value-in-head"]["include-interpolated"] == true

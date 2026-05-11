@@ -38,14 +38,14 @@ allow := true
 
 	blocks == [
 		[
-			{"location": {"col": 1, "end": {"col": 15, "row": 5}, "row": 3, "text": "# METADATA"}, "text": " METADATA"},
-			{"location": {"col": 1, "end": {"col": 13, "row": 4}, "row": 4, "text": "# title: foo"}, "text": " title: foo"},
-			{"location": {"col": 1, "end": {"col": 15, "row": 5}, "row": 5, "text": "# bar: invalid"}, "text": " bar: invalid"},
+			{"col": 1, "end": {"col": 15, "row": 5}, "row": 3, "text": "# METADATA"},
+			{"col": 1, "end": {"col": 13, "row": 4}, "row": 4, "text": "# title: foo"},
+			{"col": 1, "end": {"col": 15, "row": 5}, "row": 5, "text": "# bar: invalid"},
 		],
-		[{"location": {"col": 1, "end": {"col": 15, "row": 8}, "row": 8, "text": "# not metadata"}, "text": " not metadata"}],
+		[{"col": 1, "end": {"col": 15, "row": 8}, "row": 8, "text": "# not metadata"}],
 		[
-			{"location": {"col": 1, "end": {"col": 10, "row": 10}, "row": 10, "text": "# another"}, "text": " another"},
-			{"location": {"col": 1, "end": {"col": 8, "row": 11}, "row": 11, "text": "# block"}, "text": " block"},
+			{"col": 1, "end": {"col": 10, "row": 10}, "row": 10, "text": "# another"},
+			{"col": 1, "end": {"col": 8, "row": 11}, "row": 11, "text": "# block"},
 		],
 	]
 }

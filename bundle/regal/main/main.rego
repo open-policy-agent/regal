@@ -119,8 +119,9 @@ report contains violation if {
 
 # Check custom rules
 report contains violation if {
-	file_name_relative_to_root := trim_prefix(input.regal.file.name, concat("", [config.path_prefix, "/"]))
 	not _globally_ignored
+
+	file_name_relative_to_root := trim_prefix(input.regal.file.name, concat("", [config.path_prefix, "/"]))
 
 	some category, title
 	violation := data.custom.regal.rules[category][title].report[_]

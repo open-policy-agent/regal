@@ -5,21 +5,22 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/style/no-whitespace-comment
 package regal.rules.style["no-whitespace-comment"]
 
+import future.keywords.not
+
 import data.regal.ast
 import data.regal.config
 import data.regal.result
-import data.regal.util
 
 report contains violation if {
-	some comment in ast.comments_decoded
+	some location in ast.comments_decoded
 
-	not regex.match(`^[\s#]*$|^#*[\s]+.*$`, comment.text)
-	not _excepted(comment.text)
+	text := trim_prefix(location.text, "#")
 
-	loc := util.to_location_object(comment.location)
-	not _excepted_shebang(loc.row, comment.text)
+	not regex.match(`^[\s#]*$|^#*[\s]+.*$`, text)
+	not regex.match(config.rules.style["no-whitespace-comment"]["except-pattern"], text)
+	not _excepted_shebang(location.row, text)
 
-	violation := result.fail(rego.metadata.chain(), result.location(comment))
+	violation := result.fail(rego.metadata.chain(), result.with_text(location))
 }
 
 # UNIX-style shebangs on the first line of the file should be exempted from the
@@ -31,5 +32,3 @@ _excepted_shebang(row, text) if {
 	# Note that the # will already have been consumed while parsing the AST.
 	regex.match(`^[!].*`, text)
 }
-
-_excepted(text) if regex.match(config.rules.style["no-whitespace-comment"]["except-pattern"], text)

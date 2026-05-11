@@ -14,7 +14,7 @@
 #   - input.params: schema.regal.lsp.textdocument
 package regal.lsp.documentlink
 
-import data.regal.util
+import data.regal.ast
 
 # METADATA
 # entrypoint: true
@@ -24,19 +24,15 @@ result["response"] := items
 # description: Set of links in document
 # entrypoint: true
 items contains item if {
-	module := data.workspace.parsed[input.params.textDocument.uri]
+	some location in ast.comments_decoded
 
-	some encoded in module.comments
+	contains(location.text, "regal ignore:")
 
-	text := base64.decode(encoded.text)
-	contains(text, "regal ignore:")
+	row := location.row - 1
 
-	loc := util.to_location_no_text(encoded.location)
-	row := loc.row - 1
+	some rule in regex.split(`,\s*`, trim_space(regex.replace(location.text, `^.*regal ignore:\s*(\S+)`, "$1")))
 
-	some rule in regex.split(`,\s*`, trim_space(regex.replace(text, `^.*regal ignore:\s*(\S+)`, "$1")))
-
-	col := loc.col + indexof(text, rule)
+	col := (location.col + indexof(location.text, rule)) - 1
 
 	item := {
 		"target": $"https://www.openpolicyagent.org/projects/regal/rules/{_category_for[rule]}/{rule}",

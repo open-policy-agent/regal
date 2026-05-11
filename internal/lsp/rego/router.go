@@ -139,12 +139,18 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 				InputDotJSON: true,
 			},
 		},
-		"textDocument/documentLink": {handler: passthrough},
+		"textDocument/documentLink": {
+			handler:  passthrough,
+			requires: &Requirements{File: FileRequirements{Lines: true}},
+		},
 		"textDocument/documentHighlight": {
 			handler:  passthrough,
 			requires: &Requirements{File: FileRequirements{Lines: true}},
 		},
-		"textDocument/foldingRange": {handler: passthrough},
+		"textDocument/foldingRange": {
+			handler:  passthrough,
+			requires: &Requirements{File: FileRequirements{Lines: true}},
+		},
 		"textDocument/hover": {
 			handler:  textDocument[types.HoverParams, *types.Hover],
 			requires: &Requirements{File: FileRequirements{Lines: true}},

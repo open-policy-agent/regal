@@ -11,14 +11,16 @@ import data.regal.result
 report contains violation if {
 	some block in ast.comments.blocks
 
-	regex.match(`^\s*METADATA`, block[0].text)
+	regex.match(`^#\s*METADATA`, block[0].text)
 
-	some attribute, _ in yaml.unmarshal(concat("\n", [entry.text | some entry in array.slice(block, 1, 100)]))
+	some attribute, _ in yaml.unmarshal(concat("\n", [trim_prefix(entry.text, "#") |
+		some entry in array.slice(block, 1, 100)
+	]))
 
 	not attribute in ast.comments.metadata_attributes
 
-	violation := result.fail(rego.metadata.chain(), result.location([line |
+	violation := result.fail(rego.metadata.chain(), result.with_text([line |
 		some line in block
-		startswith(trim_space(line.text), $"{attribute}:")
+		startswith(line.text, $"# {attribute}:")
 	][0]))
 }
