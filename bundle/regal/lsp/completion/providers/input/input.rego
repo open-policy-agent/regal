@@ -29,6 +29,6 @@ items contains item if {
 			"range": location.word_range(word, input.params.position),
 			"newText": "input",
 		},
-		"data": {"resolver": "input"},
+		"data": "input",
 	}
 }

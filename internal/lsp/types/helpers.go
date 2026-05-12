@@ -5,14 +5,6 @@ import (
 	"strings"
 )
 
-func NewCompletionParams(uri string, line, char uint, context *CompletionContext) CompletionParams {
-	return CompletionParams{
-		TextDocument: TextDocumentIdentifier{URI: uri},
-		Position:     Position{Line: line, Character: char},
-		Context:      context,
-	}
-}
-
 func RangeBetween[T1, T2, T3, T4 iuint](startLine T1, startCharacter T2, endLine T3, endCharacter T4) Range {
 	return Range{
 		Start: Position{Line: uint(startLine), Character: uint(startCharacter)},

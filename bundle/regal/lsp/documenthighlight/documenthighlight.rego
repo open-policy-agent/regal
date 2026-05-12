@@ -17,7 +17,9 @@ import data.regal.util
 
 # METADATA
 # entrypoint: true
-result["response"] := items
+default result["response"] := null
+
+result["response"] := items if items != set()
 
 # METADATA
 # description: Highlights a function args in position

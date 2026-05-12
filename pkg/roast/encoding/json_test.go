@@ -29,6 +29,11 @@ var (
 			want: ast.InternedValue("interned"),
 		},
 		{
+			name: "string with escapes",
+			json: []byte(`"data.regal.rules.bugs[\"argument-always-wildcard_test\"]"`),
+			want: ast.InternedValue(`data.regal.rules.bugs["argument-always-wildcard_test"]`),
+		},
+		{
 			name: "boolean true",
 			json: []byte(`true`),
 			want: ast.Boolean(true),
@@ -78,6 +83,11 @@ var (
 			name: "empty object",
 			json: []byte(`{}`),
 			want: ast.InternedEmptyObjectValue,
+		},
+		{
+			name: "complex object",
+			json: []byte(`{"label":"data.regal.rules.bugs[\"argument-always-wildcard_test\"]"}`),
+			want: ast.MustParseTerm(`{"label":"data.regal.rules.bugs[\"argument-always-wildcard_test\"]"}`).Value,
 		},
 	}
 )
@@ -150,13 +160,12 @@ func TestJSONRoundTripBigNumber(t *testing.T) {
 func TestDecodeToValue(t *testing.T) {
 	t.Parallel()
 
-	mv := OfValue()
-
 	decoders := []struct {
 		name string
 		fn   func([]byte) (ast.Value, error)
 	}{
-		{name: "regal", fn: mv.Decode}, {name: "opa", fn: opaDecodeToValue},
+		{name: "regal", fn: OfValue().Decode},
+		{name: "opa", fn: opaDecodeToValue},
 	}
 
 	for _, test := range valueTests {

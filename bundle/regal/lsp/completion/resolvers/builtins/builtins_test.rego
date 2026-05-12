@@ -1,10 +1,12 @@
 package regal.lsp.completion.resolvers.builtins_test
 
+import data.regal.lsp.completion.resolvers.builtins
+
 test_resolve_builtin_documentation if {
-	input_count := {"params": {"label": "count", "data": {"resolver": "builtins"}}}
-	result_count := data.regal.lsp.completion.resolvers.builtins.resolve
-		with input as input_count
+	result_count := builtins.resolve
 		with data.workspace.builtins as _builtins
+		with input.params.label as "count"
+		with input.params.data as "builtins"
 
 	result_count == {
 		"label": "count",
@@ -12,15 +14,13 @@ test_resolve_builtin_documentation if {
 			"kind": "markdown",
 			"value": "### [count](https://www.openpolicyagent.org/docs/policy-reference/#builtin-aggregates-count)\n\n```rego\nn := count(collection)\n```\n\nCount takes a collection or string and returns the number of elements (or characters) in it.\n\n#### Arguments\n\n- `collection` any: the set/array/object/string to be counted\n\nReturns `n` of type `number`: the count of elements, key/val pairs, or characters, respectively.\n",
 		},
-		"data": {"resolver": "builtins"},
 	}
-	input_hmac := {"params": {"label": "crypto.hmac.md5", "data": {"resolver": "builtins"}}}
-	result_hmac := data.regal.lsp.completion.resolvers.builtins.resolve
-		with input as input_hmac
+	result_hmac := builtins.resolve
 		with data.workspace.builtins as _builtins
+		with input.params.label as "crypto.hmac.md5"
+		with input.params.data as "builtins"
 
 	result_hmac == {
-		"data": {"resolver": "builtins"},
 		"documentation": {
 			"kind": "markdown",
 			"value": "### [crypto.hmac.md5](https://www.openpolicyagent.org/docs/policy-reference/#builtin-crypto.hmac.md5-crypto-hmac-md5)\n\n```rego\ny := crypto.hmac.md5(x, key)\n```\n\nReturns a string representing the MD5 HMAC of the input message using the input key.\n\n#### Arguments\n\n- `x` string: input string\n- `key` string: key to use\n\nReturns `y` of type `string`: MD5-HMAC of `x`\n",

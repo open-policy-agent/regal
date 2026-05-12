@@ -16,7 +16,6 @@ test_code_lenses_for_module if {
 
 	lenses := codelens.lenses
 		with input.params.textDocument.uri as "file://policy.rego"
-		with input.regal.file.name as "policy.rego"
 		with input.regal.file.lines as split(policy, "\n")
 		with data.server.feature_flags.debug_provider as true
 		with data.client.init_options.enableDebugCodelens as true

@@ -4,25 +4,6 @@ import data.regal.ast
 
 import data.regal.lsp.hover.keywords
 
-test_keywords_package if {
-	module := ast.policy("")
-	kwds := keywords.by_row
-		with data.workspace.parsed["file:///p.rego"] as module
-		with input.params.textDocument.uri as "file:///p.rego"
-		with input.regal.file.lines as module.regal.file.lines
-
-	count(kwds) == 1 # lines with keywords
-
-	_keyword_on_row(
-		kwds,
-		1,
-		{
-			"name": "package",
-			"location": {"row": 1, "col": 1},
-		},
-	)
-}
-
 test_keywords_import if {
 	module := ast.policy(`import data.foo`)
 
@@ -31,7 +12,7 @@ test_keywords_import if {
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
-	count(kwds) == 2 # lines with keywords
+	count(kwds) == 1 # lines with keywords
 
 	_keyword_on_row(
 		kwds,
@@ -54,7 +35,7 @@ test_keywords_if if {
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
-	count(kwds) == 2 # lines with keywords
+	count(kwds) == 1 # lines with keywords
 
 	_keyword_on_row(
 		kwds,
@@ -79,7 +60,7 @@ test_keywords_if_on_another_line if {
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
-	count(kwds) == 3 # lines with keywords
+	count(kwds) == 2 # lines with keywords
 
 	_keyword_on_row(
 		kwds,
@@ -101,7 +82,7 @@ test_keywords_some_in if {
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
-	count(kwds) == 3 # lines with keywords
+	count(kwds) == 2 # lines with keywords
 
 	_keyword_on_row(
 		kwds,
@@ -126,7 +107,7 @@ test_keywords_some_no_body if {
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
-	count(kwds) == 2 # lines with keywords
+	count(kwds) == 1 # lines with keywords
 
 	_keyword_on_row(
 		kwds,
@@ -157,7 +138,7 @@ test_keywords_some_in_func_arg if {
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
-	count(kwds) == 2 # lines with keywords
+	count(kwds) == 1 # lines with keywords
 
 	_keyword_on_row(
 		kwds,
@@ -183,7 +164,7 @@ messages contains "hello" if {
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
-	count(kwds) == 2 # lines with keywords
+	count(kwds) == 1 # lines with keywords
 
 	_keyword_on_row(
 		kwds,
@@ -211,7 +192,7 @@ allow if {
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.regal.file.lines as module.regal.file.lines
 
-	count(kwds) == 3 # lines with keywords
+	count(kwds) == 2 # lines with keywords
 
 	_keyword_on_row(
 		kwds,

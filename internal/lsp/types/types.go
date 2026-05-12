@@ -75,52 +75,11 @@ type (
 		TextDocument TextDocumentIdentifier `json:"textDocument"`
 		Position     Position               `json:"position"`
 	}
-	DefinitionParams         = TextDocumentPositionParams
-	HoverParams              = TextDocumentPositionParams
-	LinkedEditingRangeParams = TextDocumentPositionParams
-
-	CompletionParams struct {
-		TextDocument TextDocumentIdentifier `json:"textDocument"`
-		Position     Position               `json:"position"`
-		Context      *CompletionContext     `json:"context,omitempty"`
-	}
-
-	CompletionContext struct {
-		TriggerCharacter string `json:"triggerCharacter"`
-		TriggerKind      uint   `json:"triggerKind"`
-	}
-
-	CompletionList struct {
-		Items        []CompletionItem `json:"items"`
-		IsIncomplete bool             `json:"isIncomplete"`
-	}
-
-	CompletionItem struct {
-		Data            any                         `json:"data,omitempty"`
-		LabelDetails    *CompletionItemLabelDetails `json:"labelDetails,omitempty"`
-		Documentation   *MarkupContent              `json:"documentation,omitempty"`
-		TextEdit        *TextEdit                   `json:"textEdit,omitempty"`
-		InserTextFormat *uint                       `json:"insertTextFormat,omitempty"`
-		SortText        *string                     `json:"sortText,omitempty"`
-		Label           string                      `json:"label"`
-		Detail          string                      `json:"detail"`
-		Kind            uint                        `json:"kind"`
-		Preselect       bool                        `json:"preselect"`
-	}
-
-	CompletionItemLabelDetails struct {
-		Description string `json:"description"`
-		Detail      string `json:"detail"`
-	}
+	DefinitionParams = TextDocumentPositionParams
+	HoverParams      = TextDocumentPositionParams
 
 	WorkspaceFoldersServerCapabilities struct {
 		Supported bool `json:"supported"`
-	}
-
-	CodeLens struct {
-		Command *Command `json:"command,omitempty"`
-		Data    *any     `json:"data,omitempty"`
-		Range   Range    `json:"range"`
 	}
 
 	Command struct {
@@ -128,11 +87,6 @@ type (
 		Title     string `json:"title"`
 		Tooltip   string `json:"tooltip"`
 		Command   string `json:"command"`
-	}
-
-	LinkedEditingRanges struct {
-		Ranges      []Range `json:"ranges"`
-		WordPattern *string `json:"wordPattern,omitempty"`
 	}
 
 	ExecuteCommandParams struct {
@@ -241,21 +195,6 @@ type (
 		Kind          symbols.SymbolKind `json:"kind"`
 	}
 
-	InlayHint struct {
-		Tooltip      MarkupContent `json:"tooltip"`
-		Position     Position      `json:"position"`
-		Data         any           `json:"data,omitempty"`
-		Label        string        `json:"label"`
-		Kind         uint8         `json:"kind"`
-		PaddingLeft  bool          `json:"paddingLeft"`
-		PaddingRight bool          `json:"paddingRight"`
-	}
-
-	InlayHintParams struct {
-		TextDocument TextDocumentIdentifier `json:"textDocument"`
-		Range        Range                  `json:"range"`
-	}
-
 	DidSaveTextDocumentParams struct {
 		Text         *string                `json:"text,omitempty"`
 		TextDocument TextDocumentIdentifier `json:"textDocument"`
@@ -315,11 +254,6 @@ type (
 		Character uint `json:"character"`
 	}
 
-	MarkupContent struct {
-		Kind  string `json:"kind"`
-		Value string `json:"value"`
-	}
-
 	DidOpenTextDocumentParams struct {
 		TextDocument TextDocumentItem `json:"textDocument"`
 	}
@@ -340,11 +274,6 @@ type (
 	Location struct {
 		URI   string `json:"uri"`
 		Range Range  `json:"range"`
-	}
-
-	Hover struct {
-		Contents MarkupContent `json:"contents"`
-		Range    Range         `json:"range"`
 	}
 
 	FilesParams struct {
@@ -376,37 +305,6 @@ type (
 
 	TraceParams struct {
 		Value string `json:"value"`
-	}
-
-	SignatureHelpParams struct {
-		TextDocument TextDocumentIdentifier `json:"textDocument"`
-		Position     Position               `json:"position"`
-		Context      *SignatureHelpContext  `json:"context,omitempty"`
-	}
-
-	SignatureHelpContext struct {
-		TriggerKind         uint           `json:"triggerKind"`
-		TriggerCharacter    *string        `json:"triggerCharacter,omitempty"`
-		IsRetrigger         bool           `json:"isRetrigger"`
-		ActiveSignatureHelp *SignatureHelp `json:"activeSignatureHelp,omitempty"`
-	}
-
-	SignatureHelp struct {
-		Signatures      []SignatureInformation `json:"signatures"`
-		ActiveSignature *uint                  `json:"activeSignature,omitempty"`
-		ActiveParameter *uint                  `json:"activeParameter,omitempty"`
-	}
-
-	SignatureInformation struct {
-		Label           string                 `json:"label"`
-		Documentation   string                 `json:"documentation,omitempty"`
-		Parameters      []ParameterInformation `json:"parameters,omitempty"`
-		ActiveParameter *uint                  `json:"activeParameter,omitempty"`
-	}
-
-	ParameterInformation struct {
-		Label         string  `json:"label"`
-		Documentation *string `json:"documentation,omitempty"`
 	}
 
 	SemanticTokens struct {

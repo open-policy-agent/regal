@@ -6,6 +6,7 @@
 # schemas:
 #   - input:        schema.regal.lsp.common
 #   - input.params: schema.regal.lsp.textdocumentposition
+# scope: subpackages
 package regal.lsp.hover
 
 import data.regal.util
@@ -29,7 +30,8 @@ result["response"] := hover if {
 	text := input.regal.file.lines[line]
 	call := location.ref_at(text, char + 1)
 
-	# ensure this is a call, as e.g. `contains` could refer either to the built-in function or the keyword
+	# ensure this is a call, as e.g. `contains` could refer
+	# either to the built-in function or the keyword
 	substring(text, char + call.offset_after, 1) == "("
 
 	hover := {
@@ -60,7 +62,8 @@ result["response"] := hover if {
 	word := location.word_at(text, char + 1)
 
 	# cheap check before more expensive AST keywords lookup
-	word.text in {"if", "package", "import", "contains", "some", "every", "in"}
+	word.text in {"if", "import", "not", "contains", "some", "every", "in"}
+	not _contains_call(text, word, char)
 
 	keyword := _keyword(word.text, line + 1, char + 1)
 
@@ -80,6 +83,11 @@ result["response"] := hover if {
 			},
 		},
 	}
+}
+
+_contains_call(text, word, char) if {
+	word.text == "contains"
+	substring(text, char + word.offset_after, 1) == "("
 }
 
 _keyword(name, row, col) := keyword if {

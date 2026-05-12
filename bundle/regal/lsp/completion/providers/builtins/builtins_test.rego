@@ -31,7 +31,7 @@ test_simple_builtin_completion if {
 					"start": {"character": 9, "line": 3},
 				},
 			},
-			"data": {"resolver": "builtins"},
+			"data": "builtins",
 		},
 		{
 			"detail": "built-in function",
@@ -44,7 +44,7 @@ test_simple_builtin_completion if {
 					"start": {"character": 9, "line": 3},
 				},
 			},
-			"data": {"resolver": "builtins"},
+			"data": "builtins",
 		},
 	}
 }
@@ -77,7 +77,7 @@ test_simple_builtin_completion_single_match if {
 				"start": {"character": 9, "line": 3},
 			},
 		},
-		"data": {"resolver": "builtins"},
+		"data": "builtins",
 	}}
 }
 
@@ -109,7 +109,7 @@ test_simple_builtin_completion_single_match_longer_ref if {
 				"start": {"character": 9, "line": 3},
 			},
 		},
-		"data": {"resolver": "builtins"},
+		"data": "builtins",
 	}}
 }
 

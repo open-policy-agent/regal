@@ -6,12 +6,10 @@ import (
 	"io"
 	"log"
 	"strconv"
-	"strings"
 
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
-	"github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/funsafe"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
@@ -19,6 +17,9 @@ import (
 	_ "github.com/open-policy-agent/regal/pkg/roast/intern"
 )
 
+// ValueMarshaller provides the most efficient methods for encoding and decoding
+// OPA's ast.Values matching JSON types, as plain JSON. Use this for when you do
+// **not** want RoAST.
 type ValueMarshaller struct {
 	config jsoniter.Config
 	json   jsoniter.API
@@ -85,16 +86,6 @@ func MustJSONRoundTrip(from, to any) {
 	}
 }
 
-// MustJSONRoundTripTo convert any value to JSON and back again, returning the new value or exit on failure.
-func MustJSONRoundTripTo[T any](from any) T {
-	to, err := JSONRoundTripTo[T](from)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return to
-}
-
 // NewIndentEncoder creates a new JSON encoder with the specified prefix and indent, encoding to w.
 func NewIndentEncoder(w io.Writer, prefix, indent string) *jsoniter.Encoder {
 	enc := JSON().NewEncoder(w)
@@ -115,7 +106,7 @@ func (m ValueMarshaller) Encode(out io.Writer, value ast.Value) error {
 		return stream.Error
 	}
 
-	m.valueToJSON(value, stream)
+	m.toJSON(value, stream)
 
 	return stream.Flush()
 }
@@ -124,7 +115,7 @@ func (m ValueMarshaller) Decode(bs []byte) (val ast.Value, err error) {
 	iter := m.json.BorrowIterator(bs)
 	defer m.json.ReturnIterator(iter)
 
-	value := m.jsonTypeToValue(iter, iter.WhatIsNext())
+	value := m.toValue(iter, iter.WhatIsNext())
 	if iter.Error != nil && !errors.Is(iter.Error, io.EOF) {
 		err = iter.Error
 	}
@@ -132,7 +123,7 @@ func (m ValueMarshaller) Decode(bs []byte) (val ast.Value, err error) {
 	return value, err
 }
 
-func (m ValueMarshaller) valueToJSON(value ast.Value, stream *jsoniter.Stream) {
+func (m ValueMarshaller) toJSON(value ast.Value, stream *jsoniter.Stream) {
 	switch v := value.(type) {
 	case ast.Null:
 		stream.WriteNil()
@@ -147,7 +138,7 @@ func (m ValueMarshaller) valueToJSON(value ast.Value, stream *jsoniter.Stream) {
 
 		l := v.Len()
 		for i := range l {
-			m.valueToJSON(v.Elem(i).Value, stream)
+			m.toJSON(v.Elem(i).Value, stream)
 
 			if i != l-1 {
 				stream.WriteMore()
@@ -160,7 +151,7 @@ func (m ValueMarshaller) valueToJSON(value ast.Value, stream *jsoniter.Stream) {
 
 		l := v.Len()
 		for i, term := range v.Slice() {
-			m.valueToJSON(term.Value, stream)
+			m.toJSON(term.Value, stream)
 
 			if i != l-1 {
 				stream.WriteMore()
@@ -190,7 +181,7 @@ func (m ValueMarshaller) valueToJSON(value ast.Value, stream *jsoniter.Stream) {
 					stream.WriteObjectField(key.String())
 				}
 
-				m.valueToJSON(elem.Value().Value, stream)
+				m.toJSON(elem.Value().Value, stream)
 
 				if i != v.Len()-1 {
 					stream.WriteMore()
@@ -204,19 +195,17 @@ func (m ValueMarshaller) valueToJSON(value ast.Value, stream *jsoniter.Stream) {
 	}
 }
 
-func (m ValueMarshaller) jsonTypeToValue(iter *jsoniter.Iterator, valueType jsoniter.ValueType) ast.Value {
+func (m ValueMarshaller) toValue(iter *jsoniter.Iterator, valueType jsoniter.ValueType) ast.Value {
 	switch valueType {
 	case jsoniter.StringValue:
-		// must *not* be used directly in a new string term, as the underlying value will be mutated
-		strUnsafe := util.ByteSliceToString(iter.ReadStringAsSlice())
-
-		if ast.HasInternedValue(strUnsafe) {
-			// zero alloc path
-			return ast.InternedTerm(strUnsafe).Value
-		}
-
-		// not interned, pay 2 allocs (one for the string, one for ast.Value boxing)
-		return ast.String(strings.Clone(strUnsafe))
+		// NOTE: sadly, this allocates :/ which it wouldn't have to do if
+		// iter.ReadStringAsSlice() actually worked... but it fails for all
+		// strings with escapes, as for some reason it'll then stop at the
+		// first **escaped quote** instead of the actual end of the string.
+		// perhaps there's some elaborate way to work around this, but since
+		// we'll be ditching jsoniter for json/v2 at our first opportunity,
+		// not spending more time here.
+		return ast.InternedTerm(iter.ReadString()).Value
 	case jsoniter.NumberValue:
 		if m.config.UseNumber {
 			// NOTE: this always allocates for reading the number as a string,
@@ -228,7 +217,6 @@ func (m ValueMarshaller) jsonTypeToValue(iter *jsoniter.Iterator, valueType json
 
 			return ast.Number(jsonNum)
 		}
-
 		// NOTE: this, on the other hand, is not safe if e.g. "uncommon" or huge numbers are expected,
 		// so only use this when you know the input is safe, and never on arbitrary user input
 		jsonFloat := iter.ReadFloat64()
@@ -247,7 +235,7 @@ func (m ValueMarshaller) jsonTypeToValue(iter *jsoniter.Iterator, valueType json
 		var terms []*ast.Term // we don't know the length here so no pre-alloc :/
 
 		iter.ReadArrayCB(func(iter *jsoniter.Iterator) bool {
-			elem := m.jsonTypeToValue(iter, iter.WhatIsNext())
+			elem := m.toValue(iter, iter.WhatIsNext())
 			if elem == nil {
 				return false
 			}
@@ -270,7 +258,7 @@ func (m ValueMarshaller) jsonTypeToValue(iter *jsoniter.Iterator, valueType json
 		var items [][2]*ast.Term // same as above, no pre-alloc
 
 		iter.ReadObjectCB(func(iter *jsoniter.Iterator, field string) bool {
-			value := m.jsonTypeToValue(iter, iter.WhatIsNext())
+			value := m.toValue(iter, iter.WhatIsNext())
 			if value == nil {
 				return false
 			}

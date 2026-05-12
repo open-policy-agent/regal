@@ -18,7 +18,9 @@ import data.regal.ast
 
 # METADATA
 # entrypoint: true
-result["response"] := items
+default result["response"] := null
+
+result["response"] := items if items != set()
 
 # METADATA
 # description: Set of links in document

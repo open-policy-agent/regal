@@ -19,32 +19,25 @@ type (
 		hash      int
 		sortGuard *sync.Once
 	}
-
 	eface struct {
 		rtype unsafe.Pointer
 		data  unsafe.Pointer
 	}
-
 	objectElem struct {
 		key   *ast.Term
 		value *ast.Term
 		next  *objectElem //nolint:unused
 	}
-
 	objectElemSlice []*objectElem
 )
 
-func ObjectElems(o ast.Object) objectElemSlice {
-	ef := (*eface)(unsafe.Pointer(&o))
-	obj := (*Object)(ef.data)
-
-	return obj.keys
-}
-
-// Elems returns a slice of object elements, without heap allocations.
+// ObjectElems returns a slice of object elements, without heap allocations.
 // Use Key() and Value() to access the key and value of each element.
-func (o *Object) Elems() objectElemSlice {
-	return o.keys
+func ObjectElems(o ast.Object) objectElemSlice {
+	// Since ast.Object is an interface, we must first convert it to the internal
+	// form of an interface to be able to then access the underlying concrete type
+	// (*ast.object).
+	return (*Object)((*eface)(unsafe.Pointer(&o)).data).keys
 }
 
 func (oe *objectElem) Key() *ast.Term {

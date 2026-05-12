@@ -55,10 +55,6 @@ type Client struct {
 	Capabilities ast.Value             `json:"capabilities,omitempty"`
 }
 
-func NewGenericClient() Client {
-	return Client{Identifier: clients.IdentifierGeneric}
-}
-
 func (c *Client) UnmarshalJSON(data []byte) (err error) {
 	var m map[string]any
 	if err := encoding.SafeNumberConfig.Unmarshal(data, &m); err != nil {
