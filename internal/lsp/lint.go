@@ -13,6 +13,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/completions/refs"
+	"github.com/open-policy-agent/regal/internal/lsp/store"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
@@ -79,7 +80,7 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		opts.Cache.SetModule(opts.FileURI, module)
 		opts.Cache.SetSuccessfulParseLineCount(opts.FileURI, numLines)
 
-		if err := PutFileMod(ctx, opts.Store, opts.FileURI, module); err != nil {
+		if err := store.PutFileMod(ctx, opts.Store, opts.FileURI, module); err != nil {
 			return false, fmt.Errorf("failed to update rego store with parsed module: %w", err)
 		}
 
@@ -92,7 +93,7 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 			}
 		}
 
-		if err = PutFileRefs(ctx, opts.Store, opts.FileURI, ruleRefs); err != nil {
+		if err = store.PutFileRefs(ctx, opts.Store, opts.FileURI, ruleRefs); err != nil {
 			return false, fmt.Errorf("failed to update rego store with defined refs: %w", err)
 		}
 
