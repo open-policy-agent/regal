@@ -19,10 +19,10 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 
-	"github.com/open-policy-agent/regal/internal/lsp"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
+	"github.com/open-policy-agent/regal/internal/lsp/store"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/roast/transforms/module"
@@ -167,15 +167,15 @@ func storeForDocument(tb testing.TB, doc document, jsonData []byte) storage.Stor
 		}
 	}
 
-	store := inmem.NewWithOpts(inmem.OptReturnASTValuesOnRead(true))
-	if err := storage.WriteOne(tb.Context(), store, storage.AddOp, storage.RootPath, data); err != nil {
+	stg := inmem.NewWithOpts(inmem.OptReturnASTValuesOnRead(true))
+	if err := storage.WriteOne(tb.Context(), stg, storage.AddOp, storage.RootPath, data); err != nil {
 		tb.Fatalf("failed to write to store: %v", err)
 	}
 
 	bis := rego.BuiltinsForCapabilities(ast.CapabilitiesForThisVersion())
-	must.Equal(tb, nil, lsp.PutBuiltins(tb.Context(), store, bis), "failed to update builtins in storage")
+	must.Equal(tb, nil, store.PutBuiltins(tb.Context(), stg, bis), "failed to update builtins in storage")
 
-	return store
+	return stg
 }
 
 func handlerTests(tb testing.TB) iter.Seq2[string, testCase] {

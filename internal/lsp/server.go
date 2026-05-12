@@ -38,6 +38,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
+	"github.com/open-policy-agent/regal/internal/lsp/store"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/update"
@@ -192,17 +193,17 @@ func NewLanguageServer(ctx context.Context, opts *LanguageServerOptions) *Langua
 func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, cfg *config.Config) *LanguageServer {
 	c := cache.NewCache()
 	qc := query.NewCache()
-	store := NewRegalStore()
+	rstore := store.NewRegalStore()
 
 	featureFlags := util.Or(opts.FeatureFlags, DefaultServerFeatureFlags)
 
-	_ = PutServer(ctx, store, types.ServerContext{FeatureFlags: *featureFlags, Version: version.Version})
+	_ = store.PutServer(ctx, rstore, types.ServerContext{FeatureFlags: *featureFlags, Version: version.Version})
 
 	ls := &LanguageServer{
 		cache:              c,
 		queryCache:         qc,
 		loadedConfig:       cfg,
-		regoStore:          store,
+		regoStore:          rstore,
 		log:                opts.Logger,
 		featureFlags:       *featureFlags,
 		initializationGate: make(chan struct{}),
@@ -220,7 +221,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		loadedConfigAllRegoVersions: concurrent.MapOf(make(map[string]ast.RegoVersion)),
 	}
 
-	ls.regoRouter = rego.NewRegoRouter(ctx, store, qc, rego.Providers{
+	ls.regoRouter = rego.NewRegoRouter(ctx, rstore, qc, rego.Providers{
 		ContextProvider:              ls.regalContext,
 		IgnoredProvider:              ls.ignoreURI,
 		ContentProvider:              ls.cache.GetFileContents,
@@ -613,7 +614,7 @@ func (l *LanguageServer) setClient(ctx context.Context, client types.Client) {
 	l.clientLock.Lock()
 	l.client = client
 
-	if err := PutClient(ctx, l.regoStore, client); err != nil {
+	if err := store.PutClient(ctx, l.regoStore, client); err != nil {
 		l.clientLock.Unlock()
 		panic(fmt.Sprintf("failed to store client in rego store: %s", err))
 	}
@@ -636,7 +637,7 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
 	l.loadedConfig = &conf
 	l.loadedConfigLock.Unlock()
 
-	if err := PutConfig(ctx, l.regoStore, &conf); err != nil {
+	if err := store.PutConfig(ctx, l.regoStore, &conf); err != nil {
 		l.log.Message("failed to update config in storage: %v", err)
 	}
 
@@ -668,7 +669,7 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
 
 	l.loadedBuiltins.Set(capsURL, bis)
 
-	if err := PutBuiltins(ctx, l.regoStore, bis); err != nil {
+	if err := store.PutBuiltins(ctx, l.regoStore, bis); err != nil {
 		l.log.Message("failed to update builtins in storage: %v", err)
 	}
 
@@ -687,7 +688,7 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
 			l.cache.SetIgnoredFileContents(k, contents)
 		}
 
-		if err := RemoveFileMod(ctx, l.regoStore, k); err != nil {
+		if err := store.RemoveFileMod(ctx, l.regoStore, k); err != nil {
 			l.log.Message("failed to remove mod from store: %s", err)
 		}
 	}

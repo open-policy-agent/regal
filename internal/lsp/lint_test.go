@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/lsp/store"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
@@ -96,7 +97,7 @@ allow[msg] { 1 == 1; msg := "hello" }
 
 			success := must.Return(updateParse(t.Context(), updateParseOpts{
 				Cache:            c,
-				Store:            NewRegalStore(),
+				Store:            store.NewRegalStore(),
 				FileURI:          testData.fileURI,
 				Builtins:         ast.BuiltinMap,
 				RegoVersion:      testData.regoVersion,
