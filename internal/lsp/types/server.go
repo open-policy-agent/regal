@@ -16,4 +16,7 @@ type ServerFeatureFlags struct {
 	// OPATestProvider indicates whether the server supports testing-related features
 	// including running Rego tests via LSP command and test location notifications.
 	OPATestProvider bool `json:"opa_test_provider"`
+	// TestCreationProvider indicates whether the server supports the regal.createTest
+	// command for creating tests from rule dependencies.
+	TestCreationProvider bool `json:"test_creation_provider"`
 }

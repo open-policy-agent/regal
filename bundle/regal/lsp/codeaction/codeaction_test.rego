@@ -141,7 +141,7 @@ test_code_actions_only_source if {
 		with input.params.context.diagnostics as []
 		with input.params.context.only as ["source"]
 
-	count(r) == 1
+	count(r) == 2
 
 	some action in r
 
@@ -150,6 +150,27 @@ test_code_actions_only_source if {
 	action.command.command == "regal.explorer"
 	action.command.title == "Explore compiler stages for this policy"
 	action.command.tooltip == "Explore compiler stages for this policy"
+	count(action.command.arguments) == 1
+	action.command.arguments[0].target == "file:///workspace/policy.rego"
+}
+
+test_code_actions_source_create_test if {
+	r := codeaction.actions
+		with data.client.identifier as client.identifiers.generic
+		with input.regal.environment.workspace_root_uri as "file:///workspace"
+		with input.params.textDocument.uri as "file:///workspace/policy.rego"
+		with input.params.context.diagnostics as []
+		with input.params.context.only as ["source.createTest"]
+
+	count(r) == 1
+
+	some action in r
+
+	action.title == "Create tests for this file"
+	action.kind == "source.createTest"
+	action.command.command == "regal.createTest"
+	action.command.title == "Create tests for this file"
+	action.command.tooltip == "Create test cases for all rules in this file"
 	count(action.command.arguments) == 1
 	action.command.arguments[0].target == "file:///workspace/policy.rego"
 }
@@ -175,7 +196,7 @@ test_code_actions_empty_only_means_all if {
 		with input.params.context.only as []
 		with data.client.identifier as client.identifiers.vscode
 
-	count(r) == 4
+	count(r) == 5
 }
 
 _diagnostics["opa-fmt"] := {
