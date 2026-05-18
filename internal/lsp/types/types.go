@@ -1,8 +1,6 @@
 package types
 
 import (
-	"encoding/json"
-
 	"github.com/open-policy-agent/regal/internal/lsp/types/symbols"
 )
 
@@ -39,33 +37,6 @@ type (
 		EnableServerTesting bool `json:"enableServerTesting,omitempty"`
 	}
 
-	InitializeParams struct {
-		InitializationOptions *InitializationOptions `json:"initializationOptions,omitempty"`
-		ClientInfo            ClientInfo             `json:"clientInfo"`
-		Locale                string                 `json:"locale"`
-		RootPath              string                 `json:"rootPath"`
-		RootURI               string                 `json:"rootUri"`
-		Trace                 string                 `json:"trace"`
-		WorkspaceFolders      *[]WorkspaceFolder     `json:"workspaceFolders"`
-		Capabilities          *json.RawMessage       `json:"capabilities,omitempty"`
-		ProcessID             int                    `json:"processId"`
-	}
-
-	WorkspaceFolder struct {
-		URI  string `json:"uri"`
-		Name string `json:"name"`
-	}
-
-	ClientInfo struct {
-		Name    string `json:"name"`
-		Version string `json:"version"`
-	}
-
-	ShowMessageParams struct {
-		Message string `json:"message"`
-		Type    uint   `json:"type"`
-	}
-
 	ServerInfo struct {
 		Name    string `json:"name"`
 		Version string `json:"version"`
@@ -77,17 +48,6 @@ type (
 	}
 	DefinitionParams = TextDocumentPositionParams
 	HoverParams      = TextDocumentPositionParams
-
-	WorkspaceFoldersServerCapabilities struct {
-		Supported bool `json:"supported"`
-	}
-
-	Command struct {
-		Arguments *[]any `json:"arguments,omitempty"`
-		Title     string `json:"title"`
-		Tooltip   string `json:"tooltip"`
-		Command   string `json:"command"`
-	}
 
 	ExecuteCommandParams struct {
 		Command   string `json:"command"`
@@ -334,27 +294,6 @@ type (
 	ExplorerResult struct {
 		Stages []ExplorerStageResult `json:"stages"`
 		Plan   string                `json:"plan,omitempty"`
-	}
-
-	ShowDocumentParams struct {
-		URI       string `json:"uri"`
-		External  *bool  `json:"external,omitempty"`
-		TakeFocus *bool  `json:"takeFocus,omitempty"`
-		Selection *Range `json:"selection,omitempty"`
-	}
-
-	ShowDocumentResult struct {
-		Success bool `json:"success"`
-	}
-
-	MessageActionItem struct {
-		Title string `json:"title"`
-	}
-
-	ShowMessageRequestParams struct {
-		Type    uint                `json:"type"`
-		Message string              `json:"message"`
-		Actions []MessageActionItem `json:"actions"`
 	}
 
 	iuint interface{ ~int | ~uint }

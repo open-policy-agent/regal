@@ -370,12 +370,6 @@
             "workspace_root": {
               "type": "string"
             },
-            "input_dot_json": {
-              "type": "object"
-            },
-            "input_dot_json_path": {
-              "type": "string"
-            },
             "rego_version": {
               "type": "integer",
               "minimum": 0,

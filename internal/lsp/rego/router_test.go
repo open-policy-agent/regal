@@ -214,6 +214,9 @@ func providersForTest(tb testing.TB, test testCase) rego.Providers {
 		SuccessfulParseCountProvider: func(string) (uint, bool) {
 			return 1, true
 		},
+		InputPathProvider: func(string) string {
+			return "input.json"
+		},
 	}
 }
 

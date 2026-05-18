@@ -1,15 +1,12 @@
 package lsp
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
@@ -75,83 +72,4 @@ func TestEvalWorkspacePathInternalData(t *testing.T) {
 	act := util.Sorted(must.Return(util.AnySliceTo[string](val))(t))
 
 	assert.SlicesEqual(t, []string{"capabilities", "combined_config", "user_config"}, act)
-}
-
-func TestFindInputPath(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct{ fileExt, fileContent string }{{"json", `{"x": true}`}, {"yaml", "x: true"}}
-
-	for _, tc := range cases {
-		t.Run(tc.fileExt, func(t *testing.T) {
-			t.Parallel()
-
-			tmpDir := t.TempDir()
-			workspacePath := filepath.Join(tmpDir, "workspace")
-			file := filepath.Join(tmpDir, "workspace", "foo", "bar", "baz.rego")
-
-			must.MkdirAll(t, workspacePath, "foo", "bar")
-			must.Equal(t, "", rio.FindInputPath(file, workspacePath), "expected no input path to be found")
-
-			inputPath := filepath.Join(workspacePath, "foo", "bar", "input."+tc.fileExt)
-			createWithContent(t, inputPath, tc.fileContent)
-
-			assert.Equal(t, inputPath, rio.FindInputPath(file, workspacePath), "input")
-			must.Remove(t, inputPath)
-
-			workspaceInputPath := filepath.Join(workspacePath, "input."+tc.fileExt)
-			createWithContent(t, workspaceInputPath, tc.fileContent)
-
-			assert.Equal(t, workspaceInputPath, rio.FindInputPath(file, workspacePath), "input")
-		})
-	}
-}
-
-func TestFindInput(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct{ fileType, fileContent string }{{"json", `{"x": true}`}, {"yaml", "x: true"}}
-
-	for _, tc := range cases {
-		t.Run(tc.fileType, func(t *testing.T) {
-			t.Parallel()
-
-			tmpDir := t.TempDir()
-			workspacePath := filepath.Join(tmpDir, "workspace")
-			file := filepath.Join(tmpDir, "workspace", "foo", "bar", "baz.rego")
-
-			must.MkdirAll(t, workspacePath, "foo", "bar")
-
-			path, value := rio.FindInput(file, workspacePath)
-			must.Equal(t, "", path, "expected no input path to be found")
-			must.Equal(t, nil, value)
-
-			inputPath := filepath.Join(workspacePath, "foo", "bar", "input."+tc.fileType)
-
-			createWithContent(t, inputPath, tc.fileContent)
-
-			path, value = rio.FindInput(file, workspacePath)
-			assert.Equal(t, inputPath, path, "input path")
-			assert.Equal(t, 0, ast.NewObject(rast.Item("x", ast.InternedTerm(true))).Compare(value))
-
-			must.Remove(t, inputPath)
-
-			workspaceInputPath := filepath.Join(workspacePath, "input."+tc.fileType)
-			createWithContent(t, workspaceInputPath, tc.fileContent)
-
-			path, value = rio.FindInput(file, workspacePath)
-			assert.Equal(t, workspaceInputPath, path, "input path")
-			assert.Equal(t, 0, ast.NewObject(rast.Item("x", ast.InternedTerm(true))).Compare(value))
-		})
-	}
-}
-
-func createWithContent(t *testing.T, path, content string) {
-	t.Helper()
-
-	must.Equal(t, nil, rio.WithCreateRecursive(path, func(f *os.File) error {
-		_, err := f.WriteString(content)
-
-		return err
-	}))
 }

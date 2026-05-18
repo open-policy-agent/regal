@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -227,19 +228,18 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
 		switch req.Method {
 		case "window/showMessageRequest":
-			params := must.Return(encoding.JSONUnmarshalTo[types.ShowMessageRequestParams](*req.Params))(t)
-
-			if strings.Contains(params.Message, "No input.json/yaml file was found.") {
+			message := encoding.JSON().Get(*req.Params, "message").ToString()
+			if strings.Contains(message, "No input.json/yaml file was found.") {
 				t.Log("create input.json prompt received, replied to")
 
-				return types.MessageActionItem{Title: "Yes"}, nil
-			} else if strings.Contains(params.Message, "created successfully") {
+				return new(json.RawMessage(`{"title":"Yes"}`)), nil
+			} else if strings.Contains(message, "created successfully") {
 				t.Log("input.json created successfully")
 
 				inputJSONCreated <- struct{}{}
 
 				// The success notification and prompt to open the file
-				return types.MessageActionItem{Title: "Open"}, nil
+				return new(json.RawMessage(`{"title":"Open"}`)), nil
 			}
 
 		case "window/showDocument":
@@ -247,7 +247,7 @@ func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 
 			t.Log("window/showDocument received")
 
-			return types.ShowDocumentResult{Success: true}, nil
+			return new(json.RawMessage(`{"success":true}`)), nil
 		}
 
 		return struct{}{}, nil
@@ -289,11 +289,7 @@ allow if {
 	case <-inputJSONCreated:
 		for {
 			if _, err := os.Stat(filepath.Join(tempDir, "input.json")); err == nil {
-				contents, err := os.ReadFile(filepath.Join(tempDir, "input.json"))
-				if err != nil {
-					t.Fatalf("failed to read input.json: %s", err)
-				}
-
+				contents := must.Return(os.ReadFile(filepath.Join(tempDir, "input.json")))(t)
 				must.Equal(t, `{
   "foo": {
     "bar": "changeme",

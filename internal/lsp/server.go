@@ -34,6 +34,7 @@ import (
 	lsconfig "github.com/open-policy-agent/regal/internal/lsp/config"
 	"github.com/open-policy-agent/regal/internal/lsp/documentsymbol"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
+	"github.com/open-policy-agent/regal/internal/lsp/input"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
@@ -41,6 +42,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/store"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/lsp/window"
 	"github.com/open-policy-agent/regal/internal/update"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/internal/web"
@@ -55,6 +57,12 @@ import (
 )
 
 const (
+	noInputFoundMsg = "No input.json/yaml file was found. " +
+		"This file is used to provide input data for rule evaluation. " +
+		"Would you like to create one?"
+
+	inputCreateSuccessMsg      = "input.json created successfully! Running Evaluate will now pull from this file."
+	crlfWarnMsg                = "CRLF line ending detected. Please change editor setting to use LF for line endings."
 	methodTdPublishDiagnostics = "textDocument/publishDiagnostics"
 	methodWsApplyEdit          = "workspace/applyEdit"
 
@@ -129,6 +137,7 @@ type LanguageServer struct {
 
 	regoStore storage.Store
 	conn      *jsonrpc2.Conn
+	window    *window.Window
 
 	configWatcher               *lsconfig.Watcher
 	loadedConfig                *config.Config
@@ -159,6 +168,8 @@ type LanguageServer struct {
 	testLocationJobs chan fileJob
 	prepareQueryJobs chan struct{}
 	commandRequest   chan types.ExecuteCommandParams
+
+	input *input.Manager
 
 	// templatingFiles tracks files currently being templated to ensure
 	// other updates are not processed while the file is being updated.
@@ -194,7 +205,6 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 	c := cache.NewCache()
 	qc := query.NewCache()
 	rstore := store.NewRegalStore()
-
 	featureFlags := util.Or(opts.FeatureFlags, DefaultServerFeatureFlags)
 
 	_ = store.PutServer(ctx, rstore, types.ServerContext{FeatureFlags: *featureFlags, Version: version.Version})
@@ -206,6 +216,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		regoStore:          rstore,
 		log:                opts.Logger,
 		featureFlags:       *featureFlags,
+		input:              input.NewManager(rstore, opts.Logger),
 		initializationGate: make(chan struct{}),
 		lintJobs:           make(chan lintJob, 10),
 		commandRequest:     make(chan types.ExecuteCommandParams, 10),
@@ -227,9 +238,11 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		ContentProvider:              ls.cache.GetFileContents,
 		ParseErrorsProvider:          ls.cache.GetParseErrors,
 		SuccessfulParseCountProvider: ls.cache.GetSuccessfulParseLineCount,
+		InputPathProvider:            ls.input.FindForPath,
 	})
 
 	ls.regoRouter.RegisterResultHandler("initialize", ls.initializeResultHandler)
+	ls.regoRouter.RegisterResultHandler("initialized", ls.initializedResultHandler)
 	ls.regoRouter.RegisterResultHandler("textDocument/semanticTokens/full", semantictokens.ResultHandler)
 
 	merged, _ := config.WithDefaultsFromBundle(bundle.Embedded(), cfg)
@@ -251,8 +264,6 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 	}
 
 	switch req.Method {
-	case "initialized":
-		return l.handleInitialized(ctx)
 	case "textDocument/definition":
 		return handler.WithParams(req, l.handleTextDocumentDefinition)
 	case "textDocument/diagnostic":
@@ -299,7 +310,10 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return handler.WithParams(req, func(params types.TraceParams) (any, error) {
 			if level, err := log.TraceValueToLevel(params.Value); err != nil {
 				return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams, Message: err.Error()}
-			} else {
+			} else if level != log.LevelOff {
+				// VS Code sets this to "off" a few seconds after initialization,
+				// for no apparent reason. Perhaps we shouldn't use this level to
+				// determine logging, but what else is it for?
 				l.log.SetLevel(level)
 			}
 
@@ -311,28 +325,13 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return emptyStruct, nil
 	}
 
-	// Handles:
-	// - initialize
-	// - textDocument/codeAction
-	// - textDocument/codeLens
-	// - textDocument/completion
-	//   - completionItem/resolve
-	// - textDocument/documentLink
-	// - textDocument/documentHighlight
-	// - textDocument/foldingRange
-	// - textDocument/hover
-	// - textDocument/inlayHint
-	//   - inlayHint/resolve
-	// - textDocument/linkedEditingRange
-	// - textDocument/selectionRange
-	// - textDocument/signatureHelp
-	//
 	// returns jsonrpc2.Error with code jsonrpc2.CodeMethodNotFound if provided unknown method.
 	return l.regoRouter.Handle(ctx, l.conn, req)
 }
 
 func (l *LanguageServer) SetConn(conn *jsonrpc2.Conn) {
 	l.conn = conn
+	l.window = window.New(conn, l.log)
 }
 
 // Shutdown waits for all worker goroutines to complete. The context can be
@@ -385,7 +384,7 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 				case <-ctx.Done():
 					return
 				case job := <-l.lintJobs:
-					l.log.Debug("linting: %s", job.Reason)
+					l.log.Message("linting: %s", job.Reason)
 
 					select {
 					case work <- struct{}{}:
@@ -493,7 +492,6 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 						update.CheckAndWarn(ctx, update.Options{
 							CurrentVersion: version.Version,
 							CurrentTime:    time.Now().UTC(),
-							Debug:          false,
 							StateDir:       config.GlobalConfigDir(true),
 						}, os.Stderr)
 					}
@@ -933,11 +931,8 @@ func (l *LanguageServer) handleTextDocumentDidOpen(
 ) (any, error) {
 	// then we have started the server, and not yet received a suitable root to use.
 	if l.getWorkspaceRootURI() == "" {
-		err := l.updateRootURI(
-			// get the URI of the file's immediate parent
-			l.fromPath(filepath.Dir(uri.ToPath(params.TextDocument.URI))),
-		)
-		if err != nil {
+		// get the URI of the file's immediate parent
+		if err := l.updateRootURI(ctx, l.fromPath(filepath.Dir(uri.ToPath(params.TextDocument.URI)))); err != nil {
 			l.log.Message("failed to update server root URI: %w", err)
 		}
 	}
@@ -1002,15 +997,22 @@ func (l *LanguageServer) handleTextDocumentDidChange(
 		}
 	}
 
-	if ignored := l.setMaybeIgnoredContents(params.TextDocument.URI, contents); !ignored {
-		parseSuccess, err := updateParse(ctx, l.parseOpts(params.TextDocument.URI, l.builtinsForCurrentCapabilities()))
-		if err != nil {
-			l.log.Message("failed to update module for %s: %s", params.TextDocument.URI, err)
-		} else if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
-			l.testLocationJobs <- fileJob{URI: params.TextDocument.URI}
-		}
+	ignored := l.setMaybeIgnoredContents(params.TextDocument.URI, contents)
+	if !ignored {
+		// handle async as we want to acknowledge we handled the change to the client ASAP,
+		// regardless of whether parsing / linting was successful or not
+		go func() {
+			opts := l.parseOpts(params.TextDocument.URI, l.builtinsForCurrentCapabilities())
 
-		l.lintJobs <- lintJob{Reason: "textDocument/didChange"}
+			parseSuccess, err := updateParse(ctx, opts)
+			if err != nil {
+				l.log.Message("failed to update module for %s: %s", params.TextDocument.URI, err)
+			} else if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
+				l.testLocationJobs <- fileJob{URI: params.TextDocument.URI}
+			}
+
+			l.lintJobs <- lintJob{Reason: "textDocument/didChange"}
+		}()
 	}
 
 	return emptyStruct, nil
@@ -1066,14 +1068,7 @@ func (l *LanguageServer) handleTextDocumentDidSave(
 	}
 
 	if slices.ContainsFunc(enabled, util.EqualsAny(ruleNameOPAFmt, ruleNameUseRegoV1)) {
-		resp := types.ShowMessageParams{
-			Type:    2, // warning
-			Message: "CRLF line ending detected. Please change editor setting to use LF for line endings.",
-		}
-
-		if err := l.conn.Notify(ctx, "window/showMessage", resp); err != nil {
-			l.log.Message("failed to notify: %s", err)
-		}
+		l.window.ShowMessage(ctx, types.WarningMessage, crlfWarnMsg)
 	}
 
 	return emptyStruct, nil
@@ -1318,7 +1313,7 @@ func (l *LanguageServer) initializeResultHandler(ctx context.Context, result any
 
 	l.setClient(ctx, response.Regal.Client)
 
-	if err := l.updateRootURI(response.Regal.Workspace.URI); err != nil {
+	if err := l.updateRootURI(ctx, response.Regal.Workspace.URI); err != nil {
 		l.log.Message("failed to set rootURI: %w", err)
 	}
 
@@ -1329,12 +1324,11 @@ func (l *LanguageServer) initializeResultHandler(ctx context.Context, result any
 	return response.Response, nil
 }
 
-func (l *LanguageServer) updateRootURI(rootURI string) error {
+func (l *LanguageServer) updateRootURI(ctx context.Context, rootURI string) error {
 	l.loadedConfigLock.Lock()
 	defer l.loadedConfigLock.Unlock()
 
-	// rootURI not expected to have a trailing slash, remove if present for
-	// consistency
+	// rootURI not expected to have a trailing slash, remove if present for consistency
 	normalizedRootURI := strings.TrimSuffix(rootURI, string(os.PathSeparator))
 
 	configRoots, err := lsconfig.FindConfigRoots(uri.ToPath(normalizedRootURI))
@@ -1386,7 +1380,7 @@ func (l *LanguageServer) updateRootURI(rootURI string) error {
 		l.log.Message("no config file found for workspace")
 	}
 
-	return nil
+	return l.input.LoadFromRoot(ctx, workspaceRootPath)
 }
 
 type fileToLoad struct {
@@ -1402,10 +1396,9 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 		return nil, nil, nil
 	}
 
-	fileCh := make(chan fileToLoad, 1000)
-
 	// Walk the workspace and enqueue files that need loading from disk.
 	walkErr := make(chan error, 1)
+	fileCh := make(chan fileToLoad, 1000)
 
 	go func() {
 		defer close(fileCh)
@@ -1455,7 +1448,7 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 				}
 
 				if _, err := updateParse(ctx, l.parseOpts(f.uri, l.builtinsForCurrentCapabilities())); err != nil {
-					fmt.Fprintln(os.Stderr, "error parse", f.uri)
+					l.log.Message("error parsing file %s", f.uri)
 					mu.Lock()
 
 					failed = append(failed,
@@ -1487,7 +1480,15 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 	return changedOrNewURIs, failed, nil
 }
 
-func (l *LanguageServer) handleInitialized(ctx context.Context) (any, error) {
+func (l *LanguageServer) initializedResultHandler(ctx context.Context, result any) (any, error) {
+	// If the client supports dynamic registration, register for any the Rego
+	// handler returned. Currently this is workspace/didChangeWatchedFiles only.
+	if raw, ok := result.(*json.RawMessage); ok && len(*raw) > 4 { // = len("null")
+		if err := l.conn.Call(ctx, "client/registerCapability", &raw, nil); err != nil {
+			l.log.Message("failed to register workspace/didChangeWatchedFiles capability: %s", err)
+		}
+	}
+
 	// Load workspace contents and start jobs asynchronously
 	// This allows us to respond to the client immediately while workspace
 	// loading happens in the background
@@ -1506,8 +1507,10 @@ func (l *LanguageServer) handleInitialized(ctx context.Context) (any, error) {
 		// must start other workers here otherwise the test locations block
 		l.initializationGateOnce.Do(func() { close(l.initializationGate) })
 
+		builtins := l.builtinsForCurrentCapabilities()
+
 		for _, cnURI := range newURIs {
-			parseSuccess, err := updateParse(ctx, l.parseOpts(cnURI, l.builtinsForCurrentCapabilities()))
+			parseSuccess, err := updateParse(ctx, l.parseOpts(cnURI, builtins))
 			if err != nil {
 				l.log.Message("failed to update module for %s: %s", cnURI, err)
 			} else if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
@@ -1515,9 +1518,7 @@ func (l *LanguageServer) handleInitialized(ctx context.Context) (any, error) {
 			}
 		}
 
-		l.lintJobs <- lintJob{
-			Reason: "Workspace Initialization",
-		}
+		l.lintJobs <- lintJob{Reason: "Workspace Initialization"}
 	}()
 
 	return emptyStruct, nil
@@ -1536,31 +1537,40 @@ func (l *LanguageServer) handleWorkspaceDidChangeWatchedFiles(
 ) (any, error) {
 	changes := false
 
-	for _, change := range params.Changes {
-		// this handles the case of a new config file being created when one did not exist before
-		if util.HasAnySuffix(change.URI, filepath.Join(".regal", "config.yaml"), ".regal.yaml") {
-			if configFile, err := config.Find(l.workspacePath()); err == nil {
-				l.configWatcher.Watch(configFile.Name())
-				rio.CloseIgnore(configFile)
+	for _, change := range slices.Compact(params.Changes) {
+		switch {
+		case change.URI == "":
+		case l.ignoreURI(change.URI):
+			if l.input.HasInputSuffix(change.URI) {
+				switch change.Type {
+				case 1, 2:
+					if err := l.input.Update(ctx, change.URI, nil); err != nil {
+						l.log.Message("failed to update input for %s: %s", change.URI, err)
+					}
+				case 3:
+					if err := l.input.Delete(ctx, change.URI); err != nil {
+						l.log.Message("failed to delete input entry for %s: %s", change.URI, err)
+					}
+				}
+			} else if change.Type == 1 && config.HasConfigSuffix(change.URI) {
+				// this handles the case of a new config file being created when one did not exist before
+				if configFile, err := config.Find(l.workspacePath()); err == nil {
+					l.configWatcher.Watch(configFile.Name())
+					rio.CloseIgnore(configFile)
+				}
+			}
+		case strings.HasSuffix(change.URI, ".rego"):
+			parseSuccess, err := updateParse(ctx, l.parseOpts(change.URI, l.builtinsForCurrentCapabilities()))
+			if err == nil {
+				if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
+					l.testLocationJobs <- fileJob{URI: change.URI}
+				}
+
+				changes = true
+			} else {
+				l.log.Message("failed to update module for %s: %s", change.URI, err)
 			}
 		}
-
-		if change.URI == "" || l.ignoreURI(change.URI) {
-			continue
-		}
-
-		parseSuccess, err := updateParse(ctx, l.parseOpts(change.URI, l.builtinsForCurrentCapabilities()))
-		if err != nil {
-			l.log.Message("failed to update module for %s: %s", change.URI, err)
-
-			continue
-		}
-
-		if l.getClient().InitOptions.EnableServerTesting && parseSuccess {
-			l.testLocationJobs <- fileJob{URI: change.URI}
-		}
-
-		changes = true
 	}
 
 	if changes {
@@ -1730,26 +1740,12 @@ func (l *LanguageServer) handleInputSkeletonPrompt(
 		return false, nil
 	}
 
-	var action types.MessageActionItem
-
-	showMsgCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	msgCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	if err := l.conn.Call(showMsgCtx, "window/showMessageRequest", types.ShowMessageRequestParams{
-		Type: 3, // info
-		Message: "No input.json/yaml file was found. " +
-			"This file is used to provide input data for rule evaluation. " +
-			"Would you like to create one?",
-		Actions: []types.MessageActionItem{
-			{Title: "Yes"},
-			{Title: "No"},
-			{Title: "Ignore"},
-		},
-	}, &action); err != nil {
-		return false, fmt.Errorf("window/showMessageRequest failed: %w", err)
-	}
+	action := l.window.ShowMessageRequest(msgCtx, types.InfoMessage, noInputFoundMsg, "Yes", "No", "Ignore")
 
-	switch action.Title {
+	switch action {
 	case "Yes":
 		data, err := json.MarshalIndent(skeleton, "", "  ")
 		if err != nil {
@@ -1761,25 +1757,9 @@ func (l *LanguageServer) handleInputSkeletonPrompt(
 			return false, fmt.Errorf("failed to create input.json: %w", err)
 		}
 
-		var openAction types.MessageActionItem
-		if err = l.conn.Call(ctx, "window/showMessageRequest", types.ShowMessageRequestParams{
-			Type:    3,
-			Message: "input.json created successfully! Running Evaluate will now pull from this file.",
-			Actions: []types.MessageActionItem{{Title: "Open"}},
-		}, &openAction); err != nil {
-			return true, fmt.Errorf("window/showMessageRequest failed: %w", err)
-		}
-
-		if openAction.Title == "Open" {
-			takeFocus := false
-
-			var showResult types.ShowDocumentResult
-			if err = l.conn.Call(ctx, "window/showDocument", types.ShowDocumentParams{
-				URI:       uri.FromPath(l.getClient().Identifier, inputFile),
-				TakeFocus: &takeFocus,
-			}, &showResult); err != nil {
-				l.log.Message("window/showDocument failed: %v", err)
-			}
+		openAction := l.window.ShowMessageRequest(ctx, types.InfoMessage, inputCreateSuccessMsg, "Open")
+		if openAction == "Open" {
+			l.window.ShowDocument(ctx, uri.FromPath(l.getClient().Identifier, inputFile), false)
 		}
 
 		return true, nil

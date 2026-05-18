@@ -18,43 +18,42 @@ import data.regal.lsp.location
 # METADATA
 # description: items contains found suggestions from `input.json`
 items contains item if {
-	input.regal.environment.input_dot_json_path
+	input.regal.environment.input_path != ""
 
 	line := input.regal.file.lines[input.params.position.line]
-	word := location.ref_at(line, input.params.position.character + 1)
+	line != ""
+	location.in_rule_body(line)
 
-	some [suggestion, type] in _matching_input_suggestions
+	word := location.ref_at(line, input.params.position.character + 1)
+	startswith(word.text, "i")
+
+	edit := location.word_range(word, input.params.position)
+
+	some [suggestion, type] in _input_paths
+
+	startswith(suggestion, word.text)
 
 	item := {
 		"label": suggestion,
 		"kind": kind.variable,
 		"detail": type,
-		"documentation": {
-			"kind": "markdown",
-			"value": $"(inferred from [`input.json`]({input.regal.environment.input_dot_json_path}))",
-		},
+		"documentation": _documentation,
 		"textEdit": {
-			"range": location.word_range(word, input.params.position),
+			"range": edit,
 			"newText": suggestion,
 		},
 	}
 }
 
-_matching_input_suggestions contains [suggestion, type] if {
-	line := input.regal.file.lines[input.params.position.line]
-
-	line != ""
-	location.in_rule_body(line)
-
-	word := location.ref_at(line, input.params.position.character + 1)
-
-	some [suggestion, type] in _input_paths
-
-	startswith(suggestion, word.text)
+_documentation := {
+	"kind": "markdown",
+	"value": $"(inferred from [`input.json`]({input.regal.environment.input_path}))",
 }
 
 _input_paths contains [$"input.{concat(".", path)}", type_name(value)] if {
-	walk(input.regal.environment.input_dot_json, [path, value])
+	input_doc := data.workspace.inputs[input.regal.environment.input_path]
+
+	walk(input_doc, [path, value])
 
 	path != []
 

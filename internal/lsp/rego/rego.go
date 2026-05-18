@@ -52,11 +52,10 @@ type (
 	}
 
 	Environment struct {
-		PathSeparator     string    `json:"path_separator"`
-		WorkspaceRootURI  string    `json:"workspace_root_uri"`
-		WorkspaceRootPath string    `json:"workspace_root_path"`
-		InputDotJSON      ast.Value `json:"input_dot_json,omitempty"`
-		InputDotJSONPath  *string   `json:"input_dot_json_path,omitempty"`
+		PathSeparator     string `json:"path_separator"`
+		WorkspaceRootURI  string `json:"workspace_root_uri"`
+		WorkspaceRootPath string `json:"workspace_root_path"`
+		InputPath         string `json:"input_path,omitempty"`
 	}
 
 	RegalContext struct {
@@ -67,8 +66,8 @@ type (
 	}
 
 	Requirements struct {
-		File         FileRequirements `json:"file"`
-		InputDotJSON bool             `json:"input_dot_json"`
+		File      FileRequirements `json:"file"`
+		InputPath bool             `json:"input_path"`
 	}
 
 	FileRequirements struct {
