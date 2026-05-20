@@ -29,19 +29,12 @@
               "type": "string",
               "description": "File system path of the workspace root"
             },
-            "input_dot_json_path": {
+            "input_path": {
               "type": [
                 "string",
                 "null"
               ],
-              "description": "Path to the input.json file, if found"
-            },
-            "input_dot_json": {
-              "type": [
-                "object",
-                "null"
-              ],
-              "description": "Content of the input.json file, if found"
+              "description": "Path to the closest input.json or input.yaml file, if found"
             },
             "path_separator": {
               "type": "string",

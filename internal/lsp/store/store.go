@@ -33,6 +33,7 @@ func NewRegalStore() storage.Store {
 			// we'll need to conform to the most basic "JSON" format understood by the store
 			"defined_refs": map[string]any{},
 			"builtins":     map[string]any{},
+			"inputs":       map[string]any{},
 		},
 		"client": map[string]any{},
 		"server": map[string]any{},
@@ -82,11 +83,26 @@ func Put[T any](ctx context.Context, store storage.Store, path storage.Path, val
 	})
 }
 
-func write[T any](ctx context.Context, store storage.Store, txn storage.Transaction, path storage.Path, value T) error {
-	var stErr *storage.Error
+func Get(ctx context.Context, store storage.Store, path storage.Path) (val ast.Value, err error) {
+	var res any
+	if res, err = storage.ReadOne(ctx, store, path); err == nil {
+		if v, ok := res.(ast.Value); ok {
+			val = v
+		}
+	}
 
+	return val, err
+}
+
+func Remove(ctx context.Context, store storage.Store, path storage.Path) error {
+	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
+		return remove(ctx, store, txn, path)
+	})
+}
+
+func write[T any](ctx context.Context, store storage.Store, txn storage.Transaction, path storage.Path, value T) error {
 	err := store.Write(ctx, txn, storage.ReplaceOp, path, value)
-	if errors.As(err, &stErr) && stErr.Code == storage.NotFoundErr {
+	if stErr, ok := errors.AsType[*storage.Error](err); ok && stErr.Code == storage.NotFoundErr {
 		if err = store.Write(ctx, txn, storage.AddOp, path, value); err != nil {
 			return fmt.Errorf("failed to add value at path %s in store: %w", path, err)
 		}

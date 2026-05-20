@@ -115,6 +115,10 @@ type (
 	}
 )
 
+func HasConfigSuffix(path string) bool {
+	return util.HasAnySuffix(path, standaloneConfigFileName, ".regal/config.yaml", ".regal\\config.yaml")
+}
+
 func (d *Default) mapToConfig(result any) error {
 	resultMap, ok := result.(map[string]any)
 	if !ok {

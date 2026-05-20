@@ -15,7 +15,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/storage"
 
-	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	ruri "github.com/open-policy-agent/regal/internal/lsp/uri"
@@ -78,6 +77,7 @@ type (
 		IgnoredProvider              func(uri string) bool
 		ParseErrorsProvider          func(uri string) ([]types.Diagnostic, bool)
 		SuccessfulParseCountProvider func(uri string) (uint, bool)
+		InputPathProvider            func(path string) string
 	}
 
 	RegoRouter struct {
@@ -123,7 +123,7 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 			SuccessfulParseLineCount: true,
 			ParseErrors:              true,
 		}}},
-		"textDocument/completion":          {requires: Requirements{File: FileRequirements{Lines: true}, InputDotJSON: true}},
+		"textDocument/completion":          {requires: Requirements{File: FileRequirements{Lines: true}, InputPath: true}},
 		"textDocument/documentLink":        {requires: fileLines},
 		"textDocument/documentHighlight":   {requires: fileLines},
 		"textDocument/foldingRange":        {requires: fileLines},
@@ -135,6 +135,8 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 		"textDocument/signatureHelp":       {requires: fileLines},
 		"completionItem/resolve":           {resolver: passthrough},
 		"inlayHint/resolve":                {resolver: passthrough},
+
+		"initialized": {}, // special case
 	}
 
 	return &RegoRouter{routes: routes, providers: prvs, qc: qc}
@@ -152,7 +154,7 @@ func (m *RegoRouter) RegisterResultHandler(method string, handler ResultHandler)
 	m.resultHandlers[method] = handler
 }
 
-func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
+func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
 	pq := m.qc.Get(query.MainEval)
 	if pq == nil {
 		return nil, fmt.Errorf("no prepared query for %s", query.MainEval)
@@ -173,23 +175,22 @@ func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2
 	}
 
 	if route, ok := m.routes[req.Method]; ok {
-		if strings.HasSuffix(req.Method, "/resolve") && route.resolver != nil {
-			rctx := m.providers.ContextProvider("", Requirements{}) // No requirements for resolvers yet
+		if strings.HasPrefix(req.Method, "textDocument/") {
+			result, err = textDocumentPassthroughHandlerFor(route)(ctx, pq, m.providers, req)
+		} else {
+			rctx := m.providers.ContextProvider("", route.requires) // No requirements for resolvers yet
 			rctx.Query = pq
 
-			return passthrough(ctx, rctx, req)
+			result, err = passthrough(ctx, rctx, req)
 		}
 
-		result, err := textDocumentPassthroughHandlerFor(route)(ctx, pq, m.providers, req)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			if resultHandler, ok := m.resultHandlers[req.Method]; ok {
+				result, err = resultHandler(ctx, result)
+			}
 		}
 
-		if handler, ok := m.resultHandlers[req.Method]; ok {
-			return handler(ctx, result)
-		}
-
-		return result, nil
+		return result, err
 	}
 
 	return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound, Message: "method not supported: " + req.Method}
@@ -205,7 +206,7 @@ func textDocumentPassthroughHandlerFor(route Route) regoHandler {
 		}
 
 		docURI := maybeURI.ToString()
-		if prvs.IgnoredProvider != nil && prvs.IgnoredProvider(docURI) {
+		if prvs.IgnoredProvider != nil && prvs.IgnoredProvider(docURI) || !strings.HasSuffix(docURI, ".rego") {
 			// This is not an error, but perhaps we should wire in some debug logging later
 			return nil, nil
 		}
@@ -262,21 +263,13 @@ func regalContextForRequirements(prvs Providers, uri string, reqs Requirements) 
 		}
 	}
 
-	if reqs.InputDotJSON {
-		path := ruri.ToPath(uri)
-		root := ruri.ToPath(rctx.Environment.WorkspaceRootURI)
-
-		// TODO: Avoid the intermediate map[string]any step and unmarshal directly into ast.Value.
-		inputDotJSONPath, inputDotJSONContent := io.FindInput(path, root)
-		if inputDotJSONPath != "" && inputDotJSONContent != nil {
-			inputDotJSONValue, err := transform.ToOPAInputValue(inputDotJSONContent)
-			if err != nil {
-				return nil, fmt.Errorf("failed to convert input.json to value: %w", err)
-			}
-
-			rctx.Environment.InputDotJSONPath = &inputDotJSONPath
-			rctx.Environment.InputDotJSON = inputDotJSONValue
+	if reqs.InputPath {
+		if prvs.InputPathProvider == nil {
+			return nil, errors.New("input.json path provider required but not provided")
 		}
+
+		path := ruri.ToRelativePath(uri, rctx.Environment.WorkspaceRootURI)
+		rctx.Environment.InputPath = prvs.InputPathProvider(path)
 	}
 
 	return rctx, nil

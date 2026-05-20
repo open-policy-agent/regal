@@ -136,7 +136,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 						"query":       args.Query,
 						"enablePrint": true,
 						"stopOnEntry": true,
-						"inputPath":   rio.FindInputPath(uri.ToPath(args.Target), l.workspacePath()),
+						"inputPath":   l.input.FindForPath(args.Target),
 					}
 
 					responseResult := map[string]any{}
@@ -160,18 +160,8 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 
 				if err != nil {
 					l.log.Message("command failed: %s", err)
-
-					if err := l.conn.Notify(ctx, "window/showMessage", types.ShowMessageParams{
-						Type:    1, // error
-						Message: err.Error(),
-					}); err != nil {
-						l.log.Message("failed to notify client of command error: %s", err)
-					}
-
-					break
-				}
-
-				if fixed {
+					l.window.ShowMessage(ctx, types.ErrorMessage, err.Error())
+				} else if fixed {
 					// Use a timeout context for RPC to ensure it completes during graceful shutdown
 					rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
 
@@ -359,11 +349,7 @@ func (l *LanguageServer) handleIgnoreRuleCommand(_ context.Context, args types.C
 	// TODO: we need to trigger a config reload so that the server starts using
 	// the new config immediately. Currently, the server will pick up the config
 	// change through file system watchers only.
-	if err := os.WriteFile(configPath, []byte(newContent), 0o600); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
-	}
-
-	return nil
+	return util.WrapErr(os.WriteFile(configPath, []byte(newContent), 0o600), "failed to write config file")
 }
 
 func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types.ExecuteCommandParams) error {
@@ -378,12 +364,10 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 	if len(params.Arguments) > 0 {
 		arg, ok := params.Arguments[0].(map[string]any)
 		if !ok {
-			l.log.Message(
+			return fmt.Errorf(
 				"failed to unmarshal regal.explorer command arguments, expected object, got %T",
 				params.Arguments[0],
 			)
-
-			return errors.New("failed to parse explorer arguments")
 		}
 
 		args = types.ExplorerCommandArgs{
@@ -396,9 +380,7 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 	}
 
 	if args.Target == "" {
-		l.log.Message("expected command target, got empty string")
-
-		return errors.New("target file URI is required")
+		return errors.New("explorer: target file URI is required")
 	}
 
 	contents, ok := l.cache.GetFileContents(args.Target)
@@ -441,9 +423,7 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 			stages = append(stages, stage)
 		}
 
-		responseParams := types.ExplorerResult{
-			Stages: stages,
-		}
+		responseParams := types.ExplorerResult{Stages: stages}
 
 		if !hasErrors {
 			if plan, err := explorer.Plan(ctx, path, contents, args.Print); err == nil {
@@ -507,21 +487,11 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 	}
 
 	for _, filename := range filesToOpen {
-		showParams := types.ShowDocumentParams{
-			URI:       uri.FromPath(l.getClient().Identifier, filename),
-			TakeFocus: new(false),
-		}
-
-		var result types.ShowDocumentResult
-
 		// Use a timeout context for RPC to ensure it completes during graceful shutdown
 		rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
 
 		//nolint:contextcheck
-		if err := l.conn.Call(rpcCtx, "window/showDocument", showParams, &result); err != nil {
-			l.log.Message("window/showDocument failed for %s: %s", filename, err)
-		}
-
+		l.window.ShowDocument(rpcCtx, uri.FromPath(l.getClient().Identifier, filename), false)
 		rpcCancel()
 	}
 
@@ -531,21 +501,11 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 			if err := os.WriteFile(planFile, []byte(plan), 0o600); err != nil {
 				l.log.Message("failed to write plan file: %s", err)
 			} else {
-				showParams := types.ShowDocumentParams{
-					URI:       uri.FromPath(l.getClient().Identifier, planFile),
-					TakeFocus: new(false),
-				}
-
-				var result types.ShowDocumentResult
-
 				// Use a timeout context for RPC to ensure it completes during graceful shutdown
 				rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
 
 				//nolint:contextcheck
-				if err := l.conn.Call(rpcCtx, "window/showDocument", showParams, &result); err != nil {
-					l.log.Message("window/showDocument failed for plan: %s", err)
-				}
-
+				l.window.ShowDocument(rpcCtx, uri.FromPath(l.getClient().Identifier, planFile), false)
 				rpcCancel()
 			}
 		}

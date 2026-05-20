@@ -39,48 +39,41 @@ var (
 	regalEvalUseAsInputComment = regexp.MustCompile(`^\s*regal eval:\s*use-as-input`)
 )
 
-type EvalResult struct {
-	Value       any                         `json:"value"`
-	PrintOutput map[string]map[int][]string `json:"printOutput"`
-	IsUndefined bool                        `json:"isUndefined"`
-}
-
-type PrintHook struct {
-	Output map[string]map[int][]string
-	// FileNameBase if set, is prepended to filenames in print output. Needed
-	// because rego files are evaluated with relative paths (so errors match
-	// OPA CLI format) but print hook output consumers need full URIs.
-	FileNameBase string
-}
+type (
+	EvalResult struct {
+		Value       any                         `json:"value"`
+		PrintOutput map[string]map[int][]string `json:"printOutput"`
+		IsUndefined bool                        `json:"isUndefined"`
+	}
+	PrintHook struct {
+		Output map[string]map[int][]string
+		// FileNameBase if set, is prepended to filenames in print output. Needed
+		// because rego files are evaluated with relative paths (so errors match
+		// OPA CLI format) but print hook output consumers need full URIs.
+		FileNameBase string
+	}
+)
 
 func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.CommandArgs) error {
 	if args.Target == "" || args.Query == "" {
-		l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
-
-		return nil
+		return fmt.Errorf("expected command target and query, got target %q, query %q", args.Target, args.Query)
 	}
 
 	contents, module, ok := l.cache.GetContentAndModule(args.Target)
 	if !ok {
-		l.log.Message("failed to get content or module for file %q", args.Target)
-
-		return nil
+		return fmt.Errorf("failed to get content or module for file %q", args.Target)
 	}
 
 	pq, err := l.queryCache.GetOrSet(ctx, l.regoStore, rquery.RuleHeadLocations)
 	if err != nil {
-		l.log.Message("failed to prepare query %s", rquery.RuleHeadLocations, err)
-
-		return nil
+		return fmt.Errorf("failed to prepare query %s: %w", rquery.RuleHeadLocations, err)
 	}
 
 	file := filepath.Base(uri.ToPath(args.Target))
 
 	allRuleHeadLocations, err := rrego.AllRuleHeadLocations(ctx, pq, file, contents, module)
 	if err != nil {
-		l.log.Message("failed to get rule head locations: %s", err)
-
-		return nil
+		return fmt.Errorf("failed to get rule head locations: %w", err)
 	}
 
 	// if there are none, then it's a package evaluation
@@ -98,19 +91,15 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 	if len(module.Comments) > 0 && regalEvalUseAsInputComment.Match(module.Comments[0].Text) {
 		inputValue, err = transform.ToAST(l.toRelativePath(args.Target), contents, module, false)
 		if err != nil {
-			l.log.Message("failed to prepare module: %s", err)
-
-			return nil
+			return fmt.Errorf("failed to prepare module: %w", err)
 		}
 	} else {
 		// Normal mode — try to find the input.json/yaml file in the workspace and use as input
 		// NOTE that we don't break on missing input, as some rules don't depend on that, and should
 		// still be evaluable. We may consider returning some notice to the user though.
-		inputPath, inputValue = rio.FindInput(uri.ToPath(args.Target), l.workspacePath())
-
-		ruleName := strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
-
+		inputPath = l.input.FindForPath(args.Target)
 		if inputPath == "" && !l.supressInputPrompt {
+			ruleName := strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
 			created, err := l.handleInputSkeletonPrompt(ctx, args.Target, ruleName, args.Row)
 			// Bubbling up an error here if input.json creation fails for any reason.
 			if err != nil {
@@ -120,6 +109,8 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 			if created {
 				return nil
 			}
+		} else if inputPath != "" {
+			inputValue = l.input.Get(ctx, inputPath)
 		}
 	}
 
@@ -345,14 +336,11 @@ func inputSkeletonFromRule(rule *ast.Rule, compiler *ast.Compiler) map[string]an
 		return root
 	}
 
-	refs = append(refs, headRefs...)
+	refs = util.Filter(append(refs, headRefs...), func(ref ast.Ref) bool {
+		return ref.HasPrefix(ast.InputRootRef) && len(ref) > 1
+	})
 
 	for _, ref := range refs {
-		// We only want input refs
-		if len(ref) < 2 || !ref[0].Equal(ast.InputRootDocument) {
-			continue
-		}
-
 		node := root
 
 		for _, term := range ref[1 : len(ref)-1] {

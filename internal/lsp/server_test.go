@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -162,16 +163,18 @@ func createAndInitServerWithClientName(
 		rootURI = uri.FromPath(clientIdentifier, tempDir)
 	}
 
-	request := types.InitializeParams{
-		RootURI:    rootURI,
-		ClientInfo: types.ClientInfo{Name: clientName},
-		InitializationOptions: &types.InitializationOptions{
-			EnableDebugCodelens:       true,
-			EnableExplorer:            true,
-			EvalCodelensDisplayInline: true,
-			EnableServerTesting:       true,
+	request := new(json.RawMessage(fmt.Sprintf(`{
+		"rootUri": %q,
+		"clientInfo": {
+			"name": %q
 		},
-	}
+		"initializationOptions": {
+			"enableDebugCodelens": true,
+			"enableExplorer": true,
+			"evalCodelensDisplayInline": true,
+			"enableServerTesting": true
+		}
+	}`, rootURI, clientName)))
 
 	var response struct {
 		Capabilities any              `json:"capabilities"`

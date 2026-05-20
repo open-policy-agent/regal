@@ -26,6 +26,7 @@ eval := response if {
 
 _handlers := {
 	"initialize": "initialize",
+	"initialized": "initialized",
 	"textDocument/codeAction": "codeaction",
 	"textDocument/codeLens": "codelens",
 	"textDocument/completion": "completion",

@@ -78,6 +78,10 @@ func Full(result SemanticTokensResult) (*types.SemanticTokens, error) {
 }
 
 func ResultHandler(_ context.Context, result any) (any, error) {
+	if result == nil {
+		return nil, nil //nolint:nilnil
+	}
+
 	if raw, ok := result.(*json.RawMessage); ok {
 		var semTokRes SemanticTokensResult
 		// this looks like a false positive as the struct fields are tagged

@@ -28,10 +28,15 @@ result["response"] := {
 	not _default_edit_range_supported
 }
 
-# Client supports setting a default edit range for completion items.
+# METADATA
+# description: |
+#   Client supports setting a default edit range for completion items.
+#   We consider our response "complete" in any case where we have at least
+#   one character building a ref to the left of the caret.
+# scope: rule
 result["response"] := {
 	"items": items,
-	"isIncomplete": false,
+	"isIncomplete": ref.text == "",
 	"itemDefaults": {"editRange": range},
 } if {
 	input.method == "textDocument/completion"

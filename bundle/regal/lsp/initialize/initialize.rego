@@ -39,10 +39,20 @@ _capabilities.diagnosticProvider := {
 }
 
 _capabilities.workspace.fileOperations[operation].filters := filters if {
-	filters := [{
-		"scheme": "file",
-		"pattern": {"glob": "**/*.rego"},
-	}]
+	filters := [
+		{
+			"scheme": "file",
+			"pattern": {"glob": "**/*.rego"},
+		},
+		{
+			"scheme": "file",
+			"pattern": {"glob": "**/input.json"},
+		},
+		{
+			"scheme": "file",
+			"pattern": {"glob": "**/input.yaml"},
+		},
+	]
 	some operation in ["didCreate", "didRename", "didDelete"]
 }
 
