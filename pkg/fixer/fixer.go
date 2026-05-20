@@ -26,7 +26,7 @@ const (
 
 // Fixer must be instantiated via NewFixer.
 type Fixer struct {
-	registeredFixes     map[string]fixes.Fix
+	registeredFixes     []fixes.Fix
 	onConflictOperation OnConflictOperation
 	registeredRoots     []string
 	versionsMap         map[string]ast.RegoVersion
@@ -35,7 +35,7 @@ type Fixer struct {
 // NewFixer instantiates a Fixer.
 func NewFixer() *Fixer {
 	return &Fixer{
-		registeredFixes:     make(map[string]fixes.Fix),
+		registeredFixes:     make([]fixes.Fix, 0),
 		registeredRoots:     make([]string, 0),
 		onConflictOperation: OnConflictError,
 	}
@@ -59,9 +59,7 @@ func (f *Fixer) SetRegoVersionsMap(versionsMap map[string]ast.RegoVersion) *Fixe
 // RegisterFixes sets the fixes that will be fixed if there are related linter
 // violations that can be fixed by fixes.
 func (f *Fixer) RegisterFixes(fixes ...fixes.Fix) *Fixer {
-	for _, fix := range fixes {
-		f.registeredFixes[fix.Name()] = fix
-	}
+	f.registeredFixes = append(f.registeredFixes, fixes...)
 
 	return f
 }
@@ -78,8 +76,10 @@ func (f *Fixer) RegisterRoots(roots ...string) *Fixer {
 }
 
 func (f *Fixer) GetFixForName(name string) (fixes.Fix, bool) {
-	if fix, ok := f.registeredFixes[name]; ok {
-		return fix, true
+	for _, fix := range f.registeredFixes {
+		if fix.Name() == name {
+			return fix, true
+		}
 	}
 
 	return nil, false
@@ -197,8 +197,6 @@ func (f *Fixer) applyLinterFixes(
 	}
 
 	for {
-		fixMadeInIteration := false
-
 		in, err := fp.ToInput(versionsMap)
 		if err != nil {
 			return fmt.Errorf("failed to create linter input: %w", err)
@@ -213,38 +211,56 @@ func (f *Fixer) applyLinterFixes(
 			break
 		}
 
-		for i := range rep.Violations {
-			fixInstance, ok := f.GetFixForName(rep.Violations[i].Title)
-			if !ok {
-				return fmt.Errorf("no fix for violation %s", rep.Violations[i].Title)
+		fixMade, err := f.applyOneFix(l, fp, fixReport, rep.Violations, startingFiles)
+		if err != nil {
+			return err
+		}
+
+		if !fixMade {
+			break
+		}
+	}
+
+	return nil
+}
+
+func (f *Fixer) applyOneFix(
+	l *linter.Linter,
+	fp fileprovider.FileProvider,
+	fixReport *Report,
+	violations []report.Violation,
+	startingFiles []string,
+) (bool, error) {
+	for _, fixInstance := range f.registeredFixes {
+		for i := range violations {
+			if violations[i].Title != fixInstance.Name() {
+				continue
 			}
 
 			config, err := l.GetConfig()
 			if err != nil {
-				return fmt.Errorf("failed to get config: %w", err)
+				return false, fmt.Errorf("failed to get config: %w", err)
 			}
 
-			file := rep.Violations[i].Location.File
+			file := violations[i].Location.File
 
 			abs, err := filepath.Abs(file)
 			if err != nil {
-				return fmt.Errorf("failed to get absolute path for %s: %w", file, err)
+				return false, fmt.Errorf("failed to get absolute path for %s: %w", file, err)
 			}
 
 			fc, err := fp.Get(file)
 			if err != nil {
-				return fmt.Errorf("failed to get file %s: %w", file, err)
+				return false, fmt.Errorf("failed to get file %s: %w", file, err)
 			}
 
-			fixCandidate := fixes.FixCandidate{Filename: file, Contents: fc}
-
-			fixResults, err := fixInstance.Fix(&fixCandidate, &fixes.RuntimeOptions{
+			fixResults, err := fixInstance.Fix(&fixes.FixCandidate{Filename: file, Contents: fc}, &fixes.RuntimeOptions{
 				BaseDir:   util.FindClosestMatchingRoot(abs, f.registeredRoots),
 				Config:    config,
-				Locations: []report.Location{rep.Violations[i].Location},
+				Locations: []report.Location{violations[i].Location},
 			})
 			if err != nil {
-				return fmt.Errorf("failed to fix %s: %w", file, err)
+				return false, fmt.Errorf("failed to fix %s: %w", file, err)
 			}
 
 			if len(fixResults) == 0 {
@@ -255,30 +271,23 @@ func (f *Fixer) applyLinterFixes(
 
 			if fixResult.Rename != nil {
 				if err := f.handleRename(fp, fixReport, startingFiles, fixResult); err != nil {
-					return err
+					return false, err
 				}
 
-				fixMadeInIteration = true
-
-				break // Restart the loop after handling a rename
+				return true, nil
 			}
 
-			// Write the fixed content to the file
 			if err := fp.Put(file, fixResult.Contents); err != nil {
-				return fmt.Errorf("failed to write fixed content to file %s: %w", file, err)
+				return false, fmt.Errorf("failed to write fixed content to file %s: %w", file, err)
 			}
 
 			fixReport.AddFileFix(file, fixResult)
 
-			fixMadeInIteration = true
-		}
-
-		if !fixMadeInIteration {
-			break
+			return true, nil
 		}
 	}
 
-	return nil
+	return false, nil
 }
 
 // handleRename processes the rename operation and resolves conflicts if necessary.
