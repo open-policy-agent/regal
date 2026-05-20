@@ -30,7 +30,6 @@ var (
 			input:  ast.NewObjectWithCapacity(3),
 			params: ast.NewTerm(ast.NullValue),
 			regctx: ast.NewTerm(ast.NullValue),
-			buf:    new(bytes.Buffer),
 		}
 	}}
 	fileLines = Requirements{File: FileRequirements{Lines: true}}
@@ -40,7 +39,6 @@ type inputCacheItem struct {
 	input  ast.Value
 	params *ast.Term
 	regctx *ast.Term
-	buf    *bytes.Buffer
 }
 
 func init() {
@@ -313,13 +311,13 @@ func passthrough(ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request)
 	if obj, ok := res.(ast.Object); ok {
 		rsp := obj.Get(ast.InternedTerm("response")).Value
 
-		cached.buf.Reset()
+		var buf bytes.Buffer
 
-		if err := encoding.OfValue().Encode(cached.buf, rsp); err != nil {
+		if err := encoding.OfValue().Encode(&buf, rsp); err != nil {
 			return nil, fmt.Errorf("failed to marshal response: %w", err)
 		}
 
-		raw := json.RawMessage(cached.buf.Bytes())
+		raw := json.RawMessage(buf.Bytes())
 
 		return &raw, nil
 	}
