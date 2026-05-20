@@ -39,6 +39,14 @@ func TestUseAssignmentOperator(t *testing.T) {
 			fixExpected:     false,
 			runtimeOptions:  &RuntimeOptions{Locations: []report.Location{{Row: 1, Column: 1}}},
 		},
+		"row beyond file length": {
+			// row number from a violation may exceed the file length if another fix has already
+			// rewritten the file; the fix should skip rather than panic
+			fc:              &FixCandidate{Filename: "test.rego", Contents: "package test\n\nallow = true\n"},
+			contentAfterFix: "package test\n\nallow = true\n",
+			fixExpected:     false,
+			runtimeOptions:  &RuntimeOptions{Locations: []report.Location{{Row: 99, Column: 7}}},
+		},
 		"many changes": {
 			fc: &FixCandidate{
 				Filename: "test.rego",

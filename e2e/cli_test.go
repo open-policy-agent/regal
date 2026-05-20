@@ -458,38 +458,34 @@ allow if { true }
 	}
 
 	td := testutil.TempDirectoryOf(t, initialState)
-	exp := fmt.Sprintf(`16 fixes applied:
+	exp := fmt.Sprintf(`12 fixes applied:
 In project root: %[1]s
 bar/main.rego -> wow/foo-bar/baz/main.rego:
 - directory-package-mismatch
 
 bar/main_test.rego -> wow/foo-bar/baz/main_test.rego:
 - directory-package-mismatch
-- constant-condition
 - opa-fmt
 
 foo/main.rego -> wow/main.rego:
 - directory-package-mismatch
-- constant-condition
-- no-whitespace-comment
 - opa-fmt
+- no-whitespace-comment
 
 foo/main_test.rego -> wow/main_test.rego:
 - directory-package-mismatch
-- constant-condition
 - opa-fmt
 
 
 In project root: %[2]s
 main.rego:
-- use-rego-v1
+- opa-fmt
 - no-whitespace-comment
 
 In project root: %[3]s
 main.rego:
-- constant-condition
-- no-whitespace-comment
 - opa-fmt
+- no-whitespace-comment
 `, td, filepath.Join(td, "v0"), filepath.Join(td, "v1"))
 
 	expectedState := map[string]string{
@@ -505,17 +501,17 @@ allow if {
 `,
 		filepath.FromSlash("wow/foo-bar/baz/main_test.rego"): `package wow["foo-bar"].baz_test
 
-test_allow if {}
+test_allow := true
 `,
 		"wow/main.rego": `package wow
 
 # comment
 
-allow if {}
+allow := true
 `,
 		"wow/main_test.rego": `package wow_test
 
-test_allow if {}
+test_allow := true
 `,
 		"v0/main.rego": `package v0
 
@@ -527,7 +523,7 @@ allow if input == 1
 		"v1/main.rego": `package v1
 
 # comment
-allow if {}
+allow := true
 `,
 		"unrelated.txt": `foobar`,
 	}

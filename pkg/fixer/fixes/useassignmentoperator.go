@@ -20,8 +20,12 @@ func (u *UseAssignmentOperator) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]F
 	fixed := false
 
 	for _, loc := range opts.Locations {
+		if loc.Row < 1 || loc.Row > len(lines) {
+			continue
+		}
+
 		line := lines[loc.Row-1]
-		if loc.Row > len(lines) || loc.Column-1 < 0 || loc.Column-1 >= len(line) {
+		if loc.Column-1 < 0 || loc.Column-1 >= len(line) {
 			continue
 		}
 

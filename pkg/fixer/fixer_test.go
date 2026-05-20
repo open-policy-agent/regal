@@ -52,18 +52,16 @@ deny = true
 	}
 
 	expectedFileFixedViolations := map[string][]string{
-		// use-assigment-operator is correct in formatting so does not appear.
 		filepath.Join(rootPath, "test", "main.rego"): {
 			"directory-package-mismatch",
 			"no-whitespace-comment",
 			"opa-fmt",
-			"constant-condition",
 		},
 	}
 	expectedFileContents := map[string]string{
 		filepath.Join(rootPath, "test", "main.rego"): `package test
 
-allow if {}
+allow := true
 
 # no space
 
@@ -71,7 +69,7 @@ deny := true
 `,
 	}
 
-	if got, exp := fixReport.TotalFixes(), uint(4); got != exp {
+	if got, exp := fixReport.TotalFixes(), uint(3); got != exp {
 		t.Fatalf("expected a total of %d fixes, got %d", exp, got)
 	}
 
@@ -199,6 +197,48 @@ func TestFixViolations(t *testing.T) {
 		if !slices.Equal(expectedFixes, fixes) {
 			t.Fatalf("unexpected fixes for %s:\ngot: %v\nexpected: %v", file, fixes, expectedFixes)
 		}
+	}
+}
+
+// TestFixerWhereFixAltersFileLength tests fix ordering doesn't panic when a prior fix alters line count.
+// https://github.com/open-policy-agent/regal/issues/1996
+func TestFixerWhereFixAltersFileLength(t *testing.T) {
+	t.Parallel()
+
+	rootPath := must.Return(filepath.Abs(filepath.FromSlash("/root")))(t)
+	mainDir := filepath.Join(rootPath, "main")
+	mainRegoFile := filepath.Join(mainDir, "main.rego")
+
+	policies := map[string]string{
+		mainRegoFile: "package test\n\n\n\ndeny = true\n",
+	}
+
+	memfp := fileprovider.NewInMemoryFileProvider(policies)
+
+	input, err := memfp.ToInput(map[string]ast.RegoVersion{mainDir: ast.RegoV1})
+	if err != nil {
+		t.Fatalf("failed to create input: %v", err)
+	}
+
+	l := linter.NewLinter().WithEnableAll(true).WithInputModules(&input)
+
+	f := NewFixer().
+		RegisterFixes(&fixes.Fmt{}, &fixes.UseAssignmentOperator{}).
+		RegisterRoots(rootPath).
+		SetRegoVersionsMap(map[string]ast.RegoVersion{mainDir: ast.RegoV1})
+
+	if _, err = f.Fix(t.Context(), &l, memfp); err != nil {
+		t.Fatalf("failed to fix: %v", err)
+	}
+
+	content, err := memfp.Get(mainRegoFile)
+	if err != nil {
+		t.Fatalf("failed to get file: %v", err)
+	}
+
+	expected := "package test\n\ndeny := true\n"
+	if content != expected {
+		t.Fatalf("unexpected content:\ngot:\n%s---\nexpected:\n%s---", content, expected)
 	}
 }
 
