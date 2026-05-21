@@ -16,9 +16,8 @@ report contains violation if {
 	not expr.interpolated
 
 	terms[0].type == "ref"
-	terms[0].value[0].type == "var"
 
-	ref_name := terms[0].value[0].value
+	ref_name := ast.ref_to_string(terms[0].value)
 	ref_name in ast.builtin_names
 
 	# special case as the "result" of print is ""

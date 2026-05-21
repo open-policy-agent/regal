@@ -64,6 +64,16 @@ test_fail_unused_return_value_nested if {
 	}}
 }
 
+test_fail_unused_return_value_namespaced if {
+	r := rule.report
+		with input as ast.with_rego_v1(`allow if {
+			json.match_schema({"foo": 1}, {})
+		}`)
+		with config.capabilities as capabilities.provided
+
+	count(r) == 1
+}
+
 test_success_unused_boolean_return_value if {
 	r := rule.report
 		with input as ast.policy(`allow if { startswith("s", "s") }`)
@@ -75,6 +85,16 @@ test_success_unused_boolean_return_value if {
 test_success_return_value_assigned if {
 	r := rule.report
 		with input as ast.policy(`allow if { x := indexof("s", "s") }`)
+		with config.capabilities as capabilities.provided
+
+	r == set()
+}
+
+test_success_namespaced_assigned if {
+	r := rule.report
+		with input as ast.with_rego_v1(`allow if {
+			x := json.match_schema({"foo": 1}, {})
+		}`)
 		with config.capabilities as capabilities.provided
 
 	r == set()
