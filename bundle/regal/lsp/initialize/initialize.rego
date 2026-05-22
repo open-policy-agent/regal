@@ -67,17 +67,25 @@ _capabilities.workspace.fileOperations[operation].filters := filters if {
 ## *there is no way* to support it here.
 _capabilities.workspace.workspaceFolders.supported := true
 
-_capabilities.inlayHintProvider := {"resolveProvider": true} # inlayHint/resolve request supported
+_capabilities.inlayHintProvider := {
+	# inlayHint/resolve request supported
+	"resolveProvider": true,
+}
 
 _capabilities.hoverProvider := true
 
-# In additional to the client's default trigger characters for signature help
-_capabilities.signatureHelpProvider := {"triggerCharacters": ["(", ","]}
+_capabilities.signatureHelpProvider := {
+	# In additional to the client's default trigger characters for signature help
+	"triggerCharacters": ["(", ","]
+}
 
-_capabilities.codeActionProvider := {"codeActionKinds": [
-	"quickfix", # Currently supported code action kinds
-	"source",
-]}
+_capabilities.codeActionProvider := {
+	# Currently supported code action kinds
+	"codeActionKinds": [
+		"quickfix",
+		"source"
+	],
+}
 
 _capabilities.executeCommandProvider.commands := _commands
 
@@ -115,9 +123,15 @@ _capabilities.completionProvider := {
 	"completionItem": {"labelDetailsSupport": true},
 }
 
-_capabilities.codeLensProvider := {"resolveProvider": false} # codeLens/resolve to be implemented
+_capabilities.codeLensProvider := {
+	# codeLens/resolve to be implemented
+	"resolveProvider": false,
+}
 
-_capabilities.documentLinkProvider := {"resolveProvider": false} # documentLink/resolve to be implemented
+_capabilities.documentLinkProvider := {
+	# documentLink/resolve to be implemented
+	"resolveProvider": false,
+}
 
 _capabilities.documentHighlightProvider := true
 

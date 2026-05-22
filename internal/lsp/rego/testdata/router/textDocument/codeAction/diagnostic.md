@@ -134,6 +134,20 @@ The response includes:
     },
     "kind": "source.explore",
     "title": "Explore compiler stages for this policy"
+  },
+  {
+    "command": {
+      "arguments": [
+        {
+          "target": "file:///workspace/policy.rego"
+        }
+      ],
+      "command": "regal.createTest",
+      "title": "Create tests for this file",
+      "tooltip": "Create test cases for all rules in this file"
+    },
+    "kind": "source.createTest",
+    "title": "Create tests for this file"
   }
 ]
 ```

@@ -8,6 +8,9 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/lsp/input"
+	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/store"
 	"github.com/open-policy-agent/regal/internal/lsp/testgen"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
@@ -111,11 +114,17 @@ deny if {
 				t.Fatalf("failed to parse policy: %v", err)
 			}
 
-			result, ruleErrs, err := testgen.CreateTestModule(testgen.TestModuleOptions{
+			im := input.NewManager(store.NewRegalStore(), log.NewLogger(log.LevelDebug, t.Output()))
+			if err := im.LoadFromRoot(t.Context(), workspacePath); err != nil {
+				t.Fatalf("failed to load input manager: %v", err)
+			}
+
+			result, err := testgen.CreateTestModule(t.Context(), testgen.TestModuleOptions{
 				Module:        module,
 				AllModules:    map[string]*ast.Module{fileURI: module},
 				WorkspacePath: workspacePath,
 				FileURI:       fileURI,
+				InputManager:  im,
 			})
 
 			if tc.expectedErr != "" {
@@ -131,11 +140,7 @@ deny if {
 			}
 
 			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			for _, re := range ruleErrs {
-				t.Logf("rule %s failed (may or may not be intentional due to array access limitations): %v", re.RuleName, re.Err)
+				t.Logf("rule errors (may or may not be intentional due to array access limitations): %v", err)
 			}
 
 			for _, want := range tc.expected {

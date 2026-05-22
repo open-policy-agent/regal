@@ -560,9 +560,8 @@ func (l *LanguageServer) handleCreateTestCommand(ctx context.Context, params typ
 		return errors.New("target file URI is required")
 	}
 
-	filePath := uri.ToPath(args.Target)
-
-	inputPath, inputValue := rio.FindInput(filePath, l.workspacePath())
+	inputPath := l.input.FindForPath(args.Target)
+	inputValue := l.input.Get(ctx, inputPath)
 
 	inputEmpty := inputValue == nil
 	if obj, ok := inputValue.(ast.Object); ok {
@@ -570,14 +569,13 @@ func (l *LanguageServer) handleCreateTestCommand(ctx context.Context, params typ
 	}
 
 	if inputPath == "" || inputEmpty {
-		if err := l.conn.Notify(ctx, "window/showMessage", types.ShowMessageParams{
-			Type:    3,
-			Message: "No input.json or input.yaml file found. Create one to provide test input data.",
-		}); err != nil {
-			l.log.Message("failed to show input.json missing message: %v", err)
-		}
+		l.window.ShowMessage(
+			ctx,
+			types.InfoMessage,
+			"No input.json or input.yaml file found. Create one to provide test input data.",
+		)
 
-		return errors.New("no input.json found in workspace")
+		return nil
 	}
 
 	_, module, ok := l.cache.GetContentAndModule(args.Target)
@@ -585,18 +583,18 @@ func (l *LanguageServer) handleCreateTestCommand(ctx context.Context, params typ
 		return fmt.Errorf("could not get file contents for uri %q", args.Target)
 	}
 
-	combinedTest, ruleErrs, err := testgen.CreateTestModule(testgen.TestModuleOptions{
+	combinedTest, err := testgen.CreateTestModule(ctx, testgen.TestModuleOptions{
 		Module:        module,
 		AllModules:    l.cache.GetAllModules(),
 		WorkspacePath: l.workspacePath(),
 		FileURI:       args.Target,
+		InputManager:  l.input,
 	})
-
-	for _, re := range ruleErrs {
-		l.log.Message("failed to create test for rule %s: %v", re.RuleName, re.Err)
+	if err != nil {
+		l.log.Message("errors creating tests: %v", err)
 	}
 
-	if err != nil {
+	if combinedTest == "" {
 		return err
 	}
 
@@ -618,20 +616,11 @@ func (l *LanguageServer) displayTestResult(testCode, sourceURI string) error {
 		return fmt.Errorf("failed to write test file: %w", err)
 	}
 
-	showParams := types.ShowDocumentParams{
-		URI:       uri.FromPath(l.getClient().Identifier, testFileName),
-		TakeFocus: new(true),
-	}
-
-	var result types.ShowDocumentResult
-
 	// Use a timeout context for RPC to ensure it completes during graceful shutdown
 	rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
 	defer rpcCancel()
 
-	if err := l.conn.Call(rpcCtx, "window/showDocument", showParams, &result); err != nil {
-		return fmt.Errorf("window/showDocument failed: %w", err)
-	}
+	l.window.ShowDocument(rpcCtx, uri.FromPath(l.getClient().Identifier, testFileName), true)
 
 	return nil
 }

@@ -1,6 +1,7 @@
 package testgen
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,8 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/format"
 
 	"github.com/open-policy-agent/regal/internal/compile"
-	rio "github.com/open-policy-agent/regal/internal/io"
-	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/lsp/input"
 )
 
 type TestModuleOptions struct {
@@ -23,16 +23,24 @@ type TestModuleOptions struct {
 	AllModules    map[string]*ast.Module
 	WorkspacePath string
 	FileURI       string
+	InputManager  *input.Manager
 }
 
-type RuleError struct {
-	RuleName string
-	Err      error
-}
-
-func CreateTestModule(opts TestModuleOptions) (string, []RuleError, error) {
+func CreateTestModule(ctx context.Context, opts TestModuleOptions) (string, error) {
 	if len(opts.Module.Rules) == 0 {
-		return "", nil, errors.New("no rules found in this file")
+		return "", errors.New("no rules found in this file")
+	}
+
+	compiler := compile.NewCompilerWithRegalBuiltins()
+	compiler.Compile(opts.AllModules)
+
+	if compiler.Failed() {
+		return "", fmt.Errorf("compilation failed: %w", compiler.Errors)
+	}
+
+	compiledModule, ok := compiler.Modules[opts.FileURI]
+	if !ok {
+		return "", fmt.Errorf("compiled module not found for %q", opts.FileURI)
 	}
 
 	packagePath := opts.Module.Package.Path.String()
@@ -40,23 +48,24 @@ func CreateTestModule(opts TestModuleOptions) (string, []RuleError, error) {
 	var b strings.Builder
 	b.WriteString(BuildTestHeader(packagePath))
 
-	var ruleErrs []RuleError
+	var ruleErrs []error
 
 	successCount := 0
 
-	for _, rule := range opts.Module.Rules {
+	for _, rule := range compiledModule.Rules {
 		ruleName := rule.Head.Name.String()
 
-		testFunction, err := CreateTestFunction(TestCreationOptions{
+		testFunction, err := CreateTestFunction(ctx, TestCreationOptions{
 			RuleName:      ruleName,
 			PackagePath:   packagePath,
 			WorkspacePath: opts.WorkspacePath,
 			FileURI:       opts.FileURI,
 			Rule:          rule,
-			AllModules:    opts.AllModules,
+			Compiler:      compiler,
+			InputManager:  opts.InputManager,
 		})
 		if err != nil {
-			ruleErrs = append(ruleErrs, RuleError{RuleName: ruleName, Err: err})
+			ruleErrs = append(ruleErrs, fmt.Errorf("rule %s: %w", ruleName, err))
 
 			continue
 		}
@@ -68,10 +77,10 @@ func CreateTestModule(opts TestModuleOptions) (string, []RuleError, error) {
 	}
 
 	if successCount == 0 {
-		return "", ruleErrs, errors.New("failed to create any tests")
+		return "", fmt.Errorf("failed to create any tests: %w", errors.Join(ruleErrs...))
 	}
 
-	return b.String(), ruleErrs, nil
+	return b.String(), errors.Join(ruleErrs...)
 }
 
 type TestCreationOptions struct {
@@ -80,37 +89,30 @@ type TestCreationOptions struct {
 	WorkspacePath string
 	FileURI       string
 	Rule          *ast.Rule
-	AllModules    map[string]*ast.Module
+	Compiler      *ast.Compiler
+	InputManager  *input.Manager
 }
 
-func analyzeDependencies(opts TestCreationOptions) ([]string, error) {
-	compiler := compile.NewCompilerWithRegalBuiltins()
-	compiler.Compile(opts.AllModules)
-
-	if compiler.Failed() {
-		return nil, fmt.Errorf("compilation failed: %w", compiler.Errors)
-	}
-
-	refs, err := dependencies.Base(compiler, opts.Rule)
+func analyzeDependencies(ctx context.Context, opts TestCreationOptions) ([]string, error) {
+	refs, err := dependencies.Base(opts.Compiler, opts.Rule)
 	if err != nil {
 		return nil, fmt.Errorf("failed to analyze rule dependencies: %w", err)
 	}
 
-	headRefs, err := dependencies.Base(compiler, opts.Rule.Head)
+	headRefs, err := dependencies.Base(opts.Compiler, opts.Rule.Head)
 	if err != nil {
 		return nil, fmt.Errorf("failed to analyze rule head dependencies: %w", err)
 	}
 
 	refs = append(refs, headRefs...)
 
-	filePath := uri.ToPath(opts.FileURI)
-	_, inputValue := rio.FindInput(filePath, opts.WorkspacePath)
-
 	var inputData map[string]any
 
-	if inputValue != nil {
-		if raw, err := ast.JSON(inputValue); err == nil {
-			inputData, _ = raw.(map[string]any)
+	if opts.InputManager != nil {
+		if inputPath := opts.InputManager.FindForPath(opts.FileURI); inputPath != "" {
+			if raw, err := ast.JSON(opts.InputManager.Get(ctx, inputPath)); err == nil {
+				inputData, _ = raw.(map[string]any)
+			}
 		}
 	}
 
@@ -214,12 +216,12 @@ func BuildTestHeader(packagePath string) string {
 import %s`, testPackage, packagePath)
 }
 
-func CreateTestFunction(opts TestCreationOptions) (string, error) {
-	if opts.Rule == nil || opts.AllModules == nil {
-		return "", errors.New("dependency analysis requires Rule and AllModules to be provided")
+func CreateTestFunction(ctx context.Context, opts TestCreationOptions) (string, error) {
+	if opts.Rule == nil || opts.Compiler == nil {
+		return "", errors.New("dependency analysis requires Rule and Compiler to be provided")
 	}
 
-	withClauses, err := analyzeDependencies(opts)
+	withClauses, err := analyzeDependencies(ctx, opts)
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze dependencies: %w", err)
 	}
@@ -229,9 +231,12 @@ func CreateTestFunction(opts TestCreationOptions) (string, error) {
 
 	formatted, err := format.Source("test.rego", []byte(completeTest))
 	if err != nil {
-		// Array access syntax like input.permissions[0] can cause parsing issues —
-		// fall back to a basic test skeleton without with-clauses.
-		// TODO: handle array access in withClause generation.
+		// Array access syntax like input.permissions[0] can cause parsing issues:
+		// input skeleton doesn't handle arrays, so writing input.permissions.0
+		// would result in invalid rego. Falling back here if test generation creates
+		// invalid rego.
+		//
+		// TODO: handle array access in withClause generation and input.json skeleton
 		testFunction = buildTestFunction(opts, []string{})
 		completeTest = BuildTestHeader(opts.PackagePath) + "\n\n" + testFunction
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
+	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
@@ -372,7 +373,7 @@ allow if {
 			clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
 				switch req.Method {
 				case "window/showDocument":
-					return types.ShowDocumentResult{Success: true}, nil
+					return new(json.RawMessage(`{"success":true}`)), nil
 				case "window/showMessage":
 					return struct{}{}, nil
 				default:
@@ -412,7 +413,7 @@ allow if {
 
 			if tc.expectFile {
 				for {
-					if _, statErr := os.Stat(expectedTestFile); statErr == nil {
+					if rio.Exists(expectedTestFile) {
 						fileExists = true
 
 						break
@@ -428,8 +429,7 @@ allow if {
 			} else {
 				time.Sleep(100 * time.Millisecond)
 
-				_, statErr := os.Stat(expectedTestFile)
-				fileExists = statErr == nil
+				fileExists = rio.Exists(expectedTestFile)
 			}
 
 			if tc.expectFile && !fileExists {
@@ -439,14 +439,13 @@ allow if {
 			}
 
 			if fileExists {
-				contents, _ := os.ReadFile(expectedTestFile)
-				t.Logf("Created test file contents:\n%s", string(contents))
+				contents := must.ReadFile(t, expectedTestFile)
+				t.Logf("Created test file contents:\n%s", contents)
 
-				contentsStr := string(contents)
 				if tc.shouldSucceed {
-					must.Equal(t, true, strings.Contains(contentsStr, "package policy_test"), "should contain test package")
-					must.Equal(t, true, strings.Contains(contentsStr, "test_allow if"), "should contain test function")
-					must.Equal(t, true, strings.Contains(contentsStr, "policy.allow"), "should contain rule call")
+					must.Equal(t, true, strings.Contains(contents, "package policy_test"), "should contain test package")
+					must.Equal(t, true, strings.Contains(contents, "test_allow if"), "should contain test function")
+					must.Equal(t, true, strings.Contains(contents, "policy.allow"), "should contain rule call")
 				}
 			}
 		})
