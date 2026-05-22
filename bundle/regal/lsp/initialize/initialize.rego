@@ -102,6 +102,7 @@ _commands contains "regal.fix.redundant-existence-check"
 _commands contains "regal.config.disable-rule"
 _commands contains "regal.explorer" if data.server.feature_flags.explorer_provider
 _commands contains "regal.debug" if data.server.feature_flags.debug_provider
+_commands contains "regal.createTest" if data.server.feature_flags.test_creation_provider
 
 _capabilities.documentFormattingProvider := true
 

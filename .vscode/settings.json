@@ -1,4 +1,5 @@
 {
+  "opa.dependency_paths.regal": "/Users/seanledford/regal/regal",
   "opa.env": {
     "OPA_CHECK_CAPABILITIES": "${workspacePath}/build/capabilities.json",
     "OPA_EVAL_CAPABILITIES": "${workspacePath}/build/capabilities.json"

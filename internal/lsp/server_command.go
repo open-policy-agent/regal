@@ -8,11 +8,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/open-policy-agent/opa/v1/ast"
 	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/explorer"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/lsp/testgen"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/util"
@@ -38,6 +40,14 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 				if params.Command == "regal.explorer" {
 					if err := l.handleExplorerCommand(ctx, params); err != nil {
 						l.log.Message("failed to handle explorer command: %s", err)
+					}
+
+					continue
+				}
+
+				if params.Command == "regal.createTest" {
+					if err := l.handleCreateTestCommand(ctx, params); err != nil {
+						l.log.Message("failed to handle createTest command: %s", err)
 					}
 
 					continue
@@ -523,4 +533,94 @@ func (l *LanguageServer) handleWorkspaceExecuteCommand(params types.ExecuteComma
 
 	// however, the contents of the response is not important
 	return emptyStruct, nil
+}
+
+func (l *LanguageServer) handleCreateTestCommand(ctx context.Context, params types.ExecuteCommandParams) error {
+	var args types.CommandArgs
+
+	if len(params.Arguments) > 0 {
+		arg, ok := params.Arguments[0].(map[string]any)
+		if !ok {
+			l.log.Message(
+				"failed to unmarshal regal.createTest command arguments, expected object, got %T",
+				params.Arguments[0],
+			)
+
+			return errors.New("failed to parse createTest arguments")
+		}
+
+		args = types.CommandArgs{
+			Target: util.MapGet[string](arg, "target"),
+		}
+	}
+
+	if args.Target == "" {
+		l.log.Message("expected command target, got empty string")
+
+		return errors.New("target file URI is required")
+	}
+
+	inputPath := l.input.FindForPath(args.Target)
+	inputValue := l.input.Get(ctx, inputPath)
+
+	inputEmpty := inputValue == nil
+	if obj, ok := inputValue.(ast.Object); ok {
+		inputEmpty = obj.Len() == 0
+	}
+
+	if inputPath == "" || inputEmpty {
+		l.window.ShowMessage(
+			ctx,
+			types.InfoMessage,
+			"No input.json or input.yaml file found. Create one to provide test input data.",
+		)
+
+		return nil
+	}
+
+	_, module, ok := l.cache.GetContentAndModule(args.Target)
+	if !ok {
+		return fmt.Errorf("could not get file contents for uri %q", args.Target)
+	}
+
+	combinedTest, err := testgen.CreateTestModule(ctx, testgen.TestModuleOptions{
+		Module:        module,
+		AllModules:    l.cache.GetAllModules(),
+		WorkspacePath: l.workspacePath(),
+		FileURI:       args.Target,
+		InputManager:  l.input,
+	})
+	if err != nil {
+		l.log.Message("errors creating tests: %v", err)
+	}
+
+	if combinedTest == "" {
+		return err
+	}
+
+	//nolint:contextcheck
+	if err := l.displayTestResult(combinedTest, args.Target); err != nil {
+		return fmt.Errorf("failed to display test result: %w", err)
+	}
+
+	return nil
+}
+
+func (l *LanguageServer) displayTestResult(testCode, sourceURI string) error {
+	sourceFile := uri.ToPath(sourceURI)
+	baseName := strings.TrimSuffix(filepath.Base(sourceFile), ".rego")
+
+	testFileName := filepath.Join(l.workspacePath(), baseName+"_test.rego")
+
+	if err := os.WriteFile(testFileName, []byte(testCode), 0o600); err != nil {
+		return fmt.Errorf("failed to write test file: %w", err)
+	}
+
+	// Use a timeout context for RPC to ensure it completes during graceful shutdown
+	rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
+	defer rpcCancel()
+
+	l.window.ShowDocument(rpcCtx, uri.FromPath(l.getClient().Identifier, testFileName), true)
+
+	return nil
 }
