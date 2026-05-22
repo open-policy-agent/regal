@@ -25,13 +25,6 @@ report contains violation if {
 
 	config.capabilities.builtins[ref_name].decl.result != "boolean"
 
-	# Skip builtins whose declared result is "any" (e.g. object.subset,
-	# object.union_n) - those values are commonly used as boolean
-	# predicates in `not` expressions, so flagging them produces false
-	# positives. The reporter's case (json.match_schema, declared "array")
-	# is still caught.
-	config.capabilities.builtins[ref_name].decl.result != "any"
-
 	# no violation if the return value is declared as the last function argument
 	# see the function-arg-return rule for *that* violation
 	not ast.function_ret_in_args(ref_name, terms)

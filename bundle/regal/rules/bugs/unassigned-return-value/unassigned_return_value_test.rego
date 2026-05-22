@@ -6,7 +6,7 @@ import data.regal.config
 import data.regal.rules.bugs["unassigned-return-value"] as rule
 
 test_fail_unused_return_value if {
-	r := rule.report with input as ast.with_rego_v1(`allow if {
+	r := rule.report with input as ast.policy(`allow if {
 		indexof("s", "s")
 	}`)
 		with config.capabilities as capabilities.provided
@@ -17,10 +17,10 @@ test_fail_unused_return_value if {
 		"level": "error",
 		"location": {
 			"col": 3,
-			"row": 6,
+			"row": 4,
 			"end": {
 				"col": 10,
-				"row": 6,
+				"row": 4,
 			},
 			"file": "policy.rego",
 			"text": "\t\tindexof(\"s\", \"s\")",
@@ -34,7 +34,7 @@ test_fail_unused_return_value if {
 }
 
 test_fail_unused_return_value_nested if {
-	r := rule.report with input as ast.with_rego_v1(`allow if {
+	r := rule.report with input as ast.policy(`allow if {
 		comprehension := [x |
 			indexof("s", "s")
 			x := 1
@@ -50,10 +50,10 @@ test_fail_unused_return_value_nested if {
 			"col": 4,
 			"end": {
 				"col": 11,
-				"row": 7,
+				"row": 5,
 			},
 			"file": "policy.rego",
-			"row": 7,
+			"row": 5,
 			"text": "\t\t\tindexof(\"s\", \"s\")",
 		},
 		"related_resources": [{
@@ -66,7 +66,7 @@ test_fail_unused_return_value_nested if {
 
 test_fail_unused_return_value_namespaced if {
 	r := rule.report
-		with input as ast.with_rego_v1(`allow if {
+		with input as ast.policy(`allow if {
 			json.match_schema({"foo": 1}, {})
 		}`)
 		with config.capabilities as capabilities.provided
@@ -92,7 +92,7 @@ test_success_return_value_assigned if {
 
 test_success_namespaced_assigned if {
 	r := rule.report
-		with input as ast.with_rego_v1(`allow if {
+		with input as ast.policy(`allow if {
 			x := json.match_schema({"foo": 1}, {})
 		}`)
 		with config.capabilities as capabilities.provided
