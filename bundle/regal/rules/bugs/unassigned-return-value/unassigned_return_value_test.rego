@@ -74,6 +74,16 @@ test_fail_unused_return_value_namespaced if {
 	count(r) == 1
 }
 
+test_success_negated_builtin_return_value if {
+	r := rule.report
+		with input as ast.policy(`allow if {
+			not object.subset({"a"}, {"a", "b"})
+		}`)
+		with config.capabilities as capabilities.provided
+
+	r == set()
+}
+
 test_success_unused_boolean_return_value if {
 	r := rule.report
 		with input as ast.policy(`allow if { startswith("s", "s") }`)

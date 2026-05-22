@@ -14,6 +14,7 @@ report contains violation if {
 	terms := ast.found.expressions[_][expr].terms
 
 	not expr.interpolated
+	not expr.negated
 
 	terms[0].type == "ref"
 
