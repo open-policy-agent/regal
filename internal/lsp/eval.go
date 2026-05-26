@@ -54,7 +54,7 @@ type (
 	}
 )
 
-func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.CommandArgs) error {
+func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.CommandArgs) (err error) {
 	if args.Target == "" || args.Query == "" {
 		return fmt.Errorf("expected command target and query, got target %q, query %q", args.Target, args.Query)
 	}
@@ -64,32 +64,19 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		return fmt.Errorf("failed to get content or module for file %q", args.Target)
 	}
 
-	pq, err := l.queryCache.GetOrSet(ctx, l.regoStore, rquery.RuleHeadLocations)
-	if err != nil {
-		return fmt.Errorf("failed to prepare query %s: %w", rquery.RuleHeadLocations, err)
-	}
-
-	file := filepath.Base(uri.ToPath(args.Target))
-
-	allRuleHeadLocations, err := rrego.AllRuleHeadLocations(ctx, pq, file, contents, module)
-	if err != nil {
-		return fmt.Errorf("failed to get rule head locations: %w", err)
-	}
-
-	// if there are none, then it's a package evaluation
-	ruleHeadLocations := allRuleHeadLocations[args.Query]
-
 	var (
 		inputValue ast.Value
 		inputPath  string
 	)
+
+	packagePath := module.Package.Path.String()
 
 	// When the first comment in the file is `regal eval: use-as-input`, the AST of that module is
 	// used as the input rather than the contents of input.json/yaml. This is a development feature for
 	// working on rules (built-in or custom), allowing querying the AST of the module directly.
 
 	if len(module.Comments) > 0 && regalEvalUseAsInputComment.Match(module.Comments[0].Text) {
-		inputValue, err = transform.ToAST(l.toRelativePath(args.Target), contents, module, false)
+		inputValue, err = transform.ToAST(l.Workspace().RelativePath(args.Target), contents, module, false)
 		if err != nil {
 			return fmt.Errorf("failed to prepare module: %w", err)
 		}
@@ -99,7 +86,7 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		// still be evaluable. We may consider returning some notice to the user though.
 		inputPath = l.input.FindForPath(args.Target)
 		if inputPath == "" && !l.supressInputPrompt {
-			ruleName := strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
+			ruleName := strings.TrimPrefix(args.Query, packagePath+".")
 			created, err := l.handleInputSkeletonPrompt(ctx, args.Target, ruleName, args.Row)
 			// Bubbling up an error here if input.json creation fails for any reason.
 			if err != nil {
@@ -120,18 +107,23 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		return fmt.Errorf("failed to evaluate workspace path: %w", err)
 	}
 
-	target := "package"
-	if len(ruleHeadLocations) > 0 {
-		target = strings.TrimPrefix(args.Query, module.Package.Path.String()+".")
+	ruleHeadLocations, err := l.getRuleHeadLocations(ctx, args, contents, module)
+	if err != nil {
+		return fmt.Errorf("failed to get rule head locations: %w", err)
 	}
 
-	if l.featureFlags.InlineEvaluationProvider && l.getClient().InitOptions.EvalCodelensDisplayInline {
+	target := "package"
+	if len(ruleHeadLocations) > 0 {
+		target = strings.TrimPrefix(args.Query, packagePath+".")
+	}
+
+	if l.featureFlags.InlineEvaluationProvider && l.Workspace().Client().InitOptions.EvalCodelensDisplayInline {
 		responseParams := map[string]any{
 			"result": result,
 			"line":   args.Row,
 			"target": target,
 			// only used when the target is 'package'
-			"package": strings.TrimPrefix(module.Package.Path.String(), "data."),
+			"package": strings.TrimPrefix(packagePath, "data."),
 			// only used when the target is a rule
 			"rule_head_locations": ruleHeadLocations,
 		}
@@ -148,7 +140,7 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 
 		rpcCancel()
 	} else {
-		output := filepath.Join(l.workspacePath(), "output.json")
+		output := l.Workspace().Path("output.json")
 
 		var f *os.File
 		if f, err = os.OpenFile(output, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755); err == nil {
@@ -164,6 +156,30 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 	}
 
 	return err
+}
+
+func (l *LanguageServer) getRuleHeadLocations(
+	ctx context.Context,
+	args types.CommandArgs,
+	contents string,
+	module *ast.Module,
+) ([]*ast.Location, error) {
+	pq, err := l.queryCache.GetOrSet(ctx, l.regoStore, rquery.RuleHeadLocations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare query %s: %w", rquery.RuleHeadLocations, err)
+	}
+
+	file := filepath.Base(uri.ToPath(args.Target))
+
+	allRuleHeadLocations, err := rrego.AllRuleHeadLocations(ctx, pq, file, contents, module)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rule head locations: %w", err)
+	}
+
+	// if there are none, then it's a package evaluation
+	ruleHeadLocations := allRuleHeadLocations[args.Query]
+
+	return ruleHeadLocations, nil
 }
 
 func (l *LanguageServer) Eval(
@@ -186,10 +202,10 @@ func (l *LanguageServer) Eval(
 }
 
 func (l *LanguageServer) EvalInWorkspace(ctx context.Context, query string, input ast.Value) (EvalResult, error) {
-	resultQuery := "result := " + query
+	resultQuery := `result := ` + query
 	hook := PrintHook{
 		Output:       make(map[string]map[int][]string),
-		FileNameBase: l.getWorkspaceRootURI(),
+		FileNameBase: l.Workspace().URI(),
 	}
 
 	result, err := l.Eval(ctx, resultQuery, input, hook)

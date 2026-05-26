@@ -7,8 +7,9 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
+	"github.com/open-policy-agent/regal/internal/lsp/client"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
-	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
@@ -19,9 +20,10 @@ import (
 func TestEvalWorkspacePath(t *testing.T) {
 	t.Parallel()
 
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	workspace := workspace.New("file:///workspace").WithClient(client.NewGeneric())
 
-	ls.workspaceRootURI = "file:///workspace"
+	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	ls.workspace = workspace
 
 	policy1 := `package policy1
 
@@ -40,12 +42,12 @@ func TestEvalWorkspacePath(t *testing.T) {
 	}
 	`
 
-	policy1URI := uri.FromRelativePath(ls.getClient().Identifier, "policy1.rego", ls.workspaceRootURI)
-	policy1RelativeFileName := uri.ToRelativePath(policy1URI, ls.workspaceRootURI)
+	policy1URI := workspace.URI("policy1.rego")
+	policy1RelativeFileName := workspace.RelativePath(policy1URI)
 	module1 := must.Return(rparse.ModuleWithOpts(policy1RelativeFileName, policy1, rparse.ParserOptions()))(t)
 
-	policy2URI := uri.FromRelativePath(ls.getClient().Identifier, "policy2.rego", ls.workspaceRootURI)
-	policy2RelativeFileName := uri.ToRelativePath(policy2URI, ls.workspaceRootURI)
+	policy2URI := workspace.URI("policy2.rego")
+	policy2RelativeFileName := workspace.RelativePath(policy2URI)
 	module2 := must.Return(rparse.ModuleWithOpts(policy2RelativeFileName, policy2, rparse.ParserOptions()))(t)
 
 	ls.cache.SetFileContents(policy1URI, policy1)

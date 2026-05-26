@@ -110,11 +110,11 @@ func AppendLocation(buf []byte, location *ast.Location) []byte {
 		buf = slices.Grow(buf, n)
 	}
 
-	buf = append(strconv.AppendInt(buf, int64(location.Row), 10), ':')
-	buf = append(strconv.AppendInt(buf, int64(location.Col), 10), ':')
-	buf = append(strconv.AppendInt(buf, int64(endRow), 10), ':')
+	buf = append(outil.AppendInt(buf, location.Row), ':')
+	buf = append(outil.AppendInt(buf, location.Col), ':')
+	buf = append(outil.AppendInt(buf, endRow), ':')
 
-	return strconv.AppendInt(buf, int64(endCol), 10)
+	return outil.AppendInt(buf, endCol)
 }
 
 func refHeadTerm(name string) *ast.Term {

@@ -3,7 +3,6 @@ package util
 import (
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -57,7 +56,7 @@ func BenchmarkSorted(b *testing.B) {
 func BenchmarkLineContents(b *testing.B) {
 	src := []byte{}
 	for i := range uint64(1000) {
-		src = append(strconv.AppendUint(append(src, "This is line number "...), i, 10), '\n')
+		src = append(AppendUint(append(src, "This is line number "...), i), '\n')
 	}
 
 	b.Run("LineContents", func(b *testing.B) {

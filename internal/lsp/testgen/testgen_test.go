@@ -1,7 +1,6 @@
 package testgen_test
 
 import (
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/store"
 	"github.com/open-policy-agent/regal/internal/lsp/testgen"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
@@ -105,9 +105,9 @@ deny if {
 				files["input.json"] = tc.inputJSON
 			}
 
-			workspacePath := testutil.TempDirectoryOf(t, files)
-			policyPath := filepath.Join(workspacePath, "policy.rego")
-			fileURI := uri.FromPath(clients.IdentifierGoTest, policyPath)
+			wsRootURI := uri.FromPath(clients.IdentifierGoTest, testutil.TempDirectoryOf(t, files))
+			workspace := workspace.New(wsRootURI)
+			fileURI := uri.FromPath(clients.IdentifierGoTest, workspace.Path("policy.rego"))
 
 			module, err := rparse.Module("policy.rego", tc.policy)
 			if err != nil {
@@ -115,14 +115,12 @@ deny if {
 			}
 
 			im := input.NewManager(store.NewRegalStore(), log.NewLogger(log.LevelDebug, t.Output()))
-			if err := im.LoadFromRoot(t.Context(), workspacePath); err != nil {
-				t.Fatalf("failed to load input manager: %v", err)
-			}
+			im.LoadFromWorkspace(t.Context(), workspace)
 
 			result, err := testgen.CreateTestModule(t.Context(), testgen.TestModuleOptions{
 				Module:        module,
 				AllModules:    map[string]*ast.Module{fileURI: module},
-				WorkspacePath: workspacePath,
+				WorkspacePath: workspace.Path(),
 				FileURI:       fileURI,
 				InputManager:  im,
 			})

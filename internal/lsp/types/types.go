@@ -1,7 +1,10 @@
 package types
 
 import (
+	"strconv"
+
 	"github.com/open-policy-agent/regal/internal/lsp/types/symbols"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 type (
@@ -70,6 +73,18 @@ type (
 	}
 	WorkspaceAnyEdit struct {
 		DocumentChanges []any `json:"documentChanges"`
+	}
+
+	CreateFileOptions struct {
+		Overwrite      bool `json:"overwrite"`
+		IgnoreIfExists bool `json:"ignoreIfExists"`
+	}
+
+	CreateFile struct {
+		Options              *CreateFileOptions `json:"options,omitempty"`
+		AnnotationIdentifier *string            `json:"annotationId,omitempty"`
+		Kind                 string             `json:"kind"` // must always be "create"
+		URI                  string             `json:"uri"`
 	}
 
 	RenameFileOptions struct {
@@ -298,3 +313,138 @@ type (
 
 	iuint interface{ ~int | ~uint }
 )
+
+func (p Position) ToOffset(text string) int {
+	if p.Line == 0 {
+		return util.SafeUintToInt(p.Character)
+	}
+
+	if offset := util.IndexByteNth(text, '\n', p.Line); offset > -1 {
+		return offset + 1 + util.SafeUintToInt(p.Character)
+	}
+
+	return len(text)
+}
+
+func (r RenameFile) AppendJSON(bs []byte) []byte {
+	bs = strconv.AppendQuote(append(bs, `{"kind":"rename","oldUri":`...), r.OldURI)
+	bs = strconv.AppendQuote(append(bs, `,"newUri":`...), r.NewURI)
+
+	if r.Options != nil && (r.Options.IgnoreIfExists || r.Options.Overwrite) {
+		bs = r.Options.AppendJSON(append(bs, `,"options":`...))
+	}
+
+	return append(bs, '}')
+}
+
+func (ro RenameFileOptions) AppendJSON(bs []byte) []byte {
+	bs = append(bs, '{')
+	if ro.IgnoreIfExists {
+		if bs = append(bs, `"ignoreIfExists":true`...); ro.Overwrite {
+			bs = append(bs, ',')
+		}
+	}
+
+	if ro.Overwrite {
+		bs = append(bs, `"overwrite":true`...)
+	}
+
+	return append(bs, '}')
+}
+
+func (d DeleteFile) AppendJSON(bs []byte) []byte {
+	bs = strconv.AppendQuote(append(bs, `{"kind":"delete","uri":`...), d.URI)
+
+	if d.Options != nil {
+		bs = d.Options.AppendJSON(append(bs, `,"options":`...))
+	}
+
+	return append(bs, '}')
+}
+
+func (do DeleteFileOptions) AppendJSON(bs []byte) []byte {
+	bs = append(bs, '{')
+	if do.IgnoreIfNotExists {
+		if bs = append(bs, `"ignoreIfNotExists":true`...); do.Recursive {
+			bs = append(bs, ',')
+		}
+	}
+
+	if do.Recursive {
+		bs = append(bs, `"recursive":true`...)
+	}
+
+	return append(bs, '}')
+}
+
+func (c CreateFile) AppendJSON(bs []byte) []byte {
+	bs = strconv.AppendQuote(append(bs, `{"kind":"create","uri":`...), c.URI)
+
+	if c.Options != nil {
+		bs = append(bs, `,"options":{`...)
+		if c.Options.IgnoreIfExists {
+			if bs = append(bs, `"ignoreIfExists":true`...); c.Options.Overwrite {
+				bs = append(bs, ',')
+			}
+		}
+
+		if c.Options.Overwrite {
+			bs = append(bs, []byte(`"overwrite":true`)...)
+		}
+
+		bs = append(bs, '}')
+	}
+
+	if c.AnnotationIdentifier != nil {
+		bs = strconv.AppendQuote(append(bs, `,"annotationId":`...), *c.AnnotationIdentifier)
+	}
+
+	return append(bs, '}')
+}
+
+func NewTextDocumentEdit(uri string, edits []TextEdit) TextDocumentEdit {
+	return TextDocumentEdit{
+		TextDocument: OptionalVersionedTextDocumentIdentifier{URI: uri},
+		Edits:        edits,
+	}
+}
+
+func (t TextDocumentEdit) AppendJSON(bs []byte) []byte {
+	bs = strconv.AppendQuote(append(bs, `{"textDocument":{"uri":`...), t.TextDocument.URI)
+
+	if t.TextDocument.Version != nil {
+		bs = util.AppendUint(append(bs, `,"version":`...), *t.TextDocument.Version)
+	} else {
+		bs = append(bs, `,"version":null`...)
+	}
+
+	bs = append(bs, `},"edits":[`...)
+
+	for i, edit := range t.Edits {
+		if i > 0 {
+			bs = append(bs, ',')
+		}
+
+		bs = strconv.AppendQuote(append(bs, `{"newText":`...), edit.NewText)
+		bs = edit.Range.AppendJSON(append(bs, `,"range":`...))
+		bs = append(bs, '}')
+	}
+
+	return append(bs, ']', '}')
+}
+
+func RangeBetween[T1, T2, T3, T4 iuint](startLine T1, startCharacter T2, endLine T3, endCharacter T4) Range {
+	return Range{
+		Start: Position{Line: uint(startLine), Character: uint(startCharacter)},
+		End:   Position{Line: uint(endLine), Character: uint(endCharacter)},
+	}
+}
+
+func (r Range) AppendJSON(bs []byte) []byte {
+	bs = util.AppendUint(append(bs, `{"start":{"line":`...), r.Start.Line)
+	bs = util.AppendUint(append(bs, `,"character":`...), r.Start.Character)
+	bs = util.AppendUint(append(bs, `},"end":{"line":`...), r.End.Line)
+	bs = util.AppendUint(append(bs, `,"character":`...), r.End.Character)
+
+	return append(bs, '}', '}')
+}

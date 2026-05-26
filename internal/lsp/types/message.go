@@ -1,6 +1,8 @@
 package types
 
-import "strconv"
+import (
+	"github.com/open-policy-agent/regal/internal/util"
+)
 
 const (
 	ErrorMessage Message = iota + 1
@@ -12,5 +14,5 @@ const (
 type Message uint8
 
 func (m Message) AppendText(buf []byte) []byte {
-	return strconv.AppendUint(buf, uint64(m), 10)
+	return util.AppendUint(buf, m)
 }

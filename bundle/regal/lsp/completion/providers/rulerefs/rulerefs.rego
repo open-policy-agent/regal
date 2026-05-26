@@ -17,12 +17,10 @@ _workspace_rule_refs contains ref if {
 	some ref in refs
 }
 
-_parsed_current_file := data.workspace.parsed[input.params.textDocument.uri]
-
-_current_file_package := ast.ref_to_string(_parsed_current_file.package.path)
+_current_file_package := ast.ref_to_string(data.workspace.parsed[input.params.textDocument.uri].package.path)
 
 _current_file_imports contains ref if {
-	some imp in _parsed_current_file.imports
+	some imp in data.workspace.parsed[input.params.textDocument.uri].imports
 
 	ref := ast.ref_to_string(imp.path.value)
 }

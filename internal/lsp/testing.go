@@ -34,7 +34,7 @@ func (l *LanguageServer) StartTestLocationsWorker(ctx context.Context) {
 		// Wait for initialization to complete before starting to check worker is needed
 		<-l.initializationGate
 
-		if !l.getClient().InitOptions.EnableServerTesting {
+		if !l.Workspace().Client().InitOptions.EnableServerTesting {
 			l.log.Debug("Test locations worker exiting - client does not support opaTestProvider")
 
 			return
@@ -59,7 +59,7 @@ func (l *LanguageServer) StartTestLocationsWorker(ctx context.Context) {
 // This is called after the parse has completed in the lintFileJobs worker to
 // ensure we send the latest.
 func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI string) error {
-	if !l.getClient().InitOptions.EnableServerTesting {
+	if !l.Workspace().Client().InitOptions.EnableServerTesting {
 		l.log.Message("processTestLocationsUpdate called but client does not support opaTestProvider")
 
 		return nil
@@ -75,7 +75,7 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 
 	contents, ok := l.cache.GetFileContents(fileURI)
 	if !ok {
-		return fmt.Errorf("failed to get file contents for uri %q", fileURI)
+		return fmt.Errorf("test locations: failed to get file contents for uri %q", fileURI)
 	}
 
 	module, ok := l.cache.GetModule(fileURI)
@@ -97,7 +97,8 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 		return len(a) - len(b)
 	})
 
-	regalContext, _ := transform.RegalContext(l.toRelativePath(fileURI), contents, module.RegoVersion().String()).Merge(
+	relativePath := l.Workspace().RelativePath(fileURI)
+	regalContext, _ := transform.RegalContext(relativePath, contents, module.RegoVersion().String()).Merge(
 		ast.NewObject(
 			ast.Item(ast.InternedTerm("file"), ast.ObjectTerm(
 				ast.Item(ast.InternedTerm("root"), ast.StringTerm(root)),

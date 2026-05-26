@@ -103,7 +103,6 @@ func createAndInitServerWithClientName(
 	ls := NewLanguageServer(ctx, &LanguageServerOptions{
 		Logger:                   logger,
 		WorkspaceDiagnosticsPoll: pollingInterval,
-		FeatureFlags:             DefaultServerFeatureFlags(),
 	})
 
 	ls.StartDiagnosticsWorker(ctx)
@@ -255,7 +254,7 @@ func TestPositionToOffset(t *testing.T) {
 		for char := range uint(5) {
 			pos := types.Position{Line: line, Character: char}
 			exp := line*6 + char
-			got := util.SafeIntToUint(positionToOffset(text, pos))
+			got := util.SafeIntToUint(pos.ToOffset(text))
 
 			if exp != got {
 				t.Fatalf("expected offset for line %d char %d to be %d, got %d", line, char, exp, got)

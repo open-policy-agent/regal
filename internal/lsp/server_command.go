@@ -17,6 +17,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/testgen"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/config/modify"
@@ -29,9 +30,6 @@ import (
 
 func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 	l.workersWg.Go(func() {
-		// note, in this function conn.Call is used as the workspace/applyEdit message is a request, not a notification
-		// as per the spec. In order to be 'routed' to the correct handler on the client it must have an ID
-		// receive responses too. Note however that the responses from the client are not needed by the server.
 		for {
 			select {
 			case <-ctx.Done():
@@ -54,13 +52,6 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 				}
 
 				// Handle all other commands (they use string arguments)
-				var (
-					editParams *types.ApplyWorkspaceEditParams
-					args       types.CommandArgs
-					fixed      bool
-					err        error
-				)
-
 				if len(params.Arguments) != 1 {
 					l.log.Message("expected one argument, got %d", len(params.Arguments))
 
@@ -74,6 +65,12 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 					continue
 				}
 
+				var (
+					editParams workspace.ApplyEditParams
+					args       types.CommandArgs
+					err        error
+				)
+
 				if err = encoding.JSON().Unmarshal(outil.StringToByteSlice(jsonData), &args); err != nil {
 					l.log.Message("failed to unmarshal command arguments: %s", err)
 
@@ -82,45 +79,43 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 
 				switch params.Command {
 				case "regal.fix.opa-fmt":
-					fixed, editParams, err = l.fixEditParams("Format using opa fmt", fixFmt, args)
+					editParams, err = l.fixEditParams("Format using opa fmt", fixFmt, args)
 				case "regal.fix.use-rego-v1":
-					fixed, editParams, err = l.fixEditParams("Format for Rego v1 using opa-fmt", fixUseRegoV1, args)
+					editParams, err = l.fixEditParams("Format for Rego v1 using opa-fmt", fixUseRegoV1, args)
 				case "regal.fix.use-assignment-operator":
-					fixed, editParams, err = l.fixEditParams("Replace = with := in assignment", fixUseAssignmentOperator, args)
+					editParams, err = l.fixEditParams("Replace = with := in assignment", fixUseAssignmentOperator, args)
 				case "regal.fix.no-whitespace-comment":
-					fixed, editParams, err = l.fixEditParams("Format comment to have leading whitespace", fixNoWhitespaceComment, args)
+					editParams, err = l.fixEditParams("Format comment to have leading whitespace", fixNoWhitespaceComment, args)
 				case "regal.fix.non-raw-regex-pattern":
-					fixed, editParams, err = l.fixEditParams("Replace \" with ` in regex pattern", fixNonRawRegexPattern, args)
+					editParams, err = l.fixEditParams("Replace \" with ` in regex pattern", fixNonRawRegexPattern, args)
 				case "regal.fix.prefer-equals-comparison":
-					fixed, editParams, err = l.fixEditParams("Replace = with == in comparison", fixPreferEqualsComparison, args)
+					editParams, err = l.fixEditParams("Replace = with == in comparison", fixPreferEqualsComparison, args)
 				case "regal.fix.constant-condition":
-					fixed, editParams, err = l.fixEditParams("Remove constant condition", fixConstantCondition, args)
+					editParams, err = l.fixEditParams("Remove constant condition", fixConstantCondition, args)
 				case "regal.fix.redundant-existence-check":
-					fixed, editParams, err = l.fixEditParams("Remove redundant existence check", fixRedundantExistence, args)
+					editParams, err = l.fixEditParams("Remove redundant existence check", fixRedundantExistence, args)
 				case "regal.fix.directory-package-mismatch":
-					params, err := l.fixRenameParams("Rename file to match package path", args.Target)
+					changes, err := l.fixRenameChanges(args.Target)
 					if err != nil {
 						l.log.Message("failed to fix directory package mismatch: %s", err)
 
 						break
 					}
 
-					// Use a timeout context for RPC to ensure it completes even during shutdown
-					rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
+					edit := workspace.NewApplyEditParams("Rename file to match package path").
+						WithTimeout(rpcTimeout).
+						WithChanges(changes...)
 
-					//nolint:contextcheck
-					if err := l.conn.Call(rpcCtx, methodWsApplyEdit, params, nil); err != nil {
-						l.log.Message("failed %s notify: %v", methodWsApplyEdit, err.Error())
+					if err = l.Workspace().ApplyEdit(ctx, edit); err != nil {
+						l.log.Message("failed workspace/applyEdit request: %s", err.Error())
 					}
 
-					rpcCancel()
-
 					// handle this ourselves as it's a rename and not a content edit
-					fixed = false
+					continue
 				case "regal.eval":
 					err = l.handleEvalCommand(ctx, args)
 				case "regal.debug":
-					if !l.getClient().InitOptions.EnableDebugCodelens {
+					if !l.Workspace().Client().InitOptions.EnableDebugCodelens {
 						l.log.Message("regal.debug command called but client does not support debug functionality")
 
 						break
@@ -165,22 +160,16 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 						l.log.Message("failed to ignore rule: %s", err)
 					}
 
-					fixed = false // handle this ourselves as it's a config edit
+					continue // handle this ourselves as it's a config edit
 				}
 
 				if err != nil {
 					l.log.Message("command failed: %s", err)
 					l.window.ShowMessage(ctx, types.ErrorMessage, err.Error())
-				} else if fixed {
-					// Use a timeout context for RPC to ensure it completes during graceful shutdown
-					rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
-
-					//nolint:contextcheck
-					if err = l.conn.Call(rpcCtx, methodWsApplyEdit, editParams, nil); err != nil {
-						l.log.Message("failed %s notify: %v", methodWsApplyEdit, err.Error())
+				} else if len(editParams.Edit.DocumentChanges) > 0 {
+					if err := l.Workspace().ApplyEdit(ctx, editParams); err != nil {
+						l.log.Message("failed workspace/applyEdit request: %s", err.Error())
 					}
-
-					rpcCancel()
 				}
 			}
 		}
@@ -191,13 +180,17 @@ func (l *LanguageServer) fixEditParams(
 	label string,
 	fix fixes.Fix,
 	args types.CommandArgs,
-) (bool, *types.ApplyWorkspaceEditParams, error) {
+) (workspace.ApplyEditParams, error) {
+	var editParams workspace.ApplyEditParams
+
 	oldContent, ok := l.cache.GetFileContents(args.Target)
 	if !ok {
-		return false, nil, fmt.Errorf("could not get file contents for uri %q", args.Target)
+		return editParams, fmt.Errorf("could not get file contents for uri %q", args.Target)
 	}
 
-	rto := &fixes.RuntimeOptions{BaseDir: l.workspacePath()}
+	ws := l.Workspace()
+
+	rto := &fixes.RuntimeOptions{BaseDir: ws.Path()}
 	if args.Diagnostic != nil {
 		rto.Locations = []report.Location{{
 			Row:    util.SafeUintToInt(args.Diagnostic.Range.Start.Line + 1),
@@ -211,16 +204,14 @@ func (l *LanguageServer) fixEditParams(
 
 	res, err := fix.Fix(&fixes.FixCandidate{Filename: filepath.Base(uri.ToPath(args.Target)), Contents: oldContent}, rto)
 	if err != nil {
-		return false, nil, fmt.Errorf("failed to fix: %w", err)
-	}
-
-	if len(res) == 0 {
-		return false, &types.ApplyWorkspaceEditParams{}, nil
+		return editParams, fmt.Errorf("failed to fix: %w", err)
+	} else if len(res) == 0 {
+		return editParams, nil
 	}
 
 	var edits []types.TextEdit
 
-	if l.getClient().Identifier == clients.IdentifierIntelliJ {
+	if ws.Client().Identifier == clients.IdentifierIntelliJ {
 		// IntelliJ clients need a single edit that replaces the entire file
 		numLines := util.NumLines(oldContent)
 		line, _ := util.Line(oldContent, numLines)
@@ -231,21 +222,17 @@ func (l *LanguageServer) fixEditParams(
 		edits = ComputeEdits(oldContent, res[0].Contents)
 	}
 
-	editParams := &types.ApplyWorkspaceEditParams{
-		Label: label,
-		Edit: types.WorkspaceEdit{DocumentChanges: []types.TextDocumentEdit{{
-			TextDocument: types.OptionalVersionedTextDocumentIdentifier{URI: args.Target},
-			Edits:        edits,
-		}}},
-	}
+	editParams = workspace.NewApplyEditParams(label).WithChanges(types.NewTextDocumentEdit(args.Target, edits))
 
-	return true, editParams, nil
+	return editParams, nil
 }
 
-func (l *LanguageServer) fixRenameParams(label, fileURI string) (types.ApplyWorkspaceAnyEditParams, error) {
-	roots, err := config.GetPotentialRoots(l.workspacePath())
+func (l *LanguageServer) fixRenameChanges(fileURI string) ([]workspace.DocumentChange, error) {
+	ws := l.Workspace()
+
+	roots, err := config.GetPotentialRoots(ws.Path())
 	if err != nil {
-		return types.ApplyWorkspaceAnyEditParams{}, fmt.Errorf("failed to get potential roots: %w", err)
+		return nil, fmt.Errorf("failed to get potential roots: %w", err)
 	}
 
 	fix := &fixes.DirectoryPackageMismatch{}
@@ -254,16 +241,16 @@ func (l *LanguageServer) fixRenameParams(label, fileURI string) (types.ApplyWork
 	f := fixer.NewFixer().RegisterRoots(roots...).RegisterFixes(fix).SetOnConflictOperation(fixer.OnConflictRename)
 
 	violations := []report.Violation{{Title: fix.Name(), Location: report.Location{File: uri.ToPath(fileURI)}}}
-	cfprovider := fileprovider.NewCacheFileProvider(l.cache, l.getClient().Identifier)
+	cfprovider := fileprovider.NewCacheFileProvider(l.cache, ws.Client().Identifier)
 
 	fixReport, err := f.FixViolations(violations, cfprovider, l.getLoadedConfig())
 	if err != nil {
-		return types.ApplyWorkspaceAnyEditParams{}, fmt.Errorf("failed to fix violations: %w", err)
+		return nil, fmt.Errorf("failed to fix violations: %w", err)
 	}
 
 	ff := fixReport.FixedFiles()
 	if len(ff) == 0 {
-		return types.ApplyWorkspaceAnyEditParams{Label: label, Edit: types.WorkspaceAnyEdit{}}, nil
+		return nil, nil
 	}
 
 	// find the new file and the old location
@@ -280,41 +267,39 @@ func (l *LanguageServer) fixRenameParams(label, fileURI string) (types.ApplyWork
 	}
 
 	if !found {
-		params := types.ApplyWorkspaceAnyEditParams{Label: label, Edit: types.WorkspaceAnyEdit{}}
-
-		return params, errors.New("failed to find fixed file's old location")
+		return nil, errors.New("failed to find fixed file's old location")
 	}
 
-	oldURI, newURI := l.fromPath(oldFile), l.fromPath(fixedFile)
+	oldURI, newURI := ws.URI(oldFile), ws.URI(fixedFile)
 
 	// is the newURI still in the root?
-	if !strings.HasPrefix(newURI, l.getWorkspaceRootURI()) {
-		return types.ApplyWorkspaceAnyEditParams{Label: label},
-			errors.New("cannot move file out of workspace root, consider using a workspace config or manually setting roots")
+	if !strings.HasPrefix(newURI, ws.URI()) {
+		return nil, errors.New(
+			"cannot move file out of workspace root, consider using a workspace config or manually setting roots")
 	}
 
 	// are there old dirs?
 	dirs, err := rio.DirCleanUpPaths(uri.ToPath(oldURI), []string{
-		l.workspacePath(),  // stop at the root
+		ws.Path(),          // stop at the root
 		uri.ToPath(newURI), // also preserve any dirs needed for the new file
 	})
 	if err != nil {
-		return types.ApplyWorkspaceAnyEditParams{}, fmt.Errorf("failed to determine empty directories post rename: %w", err)
+		return nil, fmt.Errorf("failed to determine empty directories post rename: %w", err)
 	}
 
 	renopts := &types.RenameFileOptions{Overwrite: false, IgnoreIfExists: false}
-	changes := append(make([]any, 0, len(dirs)+1),
+	changes := append(make([]workspace.DocumentChange, 0, len(dirs)+1),
 		types.RenameFile{Kind: "rename", OldURI: oldURI, NewURI: newURI, Options: renopts},
 	)
 
 	delopts := &types.DeleteFileOptions{Recursive: true, IgnoreIfNotExists: true}
 	for _, dir := range dirs {
-		changes = append(changes, types.DeleteFile{Kind: "delete", URI: l.fromPath(dir), Options: delopts})
+		changes = append(changes, types.DeleteFile{Kind: "delete", URI: ws.URI(dir), Options: delopts})
 	}
 
 	l.cache.Delete(oldURI)
 
-	return types.ApplyWorkspaceAnyEditParams{Label: label, Edit: types.WorkspaceAnyEdit{DocumentChanges: changes}}, nil
+	return changes, nil
 }
 
 func (l *LanguageServer) handleIgnoreRuleCommand(_ context.Context, args types.CommandArgs) error {
@@ -325,17 +310,18 @@ func (l *LanguageServer) handleIgnoreRuleCommand(_ context.Context, args types.C
 	// find or create config file
 	var configPath string
 
-	if configFile, err := config.Find(l.workspacePath()); err == nil {
+	workspace := l.Workspace()
+	if configFile, err := config.Find(workspace.Path()); err == nil {
 		defer configFile.Close()
 
 		configPath = configFile.Name()
 	} else {
-		regalDir := filepath.Join(l.workspacePath(), ".regal")
+		regalDir := workspace.Path(".regal")
 		if err := os.MkdirAll(regalDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create .regal directory: %w", err)
 		}
 
-		configPath = filepath.Join(regalDir, "config.yaml")
+		configPath = workspace.Path(".regal", "config.yaml")
 	}
 
 	var currentContent string
@@ -363,7 +349,8 @@ func (l *LanguageServer) handleIgnoreRuleCommand(_ context.Context, args types.C
 }
 
 func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types.ExecuteCommandParams) error {
-	if !l.getClient().InitOptions.EnableExplorer {
+	workspace := l.Workspace()
+	if !workspace.Client().InitOptions.EnableExplorer {
 		l.log.Message("regal.explorer command called but client does not support explorer functionality")
 
 		return errors.New("client does not support explorer functionality")
@@ -398,7 +385,7 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 		return fmt.Errorf("could not get file contents for uri %q", args.Target)
 	}
 
-	path := l.toRelativePath(args.Target)
+	path := workspace.RelativePath(args.Target)
 
 	compileResults := explorer.CompilerStages(
 		path,
@@ -409,7 +396,7 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 	)
 
 	// For VSCode, use the notification approach
-	if l.getClient().Identifier == clients.IdentifierVSCode {
+	if l.Workspace().Client().Identifier == clients.IdentifierVSCode {
 		stages := make([]types.ExplorerStageResult, 0, len(compileResults))
 		hasErrors := false
 
@@ -501,7 +488,7 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 		rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
 
 		//nolint:contextcheck
-		l.window.ShowDocument(rpcCtx, uri.FromPath(l.getClient().Identifier, filename), false)
+		l.window.ShowDocument(rpcCtx, workspace.URI(filename), false)
 		rpcCancel()
 	}
 
@@ -515,7 +502,7 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 				rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
 
 				//nolint:contextcheck
-				l.window.ShowDocument(rpcCtx, uri.FromPath(l.getClient().Identifier, planFile), false)
+				l.window.ShowDocument(rpcCtx, workspace.URI(planFile), false)
 				rpcCancel()
 			}
 		}
@@ -586,7 +573,7 @@ func (l *LanguageServer) handleCreateTestCommand(ctx context.Context, params typ
 	combinedTest, err := testgen.CreateTestModule(ctx, testgen.TestModuleOptions{
 		Module:        module,
 		AllModules:    l.cache.GetAllModules(),
-		WorkspacePath: l.workspacePath(),
+		WorkspacePath: l.Workspace().Path(),
 		FileURI:       args.Target,
 		InputManager:  l.input,
 	})
@@ -609,8 +596,7 @@ func (l *LanguageServer) handleCreateTestCommand(ctx context.Context, params typ
 func (l *LanguageServer) displayTestResult(testCode, sourceURI string) error {
 	sourceFile := uri.ToPath(sourceURI)
 	baseName := strings.TrimSuffix(filepath.Base(sourceFile), ".rego")
-
-	testFileName := filepath.Join(l.workspacePath(), baseName+"_test.rego")
+	testFileName := l.Workspace().Path(baseName + "_test.rego")
 
 	if err := os.WriteFile(testFileName, []byte(testCode), 0o600); err != nil {
 		return fmt.Errorf("failed to write test file: %w", err)
@@ -620,7 +606,7 @@ func (l *LanguageServer) displayTestResult(testCode, sourceURI string) error {
 	rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
 	defer rpcCancel()
 
-	l.window.ShowDocument(rpcCtx, uri.FromPath(l.getClient().Identifier, testFileName), true)
+	l.window.ShowDocument(rpcCtx, l.Workspace().URI(testFileName), true)
 
 	return nil
 }

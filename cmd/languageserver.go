@@ -47,11 +47,7 @@ func init() {
 				logLevel = log.LevelDebug
 			}
 
-			opts := &lsp.LanguageServerOptions{
-				Logger:       log.NewLogger(logLevel, os.Stderr),
-				FeatureFlags: lsp.DefaultServerFeatureFlags(),
-			}
-
+			opts := &lsp.LanguageServerOptions{Logger: log.NewLogger(logLevel, os.Stderr)}
 			ls := lsp.NewLanguageServer(ctx, opts)
 
 			conf := connection.LoggingConfig{Logger: opts.Logger, LogInbound: verbose, LogOutbound: verbose}

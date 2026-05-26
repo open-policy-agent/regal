@@ -1,17 +1,5 @@
 package types
 
-import (
-	"encoding/json"
-	"errors"
-
-	"github.com/open-policy-agent/opa/v1/ast"
-
-	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/roast/transforms"
-	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
-)
-
 // Ref is a generic construct for an object found in a Rego module.
 // Ref is designed to be used in completions and provides information
 // relevant to the object with that operation in mind.
@@ -47,38 +35,6 @@ type CommandArgs struct {
 	Query string `json:"path,omitempty"`
 	// Row is the row within the file where the command was run from
 	Row int `json:"row,omitempty"`
-}
-
-type Client struct {
-	Identifier   clients.Identifier    `json:"identifier"`
-	InitOptions  InitializationOptions `json:"init_options"`
-	Capabilities ast.Value             `json:"capabilities,omitempty"`
-}
-
-func (c *Client) UnmarshalJSON(data []byte) (err error) {
-	var m map[string]any
-	if err := encoding.SafeNumberConfig.Unmarshal(data, &m); err != nil {
-		return err
-	}
-
-	idNum, ok := m["identifier"].(json.Number)
-	if !ok {
-		return errors.New("invalid identifier type")
-	}
-
-	idInt, _ := idNum.Int64()
-
-	c.Identifier = clients.Identifier(util.SafeIntToUint(int(idInt))) //nolint: gosec
-
-	if initOptions, ok := m["initializationOptions"]; ok {
-		if err := encoding.JSONRoundTrip(initOptions, &c.InitOptions); err != nil {
-			return err
-		}
-	}
-
-	c.Capabilities, err = transforms.AnyToValue(m["capabilities"])
-
-	return err
 }
 
 // ServerContext is a type which is used to contain things from the server's

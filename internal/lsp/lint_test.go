@@ -6,9 +6,10 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
-	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/lsp/client"
 	"github.com/open-policy-agent/regal/internal/lsp/store"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/report"
@@ -86,6 +87,13 @@ allow[msg] { 1 == 1; msg := "hello" }
 			expectSuccess: true,
 			regoVersion:   ast.RegoUndefined,
 		},
+		"policy with import future keywords.not": {
+			fileURI:       "file:///valid.rego",
+			content:       "package test\nimport future.keywords.not\n",
+			expectModule:  true,
+			expectSuccess: true,
+			regoVersion:   ast.RegoV1,
+		},
 	}
 
 	for testName, testData := range tests {
@@ -96,12 +104,12 @@ allow[msg] { 1 == 1; msg := "hello" }
 			c.SetFileContents(testData.fileURI, testData.content)
 
 			success := must.Return(updateParse(t.Context(), updateParseOpts{
-				Cache:            c,
-				Store:            store.NewRegalStore(),
-				FileURI:          testData.fileURI,
-				Builtins:         ast.BuiltinMap,
-				RegoVersion:      testData.regoVersion,
-				ClientIdentifier: clients.IdentifierGeneric,
+				Cache:       c,
+				Store:       store.NewRegalStore(),
+				FileURI:     testData.fileURI,
+				Builtins:    ast.BuiltinMap,
+				RegoVersion: testData.regoVersion,
+				Workspace:   workspace.New("file:///").WithClient(client.NewGeneric()),
 			}))(t)
 
 			must.Equal(t, testData.expectSuccess, success, "success")

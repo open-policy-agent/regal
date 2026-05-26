@@ -1,13 +1,10 @@
 package lsp
 
 import (
-	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
-	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -116,12 +113,10 @@ import rego.v1
 		receivedMessages,
 	)
 
+	ws := ls.Workspace()
+
 	// update the contents of the bar.rego file to address the unresolved-import
-	notifyDocumentChange(
-		t,
-		connClient,
-		uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego")),
-		`package bax # package imported in foo.rego
+	notifyDocumentChange(t, connClient, ws.URI("bar.rego"), `package bax # package imported in foo.rego
 
 import rego.v1
 `)
@@ -139,7 +134,7 @@ import rego.v1
 	)
 
 	// update the contents of the bar.rego to bring back the violation
-	barURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "bar.rego"))
+	barURI := ws.URI("bar.rego")
 	notifyDocumentChange(t, connClient, barURI, `package bar # original package to bring back the violation
 
 import rego.v1

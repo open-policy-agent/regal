@@ -1,11 +1,15 @@
+// Package input manages input for evaluation, debugging and test generation.
+// A note on the design: input typically exists within a [workspace], and it's
+// possible that the workspace should be responsible for managing it, rather
+// than the input manager having knowledge of the workspace. There is always the
+// possibility of inputs later getting sourced from other places though, so for
+// now this is the approach taken. Certainly something to reconsider a bit later on.
 package input
 
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -20,6 +24,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/store"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
@@ -29,12 +34,11 @@ type (
 	// Manager manages input files in the workspace, allowing for fast retrieval of the most specific input for a given
 	// path, whether in Go (via [*Manager.FindForPath] and [*Manager.Get]) or in Rego (via `data.workspace.inputs`).
 	Manager struct {
-		rootPath string
-		rootFS   fs.FS
-		store    storage.Store
-		inputs   map[string]file
-		log      *log.Logger
-		mut      sync.RWMutex
+		workspace workspace.Workspace
+		store     storage.Store
+		inputs    map[string]file
+		log       *log.Logger
+		mut       sync.RWMutex
 	}
 	file struct {
 		dir  string
@@ -43,6 +47,9 @@ type (
 	}
 )
 
+// NewManager creates a new input Manager with the given store and logger.
+// The loading of the actual workspace may be deferred, but the manager is not
+// fully functional until [*Manager.LoadFromWorkspace] has been called.
 func NewManager(store storage.Store, log *log.Logger) *Manager {
 	return &Manager{
 		store:  store,
@@ -52,26 +59,21 @@ func NewManager(store storage.Store, log *log.Logger) *Manager {
 	}
 }
 
-func (m *Manager) LoadFromRoot(ctx context.Context, rootPath string) error {
-	root, err := os.OpenRoot(rootPath)
-	if err != nil {
-		return fmt.Errorf("failed to open workspace root: %w", err)
-	}
-
-	return m.LoadFromFS(ctx, rootPath, root.FS())
-}
-
-func (m *Manager) LoadFromFS(ctx context.Context, rootPath string, rootFS fs.FS) error {
+func (m *Manager) LoadFromWorkspace(ctx context.Context, workspace workspace.Workspace) {
 	m.mut.Lock()
-	m.rootPath = rootPath
-	m.rootFS = rootFS
+	m.workspace = workspace
 	m.mut.Unlock()
 
-	return files.DefaultWalker(".").
+	err := files.DefaultWalker(".").
 		WithFilters(filter.Not(filter.Suffixes("input.json", "input.yaml"))).
-		WalkFS(rootFS, func(path string) error {
+		WalkFS(workspace.FS(), func(path string) error {
+			m.log.Message("using input file: %s", path)
+
 			return m.Update(ctx, path, nil)
 		})
+	if err != nil {
+		m.log.Debug("error loading input files from workspace: %v", err)
+	}
 }
 
 // FindForPath returns the most specific input path for the given path
@@ -119,7 +121,7 @@ func (m *Manager) Update(ctx context.Context, pathOrURI string, content []byte) 
 	defer m.mut.Unlock()
 
 	if content == nil {
-		if content, err = fs.ReadFile(m.rootFS, path); err != nil {
+		if content, err = fs.ReadFile(m.workspace.FS(), path); err != nil {
 			return err
 		}
 
@@ -184,7 +186,7 @@ func (m *Manager) storagePathFor(path string) storage.Path {
 
 func (m *Manager) internalPath(pathOrURI string) string {
 	m.mut.RLock()
-	rootPath := m.rootPath
+	rootPath := m.workspace.Path()
 	m.mut.RUnlock()
 
 	return strings.TrimPrefix(strings.TrimPrefix(uri.ToPath(pathOrURI), rootPath), "/")

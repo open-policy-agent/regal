@@ -10,8 +10,13 @@ import (
 	"net"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 )
+
+type AnyUint interface {
+	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
+}
 
 // NilSliceToEmpty returns empty slice if provided slice is nil.
 func NilSliceToEmpty[T any](a []T) []T {
@@ -196,11 +201,7 @@ func EnsureSuffix(s, suf string) string {
 
 // IsAnyError checks if the provided error "Is" any of the provided errors.
 func IsAnyError(err error, errs ...error) bool {
-	if err != nil {
-		return slices.ContainsFunc(errs, Partial2(errors.Is, err))
-	}
-
-	return false
+	return err != nil && slices.ContainsFunc(errs, Partial2(errors.Is, err))
 }
 
 // HasAnySuffix checks if the string s has any of the provided suffixes.
@@ -398,4 +399,8 @@ func Line(s string, lineNum uint) (line string, ok bool) {
 	}
 
 	return s[idx+1 : idx+1+endIdx], true
+}
+
+func AppendUint[T AnyUint](bs []byte, i T) []byte {
+	return strconv.AppendUint(bs, uint64(i), 10)
 }
