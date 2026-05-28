@@ -2,11 +2,13 @@ package test
 
 import (
 	"context"
+	"testing"
 
 	"github.com/sourcegraph/jsonrpc2"
 
 	"github.com/open-policy-agent/regal/internal/lsp/connection"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
+	"github.com/open-policy-agent/regal/internal/lsp/log"
 )
 
 func HandlerFor[T any](method string, h handler.Func[T]) connection.HandlerFunc {
@@ -26,4 +28,10 @@ func SendsToChannel[T any](c chan T) func(T) (any, error) {
 
 		return struct{}{}, nil
 	}
+}
+
+func DebugLogger(tb testing.TB) *log.Logger {
+	tb.Helper()
+
+	return log.NewLogger(log.LevelDebug, tb.Output())
 }

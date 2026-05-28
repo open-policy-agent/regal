@@ -23,6 +23,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/open-policy-agent/regal/internal/lsp/store"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/roast/transforms/module"
@@ -55,6 +56,7 @@ func TestRegoHandlers(t *testing.T) {
 	t.Parallel()
 
 	testsExecuted := 0
+	logger := test.DebugLogger(t)
 
 	for name, test := range handlerTests(t) {
 		t.Run(name, func(t *testing.T) {
@@ -63,7 +65,7 @@ func TestRegoHandlers(t *testing.T) {
 			// map implementation... to be fixed later, but only a problem in tests, as the
 			// language server doesn't launch more than one Rego router.
 			stg := storeForDocument(t, test.policy, test.data.content)
-			mgr := rego.NewRegoRouter(t.Context(), stg, query.NewCache(), providersForTest(t, test))
+			mgr := rego.NewRouter(t.Context(), stg, query.NewCache(), providersForTest(t, test), logger)
 			mgr.RegisterResultHandler("textDocument/semanticTokens/full", semantictokens.ResultHandler)
 
 			req := request(test.method, new(json.RawMessage(test.input.content)))
@@ -224,9 +226,9 @@ func TestRouteIgnoredDocument(t *testing.T) {
 	t.Parallel()
 
 	uri := "file:///workspace/ignored.rego"
-	mgr := rego.NewRegoRouter(t.Context(), nil, query.NewCache(), rego.Providers{IgnoredProvider: func(string) bool {
+	mgr := rego.NewRouter(t.Context(), nil, query.NewCache(), rego.Providers{IgnoredProvider: func(string) bool {
 		return true
-	}})
+	}}, test.DebugLogger(t))
 	req := request("textDocument/signatureHelp", docPositionParams(t, uri, types.Position{Line: 0, Character: 0}))
 	rsp, err := mgr.Handle(t.Context(), nil, req)
 
@@ -240,7 +242,7 @@ func TestRouteInitialize(t *testing.T) {
 	data := map[string]any{"server": map[string]any{"version": "0.2.0"}}
 	store := inmem.NewFromObjectWithOpts(data, inmem.OptReturnASTValuesOnRead(true))
 
-	mgr := rego.NewRegoRouter(t.Context(), store, query.NewCache(), rego.Providers{})
+	mgr := rego.NewRouter(t.Context(), store, query.NewCache(), rego.Providers{}, test.DebugLogger(t))
 	mgr.RegisterResultHandler("initialize", func(_ context.Context, result any) (any, error) {
 		rsp, ok := result.(rego.InitializeResponse)
 

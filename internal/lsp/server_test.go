@@ -16,7 +16,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/connection"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -97,11 +97,9 @@ func createAndInitServerWithClientName(
 		pollingInterval = 10 * time.Second
 	}
 
-	logger := log.NewLogger(log.LevelDebug, t.Output())
-
 	// set up the server and client connections
 	ls := NewLanguageServer(ctx, &LanguageServerOptions{
-		Logger:                   logger,
+		Logger:                   test.DebugLogger(t),
 		WorkspaceDiagnosticsPoll: pollingInterval,
 	})
 

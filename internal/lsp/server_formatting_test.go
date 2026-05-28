@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/must"
@@ -20,9 +20,8 @@ func TestFormatting(t *testing.T) {
 		"main/main.rego": "package main\n\n",
 	}
 
-	logger := log.NewLogger(log.LevelDebug, t.Output())
 	receivedMessages := createMessageChannels(files)
-	clientHandler := createPublishDiagnosticsHandler(t, logger, receivedMessages)
+	clientHandler := createPublishDiagnosticsHandler(t, test.DebugLogger(t), receivedMessages)
 	tempDir := testutil.TempDirectoryOf(t, files)
 	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 

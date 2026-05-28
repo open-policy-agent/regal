@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
 
@@ -32,8 +32,7 @@ package bar
 	}
 
 	receivedMessages := createMessageChannels(files)
-	logger := log.NewLogger(log.LevelDebug, t.Output())
-	clientHandler := createPublishDiagnosticsHandler(t, logger, receivedMessages)
+	clientHandler := createPublishDiagnosticsHandler(t, test.DebugLogger(t), receivedMessages)
 
 	tempDir := testutil.TempDirectoryOf(t, files)
 
@@ -91,10 +90,9 @@ import rego.v1
 		".regal/config.yaml": ``,
 	}
 
-	logger := log.NewLogger(log.LevelDebug, t.Output())
 	tempDir := testutil.TempDirectoryOf(t, files)
 	receivedMessages := createMessageChannels(files)
-	clientHandler := createPublishDiagnosticsHandler(t, logger, receivedMessages)
+	clientHandler := createPublishDiagnosticsHandler(t, test.DebugLogger(t), receivedMessages)
 
 	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 

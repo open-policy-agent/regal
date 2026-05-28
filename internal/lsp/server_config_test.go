@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -41,7 +41,7 @@ allow := true
 	tempDir := testutil.TempDirectoryOf(t, files)
 
 	receivedMessages := createMessageChannels(files)
-	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
+	clientHandler := createPublishDiagnosticsHandler(t, test.DebugLogger(t), receivedMessages)
 
 	ls, _, ctx := createAndInitServer(t, tempDir, clientHandler)
 

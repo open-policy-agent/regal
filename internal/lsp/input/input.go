@@ -67,7 +67,7 @@ func (m *Manager) LoadFromWorkspace(ctx context.Context, workspace workspace.Wor
 	err := files.DefaultWalker(".").
 		WithFilters(filter.Not(filter.Suffixes("input.json", "input.yaml"))).
 		WalkFS(workspace.FS(), func(path string) error {
-			m.log.Message("using input file: %s", path)
+			m.log.Debug("using input file: %s", path)
 
 			return m.Update(ctx, path, nil)
 		})

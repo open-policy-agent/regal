@@ -6,7 +6,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/client"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/lsp/workspace"
@@ -24,7 +24,7 @@ func TestLanguageServerFixRenameParams(t *testing.T) {
 	wsRootURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
 	workspace := workspace.New(wsRootURI).WithClient(client.NewGeneric())
 
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: test.DebugLogger(t)})
 	ls.workspace = workspace
 	ls.loadedConfig = &config.Config{
 		Rules: map[string]config.Category{"idiomatic": {
@@ -57,7 +57,7 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 	wsRootURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
 	workspace := workspace.New(wsRootURI).WithClient(client.NewGeneric())
 
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: test.DebugLogger(t)})
 	ls.workspace = workspace
 	ls.loadedConfig = &config.Config{
 		Rules: map[string]config.Category{"idiomatic": {
@@ -111,7 +111,7 @@ func TestLanguageServerFixRenameParamsWhenTargetOutsideRoot(t *testing.T) {
 	wsRootURI := client.URIFromPath(filepath.Join(tmpDir, "workspace"))
 	workspace := workspace.New(wsRootURI).WithClient(client)
 
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: test.DebugLogger(t)})
 	must.Equal(t, nil, ls.loadWorkspace(t.Context(), wsRootURI, client))
 
 	// the root where the client stated the workspace is

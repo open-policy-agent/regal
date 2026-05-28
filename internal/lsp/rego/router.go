@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 
 	"github.com/open-policy-agent/regal/internal/lsp/client"
+	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	ruri "github.com/open-policy-agent/regal/internal/lsp/uri"
@@ -73,10 +75,11 @@ type (
 		InputPathProvider            func(path string) string
 	}
 
-	RegoRouter struct {
+	Router struct {
 		routes         map[string]Route
 		resultHandlers map[string]ResultHandler
 		providers      Providers
+		log            *log.Logger
 		qc             *query.Cache
 	}
 
@@ -110,8 +113,8 @@ type (
 	}
 )
 
-func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, prvs Providers) *RegoRouter {
-	if _, err := qc.GetOrSet(ctx, store, query.MainEval); err != nil {
+func NewRouter(ctx context.Context, s storage.Store, qc *query.Cache, prvs Providers, log *log.Logger) *Router {
+	if _, err := qc.GetOrSet(ctx, s, query.MainEval); err != nil {
 		panic(err) // can't recover here
 	}
 
@@ -138,10 +141,10 @@ func NewRegoRouter(ctx context.Context, store storage.Store, qc *query.Cache, pr
 		"initialized": {}, // special case
 	}
 
-	return &RegoRouter{routes: routes, providers: prvs, qc: qc}
+	return &Router{routes: routes, providers: prvs, qc: qc, log: log}
 }
 
-func (m *RegoRouter) RegisterResultHandler(method string, handler ResultHandler) {
+func (m *Router) RegisterResultHandler(method string, handler ResultHandler) {
 	if m.resultHandlers == nil {
 		m.resultHandlers = make(map[string]ResultHandler)
 	}
@@ -153,7 +156,7 @@ func (m *RegoRouter) RegisterResultHandler(method string, handler ResultHandler)
 	m.resultHandlers[method] = handler
 }
 
-func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
+func (m *Router) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
 	pq := m.qc.Get(query.MainEval)
 	if pq == nil {
 		return nil, fmt.Errorf("no prepared query for %s", query.MainEval)
@@ -175,7 +178,7 @@ func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2
 
 	if route, ok := m.routes[req.Method]; ok {
 		if strings.HasPrefix(req.Method, "textDocument/") {
-			result, err = textDocumentPassthroughHandlerFor(route)(ctx, pq, m.providers, req)
+			result, err = m.textDocumentPassthroughHandlerFor(route)(ctx, pq, m.providers, req)
 		} else {
 			rctx := m.providers.ContextProvider("", route.requires) // No requirements for resolvers yet
 			rctx.Query = pq
@@ -195,9 +198,22 @@ func (m *RegoRouter) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2
 	return nil, &jsonrpc2.Error{Code: jsonrpc2.CodeMethodNotFound, Message: "method not supported: " + req.Method}
 }
 
+// handleError logs the given message and returns nil, unless REGAL_DEBUG
+// is set, in which case msg is returned as an error. This makes issues
+// more visible during development, while not annoying actual users.
+func (m *Router) handleError(msg string) error {
+	if os.Getenv("REGAL_DEBUG") != "" {
+		return errors.New(msg)
+	}
+
+	m.log.Message(msg)
+
+	return nil
+}
+
 // textDocumentPassthroughHandlerFor wraps a regoHandler which first verifies that the text document URI isn't
 // ignored, and ensures that any custom requirements the handler may have are met.
-func textDocumentPassthroughHandlerFor(route Route) regoHandler {
+func (m *Router) textDocumentPassthroughHandlerFor(route Route) regoHandler {
 	return func(ctx context.Context, query *query.Prepared, prvs Providers, req *jsonrpc2.Request) (any, error) {
 		maybeURI := jsoniter.Get(*req.Params, "textDocument", "uri")
 		if maybeURI.LastError() != nil {
@@ -212,7 +228,7 @@ func textDocumentPassthroughHandlerFor(route Route) regoHandler {
 
 		rctx, err := regalContextForRequirements(prvs, docURI, route.requires)
 		if err != nil {
-			return nil, fmt.Errorf("error handling route %s: %w", req.Method, err)
+			return nil, m.handleError(fmt.Sprintf("error handling route %s: %v", req.Method, err))
 		} else if rctx == nil {
 			return nil, nil // e.g. file has always been unparsable
 		}

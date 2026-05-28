@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
@@ -17,7 +17,7 @@ func TestWatcher(t *testing.T) {
 	t.Parallel()
 
 	tempDir := testutil.TempDirectoryOf(t, map[string]string{"config.yaml": "---\nfoo: bar\n"})
-	watcher := NewWatcher(&WatcherOpts{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	watcher := NewWatcher(&WatcherOpts{Logger: test.DebugLogger(t)})
 	configFilePath := filepath.Join(tempDir, "config.yaml")
 
 	ctx, cancel := context.WithCancel(t.Context())

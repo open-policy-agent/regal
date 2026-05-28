@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -39,9 +39,8 @@ rules:
 	// set up the workspace content with some example rego and regal config
 	tempDir := testutil.TempDirectoryOf(t, files)
 	mainRegoURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tempDir, filepath.FromSlash(mainRegoFileName)))
-
 	receivedMessages := receivedMessagesMap{"main.rego": make(chan []string, 10)}
-	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
+	clientHandler := createPublishDiagnosticsHandler(t, test.DebugLogger(t), receivedMessages)
 
 	// note using a blank tempDir here so we can simulate the single file mode
 	_, connClient, ctx := createAndInitServer(t, "", clientHandler)

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -48,10 +48,8 @@ allow if {
 	}
 
 	tempDir := testutil.TempDirectoryOf(t, files)
-
-	logger := log.NewLogger(log.LevelDebug, t.Output())
 	receivedMessages := createMessageChannels(files)
-	clientHandler := createPublishDiagnosticsHandler(t, logger, receivedMessages)
+	clientHandler := createPublishDiagnosticsHandler(t, test.DebugLogger(t), receivedMessages)
 
 	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
