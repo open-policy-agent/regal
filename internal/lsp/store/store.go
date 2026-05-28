@@ -9,6 +9,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 
+	"github.com/open-policy-agent/regal/internal/lsp/client"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/roast/transforms/module"
 	"github.com/open-policy-agent/regal/pkg/config"
@@ -69,7 +70,7 @@ func PutConfig(ctx context.Context, store storage.Store, config *config.Config) 
 	return Put(ctx, store, pathWorkspaceConfig, rast.StructToValue(config))
 }
 
-func PutClient(ctx context.Context, store storage.Store, client types.Client) error {
+func PutClient(ctx context.Context, store storage.Store, client client.Client) error {
 	return Put(ctx, store, pathClient, rast.StructToValue(client))
 }
 

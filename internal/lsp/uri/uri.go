@@ -56,9 +56,7 @@ func FromPath(client clients.Identifier, path string) string {
 	return sb.String()
 }
 
-// ToPath converts a URI to a file path from a format for a given client.
-// Some clients represent URIs differently, and so this function exists to convert
-// client URIs into a standard file paths.
+// ToPath converts a URI to a file path.
 func ToPath(uri string) string {
 	// if it looks like uri was a file URI, then there might be encoded characters in the path
 	path, hadPrefix := strings.CutPrefix(uri, "file://")

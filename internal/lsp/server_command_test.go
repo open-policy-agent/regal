@@ -90,12 +90,11 @@ allow if {
 			files := map[string]string{"main.rego": content}
 			tempDir := testutil.TempDirectoryOf(t, files)
 			clientHandler := createWorkspaceApplyEditTestHandler(t, receivedMessages)
-			_, connClient, ctx := createAndInitServerWithClientName(t, tempDir, clientHandler, tc.clientName)
-
-			mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
+			ls, connClient, ctx := createAndInitServerWithClientName(t, tempDir, clientHandler, tc.clientName)
+			ws := ls.Workspace()
 
 			// Create command arguments with proper JSON marshaling for Windows backslash escapes
-			commandArgs := types.CommandArgs{Target: mainRegoURI}
+			commandArgs := types.CommandArgs{Target: ws.URI("main.rego")}
 			argsJSON := must.Return(encoding.JSON().Marshal(commandArgs))(t)
 
 			executeParams := types.ExecuteCommandParams{
@@ -117,7 +116,7 @@ allow if {
 				must.Equal(t, 1, len(applyEditParams.Edit.DocumentChanges), "number of document changes")
 
 				docChange := applyEditParams.Edit.DocumentChanges[0]
-				must.Equal(t, mainRegoURI, docChange.TextDocument.URI, "document URI")
+				must.Equal(t, ws.URI("main.rego"), docChange.TextDocument.URI, "document URI")
 				must.Equal(t, len(tc.expectedEdits), len(docChange.Edits), "number of edits")
 
 				for i, expected := range tc.expectedEdits {
@@ -178,14 +177,14 @@ allow if {
 }
 `
 
-	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "test.rego"))
-	ls.cache.SetFileContents(mainRegoURI, content)
+	ws := ls.Workspace()
+	ls.cache.SetFileContents(ws.URI("test.rego"), content)
 
 	executeParams := types.ExecuteCommandParams{
 		Command: "regal.explorer",
 		Arguments: []any{
 			map[string]any{
-				"target":      mainRegoURI,
+				"target":      ws.URI("test.rego"),
 				"strict":      false,
 				"annotations": false,
 				"print":       false,
@@ -268,9 +267,8 @@ allow if {
 	}
 	tempDir := testutil.TempDirectoryOf(t, files)
 
-	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
-
-	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main.rego"))
+	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
+	mainRegoURI := ls.Workspace().URI("main.rego")
 
 	timeout := time.NewTimer(determineTimeout())
 	defer timeout.Stop()

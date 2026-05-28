@@ -7,9 +7,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/lsp/client"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
-	"github.com/open-policy-agent/regal/internal/lsp/types"
+	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -127,18 +127,18 @@ func TestLoadWorkspaceContents(t *testing.T) {
 				t.Skip("file permissions used to test unreadableFiles doesn't work on windows")
 			}
 
-			tempDir := testutil.TempDirectoryOf(t, tc.files)
+			wsRootURI := "file://" + testutil.TempDirectoryOf(t, tc.files)
+			workspace := workspace.New(wsRootURI).WithClient(client.NewGeneric())
 
 			for _, fileName := range tc.unreadableFiles {
-				unreadableFile := filepath.Join(tempDir, fileName)
+				unreadableFile := workspace.Path(fileName)
 				must.Equal(t, nil, os.Chmod(unreadableFile, 0o000), "make file %s unreadable %v", fileName)
 			}
 
 			opts := &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())}
 
 			server := NewLanguageServer(t.Context(), opts)
-			server.workspaceRootURI = "file://" + tempDir
-			server.setClient(t.Context(), types.Client{Identifier: clients.IdentifierGeneric})
+			server.workspace = workspace
 			server.loadedConfig = &config.Config{}
 
 			for _, fileName := range tc.cachedFiles {
@@ -158,7 +158,7 @@ func TestLoadWorkspaceContents(t *testing.T) {
 					}
 				}
 
-				fileURI := "file://" + filepath.Join(tempDir, fileName)
+				fileURI := "file://" + workspace.Path(fileName)
 				server.cache.SetFileContents(fileURI, content)
 			}
 

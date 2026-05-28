@@ -11,11 +11,10 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
-	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/completions/refs"
 	"github.com/open-policy-agent/regal/internal/lsp/store"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
-	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
@@ -49,13 +48,12 @@ type diagnosticsRunOpts struct {
 
 // updateParseOpts contains options for updateParse function.
 type updateParseOpts struct {
-	Cache            *cache.Cache
-	Store            storage.Store
-	FileURI          string
-	Builtins         map[string]*ast.Builtin
-	RegoVersion      ast.RegoVersion
-	WorkspaceRootURI string
-	ClientIdentifier clients.Identifier
+	Cache       *cache.Cache
+	Store       storage.Store
+	FileURI     string
+	Builtins    map[string]*ast.Builtin
+	RegoVersion ast.RegoVersion
+	Workspace   workspace.Workspace
 }
 
 // updateParse updates the module cache with the latest parse result for a given URI,
@@ -64,14 +62,14 @@ type updateParseOpts struct {
 func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 	content, ok := opts.Cache.GetFileContents(opts.FileURI)
 	if !ok {
-		return false, fmt.Errorf("failed to get file contents for uri %q", opts.FileURI)
+		return false, fmt.Errorf("updateParse: failed to get file contents for uri %q", opts.FileURI)
 	}
 
 	options := rparse.ParserOptions()
 	options.RegoVersion = opts.RegoVersion
 
 	numLines := util.NumLines(content)
-	presentedFileName := uri.ToRelativePath(opts.FileURI, opts.WorkspaceRootURI)
+	presentedFileName := opts.Workspace.RelativePath(opts.FileURI)
 
 	module, err := rparse.ModuleWithOpts(presentedFileName, content, options)
 	if err == nil {
@@ -103,15 +101,13 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 	var astErrors []ast.Error
 
 	// Check if err is of type ast.Errors
-	var astErrs ast.Errors
-	if errors.As(err, &astErrs) {
+	if astErrs, ok := errors.AsType[ast.Errors](err); ok {
 		for _, e := range astErrs {
 			astErrors = append(astErrors, ast.Error{Code: e.Code, Message: e.Message, Location: e.Location})
 		}
 	} else {
 		// Check if err is a single ast.Error
-		var e *ast.Error
-		if errors.As(err, &e) {
+		if e, ok := errors.AsType[*ast.Error](err); ok {
 			astErrors = append(astErrors, ast.Error{Code: e.Code, Message: e.Message, Location: e.Location})
 		} else {
 			return false, fmt.Errorf("unknown error type: %T", err)
@@ -196,8 +192,7 @@ func convertReportToDiagnostics(rpt *report.Report, workspaceRootURI string) map
 	// rangeValCopy necessary, as value copied in loop anyway
 	//nolint:gocritic
 	for _, item := range rpt.Violations {
-		// here errors are presented as warnings, and warnings as info
-		// to differentiate from parse errors
+		// to differentiate from parse errors: errors presented as warnings and warnings as info
 		severity := diagWarnLevel
 		if item.Level == "warning" {
 			severity = diagInfoLevel
@@ -223,17 +218,12 @@ func convertReportToDiagnostics(rpt *report.Report, workspaceRootURI string) map
 func getRangeForViolation(item report.Violation) types.Range {
 	startLine, startChar := max(item.Location.Row-1, 0), max(item.Location.Column-1, 0)
 
+	endLine, endChar := startLine, startChar
 	if item.Location.End != nil {
-		return types.RangeBetween(
-			startLine, startChar,
-			max(item.Location.End.Row-1, 0), max(item.Location.End.Column-1, 0),
-		)
+		endLine, endChar = max(item.Location.End.Row-1, 0), max(item.Location.End.Column-1, 0)
+	} else if item.Location.Text != nil {
+		endChar = startChar + len(*item.Location.Text)
 	}
 
-	itemLen := 0
-	if item.Location.Text != nil {
-		itemLen = len(*item.Location.Text)
-	}
-
-	return types.RangeBetween(startLine, startChar, startLine, startChar+itemLen)
+	return types.RangeBetween(startLine, startChar, endLine, endChar)
 }

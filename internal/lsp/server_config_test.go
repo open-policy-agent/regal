@@ -47,7 +47,7 @@ allow := true
 
 	ls.StartConfigWorker(ctx)
 
-	if got, exp := ls.getWorkspaceRootURI(), uri.FromPath(ls.getClient().Identifier, tempDir); exp != got {
+	if got, exp := ls.Workspace().URI(), uri.FromPath(ls.Workspace().Client().Identifier, tempDir); exp != got {
 		t.Fatalf("expected client root URI to be %s, got %s", exp, got)
 	}
 

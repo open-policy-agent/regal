@@ -18,6 +18,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -116,7 +117,8 @@ func TestTemplateContentsForFile(t *testing.T) {
 			td := testutil.TempDirectoryOf(t, tc.DiskContents)
 			ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: lg})
 
-			ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, td)
+			wsRootURI := uri.FromPath(clients.IdentifierGeneric, td)
+			ls.workspace = workspace.New(wsRootURI)
 			ls.loadedConfigAllRegoVersions = tc.ServerAllRegoVersions
 
 			fileURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(td, tc.FileKey))
@@ -143,7 +145,8 @@ func TestTemplateContentsForFileInWorkspaceRoot(t *testing.T) {
 	td := testutil.TempDirectoryOf(t, map[string]string{".regal/config.yaml": ""})
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 
-	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, td)
+	workspaceRootURI := uri.FromPath(clients.IdentifierGeneric, td)
+	ls.workspace = workspace.New(workspaceRootURI)
 
 	fileURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(td, "foo.rego"))
 
@@ -161,7 +164,7 @@ func TestTemplateContentsForFileWithUnknownRoot(t *testing.T) {
 	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
 	fileURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(td, "foo", "bar.rego"))
 
-	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, td)
+	ls.workspace = workspace.New(uri.FromPath(clients.IdentifierGeneric, td))
 	ls.cache.SetFileContents(fileURI, "")
 
 	must.MkdirAll(t, td, "foo")
@@ -272,11 +275,7 @@ func TestNewFileTemplating(t *testing.T) {
       {
         "kind": "rename",
         "newUri": "%[2]s",
-        "oldUri": "%[1]s",
-        "options": {
-          "ignoreIfExists": false,
-          "overwrite": false
-        }
+        "oldUri": "%[1]s"
       },
       {
         "kind": "delete",

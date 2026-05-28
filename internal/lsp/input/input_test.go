@@ -8,7 +8,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/input"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
-	"github.com/open-policy-agent/regal/internal/test/must"
+	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 )
 
 func TestFindForPath(t *testing.T) {
@@ -19,7 +19,7 @@ func TestFindForPath(t *testing.T) {
 
 	inputJSON, inputYAML := []byte(`{"foo": "bar"}`), []byte(`foo: bar`)
 
-	must.Equal(t, nil, im.LoadFromFS(t.Context(), "", fstest.MapFS{
+	im.LoadFromWorkspace(t.Context(), workspace.New("file:///").WithFS(fstest.MapFS{
 		"input.json":             {Data: inputJSON},
 		"foo/bar/input.yaml":     {Data: inputYAML},
 		"foo/bar/baz/input.json": {Data: inputJSON},

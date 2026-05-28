@@ -15,6 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/storage"
 
+	"github.com/open-policy-agent/regal/internal/lsp/client"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	ruri "github.com/open-policy-agent/regal/internal/lsp/uri"
@@ -30,18 +31,10 @@ var (
 			input:  ast.NewObjectWithCapacity(3),
 			params: ast.NewTerm(ast.NullValue),
 			regctx: ast.NewTerm(ast.NullValue),
-			buf:    new(bytes.Buffer),
 		}
 	}}
 	fileLines = Requirements{File: FileRequirements{Lines: true}}
 )
-
-type inputCacheItem struct {
-	input  ast.Value
-	params *ast.Term
-	regctx *ast.Term
-	buf    *bytes.Buffer
-}
 
 func init() {
 	ast.InternStringTerm(
@@ -102,12 +95,18 @@ type (
 			Capabilities any              `json:"capabilities"`
 		} `json:"response"`
 		Regal struct {
-			Client    types.Client `json:"client"`
+			Client    client.Client `json:"client"`
 			Workspace struct {
 				URI string `json:"uri"`
 			} `json:"workspace"`
 			Warnings []string `json:"warnings"`
 		} `json:"regal"`
+	}
+
+	inputCacheItem struct {
+		input  ast.Value
+		params *ast.Term
+		regctx *ast.Term
 	}
 )
 
@@ -202,11 +201,11 @@ func textDocumentPassthroughHandlerFor(route Route) regoHandler {
 	return func(ctx context.Context, query *query.Prepared, prvs Providers, req *jsonrpc2.Request) (any, error) {
 		maybeURI := jsoniter.Get(*req.Params, "textDocument", "uri")
 		if maybeURI.LastError() != nil {
-			return nil, fmt.Errorf("expected textDocument.uri parameter at this point: %w", maybeURI.LastError())
+			return nil, fmt.Errorf("expected textDocument.uri parameter: %w", maybeURI.LastError())
 		}
 
 		docURI := maybeURI.ToString()
-		if prvs.IgnoredProvider != nil && prvs.IgnoredProvider(docURI) || !strings.HasSuffix(docURI, ".rego") {
+		if !strings.HasSuffix(docURI, ".rego") || prvs.IgnoredProvider != nil && prvs.IgnoredProvider(docURI) {
 			// This is not an error, but perhaps we should wire in some debug logging later
 			return nil, nil
 		}
@@ -313,15 +312,13 @@ func passthrough(ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request)
 	if obj, ok := res.(ast.Object); ok {
 		rsp := obj.Get(ast.InternedTerm("response")).Value
 
-		cached.buf.Reset()
+		var buf bytes.Buffer
 
-		if err := encoding.OfValue().Encode(cached.buf, rsp); err != nil {
+		if err := encoding.OfValue().Encode(&buf, rsp); err != nil {
 			return nil, fmt.Errorf("failed to marshal response: %w", err)
 		}
 
-		raw := json.RawMessage(cached.buf.Bytes())
-
-		return &raw, nil
+		return new(json.RawMessage(buf.Bytes())), nil
 	}
 
 	return nil, fmt.Errorf("unexpected query result format: %v", res)

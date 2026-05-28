@@ -4,10 +4,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/open-policy-agent/regal/internal/lsp/client"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/config"
@@ -19,10 +21,11 @@ func TestLanguageServerFixRenameParams(t *testing.T) {
 	tmpDir := t.TempDir()
 	must.MkdirAll(t, tmpDir, "workspace", "foo", "bar")
 
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	wsRootURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
+	workspace := workspace.New(wsRootURI).WithClient(client.NewGeneric())
 
-	ls.setClient(t.Context(), types.Client{Identifier: clients.IdentifierGeneric})
-	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
+	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	ls.workspace = workspace
 	ls.loadedConfig = &config.Config{
 		Rules: map[string]config.Category{"idiomatic": {
 			"directory-package-mismatch": config.Rule{
@@ -32,13 +35,12 @@ func TestLanguageServerFixRenameParams(t *testing.T) {
 		}},
 	}
 
-	fileURI := uri.FromRelativePath(ls.getClient().Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
+	fileURI := workspace.URI("foo", "bar", "policy.rego")
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 
-	params := must.Return(ls.fixRenameParams("fix my file!", fileURI))(t)
-	must.Equal(t, "fix my file!", params.Label, "label")
+	changes := must.Return(ls.fixRenameChanges(fileURI))(t)
 
-	change := must.Be[types.RenameFile](t, params.Edit.DocumentChanges[0])
+	change := must.Be[types.RenameFile](t, changes[0])
 	must.Equal(t, "rename", change.Kind, "change kind")
 	must.Equal(t, fileURI, change.OldURI, "old URI")
 
@@ -52,10 +54,11 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 	tmpDir := t.TempDir()
 	must.MkdirAll(t, tmpDir, "workspace", "foo", "bar")
 
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	wsRootURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
+	workspace := workspace.New(wsRootURI).WithClient(client.NewGeneric())
 
-	ls.setClient(t.Context(), types.Client{Identifier: clients.IdentifierGeneric})
-	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
+	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	ls.workspace = workspace
 	ls.loadedConfig = &config.Config{
 		Rules: map[string]config.Category{"idiomatic": {
 			"directory-package-mismatch": config.Rule{
@@ -65,21 +68,17 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 		}},
 	}
 
-	fileURI := uri.FromRelativePath(ls.getClient().Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
-	conflictingFileURI := uri.FromPath(
-		clients.IdentifierGeneric,
-		filepath.Join(tmpDir, "workspace", "authz", "main", "rules", "policy.rego"),
-	)
+	fileURI := workspace.URI("foo", "bar", "policy.rego")
+	conflictingFileURI := workspace.URI("authz", "main", "rules", "policy.rego")
 
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 	ls.cache.SetFileContents(conflictingFileURI, "package authz.main.rules") // existing content irrelevant here
 
-	params := must.Return(ls.fixRenameParams("fix my file!", fileURI))(t)
-	must.Equal(t, "fix my file!", params.Label, "label")
-	must.Equal(t, 3, len(params.Edit.DocumentChanges), "number of document changes")
+	changes := must.Return(ls.fixRenameChanges(fileURI))(t)
+	must.Equal(t, 3, len(changes), "number of document changes")
 
 	// check the rename
-	change := must.Be[types.RenameFile](t, params.Edit.DocumentChanges[0])
+	change := must.Be[types.RenameFile](t, changes[0])
 	must.Equal(t, "rename", change.Kind, "change kind")
 	must.Equal(t, fileURI, change.OldURI, "old URI")
 
@@ -87,12 +86,12 @@ func TestLanguageServerFixRenameParamsWithConflict(t *testing.T) {
 	must.Equal(t, uri.FromPath(clients.IdentifierGeneric, path), change.NewURI, "new URI")
 
 	// check the deletes
-	deleteChange1 := must.Be[types.DeleteFile](t, params.Edit.DocumentChanges[1])
+	deleteChange1 := must.Be[types.DeleteFile](t, changes[1])
 
 	expectedDeletedURI1 := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace", "foo", "bar"))
 	must.Equal(t, expectedDeletedURI1, deleteChange1.URI, "delete URI")
 
-	deleteChange2 := must.Be[types.DeleteFile](t, params.Edit.DocumentChanges[2])
+	deleteChange2 := must.Be[types.DeleteFile](t, changes[2])
 
 	expectedDeletedURI2 := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace", "foo"))
 	must.Equal(t, expectedDeletedURI2, deleteChange2.URI, "delete URI")
@@ -108,12 +107,16 @@ func TestLanguageServerFixRenameParamsWhenTargetOutsideRoot(t *testing.T) {
 	// is moved relative to a dir above the workspace.
 	must.WriteFile(t, filepath.Join(tmpDir, ".regal.yaml"), []byte{})
 
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	client := client.NewGeneric()
+	wsRootURI := client.URIFromPath(filepath.Join(tmpDir, "workspace"))
+	workspace := workspace.New(wsRootURI).WithClient(client)
 
-	ls.setClient(t.Context(), types.Client{Identifier: clients.IdentifierGeneric})
+	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	must.Equal(t, nil, ls.loadWorkspace(t.Context(), wsRootURI, client))
+
 	// the root where the client stated the workspace is
 	// this is what would be set if a config file were in the parent instead
-	ls.workspaceRootURI = uri.FromPath(clients.IdentifierGeneric, filepath.Join(tmpDir, "workspace"))
+	ls.workspace = workspace
 	ls.loadedConfig = &config.Config{
 		Rules: map[string]config.Category{"idiomatic": {
 			"directory-package-mismatch": config.Rule{
@@ -123,9 +126,9 @@ func TestLanguageServerFixRenameParamsWhenTargetOutsideRoot(t *testing.T) {
 		}},
 	}
 
-	fileURI := uri.FromRelativePath(ls.getClient().Identifier, "foo/bar/policy.rego", ls.workspaceRootURI)
+	fileURI := uri.FromRelativePath(clients.IdentifierGeneric, "foo/bar/policy.rego", workspace.URI())
 	ls.cache.SetFileContents(fileURI, "package authz.main.rules")
 
-	_, err := ls.fixRenameParams("fix my file!", fileURI)
+	_, err := ls.fixRenameChanges(fileURI)
 	assert.StringContains(t, err.Error(), "cannot move file out of workspace root")
 }
