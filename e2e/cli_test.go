@@ -528,8 +528,7 @@ allow := true
 		"unrelated.txt": `foobar`,
 	}
 
-	// --force is required to make the changes when there is no git repo
-	regal("fix", "--force", join(td, "foo"), join(td, "bar"), join(td, "v0"), join(td, "v1")).
+	regal("fix", join(td, "foo"), join(td, "bar"), join(td, "v0"), join(td, "v1")).
 		expectStdout(equals(exp)).
 		expectFiles(
 			notExists(td, "bar"),
@@ -550,8 +549,7 @@ func TestFixWithConflicts(t *testing.T) {
 
 	td := testutil.TempDirectoryOf(t, initialState)
 
-	// --force is required to make the changes when there is no git repo
-	regal("fix", "--force", td).
+	regal("fix", td).
 		expectExitCode(1).
 		expectStdout(equals(
 			"Source file conflicts:\n"+
@@ -582,9 +580,7 @@ func TestFixWithConflictRenaming(t *testing.T) {
 
 	td := testutil.TempDirectoryOf(t, initialState)
 
-	// --force is required to make the changes when there is no git repo
-	// --conflict=rename will rename inbound files when there is a conflict
-	regal("fix", "--force", "--on-conflict=rename", td).
+	regal("fix", "--on-conflict=rename", td).
 		expectStdout(equals("3 fixes applied:\n"+
 			"In project root: %[1]s\n"+
 			"foo/bar.rego -> bar/bar.rego:\n"+
@@ -625,8 +621,7 @@ project:
 	expectedState["foo/wow/foo.rego"] = initialState["foo/foo.rego"]
 	delete(expectedState, "foo/foo.rego")
 
-	// --force is required to make the changes when there is no git repo
-	regal("fix", "--force", join(td, "foo/foo.rego")).
+	regal("fix", join(td, "foo/foo.rego")).
 		expectStdout(equals(
 			"1 fix applied:\n"+
 				"In project root: %[1]s\n"+
