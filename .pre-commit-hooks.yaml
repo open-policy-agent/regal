@@ -23,19 +23,19 @@
   language: golang
   name: policy file fixing
   description: auto-fix policy files with Regal from Styra built from source
-  entry: regal fix --force
+  entry: regal fix
   files: (\.rego)$
 
 - id: regal-fix-use-path
   language: system
   name: policy file fixing
   description: auto-fix policy files with Regal from Styra using system $PATH
-  entry: regal fix --force
+  entry: regal fix
   files: (\.rego)$
 
 - id: regal-fix-download
   language: script
   name: policy file fixing
   description: auto-fix policy files with Regal downloaded from Github
-  entry: build/download-and-run.sh fix --force
+  entry: build/download-and-run.sh fix
   files: (\.rego)$

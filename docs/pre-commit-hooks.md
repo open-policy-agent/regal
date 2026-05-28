@@ -45,11 +45,10 @@ Runs Regal against all staged `.rego` files, aborting the commit if any fail.
 
 ![commit-msg hook](https://img.shields.io/badge/hook-pre--commit-informational?logo=git)
 
-Runs `regal fix --force` against all staged `.rego` files, applying any
+Runs `regal fix` against all staged `.rego` files, applying any
 auto-fixable rule violations in place. Use this alongside `regal-lint` when you
 want the hook to repair style-level issues automatically rather than asking the
-contributor to re-run `regal fix` themselves. `--force` is required because
-pre-commit invokes hooks against files staged in a dirty git tree.
+contributor to re-run `regal fix` themselves.
 
 - requires the `go` build chain is installed and available on `$PATH`
 - will build and install the tagged version of Regal in an isolated `GOPATH`
