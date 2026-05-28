@@ -64,7 +64,7 @@ main contains null if {
 # title: pull_request
 # description: Run all task to verify a pull request
 do contains "pull_request" if {
-	some x in ["test", "lint", "e2e", "check_readme"]
+	some x in ["test", "lint", "e2e", "check_readme", "check_capabilities"]
 	github("::group::", x)
 	job[x]
 	github("::endgroup::", x)
@@ -94,6 +94,7 @@ job contains "pr" if {
 	# format
 	fmt_all
 	write_readme
+	write_capabilities
 	golangcilintfix
 
 	# verify
@@ -148,6 +149,14 @@ build(false) if {
 job contains "check_readme" if {
 	build(true)
 	check_readme
+}
+
+# METADATA
+# title: check_capabilities
+# description: Verify that build/capabilities.json is up-to-date
+job contains "check_capabilities" if {
+	build(true)
+	check_capabilities
 }
 
 # any binary is good enough when calling `build(false)`, it doesn't need to be
@@ -393,6 +402,14 @@ check_readme if {
 
 write_readme if {
 	run("./build/update-readme.sh write")
+}
+
+check_capabilities if {
+	run("./build/update-capabilities.sh check")
+}
+
+write_capabilities if {
+	run("./build/update-capabilities.sh write")
 }
 
 fmt_all if {
