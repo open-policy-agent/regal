@@ -151,7 +151,7 @@ type LanguageServer struct {
 	bundleCache *bundles.Cache
 	queryCache  *query.Cache
 
-	regoRouter *rego.RegoRouter
+	regoRouter *rego.Router
 
 	// initializationGate blocks workers until the initialized notification is received
 	initializationGate     chan struct{}
@@ -226,14 +226,14 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		loadedConfigAllRegoVersions: concurrent.MapOf(make(map[string]ast.RegoVersion)),
 	}
 
-	ls.regoRouter = rego.NewRegoRouter(ctx, rstore, qc, rego.Providers{
+	ls.regoRouter = rego.NewRouter(ctx, rstore, qc, rego.Providers{
 		ContextProvider:              ls.regalContext,
 		IgnoredProvider:              ls.ignoreURI,
 		ContentProvider:              ls.cache.GetFileContents,
 		ParseErrorsProvider:          ls.cache.GetParseErrors,
 		SuccessfulParseCountProvider: ls.cache.GetSuccessfulParseLineCount,
 		InputPathProvider:            ls.input.FindForPath,
-	})
+	}, opts.Logger)
 
 	ls.regoRouter.RegisterResultHandler("initialize", ls.initializeResultHandler)
 	ls.regoRouter.RegisterResultHandler("initialized", ls.initializedResultHandler)

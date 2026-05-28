@@ -8,7 +8,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/lsp/client"
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/test/assert"
@@ -22,7 +22,7 @@ func TestEvalWorkspacePath(t *testing.T) {
 
 	workspace := workspace.New("file:///workspace").WithClient(client.NewGeneric())
 
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: test.DebugLogger(t)})
 	ls.workspace = workspace
 
 	policy1 := `package policy1
@@ -67,7 +67,7 @@ func TestEvalWorkspacePath(t *testing.T) {
 func TestEvalWorkspacePathInternalData(t *testing.T) {
 	t.Parallel()
 
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: test.DebugLogger(t)})
 
 	res := must.Return(ls.EvalInWorkspace(t.Context(), "object.keys(data.internal)", ast.InternedEmptyObjectValue))(t)
 	val := must.Be[[]any](t, res.Value)

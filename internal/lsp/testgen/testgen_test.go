@@ -8,8 +8,8 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/input"
-	"github.com/open-policy-agent/regal/internal/lsp/log"
 	"github.com/open-policy-agent/regal/internal/lsp/store"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/testgen"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/lsp/workspace"
@@ -114,7 +114,7 @@ deny if {
 				t.Fatalf("failed to parse policy: %v", err)
 			}
 
-			im := input.NewManager(store.NewRegalStore(), log.NewLogger(log.LevelDebug, t.Output()))
+			im := input.NewManager(store.NewRegalStore(), test.DebugLogger(t))
 			im.LoadFromWorkspace(t.Context(), workspace)
 
 			result, err := testgen.CreateTestModule(t.Context(), testgen.TestModuleOptions{

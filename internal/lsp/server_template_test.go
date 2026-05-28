@@ -15,7 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/lsp/workspace"
@@ -113,9 +113,8 @@ func TestTemplateContentsForFile(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			lg := log.NewLogger(log.LevelDebug, t.Output())
 			td := testutil.TempDirectoryOf(t, tc.DiskContents)
-			ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: lg})
+			ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: test.DebugLogger(t)})
 
 			wsRootURI := uri.FromPath(clients.IdentifierGeneric, td)
 			ls.workspace = workspace.New(wsRootURI)
@@ -143,7 +142,7 @@ func TestTemplateContentsForFileInWorkspaceRoot(t *testing.T) {
 	t.Parallel()
 
 	td := testutil.TempDirectoryOf(t, map[string]string{".regal/config.yaml": ""})
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: test.DebugLogger(t)})
 
 	workspaceRootURI := uri.FromPath(clients.IdentifierGeneric, td)
 	ls.workspace = workspace.New(workspaceRootURI)
@@ -161,7 +160,7 @@ func TestTemplateContentsForFileWithUnknownRoot(t *testing.T) {
 	t.Parallel()
 
 	td := t.TempDir()
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())})
+	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: test.DebugLogger(t)})
 	fileURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(td, "foo", "bar.rego"))
 
 	ls.workspace = workspace.New(uri.FromPath(clients.IdentifierGeneric, td))
@@ -337,7 +336,7 @@ func TestTemplateWorkerSkipsDidOpenWhenTemplating(t *testing.T) {
 
 	receivedMessages := receivedMessagesMap{"policy.rego": make(chan []string, 10)}
 	tempDir := testutil.TempDirectoryOf(t, map[string]string{".regal/config.yaml": `{}`})
-	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
+	clientHandler := createPublishDiagnosticsHandler(t, test.DebugLogger(t), receivedMessages)
 	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	// note that the template worker is not started, we simulate it's running

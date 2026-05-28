@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
@@ -43,7 +43,7 @@ rules:
 	mainRegoURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(tempDir, filepath.FromSlash(mainRegoFileName)))
 
 	receivedMessages := createMessageChannels(files)
-	clientHandler := createPublishDiagnosticsHandler(t, log.NewLogger(log.LevelDebug, t.Output()), receivedMessages)
+	clientHandler := createPublishDiagnosticsHandler(t, test.DebugLogger(t), receivedMessages)
 
 	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 

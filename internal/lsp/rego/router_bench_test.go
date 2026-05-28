@@ -12,6 +12,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/rego"
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 )
@@ -20,10 +21,12 @@ import (
 // Therefore make sure all tests in TestRegoHandlers pass before running these benchmarks!
 // See testdata/bench_results.txt for the current results, and update it on changes.
 func BenchmarkRegoHandlers(b *testing.B) {
+	logger := test.DebugLogger(b)
+
 	for name, test := range handlerTests(b) { //nolint:gocritic // "each iteration copies 184 bytes"
 		b.Run(name, func(b *testing.B) {
 			stg := storeForDocument(b, test.policy, test.data.content)
-			mgr := rego.NewRegoRouter(b.Context(), stg, query.NewCache(), providersForTest(b, test))
+			mgr := rego.NewRouter(b.Context(), stg, query.NewCache(), providersForTest(b, test), logger)
 			mgr.RegisterResultHandler("textDocument/semanticTokens/full", semantictokens.ResultHandler)
 
 			runBenchmark(b, mgr, request(test.method, new(json.RawMessage(test.input.content))))
@@ -54,14 +57,14 @@ func BenchmarkFoldingRangeHandlerLineFoldingOnlyVsFull(b *testing.B) {
 					"parsed": map[string]any{doc.uri: doc.parsed},
 				},
 			}, inmem.OptReturnASTValuesOnRead(true))
-			router := rego.NewRegoRouter(b.Context(), store, query.NewCache(), contextForDoc(doc))
+			router := rego.NewRouter(b.Context(), store, query.NewCache(), contextForDoc(doc), test.DebugLogger(b))
 
 			runBenchmark(b, router, req)
 		})
 	}
 }
 
-func runBenchmark(b *testing.B, mgr *rego.RegoRouter, req *jsonrpc2.Request) {
+func runBenchmark(b *testing.B, mgr *rego.Router, req *jsonrpc2.Request) {
 	b.Helper()
 
 	for b.Loop() {

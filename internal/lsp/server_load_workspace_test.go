@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/regal/internal/lsp/client"
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
@@ -135,9 +135,7 @@ func TestLoadWorkspaceContents(t *testing.T) {
 				must.Equal(t, nil, os.Chmod(unreadableFile, 0o000), "make file %s unreadable %v", fileName)
 			}
 
-			opts := &LanguageServerOptions{Logger: log.NewLogger(log.LevelDebug, t.Output())}
-
-			server := NewLanguageServer(t.Context(), opts)
+			server := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: test.DebugLogger(t)})
 			server.workspace = workspace
 			server.loadedConfig = &config.Config{}
 

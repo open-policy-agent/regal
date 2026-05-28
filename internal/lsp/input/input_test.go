@@ -7,7 +7,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 
 	"github.com/open-policy-agent/regal/internal/lsp/input"
-	"github.com/open-policy-agent/regal/internal/lsp/log"
+	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 )
 
@@ -15,7 +15,7 @@ func TestFindForPath(t *testing.T) {
 	t.Parallel()
 
 	st := inmem.NewFromObject(map[string]any{"workspace": map[string]any{"inputs": map[string]any{}}})
-	im := input.NewManager(st, log.NewLogger(log.LevelDebug, t.Output()))
+	im := input.NewManager(st, test.DebugLogger(t))
 
 	inputJSON, inputYAML := []byte(`{"foo": "bar"}`), []byte(`foo: bar`)
 
