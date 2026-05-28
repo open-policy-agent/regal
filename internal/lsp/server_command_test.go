@@ -404,26 +404,10 @@ allow if {
 
 			expectedTestFile := filepath.Join(tempDir, "policy_test.rego")
 
-			timeout := time.NewTimer(5 * time.Second)
-			defer timeout.Stop()
-
 			var fileExists bool
 
 			if tc.expectFile {
-				for {
-					if rio.Exists(expectedTestFile) {
-						fileExists = true
-
-						break
-					}
-
-					select {
-					case <-timeout.C:
-						break
-					default:
-						time.Sleep(50 * time.Millisecond)
-					}
-				}
+				fileExists = waitForFile(expectedTestFile, 5*time.Second)
 			} else {
 				time.Sleep(100 * time.Millisecond)
 
@@ -448,4 +432,18 @@ allow if {
 			}
 		})
 	}
+}
+
+func waitForFile(path string, timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+
+	for time.Now().Before(deadline) {
+		if rio.Exists(path) {
+			return true
+		}
+
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	return false
 }
