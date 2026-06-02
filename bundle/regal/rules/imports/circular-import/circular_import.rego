@@ -11,25 +11,9 @@ import data.regal.ast
 import data.regal.result
 import data.regal.util
 
-_refs[str] contains ref.location if {
-	some ref
-	ast.found.refs[_][ref].value[0].value == "data"
-	ast.static_ref(ref)
-
-	str := concat(".", [term.value | some term in ref.value])
-}
-
-_refs[ref] contains imported.path.location if {
-	some imported in ast.imports
-
-	imported.path.value[0].value == "data"
-
-	ref := concat(".", [term.value | some term in imported.path.value])
-}
-
 # METADATA
 # description: collects refs from module, if any
-aggregate contains {"package_name": ast.package_name_full, "refs": _refs} if _refs != {}
+aggregate contains {"refs": _refs} if _refs != {}
 
 # METADATA
 # schemas:
@@ -77,19 +61,41 @@ aggregate_report contains violation if {
 	})
 }
 
+_refs[str] contains ref.location if {
+	some ref
+	ast.found.refs[_][ref].value[0].value == "data"
+	ast.static_ref(ref)
+
+	str := concat(".", [term.value | some term in ref.value])
+}
+
+_refs[ref] contains imported.path.location if {
+	some imported in ast.imports
+
+	imported.path.value[0].value == "data"
+
+	ref := concat(".", [term.value | some term in imported.path.value])
+}
+
 # METADATA
 # schemas:
 #   - input: schema.regal.aggregate
-_package_locations[referenced_pkg][pkg.package_name] := [file, util.any_set_item(referenced_locations)] if {
+_package_locations[referenced_pkg][package_name] := [file, util.any_set_item(referenced_locations)] if {
 	some file, pkg in _aggregated
+
+	package_name := _common[file].package_name_full
+
 	some referenced_pkg, referenced_locations in pkg.refs
 }
 
 # METADATA
 # schemas:
 #   - input: schema.regal.aggregate
-_import_graph[pkg.package_name] contains str if {
-	some pkg in _aggregated
+_import_graph[package_name] contains str if {
+	some file, pkg in _aggregated
+
+	package_name := _common[file].package_name_full
+
 	some str, _ in pkg.refs
 }
 
@@ -118,4 +124,9 @@ _aggregated[file] := agg if {
 	# so we can simplify things some for our callers
 	some file
 	agg := input.aggregates_internal[file]["imports/circular-import"][_]
+}
+
+_common[file] := agg if {
+	some file
+	agg := input.aggregates_internal[file].common[_]
 }

@@ -21,7 +21,7 @@ test_aggregate_rule_contains_single_self_ref if {
 		with input as ast.policy("import data.example")
 		with ast.package_name_full as "data.policy"
 
-	aggregate == {{"refs": {"data.example": {"3:8:3:20"}}, "package_name": "data.policy"}}
+	aggregate == {{"refs": {"data.example": {"3:8:3:20"}}}}
 }
 
 test_aggregate_rule_surfaces_refs if {
@@ -42,40 +42,37 @@ test_aggregate_rule_surfaces_refs if {
     }
     `)
 
-	aggregate == {{
-		"refs": {
-			"data.config.deny.enabled": {"11:7:11:31"},
-			"data.foo.bar": {"6:12:6:24"},
-			"data.baz.qux": {"8:14:8:26"},
-		},
-		"package_name": "data.policy.foo",
-	}}
+	aggregate == {{"refs": {
+		"data.config.deny.enabled": {"11:7:11:31"},
+		"data.foo.bar": {"6:12:6:24"},
+		"data.baz.qux": {"8:14:8:26"},
+	}}}
 }
 
 test_import_graph if {
 	r := rule._import_graph with input.aggregates_internal as {
-		"a.rego": {"imports/circular-import": {{
-			"refs": {"data.policy.b": {"3:12:3:12"}},
-			"package_name": "data.policy.a",
-		}}},
-		"b.rego": {"imports/circular-import": {{
-			"refs": {"data.policy.c": {"3:12:3:12"}},
-			"package_name": "data.policy.b",
-		}}},
-		"c.rego": {"imports/circular-import": {{
-			"refs": {"data.policy.a": {"3:12:3:12"}},
-			"package_name": "data.policy.c",
-		}}},
+		"a.rego": {
+			"common": {{"package_name_full": "data.policy.a"}},
+			"imports/circular-import": {{"refs": {"data.policy.b": {"3:12:3:12"}}}},
+		},
+		"b.rego": {
+			"common": {{"package_name_full": "data.policy.b"}},
+			"imports/circular-import": {{"refs": {"data.policy.c": {"3:12:3:12"}}}},
+		},
+		"c.rego": {
+			"common": {{"package_name_full": "data.policy.c"}},
+			"imports/circular-import": {{"refs": {"data.policy.a": {"3:12:3:12"}}}},
+		},
 	}
 
 	r == {"data.policy.a": {"data.policy.b"}, "data.policy.b": {"data.policy.c"}, "data.policy.c": {"data.policy.a"}}
 }
 
 test_import_graph_self_import if {
-	r := rule._import_graph with input.aggregates_internal as {"example.rego": {"imports/circular-import": {{
-		"refs": {"data.example": {"4:12:4:12"}},
-		"package_name": "data.example",
-	}}}}
+	r := rule._import_graph with input.aggregates_internal as {"example.rego": {
+		"common": {{"package_name_full": "data.example"}},
+		"imports/circular-import": {{"refs": {"data.example": {"4:12:4:12"}}}},
+	}}
 
 	r == {"data.example": {"data.example"}}
 }
@@ -106,18 +103,18 @@ test_groups_empty_graph if {
 
 test_package_locations if {
 	r := rule._package_locations with input.aggregates_internal as {
-		"a.rego": {"imports/circular-import": {{
-			"refs": {"data.policy.b": {"3:12:3:12"}},
-			"package_name": "data.policy.a",
-		}}},
-		"b.rego": {"imports/circular-import": {{
-			"refs": {"data.policy.c": {"3:12:3:12"}},
-			"package_name": "data.policy.b",
-		}}},
-		"c.rego": {"imports/circular-import": {{
-			"refs": {"data.policy.a": {"3:12:3:12"}},
-			"package_name": "data.policy.c",
-		}}},
+		"a.rego": {
+			"common": {{"package_name_full": "data.policy.a"}},
+			"imports/circular-import": {{"refs": {"data.policy.b": {"3:12:3:12"}}}},
+		},
+		"b.rego": {
+			"common": {{"package_name_full": "data.policy.b"}},
+			"imports/circular-import": {{"refs": {"data.policy.c": {"3:12:3:12"}}}},
+		},
+		"c.rego": {
+			"common": {{"package_name_full": "data.policy.c"}},
+			"imports/circular-import": {{"refs": {"data.policy.a": {"3:12:3:12"}}}},
+		},
 	}
 
 	r == {
@@ -129,14 +126,14 @@ test_package_locations if {
 
 test_aggregate_report_fails_when_cycle_present if {
 	r := rule.aggregate_report with input.aggregates_internal as {
-		"a.rego": {"imports/circular-import": {{
-			"refs": {"data.policy.b": {"3:12:3:12"}},
-			"package_name": "data.policy.a",
-		}}},
-		"b.rego": {"imports/circular-import": {{
-			"refs": {"data.policy.a": {"2:0:2:0"}},
-			"package_name": "data.policy.b",
-		}}},
+		"a.rego": {
+			"common": {{"package_name_full": "data.policy.a"}},
+			"imports/circular-import": {{"refs": {"data.policy.b": {"3:12:3:12"}}}},
+		},
+		"b.rego": {
+			"common": {{"package_name_full": "data.policy.b"}},
+			"imports/circular-import": {{"refs": {"data.policy.a": {"2:0:2:0"}}}},
+		},
 	}
 
 	r == {{
@@ -161,10 +158,10 @@ test_aggregate_report_fails_when_cycle_present if {
 }
 
 test_aggregate_report_fails_when_cycle_present_in_1_package if {
-	r := rule.aggregate_report with input.aggregates_internal as {"a.rego": {"imports/circular-import": {{
-		"refs": {"data.policy.a": {"3:12:3:12"}},
-		"package_name": "data.policy.a",
-	}}}}
+	r := rule.aggregate_report with input.aggregates_internal as {"a.rego": {
+		"common": {{"package_name_full": "data.policy.a"}},
+		"imports/circular-import": {{"refs": {"data.policy.a": {"3:12:3:12"}}}},
+	}}
 
 	r == {{
 		"category": "imports",
@@ -188,18 +185,18 @@ test_aggregate_report_fails_when_cycle_present_in_1_package if {
 
 test_aggregate_report_fails_when_cycle_present_in_n_packages if {
 	r := rule.aggregate_report with input.aggregates_internal as {
-		"a.rego": {"imports/circular-import": {{
-			"refs": {"data.policy.b": {"3:12:3:12"}},
-			"package_name": "data.policy.a",
-		}}},
-		"b.rego": {"imports/circular-import": {{
-			"refs": {"data.policy.c": {"3:12:3:12"}},
-			"package_name": "data.policy.b",
-		}}},
-		"c.rego": {"imports/circular-import": {{
-			"refs": {"data.policy.a": {"3:12:3:12"}},
-			"package_name": "data.policy.c",
-		}}},
+		"a.rego": {
+			"common": {{"package_name_full": "data.policy.a"}},
+			"imports/circular-import": {{"refs": {"data.policy.b": {"3:12:3:12"}}}},
+		},
+		"b.rego": {
+			"common": {{"package_name_full": "data.policy.b"}},
+			"imports/circular-import": {{"refs": {"data.policy.c": {"3:12:3:12"}}}},
+		},
+		"c.rego": {
+			"common": {{"package_name_full": "data.policy.c"}},
+			"imports/circular-import": {{"refs": {"data.policy.a": {"3:12:3:12"}}}},
+		},
 	}
 
 	r == {{
