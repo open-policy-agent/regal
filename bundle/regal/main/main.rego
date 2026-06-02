@@ -8,6 +8,7 @@
 #   scope of a single file
 package regal.main
 
+import data.regal.aggregators
 import data.regal.ast
 import data.regal.config
 import data.regal.notices
@@ -136,7 +137,10 @@ report contains violation if {
 aggregate[input.regal.file.name].common contains {
 	"package_name": ast.package_name,
 	"package_name_full": ast.package_name_full,
+	"package_path": ast.package_path,
 	"lines": input.regal.file.lines,
+	"rule_tree": aggregators.rule_tree,
+	"imports": aggregators.imports,
 }
 
 # METADATA

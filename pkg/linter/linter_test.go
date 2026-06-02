@@ -369,7 +369,7 @@ func TestLintWithCollectQuery(t *testing.T) {
 
 	must.Equal(t, 1, result.Aggregates.Len(), "aggregates count")
 
-	_, err := result.Aggregates.Find(util.Map([]string{"p.rego", "imports/unresolved-import"}, ast.InternedTerm))
+	_, err := result.Aggregates.Find(util.Map([]string{"p.rego", "common"}, ast.InternedTerm))
 
-	assert.Equal(t, nil, err, "expected aggregates to contain 'p.rego/imports/unresolved-import'")
+	assert.Equal(t, nil, err, "expected aggregates to contain 'p.rego/common'")
 }

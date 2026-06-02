@@ -416,6 +416,6 @@ assignment_terms(terms) := [terms[1], terms[2]] if is_assignment(terms[0])
 rule_head_locations[name] contains {"row": loc.row, "col": loc.col} if {
 	some i, rule in input.rules
 
-	name := $"data.{package_name}.{rule_names_ordered[i]}"
+	name := $"{package_name_full}.{rule_names_ordered[i]}"
 	loc := util.to_location_object(rule.head.location)
 }

@@ -22,24 +22,14 @@ func TestLanguageServerMultipleFiles(t *testing.T) {
 	files := map[string]string{
 		"authz.rego": `package authz
 
-import rego.v1
-
 import data.admins.users
 
 default allow := false
 
 allow if input.user in users
 `,
-		"admins.rego": `package admins
-
-import rego.v1
-
-users = {"alice", "bob"}
-`,
-		"ignored/foo.rego": `package ignored
-
-foo = 1
-`,
+		"admins.rego":      "package admins\n\nusers = {\"alice\", \"bob\"}\n",
+		"ignored/foo.rego": "package ignored\n\nfoo = 1\n",
 		".regal/config.yaml": `
 rules:
   idiomatic:
