@@ -133,6 +133,13 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 						break
 					}
 
+					// FindForPath returns a workspace-relative path (or ""); the OPA debugger
+					// resolves inputPath via os.Open against its own CWD, so pass an absolute path.
+					var inputPath string
+					if rel := l.input.FindForPath(args.Target); rel != "" {
+						inputPath = l.Workspace().Path(rel)
+					}
+
 					responseParams := map[string]any{
 						"type":        "opa-debug",
 						"name":        args.Query,
@@ -141,7 +148,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 						"query":       args.Query,
 						"enablePrint": true,
 						"stopOnEntry": true,
-						"inputPath":   l.input.FindForPath(args.Target),
+						"inputPath":   inputPath,
 					}
 
 					responseResult := map[string]any{}
