@@ -5,70 +5,30 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/unresolved-import
 package regal.rules.imports["unresolved-import"]
 
-import future.keywords.not
-
-import data.regal.ast
+import data.regal.aggregated
 import data.regal.config
 import data.regal.result
 import data.regal.util
 
 # METADATA
-# description: collects imports and exported refs from each module
-aggregate contains entry if {
-	imports_with_location := [imp |
-		some _import in input.imports
-
-		_import.path.value[0].value == "data"
-		len := count(_import.path.value)
-		len > 1
-
-		# Special case for custom rules, where we don't want to flag e.g. `import data.regal.ast`
-		# as unknown, even though it's not a package included in evaluation.
-		not {
-			_import.path.value[1].value == "regal"
-			ast.package_path[0] == "custom"
-			ast.package_path[1] == "regal"
-		}
-
-		path := [term.value | some term in array.slice(_import.path.value, 1, len)]
-		imp := [path, _import.location]
-	]
-
-	exported_refs := {ast.package_path} | {ref |
-		some rule in input.rules
-
-		# locations will only contribute to each item in the set being unique,
-		# which we don't want here — we only care for distinct ref paths
-		some ref in _to_paths(ast.package_path, rule.head.ref)
-	}
-
-	entry := {
-		"imports": imports_with_location,
-		"exported_refs": exported_refs,
-	}
-}
-
-# METADATA
 # schemas:
 #   - input: schema.regal.aggregate
 aggregate_report contains violation if {
-	all_known_refs := {path | path := input.aggregates_internal[_]["imports/unresolved-import"][_].exported_refs[_]}
+	rule_tree := aggregated.rule_tree
 
-	some file
-	entry := input.aggregates_internal[file]["imports/unresolved-import"][_]
-
+	some file, entries in _aggregates
+	some entry in entries
 	some [path, location] in entry.imports
+
 	not path in _except_imports
-	not path in all_known_refs
+	object.get(rule_tree.data, path, false) == false
 
 	# cheap operation failed — need to check wildcards here to account
 	# for map generating / general ref head rules
-	not _wildcard_match(path, (all_known_refs | _except_imports))
+	not _wildcard_match(path, _except_imports)
+	not _is_resolved_ref(path, rule_tree.data)
 
-	violation := result.fail(rego.metadata.chain(), {"location": object.union(util.to_location_no_text(location), {
-		"file": file,
-		"text": $"import data.{concat(".", path)}",
-	})})
+	violation := result.fail(rego.metadata.chain(), aggregated.location_object(location, file))
 }
 
 # the package part will always be included exported refs
@@ -84,12 +44,18 @@ _to_path(pkg_path, terms) := array.flatten([pkg_path, terms[0].value, [_to_strin
 _to_string(term) := term.value if term.type == "string"
 _to_string(term) := "**" if term.type == "var"
 
+_is_resolved_ref(ref_path, rule_tree) if {
+	some i in numbers.range(1, count(ref_path))
+
+	object.get(rule_tree, array.slice(ref_path, 0, i), false) == {} # regal ignore:superfluous-object-get
+}
+
 _except_imports contains split(trim_prefix(str, "data."), ".") if {
 	some str in config.rules.imports["unresolved-import"]["except-imports"]
 }
 
-_wildcard_match(imp_path, refs_and_except_imports) if {
-	some except in refs_and_except_imports
+_wildcard_match(imp_path, except_imports) if {
+	some except in except_imports
 	path := concat(".", except)
 	contains(path, "*")
 
@@ -105,9 +71,4 @@ _wildcard_match(imp_path, refs_and_except_imports) if {
 # METADATA
 # schemas:
 #   - input: schema.regal.aggregate
-_aggregates[file] := agg if {
-	# we know that there is only one aggregate of this type per file,
-	# so we can simplify things some for our callers
-	some file
-	agg := input.aggregates_internal[file]["imports/unresolved-import"][_]
-}
+_aggregates[file] := input.aggregates_internal[file].common if some file
