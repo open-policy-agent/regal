@@ -4,15 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
-
-	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/roast/transforms"
 	"github.com/open-policy-agent/regal/internal/roast/transforms/module"
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 
 	_ "github.com/open-policy-agent/regal/internal/roast/encoding"
@@ -37,21 +33,6 @@ var (
 // unmarshaled from RoAST JSON. Don't use it for anything else.
 func AnyToValue(x any) (ast.Value, error) {
 	return transforms.AnyToValue(x)
-}
-
-// ToOPAInputValue converts provided x to an ast.Value suitable for use as
-// parsed input to OPA (`rego.EvalParsedInput`). This will have the value
-// pass through the same kind of roundtrip as OPA would otherwise have to
-// do when provided unparsed input, but much more efficiently as both JSON
-// marshalling and the custom InterfaceToValue function provided here are
-// optimized for performance.
-func ToOPAInputValue(x any) (ast.Value, error) {
-	ptr := reference(x)
-	if err := anyPtrRoundTrip(ptr); err != nil {
-		return nil, err
-	}
-
-	return AnyToValue(*ptr)
 }
 
 // ToAST converts a Rego module to an ast.Value suitable for use as input in Regal.
@@ -113,41 +94,4 @@ func RegalContextWithOperations(name, content, regoVersion string, collect bool)
 	context.Insert(operations[0], operations[1])
 
 	return context
-}
-
-// From OPA's util package
-//
-// Reference returns a pointer to its argument unless the argument already is
-// a pointer. If the argument is **t, or ***t, etc, it will return *t.
-//
-// Used for preparing Go types (including pointers to structs) into values to be
-// put through util.RoundTrip().
-func reference(x any) *any {
-	var y any
-
-	rv := reflect.ValueOf(x)
-	if rv.Kind() == reflect.Pointer {
-		return reference(rv.Elem().Interface())
-	}
-
-	if rv.Kind() != reflect.Invalid {
-		y = rv.Interface()
-
-		return &y
-	}
-
-	return &x
-}
-
-func anyPtrRoundTrip(x *any) error {
-	bs, err := jsoniter.ConfigFastest.Marshal(x)
-	if err != nil {
-		return err
-	}
-
-	if err = jsoniter.ConfigFastest.Unmarshal(bs, x); err != nil {
-		return encoding.SafeNumberConfig.Unmarshal(bs, x)
-	}
-
-	return nil
 }

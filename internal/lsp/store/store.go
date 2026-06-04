@@ -84,17 +84,6 @@ func Put[T any](ctx context.Context, store storage.Store, path storage.Path, val
 	})
 }
 
-func Get(ctx context.Context, store storage.Store, path storage.Path) (val ast.Value, err error) {
-	var res any
-	if res, err = storage.ReadOne(ctx, store, path); err == nil {
-		if v, ok := res.(ast.Value); ok {
-			val = v
-		}
-	}
-
-	return val, err
-}
-
 func Remove(ctx context.Context, store storage.Store, path storage.Path) error {
 	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
 		return remove(ctx, store, txn, path)

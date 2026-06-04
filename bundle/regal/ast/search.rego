@@ -137,7 +137,7 @@ found.vars[rule_index].term contains var if {
 	fn_name := ref_static_to_string(call[0].value)
 	undeclared_start := count(all_functions[fn_name].decl.args) + 1
 
-	call[undeclared_start]
+	_ = call[undeclared_start]
 	fn_name != "print"
 
 	some var in find_term_vars(array.slice(call, undeclared_start, 100))
@@ -236,7 +236,7 @@ found.expressions[rule_index] contains value if {
 
 	walk(rule[node], [_, value])
 
-	value.terms
+	_ = value.terms
 }
 
 # METADATA
@@ -258,8 +258,7 @@ is_in_local_scope(rule, location, value) if {
 #   assignments / unification, but it's likely good enough since other rules
 #   recommend against those
 find_vars_in_local_scope(rule, location) := [var |
-	some var
-	found.vars[_rule_index(rule)][_][var]
+	var := found.vars[_rule_index(rule)][_][_]
 
 	not startswith(var.value, "$")
 	_before_location(rule.head, var, util.to_location_object(location))
