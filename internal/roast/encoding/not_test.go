@@ -31,10 +31,11 @@ func TestNotImport(t *testing.T) {
 			exp: `{
   "location": "5:6:5:27",
   "terms": {
-    "location": "6:5:6:6",
+    "location": "5:6:5:27",
     "type": "not",
     "body": [
       {
+        "location": "5:6:5:27",
         "terms": [
           {
             "location": "5:22:5:24",
@@ -113,7 +114,7 @@ func TestNotImport(t *testing.T) {
 			exp: `{
   "location": "5:6:10:7",
   "terms": {
-    "location": "5:10:5:11",
+    "location": "5:6:10:7",
     "type": "not",
     "explicit_body": true,
     "body": [
