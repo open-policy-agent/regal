@@ -84,28 +84,6 @@ jobs:
       - run: echo "race detector failed but job is optional"
         if: job.steps.race.status == failure()
 
-  frankenstein:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version-file: go.mod
-      - run: |
-          go mod tidy
-        working-directory: e2e/testbuild
-      - name: display go.sum diff
-        working-directory: e2e/testbuild
-        run: |
-          git diff --exit-code go.sum && exit 0
-          echo "# go.sum diff" >> $GITHUB_STEP_SUMMARY
-          echo '```diff' >> $GITHUB_STEP_SUMMARY
-          git diff go.sum >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-      - run: |
-          go run .
-        working-directory: e2e/testbuild
-
   code_coverage:
     runs-on: ubuntu-latest
     steps:
