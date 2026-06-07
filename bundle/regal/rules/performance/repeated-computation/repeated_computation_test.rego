@@ -1,6 +1,8 @@
 package regal.rules.performance["repeated-computation_test"]
 
 import data.regal.ast
+import data.regal.capabilities
+import data.regal.config
 
 import data.regal.rules.performance["repeated-computation"] as rule
 
@@ -12,16 +14,17 @@ allow if {
 	limit > 1
 }
 `)
+		with config.capabilities as capabilities.provided
 
 	r == with_location({
 		"col": 11,
 		"end": {
-			"col": 25,
+			"col": 24,
 			"row": 6,
 		},
 		"file": "policy.rego",
 		"row": 6,
-		"text": "count(input.s)",
+		"text": "\tlimit := count(input.s)",
 	})
 }
 
@@ -31,6 +34,7 @@ allow if {
 	count(input.s) > 0
 }
 `)
+		with config.capabilities as capabilities.provided
 
 	r == set()
 }
@@ -42,6 +46,7 @@ allow if {
 	count(input.b) > 0
 }
 `)
+		with config.capabilities as capabilities.provided
 
 	r == set()
 }
@@ -54,6 +59,7 @@ allow if {
 	count(counts) > 0
 }
 `)
+		with config.capabilities as capabilities.provided
 
 	r == set()
 }
@@ -68,6 +74,7 @@ allow if {
 	}
 }
 `)
+		with config.capabilities as capabilities.provided
 
 	r == set()
 }
@@ -80,16 +87,17 @@ allow if {
 	count(input.s) > 2
 }
 `)
+		with config.capabilities as capabilities.provided
 
 	count(r) == 2
 
 	some first in r
 	first.location.row == 6
-	first.location.text == "count(input.s)"
+	first.location.text == "\tcount(input.s) > 1"
 
 	some second in r
 	second.location.row == 7
-	second.location.text == "count(input.s)"
+	second.location.text == "\tcount(input.s) > 2"
 }
 
 test_ok_custom_function_calls if {
@@ -103,6 +111,7 @@ allow if {
 	matches(input.s)
 }
 `)
+		with config.capabilities as capabilities.provided
 
 	r == set()
 }
@@ -115,6 +124,7 @@ allow if {
 	count(xs) > 1
 }
 `)
+		with config.capabilities as capabilities.provided
 
 	r == set()
 }
@@ -126,9 +136,16 @@ allow if {
 	time.now_ns() > 1
 }
 `)
+		with config.capabilities as capabilities_with_nondeterministic
 
 	r == set()
 }
+
+capabilities_with_nondeterministic := object.union(capabilities.provided, {
+	"builtins": object.union(capabilities.provided.builtins, {
+		"time.now_ns": object.union(capabilities.provided.builtins["time.now_ns"], {"nondeterministic": true}),
+	}),
+})
 
 with_location(location) := {{
 	"category": "performance",

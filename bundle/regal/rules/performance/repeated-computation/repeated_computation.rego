@@ -98,18 +98,15 @@ _before(left, right) if {
 	left.col < right.col
 }
 
-_without_locations(value) := [_without_locations(item) | some i, item in value] if is_array(value)
-
-_without_locations(value) := {key: _without_locations(item) |
-	is_object(value)
-	some key, item in value
-	key != "location"
+_without_locations(value) := {_locationless_part(path, item) |
+	walk(value, [path, item])
+	not _location_path(path)
 }
 
-_without_locations(value) := {_without_locations(item) | some item in value} if is_set(value)
+_locationless_part(path, value) := {"path": path, "type": type_name(value)} if {
+	type_name(value) in {"array", "object", "set"}
+} else := {"path": path, "value": value}
 
-_without_locations(value) := value if {
-	not is_array(value)
-	not is_object(value)
-	not is_set(value)
+_location_path(path) if {
+	path[_] == "location"
 }
