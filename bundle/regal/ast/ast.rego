@@ -263,6 +263,19 @@ _format_term(term) := concat("", [".", term.value]) if {
 
 # METADATA
 # description: |
+#   returns the static prefic of a terms array
+static_prefix(terms) := terms if {
+	count(terms) == 1
+} else := static if {
+	static := array.slice(terms, 0, [i |
+		some i, term in terms
+		i > 0
+		term.type == {"call", "var", "ref", "templatestring"}
+	][0])
+} else := terms
+
+# METADATA
+# description: |
 #   returns the string representation of a ref up until its first
 #   non-static (i.e. variable) value, if any:
 #   foo.bar -> foo.bar
