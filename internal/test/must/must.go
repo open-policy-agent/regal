@@ -68,15 +68,6 @@ func Write(tb testing.TB, w io.Writer, contents string) {
 	}
 }
 
-func ReadDir(tb testing.TB, path string) []os.DirEntry {
-	tb.Helper()
-
-	entries, err := os.ReadDir(path)
-	Equal(tb, nil, err, "failed to read directory %s", path)
-
-	return entries
-}
-
 func ReadFile(tb testing.TB, path string) string {
 	tb.Helper()
 
@@ -91,14 +82,6 @@ func WriteFile(tb testing.TB, path string, contents []byte) {
 
 	if err := os.WriteFile(path, contents, 0o600); err != nil {
 		tb.Fatalf("failed to write file %s: %v", path, err)
-	}
-}
-
-func Remove(tb testing.TB, path string) {
-	tb.Helper()
-
-	if err := os.Remove(path); err != nil {
-		tb.Fatalf("failed to remove file %s: %v", path, err)
 	}
 }
 

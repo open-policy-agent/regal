@@ -37,6 +37,7 @@ func BenchmarkRegalLintingItself(b *testing.B) {
 // 371014222 ns/op	1246251634 B/op	35248709 allocs/op // Lots of new Rego code (to lint) added
 // 370440556 ns/op	1247207368 B/op	35345393 allocs/op // ... some time later ...
 // 367091361 ns/op	1236597106 B/op	34901438 allocs/op // Unified aggregates
+// 364328681 ns/op	1212708122 B/op	33820873 allocs/op // Ridiculous _ = value.terms hack
 func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
 	benchmarkLint(b, bundleLinter(b, true).MustPrepare(b.Context()))
 }

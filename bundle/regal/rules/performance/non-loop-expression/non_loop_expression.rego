@@ -81,7 +81,7 @@ _assign_vars(body) := {expr.terms[1].value |
 }
 
 _expr_vars(expr) := _term_vars(expr.terms) if not expr.with
-_expr_vars(expr) := array.flatten([_term_vars(expr.terms), _vars_no_builtins(expr.with)]) if expr.with
+_expr_vars(expr) := array.flatten([_term_vars(expr.terms), _vars_no_builtins(expr.with)]) if _ = expr.with
 
 _term_vars(terms) := _vars_no_builtins(terms[2]) if {
 	terms[0].type == "ref"

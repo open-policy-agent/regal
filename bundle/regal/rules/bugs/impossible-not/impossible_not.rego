@@ -15,7 +15,7 @@ _package_path := [term.value | some term in input.package.path]
 _multivalue_rules contains path if {
 	some rule in ast.rules
 
-	rule.head.key
+	_ = rule.head.key
 	not rule.head.value
 
 	# ignore general ref head rules for now
