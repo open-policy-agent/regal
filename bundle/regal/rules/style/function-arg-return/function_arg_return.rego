@@ -1,5 +1,5 @@
 # METADATA
-# description: Function argument used for return value
+# description: Return value assigned in function argument
 # related_resources:
 #   - description: documentation
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/style/function-arg-return

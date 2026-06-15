@@ -379,7 +379,7 @@ test_fail_non_loop_assignment_with_expression if {
 
 	r == {{
 		"category": "performance",
-		"description": "Non-loop expression",
+		"description": "Non loop expression in loop",
 		"level": "error",
 		"location": {
 			"col": 3,
@@ -412,7 +412,7 @@ test_success_non_loop_assignment_with_expression if {
 
 with_location(location) := {{
 	"category": "performance",
-	"description": "Non-loop expression",
+	"description": "Non loop expression in loop",
 	"related_resources": [{
 		"description": "documentation",
 		"ref": "https://www.openpolicyagent.org/projects/regal/rules/performance/non-loop-expression",
