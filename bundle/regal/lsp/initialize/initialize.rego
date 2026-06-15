@@ -156,6 +156,16 @@ _capabilities.semanticTokensProvider := {
 	"full": true,
 }
 
+_capabilities.referencesProvider := true
+
+default _capabilities.renameProvider := true
+
+# "RenameOptions may only be specified if the client states
+# that it supports prepareSupport in its initial initialize request."
+_capabilities.renameProvider := {"prepareProvider": true} if {
+	input.params.capabilities.textDocument.rename.prepareSupport == true
+}
+
 # ExperimentalCapabilities contains Regal-specific custom LSP features
 # that are not part of the base LSP specification. 'Experimental' comes
 # from the field name in the spec, rather than their status. 'Experimental'
