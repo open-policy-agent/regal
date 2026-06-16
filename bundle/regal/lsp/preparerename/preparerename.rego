@@ -8,15 +8,15 @@ package regal.lsp.preparerename
 import data.regal.lsp.util.find
 import data.regal.lsp.util.range
 
-default result["response"] := null
-
 # METADATA
 # entrypoint: true
-result["response"] := response if {
-	[arg, _] := find.arg_at_position
+default result["response"] := null
 
-	response := {
-		"placeholder": arg.value,
-		"range": range.parse(arg.location),
-	}
+result["response"] := _response_for(arg) if [arg, _] := find.arg_at_position
+
+result["response"] := _response_for(var) if [var, _] := find.some_var_at_position
+
+_response_for(term) := {
+	"placeholder": term.value,
+	"range": range.parse(term.location),
 }
