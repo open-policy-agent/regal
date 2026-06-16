@@ -9,7 +9,7 @@ test_fail_future_keywords_import_wildcard if {
 
 	r == {{
 		"category": "imports",
-		"description": "Use explicit future keyword imports",
+		"description": "Avoid implicit future keyword imports",
 		"related_resources": [{
 			"description": "documentation",
 			"ref": "https://www.openpolicyagent.org/projects/regal/rules/imports/implicit-future-keywords",

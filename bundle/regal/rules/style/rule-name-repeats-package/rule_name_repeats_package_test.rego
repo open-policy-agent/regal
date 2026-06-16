@@ -4,7 +4,7 @@ import data.regal.rules.style["rule-name-repeats-package"] as rule
 
 base_result := {
 	"title": "rule-name-repeats-package",
-	"description": "Rule name repeats package",
+	"description": "Avoid repeating package path in rule names",
 	"category": "style", "level": "error",
 	"related_resources": [{
 		"description": "documentation",

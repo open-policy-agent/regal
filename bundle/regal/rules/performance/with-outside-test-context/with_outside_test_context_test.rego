@@ -13,7 +13,7 @@ test_fail_with_used_outside_test if {
 
 	r == {{
 		"category": "performance",
-		"description": "`with` used outside test context",
+		"description": "`with` used outside of test context",
 		"level": "error",
 		"location": {
 			"col": 16,

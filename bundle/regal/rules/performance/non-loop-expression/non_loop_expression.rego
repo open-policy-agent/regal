@@ -1,5 +1,5 @@
 # METADATA
-# description: Non-loop expression
+# description: Non-loop expression in loop
 # related_resources:
 #   - description: documentation
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/performance/non-loop-expression

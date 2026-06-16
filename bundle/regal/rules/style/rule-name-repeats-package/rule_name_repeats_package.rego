@@ -1,5 +1,5 @@
 # METADATA
-# description: Rule name repeats package
+# description: Avoid repeating package path in rule names
 # related_resources:
 #   - description: documentation
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/style/rule-name-repeats-package

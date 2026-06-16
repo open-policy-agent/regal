@@ -1,5 +1,5 @@
 # METADATA
-# description: Use explicit future keyword imports
+# description: Avoid implicit future keyword imports
 # related_resources:
 #   - description: documentation
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/imports/implicit-future-keywords

@@ -9,7 +9,7 @@ test_fail_todo_comment if {
 
 	r == {{
 		"category": "style",
-		"description": "Avoid TODO comments",
+		"description": "Avoid TODO and FIXME comments",
 		"related_resources": [{
 			"description": "documentation",
 			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/todo-comment",
@@ -34,7 +34,7 @@ test_fail_fixme_comment if {
 
 	r == {{
 		"category": "style",
-		"description": "Avoid TODO comments",
+		"description": "Avoid TODO and FIXME comments",
 		"related_resources": [{
 			"description": "documentation",
 			"ref": "https://www.openpolicyagent.org/projects/regal/rules/style/todo-comment",

@@ -147,7 +147,7 @@ test_success_exclude_ref_with_vars if {
 
 expected := {
 	"category": "style",
-	"description": "Yoda condition",
+	"description": "Yoda condition, it is",
 	"level": "error",
 	"related_resources": [{
 		"description": "documentation",
