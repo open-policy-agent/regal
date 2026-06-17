@@ -12,18 +12,51 @@ import data.regal.lsp.util.range
 
 # METADATA
 # entrypoint: true
-result.response contains reference if {
-	[arg, i] := find.arg_at_position
+result.response contains ref if some ref in _arg_refs
 
-	some expr in ast.found.expressions[i]
+result.response contains ref if some ref in _some_var_refs
 
-	walk(expr, [_, value])
+_arg_refs contains ref if {
+	[arg, rule_index] := find.arg_at_position
+	sref := ast.static_prefix(_module.rules[rule_index].head.ref)
+
+	some url, parsed in data.workspace.parsed
+	ast.ref_value_equal(_module.package.path, parsed.package.path)
+
+	some rule in parsed.rules
+	_has_arg_named(rule.head.args, arg.value)
+	ast.ref_value_equal(sref, ast.static_prefix(rule.head.ref))
+
+	some node in ["head", "body", "else"]
+	walk(rule[node], [_, value])
 
 	value.type == "var"
 	value.value == arg.value
 
-	reference := {
+	ref := {
+		"uri": url,
+		"range": range.parse(value.location),
+	}
+}
+
+_some_var_refs contains ref if {
+	[var, rule_index] := find.some_var_at_position
+
+	some node in ["head", "body"]
+	walk(_module.rules[rule_index][node], [_, value])
+
+	value.type == "var"
+	value.value == var.value
+
+	ref := {
 		"uri": input.params.textDocument.uri,
 		"range": range.parse(value.location),
 	}
 }
+
+_has_arg_named(args, name) if {
+	some arg in args
+	arg.value == name
+}
+
+_module := data.workspace.parsed[input.params.textDocument.uri]
