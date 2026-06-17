@@ -42,7 +42,8 @@ _arg_refs contains ref if {
 _some_var_refs contains ref if {
 	[var, rule_index] := find.some_var_at_position
 
-	walk(_module.rules[rule_index].body, [_, value])
+	some node in ["head", "body"]
+	walk(_module.rules[rule_index][node], [_, value])
 
 	value.type == "var"
 	value.value == var.value
