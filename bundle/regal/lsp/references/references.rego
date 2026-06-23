@@ -16,6 +16,10 @@ result.response contains ref if some ref in _arg_refs
 
 result.response contains ref if some ref in _some_var_refs
 
+result.response contains ref if some ref in _every_var_refs
+
+result.response contains ref if some ref in _comprehension_var_refs
+
 _arg_refs contains ref if {
 	[arg, rule_index] := find.arg_at_position
 	sref := ast.static_prefix(_module.rules[rule_index].head.ref)
@@ -47,6 +51,45 @@ _some_var_refs contains ref if {
 
 	value.type == "var"
 	value.value == var.value
+
+	ref := {
+		"uri": input.params.textDocument.uri,
+		"range": range.parse(value.location),
+	}
+}
+
+# METADATA
+# description: |
+#   References to the `every`-declared variable at the cursor: the declaration
+#   site (key or value position) plus every reference inside the block's body.
+_every_var_refs contains ref if {
+	[var, every_terms] := find.every_var_at_position
+
+	some node in ["body", "key", "value"]
+	walk(every_terms[node], [_, value])
+
+	value.type == "var"
+	value.value == var.value
+
+	ref := {
+		"uri": input.params.textDocument.uri,
+		"range": range.parse(value.location),
+	}
+}
+
+# METADATA
+# description: |
+#   References to the variable declared via `some x in y` inside a
+#   comprehension. Walking the entire comprehension covers both the
+#   declaration and every reference, scoped to that comprehension only.
+_comprehension_var_refs contains ref if {
+	[var, comp] := find.comprehension_var_at_position
+
+	walk(comp, [_, value])
+
+	value.type == "var"
+	value.value == var.value
+	not startswith(value.value, "$")
 
 	ref := {
 		"uri": input.params.textDocument.uri,
