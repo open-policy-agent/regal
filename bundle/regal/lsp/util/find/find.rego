@@ -77,7 +77,6 @@ some_var_at_position := [var, rule_index] if {
 # METADATA
 # description: |
 #   find the `every`-declared variable at the given position, if any.
-#   Returns the var term and the containing `every` block (terms object).
 # schemas:
 #   - input.params: schema.regal.lsp.textdocumentposition
 every_var_at_position := [var, every_terms] if {
@@ -102,8 +101,8 @@ every_var_at_position := [var, every_terms] if {
 
 # METADATA
 # description: |
-#   find the variable declared via `some x in y` inside a comprehension at the
-#   given position. Returns the var term and the containing comprehension.
+#   find the variable declared inside a comprehension at the
+#   given position, if any.
 # schemas:
 #   - input.params: schema.regal.lsp.textdocumentposition
 comprehension_var_at_position := [var, comp] if {
