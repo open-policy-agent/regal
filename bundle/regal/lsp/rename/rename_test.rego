@@ -72,3 +72,48 @@ foo := 42`
 
 	resp == null
 }
+
+test_rename_every_var if {
+	policy := `package p
+
+r if {
+	every k, v in input.items {
+		k > 0
+		v.active
+	}
+}`
+
+	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as {"line": 3, "character": 7}
+		with input.params.newName as "key"
+		with input.regal.file.lines as split(policy, "\n")
+
+	resp == {"changes": {"file:///p.rego": {
+		{"newText": "key", "range": {"start": {"line": 3, "character": 7}, "end": {"line": 3, "character": 8}}},
+		{"newText": "key", "range": {"start": {"line": 4, "character": 2}, "end": {"line": 4, "character": 3}}},
+	}}}
+}
+
+test_rename_comprehension_var if {
+	policy := `package p
+
+r := result if {
+	result := [x |
+		some x in input.items
+		x > 0
+	]
+}`
+
+	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as {"line": 4, "character": 7}
+		with input.params.newName as "item"
+		with input.regal.file.lines as split(policy, "\n")
+
+	resp == {"changes": {"file:///p.rego": {
+		{"newText": "item", "range": {"start": {"line": 3, "character": 12}, "end": {"line": 3, "character": 13}}},
+		{"newText": "item", "range": {"start": {"line": 4, "character": 7}, "end": {"line": 4, "character": 8}}},
+		{"newText": "item", "range": {"start": {"line": 5, "character": 2}, "end": {"line": 5, "character": 3}}},
+	}}}
+}

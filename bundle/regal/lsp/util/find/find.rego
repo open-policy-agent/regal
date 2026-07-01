@@ -73,3 +73,60 @@ some_var_at_position := [var, rule_index] if {
 	input.params.position.character >= var_pos.start.character
 	input.params.position.character <= var_pos.end.character
 }
+
+# METADATA
+# description: |
+#   find the `every`-declared variable at the given position, if any.
+# schemas:
+#   - input.params: schema.regal.lsp.textdocumentposition
+every_var_at_position := [var, every_terms] if {
+	text := input.regal.file.lines[input.params.position.line]
+
+	# `+ 1` converts LSP 0-based char position to word_at's 1-based column
+	word := location.word_at(text, input.params.position.character + 1)
+
+	some every_blocks in ast.found.every
+	some every_terms in every_blocks
+	some kind in ["key", "value"]
+
+	var := every_terms[kind]
+	var.type == "var"
+	var.value == word.text
+
+	var_pos := range.parse(var.location)
+	input.params.position.line == var_pos.start.line
+	input.params.position.character >= var_pos.start.character
+	input.params.position.character <= var_pos.end.character
+}
+
+# METADATA
+# description: |
+#   find the variable declared inside a comprehension at the
+#   given position, if any.
+# schemas:
+#   - input.params: schema.regal.lsp.textdocumentposition
+comprehension_var_at_position := [var, comp] if {
+	text := input.regal.file.lines[input.params.position.line]
+
+	# `+ 1` converts LSP 0-based char position to word_at's 1-based column
+	word := location.word_at(text, input.params.position.character + 1)
+
+	some comps in ast.found.comprehensions
+	some comp in comps
+	some var in _comp_declared_vars(comp.value.body)
+
+	var.value == word.text
+
+	var_pos := range.parse(var.location)
+	input.params.position.line == var_pos.start.line
+	input.params.position.character >= var_pos.start.character
+	input.params.position.character <= var_pos.end.character
+}
+
+_comp_declared_vars(body) := [v |
+	some expr in body
+	some symbol in expr.terms.symbols
+	some v in array.slice(symbol.value, 1, 100)
+	v.type == "var"
+	not startswith(v.value, "$")
+]
