@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/format"
@@ -17,6 +18,10 @@ import (
 )
 
 var (
+	capabilities = sync.OnceValue(func() *ast.Capabilities {
+		return ast.CapabilitiesForThisVersion()
+	})
+
 	// ParseModule metadata for regal.parse_module.
 	ParseModule = &ast.Builtin{
 		Name:        "regal.parse_module",
@@ -86,7 +91,7 @@ func RegalParseModule(_ rego.BuiltinContext, operands []*ast.Term, iter func(*as
 	filenameStr := string(filenameValue)
 	policyStr := string(policyValue)
 
-	opts := ast.ParserOptions{ProcessAnnotation: true}
+	opts := ast.ParserOptions{ProcessAnnotation: true, Capabilities: capabilities()}
 
 	// Allow testing Rego v0 modules. We could provide a separate builtin for this,
 	// but the need for this will likely diminish over time, so let's start simple.
@@ -142,7 +147,7 @@ func RegalIsFormatted(_ rego.BuiltinContext, operands []*ast.Term, iter func(*as
 	}
 
 	// We don't need to process annotations for formatting.
-	popts := ast.ParserOptions{ProcessAnnotation: false, RegoVersion: regoVersion}
+	popts := ast.ParserOptions{ProcessAnnotation: false, RegoVersion: regoVersion, Capabilities: capabilities()}
 	source := util.StringToByteSlice(inputStr)
 
 	result, err := formatRego(source, format.Opts{RegoVersion: regoVersion, ParserOptions: &popts})
