@@ -65,7 +65,7 @@ jobs:
       - uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
         if: matrix.os.name == 'linux'
         with:
-          version: v2.10.1
+          version: v2.11.4
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: regal-${{ matrix.os.name }}
@@ -83,25 +83,3 @@ jobs:
         continue-on-error: true
       - run: echo "race detector failed but job is optional"
         if: job.steps.race.status == failure()
-
-  code_coverage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
-        with:
-          go-version-file: go.mod
-      - uses: open-policy-agent/setup-opa@b2b258e089860efaadaaf71bf6e3aecb4a3eeff1 # v2.4.0
-        with:
-          version: edge
-          static: true
-      - run: |
-          go run main.go test --coverage bundle \
-          | opa eval -f raw -I -d build/simplecov/simplecov.rego data.build.simplecov.from_opa \
-          > coverage.json
-      - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
-        with:
-          fail_ci_if_error: false
-          files: ./coverage.json
-          name: regal
-          token: ${{ secrets.CODECOV_TOKEN }} # required

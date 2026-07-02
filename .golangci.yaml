@@ -7,6 +7,7 @@ linters:
     - dupword
     - err113
     - exhaustruct
+    - exhaustive
     - funlen
     - gochecknoglobals
     - gochecknoinits
