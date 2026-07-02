@@ -128,6 +128,16 @@ func init() {
 		"data.regal.result",
 		"docs",
 		"path_prefix",
+		"notice",
+		"notices",
+		"aggregate",
+		"aggregates",
+		"violations",
+		"ignore",
+		"ignore_directives",
+		"decl",
+		"position",
+		"arg",
 
 		// Common
 		"a", "b", "c",
