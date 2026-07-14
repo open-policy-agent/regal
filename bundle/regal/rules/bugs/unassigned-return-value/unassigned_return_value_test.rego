@@ -84,6 +84,16 @@ test_success_negated_builtin_return_value if {
 	r == set()
 }
 
+test_success_object_subset_boolean_return if {
+	r := rule.report
+		with input as ast.policy(`allow if {
+			object.subset({"a"}, {"a", "b"})
+		}`)
+		with config.capabilities as capabilities.provided
+
+	r == set()
+}
+
 test_success_unused_boolean_return_value if {
 	r := rule.report
 		with input as ast.policy(`allow if { startswith("s", "s") }`)

@@ -728,7 +728,21 @@ func fromOPABuiltin(builtin ast.Builtin) *Builtin {
 		rb.Decl.Result = builtin.Decl.Result().String()
 	}
 
+	if corrected, ok := builtinResultOverrides[builtin.Name]; ok {
+		rb.Decl.Result = corrected
+	}
+
 	return rb
+}
+
+// builtinResultOverrides corrects imprecise return types in OPA's builtin
+// metadata. object.subset returns a boolean, but is declared `any` in the
+// pinned OPA version, which causes false positives for the
+// unassigned-return-value rule. Fixed upstream in
+// https://github.com/open-policy-agent/opa/pull/8849; remove entries here once
+// the depended-upon OPA release ships the fix.
+var builtinResultOverrides = map[string]string{
+	"object.subset": "boolean",
 }
 
 func fromOPACapabilities(capabilities *ast.Capabilities) *Capabilities {
