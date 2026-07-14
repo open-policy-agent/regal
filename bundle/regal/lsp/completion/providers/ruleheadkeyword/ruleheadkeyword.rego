@@ -24,6 +24,8 @@ items contains item if {
 
 	word := location.word_at(line, input.params.position.character + 1)
 
+	not endswith(word.text_after, " ")
+
 	_word_matches(word.text)
 
 	some obj in _suggestions(word.text, _words_no_space(word.text_before))

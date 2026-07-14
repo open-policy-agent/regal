@@ -8,9 +8,9 @@ import data.regal.lsp.location
 # METADATA
 # description: completion suggestions for package keyword
 items contains item if {
-	not strings.any_prefix_match(input.regal.file.lines, "package ")
-
 	startswith("package", input.regal.file.lines[input.params.position.line])
+
+	not strings.any_prefix_match(input.regal.file.lines, "package ")
 
 	item := {
 		"label": "package",
