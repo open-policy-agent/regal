@@ -14,6 +14,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/explorer"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/lsp/command"
 	"github.com/open-policy-agent/regal/internal/lsp/testgen"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
@@ -115,53 +116,16 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 				case "regal.eval":
 					err = l.handleEvalCommand(ctx, args)
 				case "regal.debug":
-					if !l.Workspace().Client().InitOptions.EnableDebugCodelens {
-						l.log.Message("regal.debug command called but client does not support debug functionality")
+					if l.featureFlags.DebugProvider {
+						port, ws := uint16(0), l.Workspace()
+						if dapServer := ws.DAP(); dapServer != nil {
+							port = dapServer.Port() // Port assigned dynamically, so must be passed to client
+						}
 
-						break
-					}
-
-					if !l.featureFlags.DebugProvider {
+						err = command.NewDebug(ws, l.input, port, args).Run(ctx)
+					} else {
 						l.log.Message("regal.debug command called but disabled in server")
-
-						break
 					}
-
-					if args.Target == "" || args.Query == "" {
-						l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
-
-						break
-					}
-
-					// FindForPath returns a workspace-relative path (or ""); the OPA debugger
-					// resolves inputPath via os.Open against its own CWD, so pass an absolute path.
-					var inputPath string
-					if rel := l.input.FindForPath(args.Target); rel != "" {
-						inputPath = l.Workspace().Path(rel)
-					}
-
-					responseParams := map[string]any{
-						"type":        "opa-debug",
-						"name":        args.Query,
-						"request":     "launch",
-						"command":     "eval",
-						"query":       args.Query,
-						"enablePrint": true,
-						"stopOnEntry": true,
-						"inputPath":   inputPath,
-					}
-
-					responseResult := map[string]any{}
-
-					// Use a timeout context for RPC to ensure it completes even during shutdown
-					rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
-
-					//nolint:contextcheck
-					if err = l.conn.Call(rpcCtx, "regal/startDebugging", responseParams, &responseResult); err != nil {
-						l.log.Message("regal/startDebugging failed: %s", err.Error())
-					}
-
-					rpcCancel()
 				case "regal.config.disable-rule":
 					if err = l.handleIgnoreRuleCommand(ctx, args); err != nil {
 						l.log.Message("failed to ignore rule: %s", err)
