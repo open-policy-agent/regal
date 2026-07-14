@@ -38,13 +38,7 @@ func (pm *ProtocolManager) Start(ctx context.Context, conn io.ReadWriteCloser, h
 
 	go func() {
 		for resp := range pm.outChan {
-			if pm.logger.GetLevel() == logging.Debug {
-				if respData, err := json.Marshal(resp); respData != nil && err == nil {
-					pm.logger.Debug("Sending %T\n%s", resp, respData)
-				} else {
-					pm.logger.Debug("Sending %T", resp)
-				}
-			}
+			pm.logDebug("Sending", resp)
 
 			if err := godap.WriteProtocolMessage(conn, resp); err != nil {
 				done <- err
@@ -65,13 +59,7 @@ func (pm *ProtocolManager) Start(ctx context.Context, conn io.ReadWriteCloser, h
 				return
 			}
 
-			if pm.logger.GetLevel() == logging.Debug {
-				if reqData, err := json.Marshal(req); reqData != nil && err == nil {
-					pm.logger.Debug("Received %T\n%s", req, reqData)
-				} else {
-					pm.logger.Debug("Received %T", req)
-				}
-			}
+			pm.logDebug("Received", req)
 
 			stop, resp, err := handle(ctx, req)
 			if err != nil {
@@ -109,13 +97,11 @@ func (pm *ProtocolManager) SendResponse(resp godap.ResponseMessage, req godap.Me
 	}
 
 	if r := resp.GetResponse(); r != nil {
-		r.Success = err == nil
-		if err != nil {
+		if r.Success = err == nil; !r.Success {
 			r.Message = err.Error()
 		}
 
-		r.Seq = pm.nextSeq()
-		if req != nil {
+		if r.Seq = pm.nextSeq(); req != nil {
 			r.RequestSeq = req.GetSeq()
 		}
 	}
@@ -141,285 +127,123 @@ func (pm *ProtocolManager) nextSeq() int {
 	return pm.seq
 }
 
-func NewContinueResponse() *godap.ContinueResponse {
-	return &godap.ContinueResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "continue",
-			Success: true,
-		},
+func (pm *ProtocolManager) logDebug(event string, message godap.Message) {
+	if pm.logger.GetLevel() == logging.Debug {
+		if msgData, err := json.Marshal(message); msgData != nil && err == nil {
+			pm.logger.Debug("%s %T\n%s", event, message, msgData)
+		} else {
+			pm.logger.Debug("%s %T", event, message)
+		}
 	}
+}
+
+func NewContinueResponse() *godap.ContinueResponse {
+	return &godap.ContinueResponse{Response: createResponse("continue", true)}
 }
 
 func NewNextResponse() *godap.NextResponse {
-	return &godap.NextResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "next",
-			Success: true,
-		},
-	}
+	return &godap.NextResponse{Response: createResponse("next", true)}
 }
 
 func NewStepInResponse() *godap.StepInResponse {
-	return &godap.StepInResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "stepIn",
-			Success: true,
-		},
-	}
+	return &godap.StepInResponse{Response: createResponse("stepIn", true)}
 }
 
 func NewStepOutResponse() *godap.StepOutResponse {
-	return &godap.StepOutResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "stepOut",
-			Success: true,
-		},
-	}
+	return &godap.StepOutResponse{Response: createResponse("stepOut", true)}
 }
 
 func NewInitializeResponse(capabilities godap.Capabilities) *godap.InitializeResponse {
 	return &godap.InitializeResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "initialize",
-			Success: true,
-		},
-		Body: capabilities,
+		Response: createResponse("initialize", true),
+		Body:     capabilities,
 	}
 }
 
 func NewAttachResponse() *godap.AttachResponse {
-	return &godap.AttachResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "attach",
-			Success: true,
-		},
-	}
+	return &godap.AttachResponse{Response: createResponse("attach", true)}
 }
 
 func NewBreakpointLocationsResponse(breakpoints []godap.BreakpointLocation) *godap.BreakpointLocationsResponse {
 	return &godap.BreakpointLocationsResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "breakpointLocations",
-			Success: true,
-		},
-		Body: godap.BreakpointLocationsResponseBody{
-			Breakpoints: breakpoints,
-		},
+		Response: createResponse("breakpointLocations", true),
+		Body:     godap.BreakpointLocationsResponseBody{Breakpoints: breakpoints},
 	}
 }
 
 func NewSetBreakpointsResponse(breakpoints []godap.Breakpoint) *godap.SetBreakpointsResponse {
 	return &godap.SetBreakpointsResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "setBreakpoints",
-			Success: true,
-		},
-		Body: godap.SetBreakpointsResponseBody{
-			Breakpoints: breakpoints,
-		},
+		Response: createResponse("setBreakpoints", true),
+		Body:     godap.SetBreakpointsResponseBody{Breakpoints: breakpoints},
 	}
 }
 
 func NewConfigurationDoneResponse() *godap.ConfigurationDoneResponse {
-	return &godap.ConfigurationDoneResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "configurationDone",
-			Success: true,
-		},
-	}
+	return &godap.ConfigurationDoneResponse{Response: createResponse("configurationDone", true)}
 }
 
 func NewDisconnectResponse() *godap.DisconnectResponse {
-	return &godap.DisconnectResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "disconnect",
-			Success: true,
-		},
-	}
-}
-
-func NewEvaluateResponse(value string) *godap.EvaluateResponse {
-	return &godap.EvaluateResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "evaluate",
-			Success: true,
-		},
-		Body: godap.EvaluateResponseBody{
-			Result: value,
-		},
-	}
+	return &godap.DisconnectResponse{Response: createResponse("disconnect", true)}
 }
 
 func NewLaunchResponse() *godap.LaunchResponse {
-	return &godap.LaunchResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "launch",
-			Success: true,
-		},
-	}
+	return &godap.LaunchResponse{Response: createResponse("launch", true)}
 }
 
 func NewScopesResponse(scopes []godap.Scope) *godap.ScopesResponse {
 	return &godap.ScopesResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "scopes",
-			Success: true,
-		},
-		Body: godap.ScopesResponseBody{
-			Scopes: scopes,
-		},
+		Response: createResponse("scopes", true),
+		Body:     godap.ScopesResponseBody{Scopes: scopes},
 	}
 }
 
 func NewStackTraceResponse(stack []godap.StackFrame) *godap.StackTraceResponse {
 	return &godap.StackTraceResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "stackTrace",
-			Success: true,
-		},
-		Body: godap.StackTraceResponseBody{
-			StackFrames: stack,
-			TotalFrames: len(stack),
-		},
+		Response: createResponse("stackTrace", true),
+		Body:     godap.StackTraceResponseBody{StackFrames: stack, TotalFrames: len(stack)},
 	}
 }
 
 func NewTerminateResponse() *godap.TerminateResponse {
-	return &godap.TerminateResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "terminate",
-			Success: true,
-		},
-	}
+	return &godap.TerminateResponse{Response: createResponse("terminate", true)}
 }
 
 func NewThreadsResponse(threads []godap.Thread) *godap.ThreadsResponse {
 	return &godap.ThreadsResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "threads",
-			Success: true,
-		},
-		Body: godap.ThreadsResponseBody{
-			Threads: threads,
-		},
+		Response: createResponse("threads", true),
+		Body:     godap.ThreadsResponseBody{Threads: threads},
 	}
 }
 
 func NewVariablesResponse(variables []godap.Variable) *godap.VariablesResponse {
 	return &godap.VariablesResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "response",
-			},
-			Command: "variables",
-			Success: true,
-		},
-		Body: godap.VariablesResponseBody{
-			Variables: variables,
-		},
+		Response: createResponse("variables", true),
+		Body:     godap.VariablesResponseBody{Variables: variables},
 	}
 }
 
 // Events
 
 func NewInitializedEvent() *godap.InitializedEvent {
-	return &godap.InitializedEvent{
-		Event: godap.Event{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "event",
-			},
-			Event: "initialized",
-		},
-	}
+	return &godap.InitializedEvent{Event: createEvent("initialized")}
 }
 
 func NewOutputEvent(category, output string) *godap.OutputEvent {
 	return &godap.OutputEvent{
-		Event: godap.Event{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "event",
-			},
-			Event: "output",
-		},
-		Body: godap.OutputEventBody{
-			Output:   output,
-			Category: category,
-		},
+		Event: createEvent("output"),
+		Body:  godap.OutputEventBody{Output: output, Category: category},
 	}
 }
 
 func NewThreadEvent(threadID debug.ThreadID, reason string) *godap.ThreadEvent {
 	return &godap.ThreadEvent{
-		Event: godap.Event{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "event",
-			},
-			Event: "thread",
-		},
-		Body: godap.ThreadEventBody{
-			Reason:   reason,
-			ThreadId: int(threadID),
-		},
+		Event: createEvent("thread"),
+		Body:  godap.ThreadEventBody{Reason: reason, ThreadId: int(threadID)},
 	}
 }
 
 func NewTerminatedEvent() *godap.TerminatedEvent {
-	return &godap.TerminatedEvent{
-		Event: godap.Event{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "event",
-			},
-			Event: "terminated",
-		},
-	}
+	return &godap.TerminatedEvent{Event: createEvent("terminated")}
 }
 
 func NewStoppedEntryEvent(threadID debug.ThreadID) *godap.StoppedEvent {
@@ -438,24 +262,35 @@ func NewStoppedBreakpointEvent(threadID debug.ThreadID, bp *godap.Breakpoint) *g
 	return NewStoppedEvent("breakpoint", threadID, []int{bp.Id}, "", "")
 }
 
-func NewStoppedEvent(reason string, threadID debug.ThreadID, bps []int, description string,
-	text string,
-) *godap.StoppedEvent {
+func NewStoppedEvent(reason string, id debug.ThreadID, bps []int, description, text string) *godap.StoppedEvent {
 	return &godap.StoppedEvent{
 		Event: godap.Event{
-			ProtocolMessage: godap.ProtocolMessage{
-				Type: "event",
-			},
-			Event: "stopped",
+			ProtocolMessage: godap.ProtocolMessage{Type: "event"},
+			Event:           "stopped",
 		},
 		Body: godap.StoppedEventBody{
 			Reason:            reason,
-			ThreadId:          int(threadID),
+			ThreadId:          int(id),
 			Text:              text,
 			Description:       description,
 			AllThreadsStopped: true,
 			HitBreakpointIds:  bps,
 			PreserveFocusHint: false,
 		},
+	}
+}
+
+func createResponse(command string, success bool) godap.Response { //nolint:unparam
+	return godap.Response{
+		ProtocolMessage: godap.ProtocolMessage{Type: "response"},
+		Command:         command,
+		Success:         success,
+	}
+}
+
+func createEvent(event string) godap.Event {
+	return godap.Event{
+		ProtocolMessage: godap.ProtocolMessage{Type: "event"},
+		Event:           event,
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/dependencies"
 	"github.com/open-policy-agent/opa/v1/rego"
+	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
@@ -223,6 +224,10 @@ func (l *LanguageServer) EvalInWorkspace(ctx context.Context, query string, inpu
 	}
 
 	return EvalResult{Value: res, PrintOutput: hook.Output}, nil
+}
+
+func (l *LanguageServer) debugArgsAssembler(query ast.Body) []func(*rego.Rego) {
+	return prepareRegoArgs(query, l.assembleBundles(), topdown.NewPrintHook(os.Stderr), l.getLoadedConfig())
 }
 
 func prepareRegoArgs(

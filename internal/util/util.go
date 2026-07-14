@@ -68,6 +68,17 @@ func Map[T, U any](a []T, f func(T) U) []U {
 	return b
 }
 
+// FindFirst returns the first element in a slice that satisfies pred, or the zero value of T and false if not found.
+func FindFirst[T any, S ~[]T](s S, pred func(T) bool) (v T, ok bool) {
+	for _, v := range s {
+		if pred(v) {
+			return v, true
+		}
+	}
+
+	return v, false
+}
+
 // MapKeys applies a function to each key of a map and returns a new slice with the results.
 func MapKeys[K comparable, V any, U any](m map[K]V, f func(K) U) []U {
 	keys := make([]U, 0, len(m))

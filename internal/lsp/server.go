@@ -27,6 +27,8 @@ import (
 	"github.com/open-policy-agent/regal/bundle"
 	"github.com/open-policy-agent/regal/internal/capabilities"
 	"github.com/open-policy-agent/regal/internal/compile"
+	"github.com/open-policy-agent/regal/internal/dap"
+	"github.com/open-policy-agent/regal/internal/dap/evaluate"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/lsp/bundles"
@@ -103,6 +105,11 @@ type lintJob struct {
 type fileJob struct {
 	Reason string
 	URI    string
+}
+
+type fileToLoad struct {
+	uri  string
+	path string
 }
 
 // DefaultServerFeatureFlags returns the default feature flags with all
@@ -1258,6 +1265,18 @@ func (l *LanguageServer) initializeResultHandler(ctx context.Context, result any
 
 	if err := l.loadWorkspace(ctx, response.Regal.Workspace.URI, response.Regal.Client); err != nil {
 		l.log.Message("failed to load workspace: %w", err)
+	} else if l.featureFlags.DebugProvider {
+		// TODO: make interface binding configurable, unify logging between LSP and DAP
+		server := dap.NewServer("127.0.0.1:0", dap.NoOpLogger())
+		evaler := evaluate.NewHandler(l.debugArgsAssembler)
+
+		l.workspace = l.Workspace().WithDAPServer(server.WithEvaluateHandler(evaler))
+
+		go func() {
+			if err = l.workspace.DAP().Start(ctx); err != nil {
+				l.log.Message("failed to start DAP server: %w", err)
+			}
+		}()
 	}
 
 	for _, warning := range response.Regal.Warnings {
@@ -1331,11 +1350,6 @@ func (l *LanguageServer) loadWorkspace(ctx context.Context, rootURI string, clie
 	l.input.LoadFromWorkspace(ctx, workspace)
 
 	return nil
-}
-
-type fileToLoad struct {
-	uri  string
-	path string
 }
 
 func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool) ([]string, []fileLoadFailure, error) {
