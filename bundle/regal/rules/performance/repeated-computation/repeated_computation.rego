@@ -62,24 +62,24 @@ _excluded_builtin(name) if name in ast.operators
 
 _excluded_builtin(name) if name in {"print", "trace"}
 
-_excluded_builtin(name) if object.get(config.capabilities.builtins[name], "nondeterministic", false)
+_excluded_builtin(name) if config.capabilities.builtins[name].nondeterministic == true
 
 _top_level_body_call(rule_index, location) if {
-	expr := input.rules[rule_index].body[_]
+	some expr in input.rules[rule_index].body
 	not expr.with
 
 	_contains_location(util.to_location_object(expr.location), location)
 }
 
 _in_comprehension(rule_index, location) if {
-	comprehension := ast.found.comprehensions[rule_index][_]
+	some comprehension in ast.found.comprehensions[rule_index]
 
 	_contains_location(util.to_location_object(comprehension.location), location)
 }
 
 _in_every_body(rule_index, location) if {
-	_every := ast.found.every[rule_index][_]
-	expr := _every.body[_]
+	some _every in ast.found.every[rule_index]
+	some expr in _every.body
 
 	_contains_location(util.to_location_object(expr.location), location)
 }
@@ -107,6 +107,4 @@ _locationless_part(path, value) := {"path": path, "type": type_name(value)} if {
 	type_name(value) in {"array", "object", "set"}
 } else := {"path": path, "value": value}
 
-_location_path(path) if {
-	path[_] == "location"
-}
+_location_path(path) if "location" in path

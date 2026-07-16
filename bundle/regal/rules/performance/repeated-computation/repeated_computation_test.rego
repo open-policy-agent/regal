@@ -141,11 +141,11 @@ allow if {
 	r == set()
 }
 
-capabilities_with_nondeterministic := object.union(capabilities.provided, {
-	"builtins": object.union(capabilities.provided.builtins, {
-		"time.now_ns": object.union(capabilities.provided.builtins["time.now_ns"], {"nondeterministic": true}),
-	}),
-})
+capabilities_with_nondeterministic := json.patch(capabilities.provided, [{
+	"op": "add",
+	"path": "/builtins/time.now_ns/nondeterministic",
+	"value": true,
+}])
 
 with_location(location) := {{
 	"category": "performance",
