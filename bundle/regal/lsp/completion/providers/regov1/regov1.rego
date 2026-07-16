@@ -1,6 +1,6 @@
 # METADATA
 # description: |
-#   the `regov1`` provider provides completion suggestions for
+#   the `regov1` provider provides completion suggestions for
 #   `rego.v1` following an `import` declaration
 package regal.lsp.completion.providers.regov1
 

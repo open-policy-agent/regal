@@ -146,12 +146,12 @@ identifiers := rule_and_function_names | imported_identifiers
 rule_names contains name if {
 	some i, name in rule_names_ordered
 
-	not input.rules[i].head.args
+	not _rules[i].head.args
 }
 
 # METADATA
 # description: all rule and function names in the input AST indexed by position
-rule_names_ordered := [ref_static_to_string(rule.head.ref) | some rule in input.rules]
+rule_names_ordered := [ref_static_to_string(rule.head.ref) | some rule in _rules]
 
 # METADATA
 # description: |
@@ -324,10 +324,12 @@ function_decls[name] := info if {
 
 	some name, head in heads
 
-	info := {"decl": {
-		"args": [{"type": _custom_arg_type(arg.type), "name": arg.value} | some arg in head.args],
-		"result": {"type": "any"},
-	}}
+	info := {
+		"decl": {
+			"args": [{"type": _custom_arg_type(arg.type), "name": arg.value} | some arg in head.args],
+			"result": {"type": "any"},
+		},
+	}
 }
 
 _custom_arg_type(type) := type if type != "var"
@@ -427,7 +429,7 @@ assignment_terms(terms) := [terms[1], terms[2]] if is_assignment(terms[0])
 #   For a given rule head name, this rule contains a list of locations where
 #   there is a rule head with that name.
 rule_head_locations[name] contains {"row": loc.row, "col": loc.col} if {
-	some i, rule in input.rules
+	some i, rule in _rules
 
 	name := $"{package_name_full}.{rule_names_ordered[i]}"
 	loc := util.to_location_object(rule.head.location)

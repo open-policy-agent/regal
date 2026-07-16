@@ -25,7 +25,7 @@ result["response"] := {
 	"isIncomplete": true,
 } if {
 	input.method == "textDocument/completion"
-	not _default_edit_range_supported
+	not client.supports.edit_range_defaults
 }
 
 # METADATA
@@ -40,12 +40,10 @@ result["response"] := {
 	"itemDefaults": {"editRange": range},
 } if {
 	input.method == "textDocument/completion"
-	_default_edit_range_supported
+	client.supports.edit_range_defaults
 
 	line := input.regal.file.lines[input.params.position.line]
 	line != ""
-
-	location.in_rule_body(line)
 
 	ref := location.ref_at(line, input.params.position.character + 1)
 	range := location.word_range(ref, input.params.position)
@@ -87,8 +85,4 @@ inside_comment if {
 
 	startswith(comment.location, line)
 	util.to_location_no_text(comment.location).col <= input.params.position.character + 1
-}
-
-_default_edit_range_supported if {
-	"editRange" in client.capabilities.textDocument.completion.completionList.itemDefaults
 }
