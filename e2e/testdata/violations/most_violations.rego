@@ -334,3 +334,8 @@ non_loop_expression if {
 	endswith(user.email, "example.com")
 	role == "admin"
 }
+
+repeated_computation if {
+	count(input.items) > 0
+	count(input.items) > 1
+}
