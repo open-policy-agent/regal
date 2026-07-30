@@ -2900,8 +2900,16 @@
         ],
         "result": {
           "description": "remaining data from `object` with only keys specified in `paths`",
+          "dynamic": {
+            "key": {
+              "type": "any"
+            },
+            "value": {
+              "type": "any"
+            }
+          },
           "name": "filtered",
-          "type": "any"
+          "type": "object"
         },
         "type": "function"
       }
@@ -3218,8 +3226,16 @@
         ],
         "result": {
           "description": "result of removing all keys specified in `paths`",
+          "dynamic": {
+            "key": {
+              "type": "any"
+            },
+            "value": {
+              "type": "any"
+            }
+          },
           "name": "output",
-          "type": "any"
+          "type": "object"
         },
         "type": "function"
       }
@@ -3993,8 +4009,16 @@
         ],
         "result": {
           "description": "remaining data from `object` with only keys specified in `keys`",
+          "dynamic": {
+            "key": {
+              "type": "any"
+            },
+            "value": {
+              "type": "any"
+            }
+          },
           "name": "filtered",
-          "type": "any"
+          "type": "object"
         },
         "type": "function"
       }
@@ -4117,8 +4141,16 @@
         ],
         "result": {
           "description": "result of removing the specified `keys` from `object`",
+          "dynamic": {
+            "key": {
+              "type": "any"
+            },
+            "value": {
+              "type": "any"
+            }
+          },
           "name": "output",
-          "type": "any"
+          "type": "object"
         },
         "type": "function"
       }
@@ -4190,9 +4222,9 @@
           }
         ],
         "result": {
-          "description": "`true` if `sub` is a subset of `super`",
+          "description": "`true` if `sub` is a subset of `super`, otherwise undefined",
           "name": "result",
-          "type": "any"
+          "type": "boolean"
         },
         "type": "function"
       }
@@ -4231,8 +4263,16 @@
         ],
         "result": {
           "description": "a new object which is the result of an asymmetric recursive union of two objects where conflicts are resolved by choosing the key from the right-hand object `b`",
+          "dynamic": {
+            "key": {
+              "type": "any"
+            },
+            "value": {
+              "type": "any"
+            }
+          },
           "name": "output",
-          "type": "any"
+          "type": "object"
         },
         "type": "function"
       }
@@ -4261,8 +4301,16 @@
         ],
         "result": {
           "description": "asymmetric recursive union of all objects in `objects`, merged from left to right, where conflicts are resolved by choosing the key from the right-hand object",
+          "dynamic": {
+            "key": {
+              "type": "any"
+            },
+            "value": {
+              "type": "any"
+            }
+          },
           "name": "output",
-          "type": "any"
+          "type": "object"
         },
         "type": "function"
       }
@@ -5370,6 +5418,41 @@
           "description": "reversed string",
           "name": "y",
           "type": "string"
+        },
+        "type": "function"
+      }
+    },
+    {
+      "name": "strings.split_n",
+      "description": "Returns an array of at most `n` parts of `x` split on `delimiter`. If `n` is positive, returns the first `n` parts. If `n` is negative, returns the last `abs(n)` parts. If `n` is zero, returns an empty array. If `abs(n)` exceeds the number of parts, all parts are returned.",
+      "categories": [
+        "strings"
+      ],
+      "decl": {
+        "args": [
+          {
+            "description": "string that is split",
+            "name": "x",
+            "type": "string"
+          },
+          {
+            "description": "delimiter used for splitting",
+            "name": "delimiter",
+            "type": "string"
+          },
+          {
+            "description": "number of parts to return; positive selects from the left, negative from the right, zero returns an empty array",
+            "name": "n",
+            "type": "number"
+          }
+        ],
+        "result": {
+          "description": "split parts",
+          "dynamic": {
+            "type": "string"
+          },
+          "name": "ys",
+          "type": "array"
         },
         "type": "function"
       }

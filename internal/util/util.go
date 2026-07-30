@@ -58,7 +58,7 @@ func Must[T any](v T, err error) T {
 	return v
 }
 
-// Map applies a function to each element of a slice and returns a new slice with the results.
+// Map applies f to each element in a and returns a new slice with the results.
 func Map[T, U any](a []T, f func(T) U) []U {
 	b := make([]U, len(a))
 	for i := range a {
@@ -66,6 +66,13 @@ func Map[T, U any](a []T, f func(T) U) []U {
 	}
 
 	return b
+}
+
+// Mapper returns a function that applies f to each element in a and returns a new slice with the results.
+func Mapper[T, U any](f func(T) U) func(...T) []U {
+	return func(a ...T) []U {
+		return Map(a, f)
+	}
 }
 
 // FindFirst returns the first element in a slice that satisfies pred, or the zero value of T and false if not found.
