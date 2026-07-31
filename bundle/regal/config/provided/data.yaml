@@ -161,6 +161,8 @@ rules:
       level: ignore
     non-loop-expression:
       level: error
+    repeated-computation:
+      level: error
     walk-no-path:
       level: error
     with-outside-test-context:
