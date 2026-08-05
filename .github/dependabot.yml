@@ -3,7 +3,15 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+  - package-ecosystem: "npm"
+    directory: "/build"
+    schedule:
+      interval: "monthly"
     groups:
       dependencies:
         patterns:
