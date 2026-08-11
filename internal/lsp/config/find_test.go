@@ -8,11 +8,15 @@ import (
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/util/test"
+
+	"github.com/open-policy-agent/regal/internal/test/must"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 func TestFindConfigRoots(t *testing.T) {
 	t.Parallel()
 
+	fromSlash := util.Mapper(filepath.FromSlash)
 	testCases := map[string]struct {
 		FS       map[string]string
 		Expected []string
@@ -22,69 +26,39 @@ func TestFindConfigRoots(t *testing.T) {
 			Expected: []string{},
 		},
 		"single config root at root": {
-			FS: map[string]string{
-				filepath.FromSlash(".regal/config.yaml"): "",
-			},
-			Expected: []string{filepath.FromSlash("/")},
+			FS:       map[string]string{".regal/config.yaml": "{}"},
+			Expected: fromSlash("/"),
 		},
 		"single config root at root with .regal.yaml": {
-			FS: map[string]string{
-				filepath.FromSlash(".regal.yaml"): "",
-			},
-			Expected: []string{filepath.FromSlash("/")},
+			FS:       map[string]string{".regal.yaml": "{}"},
+			Expected: fromSlash("/"),
 		},
 		"two config roots, one higher": {
-			FS: map[string]string{
-				filepath.FromSlash(".regal/config.yaml"): "",
-				filepath.FromSlash("foo/.regal.yaml"):    "",
-			},
-			Expected: []string{
-				filepath.FromSlash("/"),
-				filepath.FromSlash("/foo"),
-			},
+			FS:       map[string]string{".regal/config.yaml": "{}", "foo/.regal.yaml": "{}"},
+			Expected: fromSlash("/", "/foo"),
 		},
 		"two config roots, one higher, not in root dir": {
-			FS: map[string]string{
-				filepath.FromSlash("foo/.regal.yaml"):            "",
-				filepath.FromSlash("bar/baz/.regal/config.yaml"): "",
-			},
-			Expected: []string{
-				filepath.FromSlash("/bar/baz"),
-				filepath.FromSlash("/foo"),
-			},
+			FS:       map[string]string{"foo/.regal.yaml": "{}", "bar/baz/.regal/config.yaml": "{}"},
+			Expected: fromSlash("/bar/baz", "/foo"),
 		},
 		"two config roots, equal depth": {
-			FS: map[string]string{
-				filepath.FromSlash("bar/.regal/config.yaml"): "",
-				filepath.FromSlash("foo/.regal.yaml"):        "",
-			},
-			Expected: []string{
-				filepath.FromSlash("/bar"),
-				filepath.FromSlash("/foo"),
-			},
+			FS:       map[string]string{"bar/.regal/config.yaml": "{}", "foo/.regal.yaml": "{}"},
+			Expected: fromSlash("/bar", "/foo"),
 		},
 	}
 
 	for testName, testData := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
-			test.WithTempFS(testData.FS, func(root string) {
-				got, err := FindConfigRoots(root)
-				if err != nil {
-					t.Fatalf("Unexpected error: %v", err)
-				}
 
-				gotTrimmed := make([]string, len(got))
-
-				for i, path := range got {
-					trimmed := cmp.Or(strings.TrimPrefix(path, root), filepath.FromSlash("/"))
-					gotTrimmed[i] = trimmed
-				}
-
-				if !slices.Equal(gotTrimmed, testData.Expected) {
-					t.Fatalf("Expected %v, got %v", testData.Expected, gotTrimmed)
-				}
+			root := test.TempDir(t, testData.FS)
+			gotTrimmed := util.Map(must.Return(FindConfigRoots(root))(t), func(path string) string {
+				return cmp.Or(strings.TrimPrefix(path, root), filepath.FromSlash("/"))
 			})
+
+			if !slices.Equal(gotTrimmed, testData.Expected) {
+				t.Fatalf("Expected %v, got %v", testData.Expected, gotTrimmed)
+			}
 		})
 	}
 }

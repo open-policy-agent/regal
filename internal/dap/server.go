@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
 
 	"github.com/open-policy-agent/opa/v1/debug"
+	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/dap/evaluate"
 	"github.com/open-policy-agent/regal/internal/util"
@@ -78,7 +78,7 @@ func (s *Server) Close() (err error) {
 
 func parsePort(addr string) (port uint16) {
 	if strings.Contains(addr, ":") {
-		if portint, _ := strconv.Atoi(strings.SplitN(addr, ":", 2)[1]); portint > 0 && portint <= 65535 {
+		if portint, _ := outil.Atoi(strings.SplitN(addr, ":", 2)[1]); portint > 0 && portint <= 65535 {
 			port = uint16(portint)
 		}
 	}

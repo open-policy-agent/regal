@@ -23,19 +23,13 @@ import (
 func TestFindRegalDirectory(t *testing.T) {
 	t.Parallel()
 
-	fs := map[string]string{filepath.FromSlash("/foo/bar/baz/p.rego"): ""}
+	root := test.TempDirOf(t, "/foo/bar/baz/p.rego", "")
+	must.MkdirAll(t, root, ".regal")
+	must.Return(FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz")))(t)
 
-	test.WithTempFS(fs, func(root string) {
-		must.MkdirAll(t, root, ".regal")
-		must.Return(FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz")))(t)
-	})
-
-	fs = map[string]string{filepath.FromSlash("/foo/bar/baz/p.rego"): "", filepath.FromSlash("/foo/bar/bax.json"): ""}
-
-	test.WithTempFS(fs, func(root string) {
-		_, err := FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz"))
-		assert.NotNil(t, err, "expected no config file found")
-	})
+	root = test.TempDirOf(t, "/foo/bar/baz/p.rego", "", "/foo/bar/bax.json", "")
+	_, err := FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz"))
+	assert.NotNil(t, err, "expected no config file found")
 }
 
 func TestFindConfig(t *testing.T) {
@@ -48,55 +42,55 @@ func TestFindConfig(t *testing.T) {
 	}{
 		"no config file": {
 			FS: map[string]string{
-				filepath.FromSlash("/foo/bar/baz/p.rego"): "",
-				filepath.FromSlash("/foo/bar/bax.json"):   "",
+				"/foo/bar/baz/p.rego": "package p",
+				"/foo/bar/bax.json":   "{}",
 			},
 			Error: "could not find Regal config",
 		},
 		".regal/config.yaml": {
 			FS: map[string]string{
-				filepath.FromSlash("/foo/bar/baz/p.rego"):         "",
-				filepath.FromSlash("/foo/bar/.regal/config.yaml"): "",
+				"/foo/bar/baz/p.rego":         "package p",
+				"/foo/bar/.regal/config.yaml": "{}",
 			},
-			ExpectedName: filepath.FromSlash("/foo/bar/.regal/config.yaml"),
+			ExpectedName: "/foo/bar/.regal/config.yaml",
 		},
 		".regal/ dir missing config file": {
 			FS: map[string]string{
-				filepath.FromSlash("/foo/bar/baz/p.rego"):   "",
-				filepath.FromSlash("/foo/bar/.regal/.keep"): "", // .keep file to ensure the dir is present
+				"/foo/bar/baz/p.rego":   "package p",
+				"/foo/bar/.regal/.keep": "me", // .keep file to ensure the dir is present
 			},
 			Error: "config file was not found in .regal directory",
 		},
 		".regal.yaml": {
 			FS: map[string]string{
-				filepath.FromSlash("/foo/bar/baz/p.rego"):  "",
-				filepath.FromSlash("/foo/bar/.regal.yaml"): "",
+				"/foo/bar/baz/p.rego":  "package p",
+				"/foo/bar/.regal.yaml": "{}",
 			},
-			ExpectedName: filepath.FromSlash("/foo/bar/.regal.yaml"),
+			ExpectedName: "/foo/bar/.regal.yaml",
 		},
 		".regal.yaml and .regal/config.yaml": {
 			FS: map[string]string{
-				filepath.FromSlash("/foo/bar/baz/p.rego"):         "",
-				filepath.FromSlash("/foo/bar/.regal.yaml"):        "",
-				filepath.FromSlash("/foo/bar/.regal/config.yaml"): "",
+				"/foo/bar/baz/p.rego":         "package p",
+				"/foo/bar/.regal.yaml":        "{}",
+				"/foo/bar/.regal/config.yaml": "{}",
 			},
 			Error: "conflicting config files: both .regal directory and .regal.yaml found",
 		},
 		".regal.yaml with .regal/config.yaml at higher directory": {
 			FS: map[string]string{
-				filepath.FromSlash("/foo/bar/baz/p.rego"):  "",
-				filepath.FromSlash("/foo/bar/.regal.yaml"): "",
-				filepath.FromSlash("/.regal/config.yaml"):  "",
+				"/foo/bar/baz/p.rego":  "package p",
+				"/foo/bar/.regal.yaml": "{}",
+				"/.regal/config.yaml":  "{}",
 			},
-			ExpectedName: filepath.FromSlash("/foo/bar/.regal.yaml"),
+			ExpectedName: "/foo/bar/.regal.yaml",
 		},
 		".regal/config.yaml with .regal.yaml at higher directory": {
 			FS: map[string]string{
-				filepath.FromSlash("/foo/bar/baz/p.rego"):         "",
-				filepath.FromSlash("/foo/bar/.regal/config.yaml"): "",
-				filepath.FromSlash("/.regal.yaml"):                "",
+				"/foo/bar/baz/p.rego":         "package p",
+				"/foo/bar/.regal/config.yaml": "{}",
+				"/.regal.yaml":                "{}",
 			},
-			ExpectedName: filepath.FromSlash("/foo/bar/.regal/config.yaml"),
+			ExpectedName: "/foo/bar/.regal/config.yaml",
 		},
 	}
 
@@ -104,20 +98,21 @@ func TestFindConfig(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
-			test.WithTempFS(testData.FS, func(root string) {
-				configFile, err := Find(filepath.Join(root, "foo", "bar", "baz"))
-				if testData.Error != "" {
-					testutil.ErrMustContain(err, testData.Error)(t)
-				} else if err != nil {
-					t.Fatalf("expected no error, got %s", err)
-				}
+			root := test.TempDir(t, testData.FS)
 
-				if testData.ExpectedName != "" {
-					if got, exp := strings.TrimPrefix(configFile.Name(), root), filepath.FromSlash(testData.ExpectedName); got != exp {
-						t.Fatalf("expected config file %q, got %q", exp, got)
-					}
+			configFile, err := Find(filepath.Join(root, "foo", "bar", "baz"))
+			if testData.Error != "" {
+				testutil.ErrMustContain(err, testData.Error)(t)
+			} else if err != nil {
+				t.Fatalf("expected no error, got %s", err)
+			}
+
+			if testData.ExpectedName != "" {
+				got, exp := strings.TrimPrefix(configFile.Name(), root), filepath.FromSlash(testData.ExpectedName)
+				if got != exp {
+					t.Fatalf("expected config file %q, got %q", exp, got)
 				}
-			})
+			}
 		})
 	}
 }
@@ -125,54 +120,44 @@ func TestFindConfig(t *testing.T) {
 func TestFindBundleRootDirectories(t *testing.T) {
 	t.Parallel()
 
-	cfg := `
-project:
+	cfg := `project:
   roots:
   - foo/bar
   - baz
 `
-
-	fs := map[string]string{
-		filepath.FromSlash("/.regal/config.yaml"):       cfg, // root from config
-		filepath.FromSlash("/.regal/rules/policy.rego"): "",  // custom rules directory
-		filepath.FromSlash("/bundle/.manifest"):         "",  // bundle from .manifest
-		filepath.FromSlash("/foo/bar/baz/policy.rego"):  "",  // foo/bar from config
-		filepath.FromSlash("/baz"):                      "",  // baz from config
-	}
-
-	test.WithTempFS(fs, func(root string) {
-		locations := must.Return(FindBundleRootDirectories(root))(t)
-		assert.Equal(t, 5, len(locations), "locations")
-
-		expected := util.Map([]string{"", ".regal/rules", "baz", "bundle", "foo/bar"}, util.FilepathJoiner(root))
-		assert.SlicesEqual(t, expected, locations, "bundle root directories")
+	root := test.TempDir(t, map[string]string{
+		"/.regal/config.yaml":       cfg,         // root from config
+		"/.regal/rules/policy.rego": "package p", // custom rules directory
+		"/bundle/.manifest":         "{}",        // bundle from .manifest
+		"/foo/bar/baz/policy.rego":  "package p", // foo/bar from config
+		"/baz":                      "",          // baz from config
 	})
+	locations := must.Return(FindBundleRootDirectories(root))(t)
+	assert.Equal(t, 5, len(locations), "locations")
+
+	expected := util.Map([]string{"", ".regal/rules", "baz", "bundle", "foo/bar"}, util.FilepathJoiner(root))
+	assert.SlicesEqual(t, expected, locations, "bundle root directories")
 }
 
 func TestFindBundleRootDirectoriesWithStandaloneConfig(t *testing.T) {
 	t.Parallel()
 
-	cfg := `
-project:
+	cfg := `project:
   roots:
   - foo/bar
   - baz
 `
-
-	fs := map[string]string{
-		filepath.FromSlash("/.regal.yaml"):             cfg, // root from config
-		filepath.FromSlash("/bundle/.manifest"):        "",  // bundle from .manifest
-		filepath.FromSlash("/foo/bar/baz/policy.rego"): "",  // foo/bar from config
-		filepath.FromSlash("/baz"):                     "",  // baz from config
-	}
-
-	test.WithTempFS(fs, func(root string) {
-		locations := must.Return(FindBundleRootDirectories(root))(t)
-		assert.Equal(t, 4, len(locations), "locations")
-
-		expected := util.Map([]string{"", "baz", "bundle", "foo/bar"}, util.FilepathJoiner(root))
-		assert.SlicesEqual(t, expected, locations, "bundle root directories")
+	root := test.TempDir(t, map[string]string{
+		"/.regal.yaml":             cfg,         // root from config
+		"/bundle/.manifest":        "{}",        // bundle from .manifest
+		"/foo/bar/baz/policy.rego": "package p", // foo/bar from config
+		"/baz":                     "",          // baz from config
 	})
+	locations := must.Return(FindBundleRootDirectories(root))(t)
+	assert.Equal(t, 4, len(locations), "locations")
+
+	expected := util.Map([]string{"", "baz", "bundle", "foo/bar"}, util.FilepathJoiner(root))
+	assert.SlicesEqual(t, expected, locations, "bundle root directories")
 }
 
 func TestMarshalConfig(t *testing.T) {
@@ -391,7 +376,7 @@ func TestAllRegoVersions(t *testing.T) {
     - path: foo
       rego-version: 1
 `,
-			FS: map[string]string{filepath.FromSlash("bar/baz/.manifest"): `{"rego_version": 1}`},
+			FS: map[string]string{"bar/baz/.manifest": `{"rego_version": 1}`},
 			Expected: map[string]ast.RegoVersion{
 				"":                            ast.RegoV0,
 				filepath.FromSlash("bar/baz"): ast.RegoV1,
@@ -400,7 +385,7 @@ func TestAllRegoVersions(t *testing.T) {
 		},
 		"no config": {
 			Config:   "",
-			FS:       map[string]string{filepath.FromSlash("bar/baz/.manifest"): `{"rego_version": 1}`},
+			FS:       map[string]string{"bar/baz/.manifest": `{"rego_version": 1}`},
 			Expected: map[string]ast.RegoVersion{},
 		},
 	}
@@ -414,10 +399,9 @@ func TestAllRegoVersions(t *testing.T) {
 				conf = testutil.MustUnmarshalYAML[*Config](t, []byte(testData.Config))
 			}
 
-			test.WithTempFS(testData.FS, func(root string) {
-				versions := must.Return(AllRegoVersions(root, conf))(t)
-				assert.True(t, maps.Equal(versions, testData.Expected))
-			})
+			root := test.TempDir(t, testData.FS)
+			versions := must.Return(AllRegoVersions(root, conf))(t)
+			assert.True(t, maps.Equal(versions, testData.Expected))
 		})
 	}
 }

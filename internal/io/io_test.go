@@ -17,20 +17,19 @@ func TestFindManifestLocations(t *testing.T) {
 	t.Parallel()
 
 	fs := map[string]string{
-		filepath.FromSlash("/.git"):                          "",
-		filepath.FromSlash("/foo/bar/baz/.manifest"):         "",
-		filepath.FromSlash("/foo/bar/qux/.manifest"):         "",
-		filepath.FromSlash("/foo/bar/.regal/.manifest.yaml"): "",
-		filepath.FromSlash("/node_modules/.manifest"):        "",
+		".git":                          "",
+		"foo/bar/baz/.manifest":         "{}",
+		"foo/bar/qux/.manifest":         "{}",
+		"foo/bar/.regal/.manifest.yaml": "{}",
+		"node_modules/.manifest":        "{}",
 	}
 
-	test.WithTempFS(fs, func(root string) {
-		locations, err := FindManifestLocations(root)
-		expected := util.Map([]string{"foo/bar/baz", "foo/bar/qux"}, filepath.FromSlash)
+	root := test.TempDir(t, fs)
+	locations, err := FindManifestLocations(root)
+	expected := util.Map([]string{"foo/bar/baz", "foo/bar/qux"}, filepath.FromSlash)
 
-		must.Equal(t, nil, err)
-		assert.SlicesEqual(t, expected, locations, "manifest locations")
-	})
+	must.Equal(t, nil, err)
+	assert.SlicesEqual(t, expected, locations, "manifest locations")
 }
 
 func TestDirCleanUpPaths(t *testing.T) {

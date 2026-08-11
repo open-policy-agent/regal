@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
+
+	outil "github.com/open-policy-agent/opa/v1/util"
 )
 
 var re = regexp.MustCompile(`^(.*)_(\d+)$`)
@@ -26,7 +27,7 @@ func renameCandidate(oldName string) string {
 	matches := re.FindStringSubmatch(base)
 	if len(matches) == 3 {
 		baseName := matches[1]
-		num, _ := strconv.Atoi(matches[2])
+		num, _ := outil.Atoi(matches[2])
 		num++
 		base = fmt.Sprintf("%s_%d", baseName, num)
 	} else {
