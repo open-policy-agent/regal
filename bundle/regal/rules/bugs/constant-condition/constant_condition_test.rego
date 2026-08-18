@@ -183,3 +183,52 @@ test_success_adding_constant_to_set if {
 	r := rule.report with input as ast.policy(`rule contains "message"`)
 	r == set()
 }
+
+test_success_constant_and_or_operand if {
+	# operands of `and`/`or` are excluded, as the fix for this rule — removing the
+	# expression — would change the meaning of the enclosing expression
+	r := rule.report with input as ast.policy(`import future.keywords.and
+	import future.keywords.or
+
+	allow if {
+		input.a and 1
+		input.b or "str"
+		input.c and 1 == 1
+	}`)
+
+	r == set()
+}
+
+test_fail_constant_condition_in_body_of_and_operand if {
+	# ... while a constant condition in an operand body holding more than one
+	# expression can safely be removed, as it is an expression of that body
+	r := rule.report with input as ast.policy(`import future.keywords.and
+
+	allow if {
+		{
+			input.a
+			true
+		} and input.b
+	}`)
+
+	r == {{
+		"category": "bugs",
+		"description": "Constant condition",
+		"location": {
+			"col": 4,
+			"file": "policy.rego",
+			"row": 8,
+			"text": "\t\t\ttrue",
+			"end": {
+				"row": 8,
+				"col": 8,
+			},
+		},
+		"related_resources": [{
+			"description": "documentation",
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/constant-condition",
+		}],
+		"title": "constant-condition",
+		"level": "error",
+	}}
+}

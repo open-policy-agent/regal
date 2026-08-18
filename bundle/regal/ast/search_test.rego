@@ -109,3 +109,34 @@ test_found_symbols_in_template_strings if {
 
 	count(syms) == 2
 }
+
+test_found_expressions_in_logical_operands if {
+	exprs := ast.found.expressions[0] with input as ast.policy(`import future.keywords.or
+
+	r if {
+		input.a == 1 or input.b == 2
+	}`)
+
+	# the `or` expression itself, plus one expression for each of its operands
+	count(exprs) == 3
+}
+
+test_logical_operand_locations if {
+	locations := ast.logical_operand_locations(0) with input as ast.policy(`import future.keywords.and
+	import future.keywords.or
+
+	r if {
+		input.a or {
+			x := input.b
+			x == 1
+		} and input.c
+	}`)
+
+	# `input.a` and the whole `and` expression (the `or` operands), and `input.c`
+	# — the two expressions of the brace enclosed `and` lhs are not included
+	locations == {"7:3:7:10", "7:14:10:16", "10:9:10:16"}
+}
+
+test_logical_operand_locations_none_found if {
+	ast.logical_operand_locations(0) == set() with input as ast.policy(`r if input.a == 1`)
+}

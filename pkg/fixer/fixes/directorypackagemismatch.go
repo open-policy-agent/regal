@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
+	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
 
@@ -50,7 +51,12 @@ func (d *DirectoryPackageMismatch) Fix(fc *FixCandidate, opts *RuntimeOptions) (
 }
 
 func getPackagePathDirectory(fc *FixCandidate, config *config.Config) (string, error) {
-	module, err := ast.ParseModule(fc.Filename, fc.Contents)
+	popts := parse.ParserOptions()
+	if fc.RegoVersion != ast.RegoUndefined {
+		popts.RegoVersion = fc.RegoVersion
+	}
+
+	module, err := parse.ModuleWithOpts(fc.Filename, fc.Contents, popts)
 	if err != nil {
 		return "", err
 	}

@@ -12,7 +12,15 @@ import data.regal.result
 # description: single scalar value or templatestring, like a lone `true` inside a rule body
 # scope: rule
 report contains violation if {
-	terms := ast.found.expressions[_][_].terms
+	some rule_index, i
+
+	expr := ast.found.expressions[rule_index][i]
+
+	# `and`/`or` operands are excluded, as the fix for this rule — removing the
+	# expression — would change the meaning of the enclosing expression
+	not expr.location in ast.logical_operand_locations(rule_index)
+
+	terms := expr.terms
 
 	# We could include composite types too, but less comomon and more expensive to check
 	terms.type in {"boolean", "null", "number", "string", "templatestring"}
@@ -26,7 +34,11 @@ report contains violation if {
 report contains violation if {
 	operators := {"equal", "gt", "gte", "lt", "lte", "neq"}
 
-	expr := ast.found.expressions[_][_]
+	some rule_index, i
+
+	expr := ast.found.expressions[rule_index][i]
+
+	not expr.location in ast.logical_operand_locations(rule_index)
 
 	expr.terms[0].value[0].type == "var"
 	expr.terms[0].value[0].value in operators
