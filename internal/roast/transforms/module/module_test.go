@@ -136,8 +136,6 @@ q if {
 	} and input.b
 }
 `, ast.ParserOptions{
-		// as the `and` and `or` keywords aren't advertised in OPA's default
-		// capabilities while still considered experimental
 		Capabilities: ast.CapabilitiesForThisVersion(ast.CapabilitiesExperimentalKeywords(true)),
 	})
 

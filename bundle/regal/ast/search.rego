@@ -241,14 +241,11 @@ found.expressions[rule_index] contains value if {
 
 # METADATA
 # description: |
-#   set containing the locations of all expressions that make up the entirety of an
-#   `and` or `or` operand in the rule at rule_index. These are found by
-#   found.expressions as well, but unlike the other expressions found there, they
-#   can't be removed without leaving the enclosing expression without an operand.
-#   Note that expressions in a brace enclosed operand body holding more than one
-#   expression — like `{ x := 1; x == input.x } and input.y` — are not included
-logical_operand_locations(rule_index) := {expr.location |
-	some i
+#   locations of the expressions that make up the entirety of an `and`/`or` operand in the
+#   rule at rule_index, i.e. those that can't be removed without leaving the enclosing
+#   expression without an operand
+logical_operand_locations[rule_index] contains expr.location if {
+	some rule_index, i
 
 	terms := found.expressions[rule_index][i].terms
 	terms.type in {"and", "or"}

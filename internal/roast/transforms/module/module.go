@@ -508,9 +508,7 @@ func bodyToArray(body ast.Body) *ast.Term {
 	return ast.ArrayTerm(exprs...)
 }
 
-// logicalToTerm converts the operands of an `and`/`or` expression. The explicit_lhs
-// and explicit_rhs attributes tell whether the operand was written as a brace
-// enclosed body (`{ x; y } or z`) rather than as a single expression.
+// logicalToTerm converts an `and`/`or` expression, where explicit_lhs/explicit_rhs mark brace enclosed operands.
 func logicalToTerm(op string, loc *ast.Location, lhs, rhs ast.Body, explicitLhs, explicitRhs bool) *ast.Term {
 	terms := objectWithLocationAndCap(loc, 5)
 

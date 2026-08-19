@@ -185,8 +185,6 @@ test_success_adding_constant_to_set if {
 }
 
 test_success_constant_and_or_operand if {
-	# operands of `and`/`or` are excluded, as the fix for this rule — removing the
-	# expression — would change the meaning of the enclosing expression
 	r := rule.report with input as ast.policy(`import future.keywords.and
 	import future.keywords.or
 
@@ -200,8 +198,7 @@ test_success_constant_and_or_operand if {
 }
 
 test_fail_constant_condition_in_body_of_and_operand if {
-	# ... while a constant condition in an operand body holding more than one
-	# expression can safely be removed, as it is an expression of that body
+	# a constant condition in an operand body of more than one expression can safely be removed
 	r := rule.report with input as ast.policy(`import future.keywords.and
 
 	allow if {
@@ -231,4 +228,65 @@ test_fail_constant_condition_in_body_of_and_operand if {
 		"title": "constant-condition",
 		"level": "error",
 	}}
+}
+
+test_success_logical_expr_with_non_constant_operand if {
+	r := rule.report with input as ast.policy(`import future.keywords.and
+	import future.keywords.or
+
+	allow if {
+		1 or input.a
+		input.b and "str"
+		1 == input.c or 2
+		{
+			x := 1
+			x == 1
+		} or 2
+	}`)
+
+	r == set()
+}
+
+test_fail_constant_logical_expr if {
+	r := rule.report with input as ast.policy(`import future.keywords.or
+
+	allow if 1 or 2`)
+
+	r == {{
+		"category": "bugs",
+		"description": "Constant condition",
+		"location": {
+			"col": 11,
+			"file": "policy.rego",
+			"row": 5,
+			"text": "\tallow if 1 or 2",
+			"end": {
+				"row": 5,
+				"col": 17,
+			},
+		},
+		"related_resources": [{
+			"description": "documentation",
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/constant-condition",
+		}],
+		"title": "constant-condition",
+		"level": "error",
+	}}
+}
+
+test_fail_constant_logical_expr_variations if {
+	# only the outermost logical expression of each is reported
+	r := rule.report with input as ast.policy(`import future.keywords.and
+	import future.keywords.or
+
+	allow if {
+		true and false
+		1 or 2 or 3
+		1 == 1 or "a" != "b"
+	}`)
+
+	locations := {[violation.location.row, violation.location.col] | some violation in r}
+
+	locations == {[7, 3], [8, 3], [9, 3]}
+	count(r) == 3
 }

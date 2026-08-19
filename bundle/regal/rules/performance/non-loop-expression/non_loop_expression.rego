@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/performance/non-loop-expression
 package regal.rules.performance["non-loop-expression"]
 
+import future.keywords.or
+
 import data.regal.ast
 import data.regal.result
 import data.regal.util
@@ -59,18 +61,10 @@ _is_print_call(term) if {
 	term.value[0].value == "print"
 }
 
-_any_var_found(expr, _, vars) if {
+_any_var_found(expr, body, vars) if {
 	some term in _expr_vars(expr)
 
-	term.value in vars
-}
-
-_any_var_found(expr, body, _) if {
-	assigned := _assign_vars(body)
-
-	some term in _expr_vars(expr)
-
-	term.value in assigned
+	term.value in vars or term.value in _assign_vars(body)
 }
 
 _assign_vars(body) := {expr.terms[1].value |

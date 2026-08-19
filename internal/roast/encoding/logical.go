@@ -30,9 +30,7 @@ func (*logicalOrCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	writeLogical(stream, "or", or.Location, or.Lhs, or.Rhs, or.ExplicitLhs, or.ExplicitRhs)
 }
 
-// writeLogical encodes the operands of an `and`/`or` expression. The explicit_lhs
-// and explicit_rhs attributes tell whether the operand was written as a brace
-// enclosed body (`{ x; y } or z`) rather than as a single expression.
+// writeLogical encodes an `and`/`or` expression, where explicit_lhs/explicit_rhs mark brace enclosed operands.
 func writeLogical(
 	stream *jsoniter.Stream,
 	op string,

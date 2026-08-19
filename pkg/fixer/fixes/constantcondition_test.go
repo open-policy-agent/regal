@@ -107,7 +107,7 @@ allow if { true }`,
 				Locations: []report.Location{
 					{
 						Row: 3, Column: 12, End: &report.Position{
-							Row: 4, Column: 16,
+							Row: 3, Column: 16,
 						},
 					},
 				},
@@ -116,6 +116,30 @@ allow if { true }`,
 			contentAfterFix: `package test
 
 allow if {  }`,
+		},
+		"multi line": {
+			fc: &FixCandidate{
+				Filename: "test.rego",
+				Contents: `package test
+
+allow if {
+	{
+		true
+	} or 2
+	input.x
+}`,
+			},
+			runtimeOptions: &RuntimeOptions{
+				Locations: []report.Location{
+					{
+						Row: 4, Column: 2, End: &report.Position{
+							Row: 6, Column: 8,
+						},
+					},
+				},
+			},
+			fixExpected:     true,
+			contentAfterFix: "package test\n\nallow if {\n\t\n\tinput.x\n}",
 		},
 		"many changes": {
 			fc: &FixCandidate{
@@ -137,7 +161,7 @@ allow if {
 					},
 					{
 						Row: 6, Column: 5, End: &report.Position{
-							Row: 4, Column: 11,
+							Row: 6, Column: 11,
 						},
 					},
 				},

@@ -11,8 +11,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
-// experimentalOpts as the `and` and `or` keywords aren't advertised in OPA's
-// default capabilities while still considered experimental.
 var experimentalOpts = ast.ParserOptions{
 	Capabilities: ast.CapabilitiesForThisVersion(ast.CapabilitiesExperimentalKeywords(true)),
 }
