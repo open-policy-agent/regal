@@ -118,6 +118,88 @@ func TestModuleToValueNotImport(t *testing.T) {
 	must.Equal(t, nil, encoding.OfValue().Encode(buf, value))
 }
 
+func TestModuleToValueLogicalKeywords(t *testing.T) {
+	t.Parallel()
+
+	module := ast.MustParseModuleWithOpts(`package test
+import future.keywords.and
+import future.keywords.or
+
+p if {
+	input.a or input.b and input.c
+}
+
+q if {
+	{
+		x := input.a
+		x == 1
+	} and input.b
+}
+`, ast.ParserOptions{
+		Capabilities: ast.CapabilitiesForThisVersion(ast.CapabilitiesExperimentalKeywords(true)),
+	})
+
+	value := must.Return(ToValue(module))(t)
+
+	buf := new(bytes.Buffer)
+	must.Equal(t, nil, encoding.OfValue().Encode(buf, value))
+
+	// `and` binds tighter than `or`, so the first rule is `a or (b and c)`
+	or := firstExprTerms(t, value, 0)
+
+	must.Equal(t, "or", stringAttr(t, or, "type"))
+	must.Equal(t, 1, bodyAttr(t, or, "lhs").Len())
+	must.Equal(t, 1, bodyAttr(t, or, "rhs").Len())
+
+	and := attr(t, bodyAttr(t, or, "rhs").Elem(0).Value, "terms")
+
+	must.Equal(t, "and", stringAttr(t, and, "type"))
+	must.Equal(t, 1, bodyAttr(t, and, "lhs").Len())
+	must.Equal(t, 1, bodyAttr(t, and, "rhs").Len())
+
+	// the second rule has a brace enclosed lhs, holding two expressions
+	explicit := firstExprTerms(t, value, 1)
+
+	must.Equal(t, "and", stringAttr(t, explicit, "type"))
+	must.Equal(t, ast.Boolean(true), must.Be[ast.Boolean](t, attr(t, explicit, "explicit_lhs")))
+	must.Equal(t, 2, bodyAttr(t, explicit, "lhs").Len())
+	must.Equal(t, 1, bodyAttr(t, explicit, "rhs").Len())
+}
+
+// firstExprTerms returns the "terms" attribute of the first expression in the
+// body of the rule at index i.
+func firstExprTerms(t *testing.T, value ast.Value, i int) ast.Value {
+	t.Helper()
+
+	terms := must.Return(value.Find(ast.Ref{
+		ast.InternedTerm("rules"),
+		ast.InternedTerm(i),
+		ast.InternedTerm("body"),
+		ast.InternedTerm(0),
+		ast.InternedTerm("terms"),
+	}))(t)
+
+	return terms
+}
+
+func attr(t *testing.T, value ast.Value, key string) ast.Value {
+	t.Helper()
+
+	return must.Be[ast.Object](t, value).Get(ast.InternedTerm(key)).Value
+}
+
+func stringAttr(t *testing.T, value ast.Value, key string) string {
+	t.Helper()
+
+	return string(must.Be[ast.String](t, attr(t, value, key)))
+}
+
+func bodyAttr(t *testing.T, value ast.Value, key string) *ast.Array {
+	t.Helper()
+
+	return must.Be[*ast.Array](t, attr(t, value, key))
+}
+
 // BenchmarkModuleToValue/ToValue-16         	  27673	         40987 ns/op	   64705 B/op	    1740 allocs/op
 func BenchmarkModuleToValue(b *testing.B) {
 	policy := `# METADATA

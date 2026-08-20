@@ -21,6 +21,8 @@ func init() {
 	jsoniter.RegisterTypeEncoder("ast.Every", &everyCodec{})
 	jsoniter.RegisterTypeEncoder("ast.With", &withCodec{})
 	jsoniter.RegisterTypeEncoder("ast.Not", &notCodec{})
+	jsoniter.RegisterTypeEncoder("ast.LogicalAnd", &logicalAndCodec{})
+	jsoniter.RegisterTypeEncoder("ast.LogicalOr", &logicalOrCodec{})
 	jsoniter.RegisterTypeEncoder("ast.Comment", &commentCodec{})
 
 	jsoniter.RegisterTypeEncoder("ast.Location", &locationCodec{})

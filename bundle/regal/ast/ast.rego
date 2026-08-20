@@ -4,6 +4,9 @@
 #   with OPA's AST, more recently in the form of RoAST
 package regal.ast
 
+import future.keywords.and
+import future.keywords.or
+
 import data.regal.config
 import data.regal.util
 
@@ -37,11 +40,8 @@ operators := {
 # description: |
 #   returns true if provided term is either a scalar or a collection of ground values
 # scope: document
-is_constant(term) if term.type in scalar_types
-
 is_constant(term) if {
-	term.type in {"array", "object", "set"}
-	not has_term_var(term.value)
+	term.type in scalar_types or term.type in {"array", "object", "set"} and not has_term_var(term.value)
 }
 
 # METADATA

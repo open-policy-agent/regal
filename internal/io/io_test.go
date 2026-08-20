@@ -2,6 +2,7 @@ package io
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -137,6 +138,16 @@ func TestOPACapabilitiesIncludeNoRegalBuiltins(t *testing.T) {
 
 	for _, b := range OPACapabilities().Builtins {
 		must.Equal(t, false, strings.HasPrefix(b.Name, "regal."), "regal builtin in opa capabilities: %s", b.Name)
+	}
+}
+
+func TestCapabilitiesIncludeExperimentalKeywords(t *testing.T) {
+	t.Parallel()
+
+	for _, keyword := range []string{"and", "or"} {
+		assert.True(t, slices.Contains(Capabilities().FutureKeywords, keyword))
+		must.Equal(t, false, slices.Contains(OPACapabilities().FutureKeywords, keyword),
+			"experimental keyword %q advertised in OPA capabilities", keyword)
 	}
 }
 

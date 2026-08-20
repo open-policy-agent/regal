@@ -373,3 +373,29 @@ func TestLintWithCollectQuery(t *testing.T) {
 
 	assert.Equal(t, nil, err, "expected aggregates to contain 'p.rego/common'")
 }
+
+func TestLintWithExperimentalKeywords(t *testing.T) {
+	t.Parallel()
+
+	input := test.InputPolicy("p/p.rego", `package p
+
+import future.keywords.or
+
+allow if {
+	input.a = 1 or input.b = 2
+}
+`)
+
+	result := must.Return(regal.NewLinter().WithInputModules(input).Lint(t.Context()))(t)
+
+	testutil.AssertNumViolations(t, 2, result)
+
+	// one violation for each operand of the `or` expression
+	assert.Equal(t, "prefer-equals-comparison", result.Violations[0].Title, "unexpected violation")
+	assert.Equal(t, 6, result.Violations[0].Location.Row, "unexpected line number")
+	assert.Equal(t, 2, result.Violations[0].Location.Column, "unexpected column number")
+
+	assert.Equal(t, "prefer-equals-comparison", result.Violations[1].Title, "unexpected violation")
+	assert.Equal(t, 6, result.Violations[1].Location.Row, "unexpected line number")
+	assert.Equal(t, 17, result.Violations[1].Location.Column, "unexpected column number")
+}

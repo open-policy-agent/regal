@@ -495,6 +495,10 @@ func bodyToArray(body ast.Body) *ast.Term {
 				if t.ExplicitBody {
 					insert(terms, "explicit_body", ast.BooleanTerm(true))
 				}
+			case *ast.LogicalAnd:
+				insert(exprObj, "terms", logicalToTerm("and", t.Location, t.Lhs, t.Rhs, t.ExplicitLhs, t.ExplicitRhs))
+			case *ast.LogicalOr:
+				insert(exprObj, "terms", logicalToTerm("or", t.Location, t.Lhs, t.Rhs, t.ExplicitLhs, t.ExplicitRhs))
 			}
 		}
 
@@ -502,6 +506,26 @@ func bodyToArray(body ast.Body) *ast.Term {
 	}
 
 	return ast.ArrayTerm(exprs...)
+}
+
+// logicalToTerm converts an `and`/`or` expression, where explicit_lhs/explicit_rhs mark brace enclosed operands.
+func logicalToTerm(op string, loc *ast.Location, lhs, rhs ast.Body, explicitLhs, explicitRhs bool) *ast.Term {
+	terms := objectWithLocationAndCap(loc, 5)
+
+	insert(terms, "type", ast.InternedTerm(op))
+
+	if explicitLhs {
+		insert(terms, "explicit_lhs", ast.BooleanTerm(true))
+	}
+
+	if explicitRhs {
+		insert(terms, "explicit_rhs", ast.BooleanTerm(true))
+	}
+
+	insert(terms, "lhs", bodyToArray(lhs))
+	insert(terms, "rhs", bodyToArray(rhs))
+
+	return ast.NewTerm(terms)
 }
 
 func objectWithLocationAndCap(loc *ast.Location, c int) ast.Object {

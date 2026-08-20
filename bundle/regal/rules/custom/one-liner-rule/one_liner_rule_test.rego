@@ -78,6 +78,21 @@ test_success_too_long_for_a_one_liner if {
 	r == set()
 }
 
+# a single expression may span several lines, and all of them count towards
+# the length of the resulting one-liner
+test_success_too_long_for_a_one_liner_spanning_several_lines if {
+	module := ast.policy(`import future.keywords.or
+
+	rule if {
+		some_really_long_rule_name_in_fact_53_characters_long or
+			another_long_rule_name_that_is_60_characters_long_in_total_x
+	}
+	`)
+	r := rule.report with input as module
+
+	r == set()
+}
+
 test_success_too_long_for_a_one_liner_configured_line_length if {
 	module := ast.with_rego_v1(`
 	rule if {

@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/style/prefer-some-in-iteration
 package regal.rules.style["prefer-some-in-iteration"]
 
+import future.keywords.or
+
 import data.regal.ast
 import data.regal.config
 import data.regal.result
@@ -95,8 +97,7 @@ _invalid_some_context(rule, path) if {
 # if previous node is of type call, also don't recommend `some .. in`
 _invalid_some_context(rule, path) if object.get(rule, array.slice(path, 0, count(path) - 2), {}).type == "call"
 
-_impossible_some(node) if node.type in {"array", "object", "set"}
-_impossible_some(node) if node.key
+_impossible_some(node) if node.type in {"array", "object", "set"} or node.key
 
 # technically this is not an _impossible_ some, as we could replace e.g. `"x" == input[_]`
 # with `some "x" in input`, but that'd be an `unnecessary-some` violation as `"x" in input`

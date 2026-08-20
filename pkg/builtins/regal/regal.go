@@ -18,8 +18,12 @@ import (
 )
 
 var (
+	// capabilities for parsing (and formatting) in the builtins below. Experimental
+	// keywords are enabled as anything OPA can be made to parse should be parsable
+	// here too — note that internal/io can't be used for this, as that package
+	// imports this one for builtin registration.
 	capabilities = sync.OnceValue(func() *ast.Capabilities {
-		return ast.CapabilitiesForThisVersion()
+		return ast.CapabilitiesForThisVersion(ast.CapabilitiesExperimentalKeywords(true))
 	})
 
 	// ParseModule metadata for regal.parse_module.

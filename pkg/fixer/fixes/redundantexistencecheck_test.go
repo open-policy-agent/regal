@@ -120,7 +120,7 @@ is_admin(user) if {
 					},
 					{
 						Row: 9, Column: 5, End: &report.Position{
-							Row: 4, Column: 9,
+							Row: 9, Column: 9,
 						},
 					},
 				},

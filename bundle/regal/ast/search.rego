@@ -241,6 +241,24 @@ found.expressions[rule_index] contains value if {
 
 # METADATA
 # description: |
+#   locations of the expressions that make up the entirety of an `and`/`or` operand in the
+#   rule at rule_index, i.e. those that can't be removed without leaving the enclosing
+#   expression without an operand
+logical_operand_locations[rule_index] contains expr.location if {
+	some rule_index, i
+
+	terms := found.expressions[rule_index][i].terms
+	terms.type in {"and", "or"}
+
+	some operand in [terms.lhs, terms.rhs]
+
+	count(operand) == 1
+
+	expr := operand[0]
+}
+
+# METADATA
+# description: |
 #   answers whether a variable of the given name (value) is declared in the
 #   local scope of the provided rule at the provided location
 is_in_local_scope(rule, location, value) if {

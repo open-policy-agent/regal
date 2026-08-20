@@ -4817,7 +4817,7 @@
     },
     {
       "name": "regex.template_match",
-      "description": "Matches a string against a pattern, where there pattern may be glob-like",
+      "description": "Matches a string against a pattern, where the pattern may be glob-like",
       "decl": {
         "args": [
           {
@@ -5888,7 +5888,7 @@
     },
     {
       "name": "to_number",
-      "description": "Converts a string, bool, or number value to a number: Strings are converted to numbers using `strconv.Atoi`, Boolean `false` is converted to 0 and `true` is converted to 1.",
+      "description": "Converts value of type string, null or boolean to number. Numeric strings converts to the corresponding number when possible. Null and boolean `false` converts to 0 and boolean `true` to 1. Numbers are returned without conversion.",
       "categories": [
         "conversions"
       ],
@@ -5896,7 +5896,7 @@
         "args": [
           {
             "description": "value to convert",
-            "name": "x",
+            "name": "value",
             "of": [
               {
                 "type": "null"
@@ -5915,7 +5915,7 @@
           }
         ],
         "result": {
-          "description": "the numeric representation of `x`",
+          "description": "the numeric representation of `value`",
           "name": "num",
           "type": "number"
         },
@@ -6533,7 +6533,9 @@
     }
   ],
   "future_keywords": [
-    "not"
+    "and",
+    "not",
+    "or"
   ],
   "features": [
     "keywords_in_refs",

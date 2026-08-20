@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/style/unnecessary-some
 package regal.rules.style["unnecessary-some"]
 
+import future.keywords.or
+
 import data.regal.ast
 import data.regal.result
 
@@ -24,13 +26,13 @@ report contains violation if {
 
 _some_is_unnecessary(symbol, scalar_types) if {
 	symbol[0].value[0].value == "internal"
-	symbol[0].value[1].value == "member_2"
-	symbol[1].type in scalar_types
-}
 
-_some_is_unnecessary(symbol, scalar_types) if {
-	symbol[0].value[0].value == "internal"
-	symbol[0].value[1].value == "member_3"
-	symbol[1].type in scalar_types
-	symbol[2].type in scalar_types
+	{
+		symbol[0].value[1].value == "member_2"
+		symbol[1].type in scalar_types
+	} or {
+		symbol[0].value[1].value == "member_3"
+		symbol[1].type in scalar_types
+		symbol[2].type in scalar_types
+	}
 }
