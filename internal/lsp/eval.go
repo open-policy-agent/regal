@@ -136,7 +136,7 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 
 		//nolint:contextcheck
 		if err = l.conn.Call(rpcCtx, "regal/showEvalResult", responseParams, &responseResult); err != nil {
-			l.log.Message("regal/showEvalResult failed: %v", err.Error())
+			l.log.Message("regal/showEvalResult failed: %v", err)
 		}
 
 		rpcCancel()

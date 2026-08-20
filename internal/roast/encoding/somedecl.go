@@ -17,7 +17,7 @@ func (*someDeclCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*someDeclCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	some := *((*ast.SomeDecl)(ptr))
+	some := *(*ast.SomeDecl)(ptr)
 
 	write.ObjectStart(stream, some.Location)
 	write.ValsArrayAttr(stream, "symbols", some.Symbols)

@@ -1,4 +1,3 @@
-//nolint:recvcheck
 package client
 
 import (

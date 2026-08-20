@@ -17,7 +17,7 @@ func (*exprCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*exprCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	expr := *((*ast.Expr)(ptr))
+	expr := *(*ast.Expr)(ptr)
 
 	write.ObjectStart(stream, expr.Location)
 

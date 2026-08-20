@@ -135,7 +135,7 @@ func TestFindBundleRootDirectories(t *testing.T) {
 	locations := must.Return(FindBundleRootDirectories(root))(t)
 	assert.Equal(t, 5, len(locations), "locations")
 
-	expected := util.Map([]string{"", ".regal/rules", "baz", "bundle", "foo/bar"}, util.FilepathJoiner(root))
+	expected := outil.Map([]string{"", ".regal/rules", "baz", "bundle", "foo/bar"}, util.FilepathJoiner(root))
 	assert.SlicesEqual(t, expected, locations, "bundle root directories")
 }
 
@@ -156,7 +156,7 @@ func TestFindBundleRootDirectoriesWithStandaloneConfig(t *testing.T) {
 	locations := must.Return(FindBundleRootDirectories(root))(t)
 	assert.Equal(t, 4, len(locations), "locations")
 
-	expected := util.Map([]string{"", "baz", "bundle", "foo/bar"}, util.FilepathJoiner(root))
+	expected := outil.Map([]string{"", "baz", "bundle", "foo/bar"}, util.FilepathJoiner(root))
 	assert.SlicesEqual(t, expected, locations, "bundle root directories")
 }
 

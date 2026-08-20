@@ -6,8 +6,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 )
 
-var noBody = ast.NewBody(ast.NewExpr(ast.InternedTerm(true)))
-
 // GetRuleDetail returns a short descriptive string value for a given rule stating
 // if the rule is constant, multi-value, single-value etc and the type of the rule's
 // value if known.
@@ -63,8 +61,21 @@ func IsConstant(rule *ast.Rule) bool {
 	return rule.Head.Value != nil &&
 		ast.IsScalar(rule.Head.Value.Value) &&
 		rule.Head.Args == nil &&
-		rule.Body.Equal(noBody) &&
+		isEmptyBody(rule) &&
 		rule.Else == nil
+}
+
+func isEmptyBody(rule *ast.Rule) bool {
+	switch len(rule.Body) {
+	case 0:
+		return true
+	case 1:
+		term, ok := rule.Body[0].Terms.(*ast.Term)
+
+		return ok && !rule.Body[0].Negated && rule.Body[0].With == nil && ast.InternedTerm(true).Equal(term)
+	default:
+		return false
+	}
 }
 
 // simplifyType removes anything but the base type from the type name.

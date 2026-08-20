@@ -2,6 +2,8 @@
 # description: various utility functions for linter policies
 package regal.util
 
+import future.keywords.or
+
 # METADATA
 # description: |
 #   returns a set of sets containing all indices of duplicates in the array,
@@ -244,15 +246,15 @@ with_source_files(aggregator, aggs) := {$"p{i + 1}.rego": {aggregator: agg} |
 contains_location(sup, sub) if {
 	sup.row < sub.row
 	sup.end.row > sub.end.row
-} else if {
+} or {
 	sup.row == sub.row
 	sup.col <= sub.col
 	sup.end.row > sub.end.row
-} else if {
+} or {
 	sup.row < sub.row
 	sup.end.row == sub.end.row
 	sup.end.col >= sub.end.col
-} else if {
+} or {
 	sup.row == sub.row
 	sup.col <= sub.col
 	sup.end.row == sub.end.row

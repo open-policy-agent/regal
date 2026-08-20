@@ -17,7 +17,7 @@ func (*commentCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*commentCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	comment := *((*ast.Comment)(ptr))
+	comment := *(*ast.Comment)(ptr)
 
 	// Use location string — text is retrieved dynamically via regal.file.lines
 	buf := stream.Buffer()

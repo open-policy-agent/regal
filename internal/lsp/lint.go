@@ -29,9 +29,13 @@ var (
 
 	errParseFailNoErrors = errors.New("failed to parse module, but no errors were set as diagnostics")
 
-	diagErrorLevel = new(uint(1))
-	diagWarnLevel  = new(uint(2))
-	diagInfoLevel  = new(uint(3))
+	uints          = [...]uint{0, 1, 2, 3}
+	diagErrorLevel = &uints[1]
+	diagWarnLevel  = &uints[2]
+	diagInfoLevel  = &uints[3]
+
+	strKeys       = [...]string{"regal/parse"}
+	regalParseKey = &strKeys[0]
 )
 
 // diagnosticsRunOpts contains options for file and workspace linting.
@@ -107,10 +111,10 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		}
 	} else {
 		// Check if err is a single ast.Error
-		if e, ok := errors.AsType[*ast.Error](err); ok {
-			astErrors = append(astErrors, ast.Error{Code: e.Code, Message: e.Message, Location: e.Location})
-		} else {
+		if e, ok := errors.AsType[*ast.Error](err); !ok {
 			return false, fmt.Errorf("unknown error type: %T", err)
+		} else {
+			astErrors = append(astErrors, ast.Error{Code: e.Code, Message: e.Message, Location: e.Location})
 		}
 	}
 
@@ -120,13 +124,13 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		line := uint(max(astError.Location.Row-1, 0))
 		text, _ := util.Line(content, line+1)
 		lineLength := cmp.Or(uint(len(text)), 1)
-		key := "regal/parse"
+		key := regalParseKey
 		link := "https://www.openpolicyagent.org/docs/errors/" // overview page
 
 		hints, _ := hints.GetForError(err)
 		if len(hints) > 0 {
 			// there should only be one hint, so take the first
-			key = hints[0]
+			key = &hints[0]
 			link += hints[0]
 		}
 
@@ -134,7 +138,7 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 			Severity:        diagErrorLevel,                                // - only error Diagnostic the server sends
 			Range:           types.RangeBetween(line, 0, line, lineLength), // - always highlights the whole line
 			Message:         astError.Message,
-			Source:          &key,
+			Source:          key,
 			Code:            strings.ReplaceAll(astError.Code, "_", "-"),
 			CodeDescription: &types.CodeDescription{Href: link},
 		})

@@ -91,7 +91,7 @@ func TestModuleToValueTemplateString(t *testing.T) {
 			t.Fatalf("expected 3 parts in template string, got: %d", partsArr.Len())
 		}
 	} else {
-		t.Fatalf("expected parts key in template string value")
+		t.Fatal("expected parts key in template string value")
 	}
 }
 
@@ -100,11 +100,11 @@ func TestModuleToValueNotImport(t *testing.T) {
 
 	module := ast.MustParseModule(`package test
 		import future.keywords.not
-		
+
 		p if {
 			not input.denied
 		}
-		
+
 		q if {
 			not {
 				x := input.role

@@ -1,5 +1,7 @@
 package regal.ast
 
+import future.keywords.or
+
 import data.regal.util
 
 _find_nested_vars(obj) := [value |
@@ -25,7 +27,7 @@ _find_assign_vars(value) := [value] if {
 has_named_var(node, name) if {
 	node.type == "var"
 	node.value == name
-} else if {
+} or {
 	node.type in {"array", "object", "set", "ref", "templatestring"}
 
 	walk(node.value, [_, nested])

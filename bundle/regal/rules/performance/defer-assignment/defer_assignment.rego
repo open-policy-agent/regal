@@ -6,6 +6,7 @@
 package regal.rules.performance["defer-assignment"]
 
 import future.keywords.not
+import future.keywords.or
 
 import data.regal.ast
 import data.regal.result
@@ -72,7 +73,7 @@ _var_value_used_in_expression(value, expr) if {
 
 	expr.terms.type == "var"
 	expr.terms.value == value
-} else if {
+} or {
 	# `not x.y`
 	is_object(expr.terms)
 

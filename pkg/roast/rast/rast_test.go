@@ -83,7 +83,7 @@ func TestStructToValueTagWithTrailingComma(t *testing.T) {
 	t.Parallel()
 
 	type testStruct struct {
-		Field string `json:"field,"` //nolint:staticcheck
+		Field string `json:"field,"` //nolint
 	}
 
 	got := rast.StructToValue(testStruct{Field: "value"})

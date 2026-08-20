@@ -15,7 +15,7 @@ func (*templateStringCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*templateStringCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	sc := *((*ast.TemplateString)(ptr))
+	sc := *(*ast.TemplateString)(ptr)
 
 	stream.WriteObjectStart()
 

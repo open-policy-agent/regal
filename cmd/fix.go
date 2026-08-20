@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
+	outil "github.com/open-policy-agent/opa/v1/util"
+
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
@@ -48,7 +50,7 @@ as it is important to understand why they were flagged.`, "\n", " ")
 		Use:   "fix <path> [path [...]]",
 		Short: "Fix Rego source files",
 		Long: func() string {
-			fixableRules := util.Map(fixes.NewDefaultFixes(), fixes.Fix.Name)
+			fixableRules := outil.Map(fixes.NewDefaultFixes(), fixes.Fix.Name)
 			if len(fixableRules) == 0 {
 				return intro
 			}
@@ -222,7 +224,7 @@ func fix(args []string, params *fixParams) (err error) {
 	}
 
 	// TODO: Figure out why filtered returns duplicates in the first place
-	filtered = slices.Compact(util.Sorted(filtered))
+	filtered = slices.Compact(outil.Sorted(filtered))
 
 	// convert the filtered paths to absolute paths before fixing to
 	// support accurate root matching.

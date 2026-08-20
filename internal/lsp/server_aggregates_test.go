@@ -47,7 +47,7 @@ package bar
 	// and missing-metadata set to error
 	select {
 	case <-timeout.C:
-		t.Fatalf("timed out waiting for server to load config")
+		t.Fatal("timed out waiting for server to load config")
 	default:
 		for {
 			time.Sleep(testPollInterval)

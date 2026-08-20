@@ -3,16 +3,11 @@
     "OPA_CHECK_CAPABILITIES": "${workspacePath}/build/capabilities.json",
     "OPA_EVAL_CAPABILITIES": "${workspacePath}/build/capabilities.json"
   },
-  "opa.roots": [
-    "${workspaceFolder}/bundle"
-  ],
+  "opa.roots": ["${workspaceFolder}/bundle"],
   "opa.strictMode": true,
   "opa.schema": "${workspaceFolder}/internal/embeds/schemas",
   "go.lintTool": "golangci-lint",
-  "go.buildFlags": [
-    "-tags",
-    "e2e"
-  ],
+  "go.buildFlags": ["-tags", "e2e"],
   "[rego]": {
     // This is better handled by Regal's selection ranges implementation
     "editor.smartSelect.selectLeadingAndTrailingWhitespace": false,
@@ -25,5 +20,9 @@
   // Long term, the extension + Regal should provide support for this, as it'll also
   // result in a better experience when we can be more selective about what to show,
   // and how.
-  "debug.inlineValues": "on"
+  "debug.inlineValues": "on",
+
+  "search.exclude": {
+    "**/testdata": true
+  }
 }

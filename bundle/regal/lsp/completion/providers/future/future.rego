@@ -24,18 +24,16 @@ items contains item if {
 	ref := $"future.keywords.{keyword}"
 	startswith(ref, word.text)
 
-	item := _item(keyword, ref, word, input.params.position)
-}
-
-_item(keyword, ref, word, position) := {
-	"label": ref,
-	"labelDetails": {
-		"description": "reference",
-	},
-	"kind": kind.reference,
-	"detail": $"import future `{keyword}` keyword",
-	"textEdit": {
-		"range": location.word_range(word, position),
-		"newText": ref,
-	},
+	item := {
+		"label": ref,
+		"labelDetails": {
+			"description": "reference",
+		},
+		"kind": kind.reference,
+		"detail": $"import future `{keyword}` keyword",
+		"textEdit": {
+			"range": location.word_range(word, input.params.position),
+			"newText": ref,
+		},
+	}
 }

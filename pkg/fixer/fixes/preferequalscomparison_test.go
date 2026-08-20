@@ -152,7 +152,7 @@ is_get := true if input.request.method == "GET"
 			}
 
 			if !tc.fixExpected && len(fixResults) != 0 {
-				t.Fatalf("unexpected fix applied")
+				t.Fatal("unexpected fix applied")
 			}
 
 			if !tc.fixExpected {

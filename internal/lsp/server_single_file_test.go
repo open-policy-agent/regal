@@ -174,7 +174,7 @@ allow := neo4j.q
 
 			t.Logf("waiting for neo4j.query in completion results for neo4j.q, got %v", itemsList)
 		case <-timeout.C:
-			t.Fatalf("timed out waiting for file completion to correct")
+			t.Fatal("timed out waiting for file completion to correct")
 		}
 	}
 }

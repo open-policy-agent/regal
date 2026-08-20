@@ -84,12 +84,12 @@ func NotNil(tb testing.TB, got any, s ...any) {
 }
 
 func FormatMsg[T any](exp, got T, s ...any) string {
-	if l := len(s); l == 0 {
-		// fallthrough to default message
-	} else if l == 1 {
-		return fmt.Sprintf("%s: expected %v, got %v", s[0], exp, got)
-	} else if msg, ok := s[0].(string); ok {
-		return fmt.Sprintf("%s: expected %v, got %v", fmt.Sprintf(msg, s[1:]...), exp, got)
+	if l := len(s); l > 0 {
+		if l == 1 {
+			return fmt.Sprintf("%s: expected %v, got %v", s[0], exp, got)
+		} else if msg, ok := s[0].(string); ok {
+			return fmt.Sprintf("%s: expected %v, got %v", fmt.Sprintf(msg, s[1:]...), exp, got)
+		}
 	}
 
 	return fmt.Sprintf("expected %v, got %v", exp, got)

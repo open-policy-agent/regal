@@ -29,6 +29,11 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
+var (
+	deleteRecursiveIgnoreIfNotExists  = &types.DeleteFileOptions{Recursive: true, IgnoreIfNotExists: true}
+	renameNoOverwriteNoIgnoreIfExists = &types.RenameFileOptions{Overwrite: false, IgnoreIfExists: false}
+)
+
 func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 	l.workersWg.Go(func() {
 		for {
@@ -108,7 +113,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 						WithChanges(changes...)
 
 					if err = l.Workspace().ApplyEdit(ctx, edit); err != nil {
-						l.log.Message("failed workspace/applyEdit request: %s", err.Error())
+						l.log.Message("failed workspace/applyEdit request: %v", err)
 					}
 
 					// handle this ourselves as it's a rename and not a content edit
@@ -139,7 +144,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 					l.window.ShowMessage(ctx, types.ErrorMessage, err.Error())
 				} else if len(editParams.Edit.DocumentChanges) > 0 {
 					if err := l.Workspace().ApplyEdit(ctx, editParams); err != nil {
-						l.log.Message("failed workspace/applyEdit request: %s", err.Error())
+						l.log.Message("failed workspace/applyEdit request: %v", err)
 					}
 				}
 			}
@@ -206,10 +211,13 @@ func (l *LanguageServer) fixRenameChanges(fileURI string) ([]workspace.DocumentC
 		return nil, fmt.Errorf("failed to get potential roots: %w", err)
 	}
 
-	fix := &fixes.DirectoryPackageMismatch{}
+	fix := fixes.DirectoryPackageMismatchFixer
 
 	// the default for the LSP is to rename on conflict
-	f := fixer.NewFixer().RegisterRoots(roots...).RegisterFixes(fix).SetOnConflictOperation(fixer.OnConflictRename)
+	f := fixer.NewFixer().
+		RegisterRoots(roots...).
+		RegisterFixes(fix).
+		SetOnConflictOperation(fixer.OnConflictRename)
 
 	violations := []report.Violation{{Title: fix.Name(), Location: report.Location{File: uri.ToPath(fileURI)}}}
 	cfprovider := fileprovider.NewCacheFileProvider(l.cache, ws.Client().Identifier)
@@ -258,14 +266,16 @@ func (l *LanguageServer) fixRenameChanges(fileURI string) ([]workspace.DocumentC
 		return nil, fmt.Errorf("failed to determine empty directories post rename: %w", err)
 	}
 
-	renopts := &types.RenameFileOptions{Overwrite: false, IgnoreIfExists: false}
 	changes := append(make([]workspace.DocumentChange, 0, len(dirs)+1),
-		types.RenameFile{Kind: "rename", OldURI: oldURI, NewURI: newURI, Options: renopts},
+		types.RenameFile{Kind: "rename", OldURI: oldURI, NewURI: newURI, Options: renameNoOverwriteNoIgnoreIfExists},
 	)
 
-	delopts := &types.DeleteFileOptions{Recursive: true, IgnoreIfNotExists: true}
 	for _, dir := range dirs {
-		changes = append(changes, types.DeleteFile{Kind: "delete", URI: ws.URI(dir), Options: delopts})
+		changes = append(changes, types.DeleteFile{
+			Kind:    "delete",
+			URI:     ws.URI(dir),
+			Options: deleteRecursiveIgnoreIfNotExists,
+		})
 	}
 
 	l.cache.Delete(oldURI)
@@ -297,7 +307,7 @@ func (l *LanguageServer) handleIgnoreRuleCommand(_ context.Context, args types.C
 
 	var currentContent string
 	if content, err := os.ReadFile(configPath); err == nil {
-		currentContent = string(content)
+		currentContent = outil.ByteSliceToString(content)
 	}
 
 	// default to empty set of rules
@@ -556,15 +566,14 @@ func (l *LanguageServer) handleCreateTestCommand(ctx context.Context, params typ
 		return err
 	}
 
-	//nolint:contextcheck
-	if err := l.displayTestResult(combinedTest, args.Target); err != nil {
+	if err := l.displayTestResult(ctx, combinedTest, args.Target); err != nil {
 		return fmt.Errorf("failed to display test result: %w", err)
 	}
 
 	return nil
 }
 
-func (l *LanguageServer) displayTestResult(testCode, sourceURI string) error {
+func (l *LanguageServer) displayTestResult(ctx context.Context, testCode, sourceURI string) error {
 	sourceFile := uri.ToPath(sourceURI)
 	baseName := strings.TrimSuffix(filepath.Base(sourceFile), ".rego")
 	testFileName := l.Workspace().Path(baseName + "_test.rego")
@@ -574,7 +583,7 @@ func (l *LanguageServer) displayTestResult(testCode, sourceURI string) error {
 	}
 
 	// Use a timeout context for RPC to ensure it completes during graceful shutdown
-	rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
+	rpcCtx, rpcCancel := context.WithTimeout(ctx, rpcTimeout)
 	defer rpcCancel()
 
 	l.window.ShowDocument(rpcCtx, l.Workspace().URI(testFileName), true)

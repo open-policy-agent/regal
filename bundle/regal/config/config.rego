@@ -6,6 +6,8 @@
 #   ignore
 package regal.config
 
+import future.keywords.or
+
 # METADATA
 # description: the path prefix value set on the current linter instance
 # scope: document
@@ -75,7 +77,7 @@ for_rule(category, title) := rules[category][title]
 # description: answers whether a rule is ignored in the most efficient way
 ignored_rule(category, title) if {
 	_force_disabled(_params, category, title)
-} else if {
+} or {
 	rules[category][title].level == "ignore"
 	not _force_enabled(_params, category, title)
 }

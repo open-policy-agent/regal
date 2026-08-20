@@ -85,13 +85,11 @@ type (
 	}
 
 	Route struct {
-		resolver regoContextHandler
 		requires Requirements
 	}
 
-	ResultHandler      = func(context.Context, any) (any, error)
-	regoHandler        = func(context.Context, *query.Prepared, Providers, *jsonrpc2.Request) (any, error)
-	regoContextHandler = func(context.Context, *RegalContext, *jsonrpc2.Request) (any, error)
+	ResultHandler = func(context.Context, any) (any, error)
+	regoHandler   = func(context.Context, *query.Prepared, Providers, *jsonrpc2.Request) (any, error)
 
 	InitializeResponse struct {
 		Response struct {
@@ -139,8 +137,8 @@ func NewRouter(ctx context.Context, s storage.Store, qc *query.Cache, prvs Provi
 		"textDocument/selectionRange":      {},
 		"textDocument/semanticTokens/full": {requires: fileLines},
 		"textDocument/signatureHelp":       {requires: fileLines},
-		"completionItem/resolve":           {resolver: passthrough},
-		"inlayHint/resolve":                {resolver: passthrough},
+		"completionItem/resolve":           {},
+		"inlayHint/resolve":                {},
 
 		"initialized": {}, // special case
 	}
@@ -264,11 +262,11 @@ func regalContextForRequirements(prvs Providers, uri string, reqs Requirements) 
 			return nil, errors.New("successful parse count provider required but not provided")
 		}
 
-		if splc, ok := prvs.SuccessfulParseCountProvider(uri); ok {
-			rctx.File.SuccessfulParseCount = splc
-		} else {
+		if splc, ok := prvs.SuccessfulParseCountProvider(uri); !ok {
 			// if the file has always been unparsable, we can return early
 			return nil, nil //nolint:nilnil
+		} else {
+			rctx.File.SuccessfulParseCount = splc
 		}
 	}
 

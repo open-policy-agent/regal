@@ -206,7 +206,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 	c := cache.NewCache()
 	qc := query.NewCache()
 	rstore := store.NewRegalStore()
-	featureFlags := util.Or(opts.FeatureFlags, DefaultServerFeatureFlags)
+	featureFlags := outil.Or(opts.FeatureFlags, DefaultServerFeatureFlags)
 
 	_ = store.PutServer(ctx, rstore, types.ServerContext{FeatureFlags: *featureFlags, Version: version.Version})
 
@@ -304,9 +304,6 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return l.handleWorkspaceSymbol()
 	case "regal/runTests":
 		return handler.WithContextAndParams(ctx, req, l.handleRunTests)
-	case "shutdown":
-		// no-op as we wait for the exit signal before closing channel
-		return emptyStruct, nil
 	case "exit":
 		// close the channel, cancel the context for all workers, and exit
 		if err := l.conn.Close(); err != nil {
@@ -327,8 +324,9 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 
 			return emptyStruct, nil
 		})
-	case "$/cancelRequest":
-		// NOTE: no-op, implement if we want to support longer running, client-triggered operations
+	case "shutdown", "$/cancelRequest":
+		// shutdown: no-op as we wait for the exit signal before closing channel
+		// $/cancelRequest: no-op, implement if we want to support longer running, client-triggered operations
 		// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#dollarRequests
 		return emptyStruct, nil
 	}

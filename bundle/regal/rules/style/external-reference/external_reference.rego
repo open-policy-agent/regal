@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/style/external-reference
 package regal.rules.style["external-reference"]
 
+import future.keywords.or
+
 import data.regal.ast
 import data.regal.config
 import data.regal.result
@@ -54,7 +56,7 @@ _named_vars(arg) := {var.value | some var in ast.find_term_vars(arg)} if arg.typ
 #   "fn_namespaces" in the report rule
 _function_call_ctx(fun, path) if {
 	object.get(fun, array.slice(path, 0, count(path) - 4), false).type == "call"
-} else if {
+} or {
 	terms_path := array.slice(path, 0, util.last_indexof(path, "terms") + 2)
 	next_term_path := array.flatten([
 		array.slice(terms_path, 0, count(terms_path) - 1), # ["body", 0, "terms", 0] -> ["body", 0, "terms"]

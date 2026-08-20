@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	outil "github.com/open-policy-agent/opa/v1/util"
 	"github.com/open-policy-agent/opa/v1/util/test"
 
 	"github.com/open-policy-agent/regal/internal/test/must"
@@ -52,7 +53,7 @@ func TestFindConfigRoots(t *testing.T) {
 			t.Parallel()
 
 			root := test.TempDir(t, testData.FS)
-			gotTrimmed := util.Map(must.Return(FindConfigRoots(root))(t), func(path string) string {
+			gotTrimmed := outil.Map(must.Return(FindConfigRoots(root))(t), func(path string) string {
 				return cmp.Or(strings.TrimPrefix(path, root), filepath.FromSlash("/"))
 			})
 

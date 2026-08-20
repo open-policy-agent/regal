@@ -23,7 +23,7 @@ type (
 		session            debug.Session
 		logger             *DebugLogger
 		serverCapabilities *godap.Capabilities
-		clientCapabilities *godap.InitializeRequestArguments
+		clientCapabilities *godap.InitializeRequestArguments //nolint:unused // TODO: look into why this is unused
 		evalHandler        evaluate.Handler
 	}
 	launchProperties struct {
