@@ -27,9 +27,9 @@ The `trace` function serves no real purpose since the introduction of `print`, a
 
 ## Configuration Options
 
-This linter rule provides the following configuration options:
+This linter rule provides the following [configuration options](https://www.openpolicyagent.org/projects/regal/configuration):
 
-```yaml
+```yaml title=".regal/config.yaml or .regal.yaml"
 rules:
   testing:
     print-or-trace-call:
