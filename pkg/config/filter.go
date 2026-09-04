@@ -60,7 +60,7 @@ outer:
 
 // excludeFile imitates the pattern matching of .gitignore files
 // See `exclusion.rego` for details on the implementation.
-func excludeFile(pattern glob.Glob, filename, pathPrefix string) bool {
+func excludeFile(pattern *glob.Pattern, filename, pathPrefix string) bool {
 	// Normalize path separators to forward slashes for consistent glob matching
 	filename = filepath.ToSlash(filename)
 	if pathPrefix != "" {
@@ -70,8 +70,8 @@ func excludeFile(pattern glob.Glob, filename, pathPrefix string) bool {
 	return pattern.Match(filename)
 }
 
-func compilePatterns(patterns []string) ([]glob.Glob, error) {
-	compiled := make([]glob.Glob, 0, len(patterns))
+func compilePatterns(patterns []string) ([]*glob.Pattern, error) {
+	compiled := make([]*glob.Pattern, 0, len(patterns))
 
 	for _, pattern := range patterns {
 		if pattern == "" {
@@ -107,7 +107,7 @@ func compilePatterns(patterns []string) ([]glob.Glob, error) {
 
 		// Loop through patterns and return true on first match
 		for _, p := range ps1 {
-			g, err := glob.Compile(p, '/')
+			g, err := glob.Compile(middleDoubleStar(p), '/')
 			if err != nil {
 				return nil, fmt.Errorf("failed to compile pattern %s: %w", p, err)
 			}
@@ -117,4 +117,13 @@ func compilePatterns(patterns []string) ([]glob.Glob, error) {
 	}
 
 	return compiled, nil
+}
+
+// middleDoubleStar makes an interior `/**/` match zero directories as well as
+// one or more, as .gitignore specifies — glob's `**` only matches a non-empty
+// sequence, so `a/**/b` alone won't match `a/b`. An empty alternative restores
+// that, for any number of occurrences.
+// Keep in sync with `_middle_doublestar` in `exclusion.rego`.
+func middleDoubleStar(pattern string) string {
+	return strings.ReplaceAll(pattern, "/**/", "/{**/,}")
 }

@@ -22,7 +22,7 @@ updates:
       interval: "monthly"
     ignore:
       # update OPA manually to bump version in README too
-      - dependency-name: "github.com/open-policy-agent/opa/v1"
+      - dependency-name: "github.com/open-policy-agent/opa"
       # the v1 of this is breaking and we plan to use a rego impl eventually
       - dependency-name: "github.com/olekukonko/tablewriter"
         versions: [">= 0.0.6"]
