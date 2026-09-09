@@ -25,8 +25,8 @@ github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de h1:FxWPpzIjnTlhP
 github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de/go.mod h1:DCaWoUhZrYW9p1lxo/cm8EmUOOzAPSEZNGF2DK1dJgw=
 github.com/arbovm/levenshtein v0.0.0-20160628152529-48b4e1c0c4d0 h1:jfIu9sQUG6Ig+0+Ap1h4unLjW6YQJpKZVmUzxsD4E/Q=
 github.com/arbovm/levenshtein v0.0.0-20160628152529-48b4e1c0c4d0/go.mod h1:t2tdKJDJF9BV14lnkjHmOQgcvEKgtqs5a1N3LNdJhGE=
-github.com/arl/statsviz v0.8.1 h1:9Ns7GBWCPWn46M/KfqZ5BqRxU578e/MV7/DOwpt2Sd8=
-github.com/arl/statsviz v0.8.1/go.mod h1:z3rQqviSGmoVkR/09Z7ygIwWlE/1Rdslvw3azST/4rQ=
+github.com/arl/statsviz v0.8.2 h1:sceiee7nGyPCEFq3y25krycRqwefBJbC5xnNZjSfLiE=
+github.com/arl/statsviz v0.8.2/go.mod h1:z3rQqviSGmoVkR/09Z7ygIwWlE/1Rdslvw3azST/4rQ=
 github.com/bcicen/bfstree v1.0.0 h1:Fx9vcyXYspj2GIJqAvd1lwCNI+cQF/r2JJqxHHmsAO0=
 github.com/bcicen/bfstree v1.0.0/go.mod h1:u//juIip96SNFkG4iMn9z0KzqLSeFSpBKoBo5ceq1uE=
 github.com/bcicen/go-units v1.0.5 h1:gfeKGDc8JgKCFyqxNKPgHc735KH3VW8bnuL5X2y2up4=
