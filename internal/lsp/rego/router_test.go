@@ -40,7 +40,6 @@ type (
 		parsed  ast.Value
 	}
 	jsonData struct {
-		name    string
 		content []byte
 	}
 	testCase struct {
@@ -114,11 +113,11 @@ func markdownToTest(tb testing.TB, method, src string) testCase {
 				}
 			case *mdast.CodeBlock:
 				if currentHeading == "input.json" { //nolint:gocritic
-					tc.input = jsonData{name: "input.json", content: n.Literal}
+					tc.input = jsonData{content: n.Literal}
 				} else if currentHeading == "data.json" {
-					tc.data = jsonData{name: "data.json", content: n.Literal}
+					tc.data = jsonData{content: n.Literal}
 				} else if currentHeading == "output.json" {
-					tc.output = jsonData{name: "output.json", content: n.Literal}
+					tc.output = jsonData{content: n.Literal}
 				} else if strings.HasSuffix(currentHeading, ".rego") {
 					tc.policy = newDocument("file:///workspace/"+currentHeading, string(n.Literal))
 				}

@@ -307,7 +307,7 @@ func (f *Fixer) handleRename(
 			break
 		}
 
-		if !errors.As(err, &fileprovider.RenameConflictError{}) {
+		if _, ok := errors.AsType[fileprovider.RenameConflictError](err); !ok {
 			return fmt.Errorf("failed to rename file: %w", err)
 		}
 

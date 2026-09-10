@@ -13,6 +13,8 @@ import (
 	"github.com/open-policy-agent/regal/pkg/config"
 )
 
+var DirectoryPackageMismatchFixer = &DirectoryPackageMismatch{}
+
 type DirectoryPackageMismatch struct{}
 
 func (*DirectoryPackageMismatch) Name() string {

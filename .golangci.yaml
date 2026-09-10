@@ -7,6 +7,7 @@ linters:
     - dupword
     - err113
     - exhaustruct
+    - exhaustruct_v5
     - exhaustive
     - funlen
     - gochecknoglobals
@@ -45,6 +46,9 @@ linters:
       exclude-functions:
         - (*github.com/olekukonko/tablewriter.Table).Append
         - (*github.com/olekukonko/tablewriter.Table).Render
+        - (*gopkg.in/yaml.v3.Encoder).Encode
+        - (io.Writer).Write
+        - (*os.File).WriteString
     gocritic:
       enable-all: true
       disabled-checks:
@@ -67,6 +71,7 @@ linters:
     perfsprint:
       err-error: true
     revive:
+      enable-all-rules: true
       rules:
         # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unused-parameter
         - name: unused-parameter
@@ -80,6 +85,62 @@ linters:
             - allowRegex: ^_
           severity: warning
           disabled: false
+        # covered by lll linter
+        - name: line-length-limit
+          disabled: true
+        # covered by errcheck linter
+        - name: unhandled-error
+          disabled: true
+        # covered by forcetypeassert linter
+        - name: unchecked-type-assertion
+          disabled: true
+        - name: cyclomatic
+          disabled: true
+        - name: cognitive-complexity
+          disabled: true
+        - name: add-constant
+          disabled: true
+        - name: max-public-structs
+          disabled: true
+        - name: flag-parameter
+          disabled: true
+        - name: blank-imports
+          disabled: true
+        - name: deep-exit
+          disabled: true
+        - name: function-length
+          disabled: true
+        - name: nested-structs
+          disabled: true
+        - name: import-shadowing
+          disabled: true
+        - name: package-naming
+          disabled: true
+        - name: var-naming
+          disabled: true
+        - name: unexported-return
+          disabled: true
+        - name: comment-spacings
+          arguments:
+            - "nolint"
+        - name: import-alias-naming
+          disabled: true
+        - name: function-result-limit
+          disabled: true
+        - name: confusing-naming
+          disabled: true
+        - name: modifies-value-receiver
+          disabled: true
+        - name: enforce-switch-style
+          disabled: true
+        - name: unexported-naming
+          disabled: true
+        - name: max-control-nesting
+          disabled: true
+        - name: exported
+          disabled: true
+        - name: indent-error-flow
+          disabled: true
     staticcheck:
       checks:
         - all
@@ -88,7 +149,10 @@ linters:
         rules:
           json: snake
     unused:
+      field-writes-are-uses: false
       exported-fields-are-used: false
+      post-statements-are-reads: false
+      local-variables-are-used: false
     usetesting:
       context-background: true
       context-todo: true

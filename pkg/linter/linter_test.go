@@ -9,12 +9,12 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/topdown"
+	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/test"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
-	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	regal "github.com/open-policy-agent/regal/pkg/linter"
 )
@@ -369,7 +369,7 @@ func TestLintWithCollectQuery(t *testing.T) {
 
 	must.Equal(t, 1, result.Aggregates.Len(), "aggregates count")
 
-	_, err := result.Aggregates.Find(util.Map([]string{"p.rego", "common"}, ast.InternedTerm))
+	_, err := result.Aggregates.Find(outil.Map([]string{"p.rego", "common"}, ast.InternedTerm))
 
 	assert.Equal(t, nil, err, "expected aggregates to contain 'p.rego/common'")
 }

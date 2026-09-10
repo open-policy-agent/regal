@@ -18,7 +18,7 @@ func (*moduleCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*moduleCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	mod := *((*ast.Module)(ptr))
+	mod := *(*ast.Module)(ptr)
 
 	encutil.ObjectStart(stream, nil)
 

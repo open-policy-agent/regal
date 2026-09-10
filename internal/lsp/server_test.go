@@ -13,6 +13,8 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
+	outil "github.com/open-policy-agent/opa/v1/util"
+
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/connection"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
@@ -224,7 +226,7 @@ func createPublishDiagnosticsHandler(
 			}
 
 			select {
-			case receivedMessages[fileBase] <- util.Sorted(violations):
+			case receivedMessages[fileBase] <- outil.Sorted(violations):
 			case <-time.After(1 * time.Second):
 				t.Fatalf("timeout writing to receivedMessages channel for %s", fileBase)
 			}

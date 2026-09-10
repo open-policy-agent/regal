@@ -83,7 +83,7 @@ func TestNoWhitespaceComment(t *testing.T) {
 			}
 
 			if !tc.fixExpected && len(fixResults) != 0 {
-				t.Fatalf("unexpected fix applied")
+				t.Fatal("unexpected fix applied")
 			}
 
 			if !tc.fixExpected {

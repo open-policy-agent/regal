@@ -83,9 +83,9 @@ func compilePatterns(patterns []string) ([]*glob.Pattern, error) {
 		// appear anywhere in the directory (--> **/)
 		if !strings.Contains(pattern[:n-1], "/") {
 			pattern = "**/" + pattern
+		} else {
+			pattern = strings.TrimPrefix(pattern, "/")
 		}
-
-		pattern = strings.TrimPrefix(pattern, "/")
 
 		ps := []string{pattern}
 		if noPrefix, ok := strings.CutPrefix(pattern, "**/"); ok {

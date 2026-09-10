@@ -15,11 +15,11 @@ type notCodec struct{}
 func (*notCodec) IsEmpty(_ unsafe.Pointer) bool { return false }
 
 func (*notCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	not := *((*ast.Not)(ptr))
+	not := *(*ast.Not)(ptr)
 
 	write.ObjectStart(stream, not.Location)
 
-	write.Val(stream, "type", "not")
+	write.String(stream, "type", "not")
 
 	if not.ExplicitBody {
 		write.Bool(stream, "explicit_body", not.ExplicitBody)

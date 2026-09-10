@@ -65,7 +65,7 @@ employee if {
 			contentAfterFix: `package test
 
 employee if {
-    
+` + "    " + `
     endswith(input.user.email, "@acmecorp.com")
 }`,
 		},
@@ -129,12 +129,12 @@ is_admin(user) if {
 			contentAfterFix: `package test
 
 employee if {
-    
+` + "    " + `
     endswith(input.user.email, "@acmecorp.com")
 }
 
 is_admin(user) if {
-    
+` + "    " + `
     "admin" in user.roles
 }`,
 		},
@@ -151,7 +151,7 @@ is_admin(user) if {
 			}
 
 			if !tc.fixExpected && len(fixResults) != 0 {
-				t.Fatalf("unexpected fix applied")
+				t.Fatal("unexpected fix applied")
 			}
 
 			if !tc.fixExpected {

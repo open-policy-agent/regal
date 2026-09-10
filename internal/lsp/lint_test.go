@@ -115,7 +115,7 @@ allow[msg] { 1 == 1; msg := "hello" }
 			must.Equal(t, testData.expectSuccess, success, "success")
 
 			if _, ok := c.GetModule(testData.fileURI); testData.expectModule && !ok {
-				t.Fatalf("expected module to be set, but it was not")
+				t.Fatal("expected module to be set, but it was not")
 			}
 
 			diags, _ := c.GetParseErrors(testData.fileURI)

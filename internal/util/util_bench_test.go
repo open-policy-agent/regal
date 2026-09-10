@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	outil "github.com/open-policy-agent/opa/v1/util"
 )
 
 // Without pre-allocating, this is more than twice as slow and results in 5 allocs/op.
@@ -43,7 +45,7 @@ func BenchmarkSorted(b *testing.B) {
 
 	var got []string
 	for b.Loop() {
-		got = Sorted(unsorted)
+		got = outil.Sorted(unsorted)
 	}
 
 	if !slices.Equal(got, sorted) {
@@ -56,7 +58,7 @@ func BenchmarkSorted(b *testing.B) {
 func BenchmarkLineContents(b *testing.B) {
 	src := []byte{}
 	for i := range uint64(1000) {
-		src = append(AppendUint(append(src, "This is line number "...), i), '\n')
+		src = append(outil.AppendInt(append(src, "This is line number "...), i), '\n')
 	}
 
 	b.Run("LineContents", func(b *testing.B) {

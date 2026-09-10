@@ -167,10 +167,10 @@ func lookupValueFromData(data map[string]any, terms ast.Ref) any {
 
 	for _, term := range terms[:len(terms)-1] {
 		key := strings.Trim(term.Value.String(), `"`)
-		if child, ok := node[key].(map[string]any); ok {
-			node = child
-		} else {
+		if child, ok := node[key].(map[string]any); !ok {
 			return nil
+		} else {
+			node = child
 		}
 	}
 

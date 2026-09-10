@@ -5,6 +5,7 @@
 package regal.ast
 
 import future.keywords.and
+import future.keywords.not
 import future.keywords.or
 
 import data.regal.config
@@ -84,11 +85,8 @@ package_name_full := concat("", ["data.", package_name])
 # description: provides all static string values from ref
 named_refs(ref) := [term |
 	some i, term in ref
-	_is_name(term.type, i)
+	i == 0 and term.type == "var" or i > 0 and term.type == "string"
 ]
-
-_is_name("var", 0)
-_is_name("string", pos) if pos > 0
 
 # METADATA
 # description: all the rules (excluding functions) in the input AST
@@ -159,10 +157,7 @@ rule_names_ordered := [ref_static_to_string(rule.head.ref) | some rule in _rules
 #   input = variable value set elsewhere in the policy
 #   output =  variable value set in this location (unification)
 # scope: document
-is_output_var(rule, var) if {
-	# test the cheap and common case first, and 'else' only when it's not
-	is_wildcard(var)
-} else if {
+is_output_var(rule, var) if is_wildcard(var) or {
 	not var.value in (rule_names | imported_identifiers)
 
 	num_above := count([1 |

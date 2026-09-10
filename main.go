@@ -17,7 +17,7 @@ func main() {
 
 	if err := cmd.RootCommand.Execute(); err != nil {
 		code := 1
-		if e := (cmd.ExitError{}); errors.As(err, &e) {
+		if e, ok := errors.AsType[cmd.ExitError](err); ok {
 			code = e.Code()
 		}
 

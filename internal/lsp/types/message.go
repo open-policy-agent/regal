@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/open-policy-agent/regal/internal/util"
+	"github.com/open-policy-agent/opa/v1/util"
 )
 
 const (
@@ -14,5 +14,5 @@ const (
 type Message uint8
 
 func (m Message) AppendText(buf []byte) []byte {
-	return util.AppendUint(buf, m)
+	return util.AppendInt(buf, m)
 }

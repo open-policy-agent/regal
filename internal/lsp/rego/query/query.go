@@ -16,6 +16,7 @@ import (
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
 	"github.com/open-policy-agent/regal/internal/compile"
+	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
@@ -166,6 +167,7 @@ func prepareQueryArgs(
 	rb *bundle.Bundle,
 ) (regoOptions, storage.Transaction) {
 	args := []func(*rego.Rego){
+		rego.Capabilities(io.Capabilities()),
 		rego.ParsedQuery(query), rego.ParsedBundle("regal", rb),
 		// For debugging, but we should probably make this conditional
 		rego.EnablePrintStatements(true), rego.PrintHook(topdown.NewPrintHook(os.Stderr)),

@@ -3,31 +3,41 @@ package modify
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	outil "github.com/open-policy-agent/opa/v1/util"
+)
+
+var (
+	errEmptyPath      = errors.New("path cannot be empty")
+	errInvalidDoc     = errors.New("invalid document structure")
+	errRootNotMapping = errors.New("root is not a mapping")
+
+	yamlBoolTrueNode  = &yaml.Node{Kind: yaml.ScalarNode, Value: "true", Tag: "!!bool"}
+	yamlBoolFalseNode = &yaml.Node{Kind: yaml.ScalarNode, Value: "false", Tag: "!!bool"}
 )
 
 // SetKey sets a key at the given path to the specified value.
 // Comments are preserved, but indentation is always 2.
 func SetKey(yamlContent string, path []string, value any) (string, error) {
 	if len(path) == 0 {
-		return "", errors.New("path cannot be empty")
+		return "", errEmptyPath
 	}
 
 	var root yaml.Node
-	if err := yaml.Unmarshal([]byte(yamlContent), &root); err != nil {
+	if err := yaml.Unmarshal(outil.StringToByteSlice(yamlContent), &root); err != nil {
 		return "", fmt.Errorf("failed to parse YAML: %w", err)
 	}
 
 	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
-		return "", errors.New("invalid document structure")
+		return "", errInvalidDoc
 	}
 
 	document := root.Content[0]
 	if document.Kind != yaml.MappingNode {
-		return "", errors.New("root is not a mapping")
+		return "", errRootNotMapping
 	}
 
 	current := document
@@ -47,30 +57,25 @@ func SetKey(yamlContent string, path []string, value any) (string, error) {
 			}
 
 			current = current.Content[j+1]
-			// force the use of the default style, rather than compact style
-			current.Style = 0
-
+			current.Style = 0 // force the use of the default style, rather than compact style
 			found = true
 
 			break
 		}
 
-		if !found {
-			// create ancestor node
-			keyNode := &yaml.Node{
-				Kind:  yaml.ScalarNode,
-				Value: key,
-			}
-			valueNode := &yaml.Node{
-				Kind:  yaml.MappingNode,
-				Style: 0, // default style rather than compact
-			}
+		if !found { // create ancestor node
+			keyNode := &yaml.Node{Kind: yaml.ScalarNode, Value: key}
+			valueNode := &yaml.Node{Kind: yaml.MappingNode, Style: 0} // default style rather than compact
 			current.Content = append(current.Content, keyNode, valueNode)
 			current = valueNode
 		}
 	}
 
 	finalKey := path[len(path)-1]
+
+	buf := new(strings.Builder)
+	enc := yaml.NewEncoder(buf)
+	enc.SetIndent(2)
 
 	// check if the final key already exists and update it
 	for i := 0; i < len(current.Content); i += 2 {
@@ -86,25 +91,11 @@ func SetKey(yamlContent string, path []string, value any) (string, error) {
 
 		current.Content[i+1] = valueNode
 
-		var buf strings.Builder
-
-		encoder := yaml.NewEncoder(&buf)
-		encoder.SetIndent(2)
-
-		if err := encoder.Encode(&root); err != nil {
-			return "", fmt.Errorf("failed to encode YAML: %w", err)
-		}
-
-		encoder.Close()
-
-		return buf.String(), nil
+		return encodeAndClose(buf, enc, &root)
 	}
 
 	// create the new key if it doesn't exist
-	keyNode := &yaml.Node{
-		Kind:  yaml.ScalarNode,
-		Value: finalKey,
-	}
+	keyNode := &yaml.Node{Kind: yaml.ScalarNode, Value: finalKey}
 
 	valueNode, err := createNodeFromValue(value)
 	if err != nil {
@@ -113,34 +104,30 @@ func SetKey(yamlContent string, path []string, value any) (string, error) {
 
 	current.Content = append(current.Content, keyNode, valueNode)
 
-	var buf strings.Builder
+	return encodeAndClose(buf, enc, &root)
+}
 
-	encoder := yaml.NewEncoder(&buf)
-	encoder.SetIndent(2)
-
-	if err := encoder.Encode(&root); err != nil {
+func encodeAndClose(buf *strings.Builder, enc *yaml.Encoder, root *yaml.Node) (string, error) {
+	if err := enc.Encode(root); err != nil {
 		return "", fmt.Errorf("failed to encode YAML: %w", err)
 	}
 
-	encoder.Close()
+	err := enc.Close()
 
-	return buf.String(), nil
+	return buf.String(), err
 }
 
 // createNodeFromValue only supports bool and strings -> YAML node.
 func createNodeFromValue(value any) (*yaml.Node, error) {
 	switch v := value.(type) {
 	case string:
-		return &yaml.Node{
-			Kind:  yaml.ScalarNode,
-			Value: v,
-		}, nil
+		return &yaml.Node{Kind: yaml.ScalarNode, Value: v}, nil
 	case bool:
-		return &yaml.Node{
-			Kind:  yaml.ScalarNode,
-			Value: strconv.FormatBool(v),
-			Tag:   "!!bool",
-		}, nil
+		if v {
+			return yamlBoolTrueNode, nil
+		}
+
+		return yamlBoolFalseNode, nil
 	default:
 		return nil, fmt.Errorf("unsupported type %T, only string and bool are supported", value)
 	}

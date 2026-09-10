@@ -17,7 +17,7 @@ func (*annotationsCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*annotationsCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	a := *((*ast.Annotations)(ptr))
+	a := *(*ast.Annotations)(ptr)
 
 	write.ObjectStart(stream, a.Location)
 	write.String(stream, "scope", a.Scope)

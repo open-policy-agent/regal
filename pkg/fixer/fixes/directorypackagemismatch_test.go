@@ -148,7 +148,7 @@ allow if input.a or input.b
 			}
 
 			if len(fr) == 0 && tc.expected != nil {
-				t.Fatalf("expected fix result, got none")
+				t.Fatal("expected fix result, got none")
 			}
 
 			fixResult := fr[0]

@@ -170,7 +170,7 @@ all_digits if {
 			}
 
 			if !tc.fixExpected && len(fixResults) != 0 {
-				t.Fatalf("unexpected fix applied")
+				t.Fatal("unexpected fix applied")
 			}
 
 			if !tc.fixExpected {
@@ -178,7 +178,7 @@ all_digits if {
 			}
 
 			if len(fixResults) == 0 {
-				t.Fatalf("expected fix to be applied")
+				t.Fatal("expected fix to be applied")
 			}
 
 			fixedContent := fixResults[0].Contents

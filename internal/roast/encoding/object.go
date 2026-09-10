@@ -34,7 +34,7 @@ type objectElem struct {
 type objectElemSlice []*objectElem
 
 func (*objectCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	o := *((*object)(ptr))
+	o := *(*object)(ptr)
 
 	stream.WriteArrayStart()
 

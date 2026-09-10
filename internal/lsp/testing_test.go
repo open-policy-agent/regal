@@ -43,12 +43,10 @@ test_bar if {
 
 	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
 		switch req.Method {
-		case "textDocument/publishDiagnostics":
-			// Ignore diagnostics for this test
-			return struct{}{}, nil
 		case "regal/testLocations":
 			return handler.WithParams(req, test.SendsToChannel(receivedMessages))
 		default:
+			// Ignore diagnostics for this test
 			return struct{}{}, nil
 		}
 	}
@@ -83,6 +81,6 @@ test_bar if {
 		}
 
 	case <-timeout.C:
-		t.Fatalf("timed out waiting for test locations notification")
+		t.Fatal("timed out waiting for test locations notification")
 	}
 }

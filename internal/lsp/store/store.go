@@ -102,10 +102,10 @@ func write[T any](ctx context.Context, store storage.Store, txn storage.Transact
 }
 
 func remove(ctx context.Context, store storage.Store, txn storage.Transaction, path storage.Path) error {
-	var stErr *storage.Error
-
 	err := store.Write(ctx, txn, storage.RemoveOp, path, nil)
-	if errors.As(err, &stErr) && stErr.Code == storage.NotFoundErr {
+
+	stErr, ok := errors.AsType[*storage.Error](err)
+	if ok && stErr.Code == storage.NotFoundErr {
 		return nil // No-op if the path does not exist
 	} else if err != nil {
 		return fmt.Errorf("failed to remove value at path %s in store: %w", path, err)

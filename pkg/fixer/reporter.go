@@ -7,7 +7,6 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/util"
 
-	rutil "github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
 )
 
@@ -64,7 +63,7 @@ func (r *PrettyReporter) ReportConflicts(fixReport *Report) error {
 			for _, file := range conflictingFiles {
 				fmt.Fprintln(r.outputWriter, "Cannot overwrite existing file:", relOrDefault(rootKey, file, file))
 
-				conflicts := rutil.Sorted(fixReport.conflictsSourceFile[rootKey][file])
+				conflicts := util.Sorted(fixReport.conflictsSourceFile[rootKey][file])
 				for _, oldPath := range conflicts {
 					fmt.Fprintln(r.outputWriter, "-", relOrDefault(rootKey, oldPath, oldPath))
 				}
@@ -97,7 +96,7 @@ func (r *PrettyReporter) ReportConflicts(fixReport *Report) error {
 				fmt.Fprintln(r.outputWriter, "Cannot move multiple files to:", relOrDefault(rootKey, file, file))
 
 				// get the old paths from the movedFiles since that includes all the files moved, not just the conflicting ones
-				for _, oldPath := range rutil.Sorted(fixReport.movedFiles[file]) {
+				for _, oldPath := range util.Sorted(fixReport.movedFiles[file]) {
 					fmt.Fprintln(r.outputWriter, "-", relOrDefault(rootKey, oldPath, oldPath))
 				}
 			}

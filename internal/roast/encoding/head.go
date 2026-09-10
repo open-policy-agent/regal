@@ -17,7 +17,7 @@ func (*headCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*headCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	head := *((*ast.Head)(ptr))
+	head := *(*ast.Head)(ptr)
 
 	write.ObjectStart(stream, head.Location)
 

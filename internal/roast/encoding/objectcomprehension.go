@@ -17,7 +17,7 @@ func (*objectComprehensionCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*objectComprehensionCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	oc := *((*ast.ObjectComprehension)(ptr))
+	oc := *(*ast.ObjectComprehension)(ptr)
 
 	write.ObjectStart(stream, nil)
 	write.Val(stream, "key", oc.Key)

@@ -65,7 +65,7 @@ allow if {
 			contentAfterFix: `package test
 
 allow if {
-    
+` + "    " + `
     endswith(input.user.email, "@acmecorp.com")
 }`,
 		},
@@ -170,9 +170,9 @@ allow if {
 			contentAfterFix: `package test
 
 allow if {
-    
+` + "    " + `
     endswith(input.user.email, "@acmecorp.com")
-    
+` + "    " + `
 }`,
 		},
 	}
@@ -188,7 +188,7 @@ allow if {
 			}
 
 			if !tc.fixExpected && len(fixResults) != 0 {
-				t.Fatalf("unexpected fix applied")
+				t.Fatal("unexpected fix applied")
 			}
 
 			if !tc.fixExpected {

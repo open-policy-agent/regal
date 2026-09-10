@@ -6,6 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/lsp/client"
 	"github.com/open-policy-agent/regal/internal/lsp/test"
@@ -71,7 +72,7 @@ func TestEvalWorkspacePathInternalData(t *testing.T) {
 
 	res := must.Return(ls.EvalInWorkspace(t.Context(), "object.keys(data.internal)", ast.InternedEmptyObjectValue))(t)
 	val := must.Be[[]any](t, res.Value)
-	act := util.Sorted(must.Return(util.AnySliceTo[string](val))(t))
+	act := outil.Sorted(must.Return(util.AnySliceTo[string](val))(t))
 
 	assert.SlicesEqual(t, []string{"capabilities", "combined_config", "user_config"}, act)
 }

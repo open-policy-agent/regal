@@ -17,7 +17,7 @@ func (*everyCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*everyCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	every := *((*ast.Every)(ptr))
+	every := *(*ast.Every)(ptr)
 
 	write.ObjectStart(stream, every.Location)
 

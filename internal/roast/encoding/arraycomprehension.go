@@ -17,7 +17,7 @@ func (*arrayComprehensionCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*arrayComprehensionCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	ac := *((*ast.ArrayComprehension)(ptr))
+	ac := *(*ast.ArrayComprehension)(ptr)
 
 	stream.WriteObjectStart()
 

@@ -12,10 +12,10 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage"
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 	"github.com/open-policy-agent/opa/v1/tester"
+	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/compile"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
-	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
 
@@ -82,7 +82,7 @@ func collectTestResults(ch chan *tester.Result) []tester.Result {
 func newStoreAndTxn(ctx context.Context, cfg *config.Config) (storage.Store, storage.Transaction) {
 	store := inmem.NewFromObjectWithOpts(map[string]any{
 		"internal": map[string]any{
-			"capabilities": util.Or(cfg.Capabilities, config.CapabilitiesForThisVersion),
+			"capabilities": outil.Or(cfg.Capabilities, config.CapabilitiesForThisVersion),
 		},
 	}, inmem.OptRoundTripOnWrite(false), inmem.OptReturnASTValuesOnRead(true))
 
