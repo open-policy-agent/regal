@@ -11,11 +11,11 @@ import (
 type numberCodec struct{}
 
 func (*numberCodec) IsEmpty(ptr unsafe.Pointer) bool {
-	return *((*ast.Number)(ptr)) == ""
+	return *(*ast.Number)(ptr) == ""
 }
 
 func (*numberCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	num := *((*ast.Number)(ptr))
+	num := *(*ast.Number)(ptr)
 	buf := stream.Buffer()
 
 	buf, _ = num.AppendText(buf)

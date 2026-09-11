@@ -20,6 +20,7 @@ report contains violation if {
 		"no_",
 		"non_",
 		"not_",
+		"without_",
 	})
 
 	violation := result.fail(rego.metadata.chain(), result.location(node))

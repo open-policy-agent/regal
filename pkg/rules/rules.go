@@ -51,8 +51,7 @@ func InputFromPaths(paths []string, prefix string, versionsMap map[string]ast.Re
 		return inputFromStdin()
 	}
 
-	var wg sync.WaitGroup
-
+	wg := new(sync.WaitGroup)
 	wg.Add(numPaths)
 
 	errors := make([]error, numPaths)
@@ -62,12 +61,7 @@ func InputFromPaths(paths []string, prefix string, versionsMap map[string]ast.Re
 		go func(i int, path string) {
 			opts := parse.ParserOptions()
 			opts.RegoVersion = RegoVersionFromMap(versionsMap, strings.TrimPrefix(path, prefix), ast.RegoUndefined)
-
-			if result, err := regoWithOpts(path, opts); err != nil {
-				errors[i] = err
-			} else {
-				parsed[i] = result
-			}
+			parsed[i], errors[i] = regoWithOpts(path, opts)
 
 			wg.Done()
 		}(i, path)

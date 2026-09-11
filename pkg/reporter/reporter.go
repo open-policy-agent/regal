@@ -14,6 +14,8 @@ import (
 	"github.com/olekukonko/tablewriter/tw"
 	"github.com/owenrumney/go-sarif/v2/sarif"
 
+	outil "github.com/open-policy-agent/opa/v1/util"
+
 	"github.com/open-policy-agent/regal/internal/mode"
 	"github.com/open-policy-agent/regal/internal/novelty"
 	"github.com/open-policy-agent/regal/internal/util"
@@ -178,7 +180,7 @@ func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
 	}
 
 	if fixableViolations.Size() > 0 {
-		violationKeys := util.Sorted(fixableViolations.Items())
+		violationKeys := outil.Sorted(fixableViolations.Items())
 		_, err = fmt.Fprintf(
 			tr.out,
 			`
@@ -352,19 +354,17 @@ func (tr GitHubReporter) Publish(ctx context.Context, r report.Report) error {
 			_ = summaryFile.Close()
 		}()
 
-		fmt.Fprintf(summaryFile, "### Regal Lint Report\n\n")
+		summaryFile.WriteString("### Regal Lint Report\n\n")
 		fmt.Fprintf(summaryFile, "%d %s linted.", r.Summary.FilesScanned, pluralize("file", r.Summary.FilesScanned))
 
 		if r.Summary.NumViolations == 0 {
-			fmt.Fprintf(summaryFile, " No violations found")
+			summaryFile.WriteString(" No violations found")
 		} else {
 			fmt.Fprintf(summaryFile, " %d %s found", r.Summary.NumViolations, pluralize("violation", r.Summary.NumViolations))
 
 			if r.Summary.FilesScanned > 1 && r.Summary.FilesFailed > 0 {
 				fmt.Fprintf(summaryFile, " in %d %s.", r.Summary.FilesFailed, pluralize("file", r.Summary.FilesFailed))
-				fmt.Fprintf(summaryFile, " See Files tab in PR for locations and details.\n\n")
-
-				fmt.Fprintf(summaryFile, "#### Violations\n\n")
+				summaryFile.WriteString("#### Violations\n\n")
 
 				for description, url := range getUniqueViolationURLs(r.Violations) {
 					fmt.Fprintf(summaryFile, "* [%s](%s)\n", description, url)
@@ -475,7 +475,7 @@ func (tr JUnitReporter) Publish(_ context.Context, r report.Report) error {
 		violationsPerFile[violation.Location.File] = append(violationsPerFile[violation.Location.File], violation)
 	}
 
-	for _, file := range util.Sorted(files) {
+	for _, file := range outil.Sorted(files) {
 		testsuite := junit.Testsuite{Name: file}
 
 		for _, violation := range violationsPerFile[file] { //nolint:gocritic

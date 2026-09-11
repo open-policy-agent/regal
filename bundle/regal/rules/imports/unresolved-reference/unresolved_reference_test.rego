@@ -285,6 +285,31 @@ test_success_ignored_paths_are_ignored if {
 	r == set()
 }
 
+test_unresoled_custom_function_correct_end_location if {
+	# only 'bar.baz' should be reported as unresolved, without the args
+	p1 := "package foo\n\nimport data.bar\nx := bar.baz(`argument`, 1000)\n"
+	p2 := "package bar\n\nx := 1\n"
+
+	agg1 := rule.aggregate with input as regal.parse_module("p1.rego", p1)
+	agg2 := rule.aggregate with input as regal.parse_module("p2.rego", p2)
+
+	r := rule.aggregate_report
+		with input.aggregates_internal as util.with_source_files("imports/unresolved-reference", [agg1, agg2])
+		with input.aggregates_internal["p1.rego"].common as _lines(p1)
+		with input.aggregates_internal["p2.rego"].common as _lines(p2)
+
+	r == {with_location({
+		"file": "p1.rego",
+		"row": 4,
+		"col": 6,
+		"end": {
+			"row": 4,
+			"col": 13,
+		},
+		"text": "x := bar.baz(`argument`, 1000)",
+	})}
+}
+
 with_location(location) := {
 	"category": "imports",
 	"description": "Unresolved Reference",

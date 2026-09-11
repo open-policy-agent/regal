@@ -3,6 +3,8 @@ package types
 import (
 	"strconv"
 
+	outil "github.com/open-policy-agent/opa/v1/util"
+
 	"github.com/open-policy-agent/regal/internal/lsp/types/symbols"
 	"github.com/open-policy-agent/regal/internal/util"
 )
@@ -413,7 +415,7 @@ func (t TextDocumentEdit) AppendJSON(bs []byte) []byte {
 	bs = strconv.AppendQuote(append(bs, `{"textDocument":{"uri":`...), t.TextDocument.URI)
 
 	if t.TextDocument.Version != nil {
-		bs = util.AppendUint(append(bs, `,"version":`...), *t.TextDocument.Version)
+		bs = outil.AppendInt(append(bs, `,"version":`...), *t.TextDocument.Version)
 	} else {
 		bs = append(bs, `,"version":null`...)
 	}
@@ -441,10 +443,10 @@ func RangeBetween[T1, T2, T3, T4 iuint](startLine T1, startCharacter T2, endLine
 }
 
 func (r Range) AppendJSON(bs []byte) []byte {
-	bs = util.AppendUint(append(bs, `{"start":{"line":`...), r.Start.Line)
-	bs = util.AppendUint(append(bs, `,"character":`...), r.Start.Character)
-	bs = util.AppendUint(append(bs, `},"end":{"line":`...), r.End.Line)
-	bs = util.AppendUint(append(bs, `,"character":`...), r.End.Character)
+	bs = outil.AppendInt(append(bs, `{"start":{"line":`...), int(r.Start.Line))
+	bs = outil.AppendInt(append(bs, `,"character":`...), int(r.Start.Character))
+	bs = outil.AppendInt(append(bs, `},"end":{"line":`...), int(r.End.Line))
+	bs = outil.AppendInt(append(bs, `,"character":`...), int(r.End.Character))
 
 	return append(bs, '}', '}')
 }

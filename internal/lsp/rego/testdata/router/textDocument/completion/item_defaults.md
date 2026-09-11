@@ -77,163 +77,244 @@ only once, thus massively reducing the size of the completion response:
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "indexof"
+      "label": "indexof",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "indexof_n"
+      "label": "indexof_n",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "intersection"
+      "label": "intersection",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.decode"
+      "label": "io.jwt.decode",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.decode_verify"
+      "label": "io.jwt.decode_verify",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.encode_sign"
+      "label": "io.jwt.encode_sign",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.encode_sign_raw"
+      "label": "io.jwt.encode_sign_raw",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_eddsa"
+      "label": "io.jwt.verify_eddsa",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_es256"
+      "label": "io.jwt.verify_es256",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_es384"
+      "label": "io.jwt.verify_es384",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_es512"
+      "label": "io.jwt.verify_es512",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_hs256"
+      "label": "io.jwt.verify_hs256",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_hs384"
+      "label": "io.jwt.verify_hs384",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_hs512"
+      "label": "io.jwt.verify_hs512",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_ps256"
+      "label": "io.jwt.verify_ps256",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_ps384"
+      "label": "io.jwt.verify_ps384",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_ps512"
+      "label": "io.jwt.verify_ps512",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_rs256"
+      "label": "io.jwt.verify_rs256",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_rs384"
+      "label": "io.jwt.verify_rs384",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "io.jwt.verify_rs512"
+      "label": "io.jwt.verify_rs512",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "is_array"
+      "label": "is_array",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "is_boolean"
+      "label": "is_boolean",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "is_null"
+      "label": "is_null",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "is_number"
+      "label": "is_number",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "is_object"
+      "label": "is_object",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "is_set"
+      "label": "is_set",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "builtins",
       "detail": "built-in function",
       "kind": 3,
-      "label": "is_string"
+      "label": "is_string",
+      "labelDetails": {
+        "description": "built-in function"
+      }
     },
     {
       "data": "input",

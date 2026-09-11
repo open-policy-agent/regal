@@ -37,13 +37,18 @@ func BenchmarkRegalLintingItself(b *testing.B) {
 // 371014222 ns/op	1246251634 B/op	35248709 allocs/op // Lots of new Rego code (to lint) added
 // 370440556 ns/op	1247207368 B/op	35345393 allocs/op // ... some time later ...
 // 367091361 ns/op	1236597106 B/op	34901438 allocs/op // Unified aggregates
+// 364328681 ns/op	1212708122 B/op	33820873 allocs/op // Ridiculous _ = value.terms hack
+// 404955889 ns/op	1305418672 B/op	35569623 allocs/op // Future and/or introduced
+// 397163042 ns/op	1306646109 B/op	35574049 allocs/op // OPA v1.20.1
+// 376966625 ns/op	1251852949 B/op	34368833 allocs/op // OPA perf PRs merged
 func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
 	benchmarkLint(b, bundleLinter(b, true).MustPrepare(b.Context()))
 }
 
 // 65815866 ns/op   43852693 B/op    1025467 allocs/op // OPA v1.10.0
 // 64977849 ns/op   38570571 B/op     932404 allocs/op // OPA v1.12.2
-// 61936272 ns/op	38191932 B/op	  921084 allocs/op // OPA v1.13.1
+// 61936272 ns/op   38191932 B/op     921084 allocs/op // OPA v1.13.1
+// 75080301 ns/op   47586984 B/op    1064790 allocs/op // OPA v1.20.1
 func BenchmarkOnlyPrepare(b *testing.B) {
 	linter := bundleLinter(b, true)
 	for b.Loop() {
@@ -54,6 +59,7 @@ func BenchmarkOnlyPrepare(b *testing.B) {
 // 127396828 ns/op	300739526 B/op	 5938689 allocs/op // OPA v1.10.0
 // 123784616 ns/op	284724624 B/op	 5918990 allocs/op // OPA v1.12.2
 // _95888368 ns/op	156125725 B/op	 3331213 allocs/op // With Rego prepare eval phase (!!!)
+// 127176516 ns/op	248721019 B/op	 5151370 allocs/op // OPA v1.20.1
 func BenchmarkRegalNoEnabledRules(b *testing.B) {
 	benchmarkLint(b, bundleLinter(b, false).WithDisableAll(true))
 }

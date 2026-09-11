@@ -16,7 +16,7 @@ excluded_file(category, title, file) if {
 # description: |
 #   pattern_compiler transforms a glob pattern into a set of glob
 #   patterns to make the combined set behave as .gitignore
-patterns_compiler(patterns) := {compiled |
+patterns_compiler(patterns) := {_middle_doublestar(compiled) |
 	some pattern in patterns
 	some processed in _leading_doublestar_pattern(_internal_slashes(pattern))
 	some compiled in _trailing_slash(processed)
@@ -48,3 +48,11 @@ _trailing_slash(pattern) := {pattern, $"{pattern}/**"} if {
 } else := {$"{pattern}**"} if {
 	endswith(pattern, "/")
 } else := {pattern}
+
+# .gitignore has an interior "/**/" match zero directories as well as one or
+# more, while glob's ** only matches a non-empty sequence, so "a/**/b" alone
+# won't match "a/b". An empty alternative restores it, for any number of
+# occurrences.
+#
+# Keep in sync with `middleDoubleStar` in `pkg/config/filter.go`.
+_middle_doublestar(pattern) := replace(pattern, "/**/", "/{**/,}")

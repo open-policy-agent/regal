@@ -4,6 +4,10 @@
 #   with OPA's AST, more recently in the form of RoAST
 package regal.ast
 
+import future.keywords.and
+import future.keywords.not
+import future.keywords.or
+
 import data.regal.config
 import data.regal.util
 
@@ -37,11 +41,8 @@ operators := {
 # description: |
 #   returns true if provided term is either a scalar or a collection of ground values
 # scope: document
-is_constant(term) if term.type in scalar_types
-
 is_constant(term) if {
-	term.type in {"array", "object", "set"}
-	not has_term_var(term.value)
+	term.type in scalar_types or term.type in {"array", "object", "set"} and not has_term_var(term.value)
 }
 
 # METADATA
@@ -84,11 +85,8 @@ package_name_full := concat("", ["data.", package_name])
 # description: provides all static string values from ref
 named_refs(ref) := [term |
 	some i, term in ref
-	_is_name(term.type, i)
+	i == 0 and term.type == "var" or i > 0 and term.type == "string"
 ]
-
-_is_name("var", 0)
-_is_name("string", pos) if pos > 0
 
 # METADATA
 # description: all the rules (excluding functions) in the input AST
@@ -146,12 +144,12 @@ identifiers := rule_and_function_names | imported_identifiers
 rule_names contains name if {
 	some i, name in rule_names_ordered
 
-	not input.rules[i].head.args
+	not _rules[i].head.args
 }
 
 # METADATA
 # description: all rule and function names in the input AST indexed by position
-rule_names_ordered := [ref_static_to_string(rule.head.ref) | some rule in input.rules]
+rule_names_ordered := [ref_static_to_string(rule.head.ref) | some rule in _rules]
 
 # METADATA
 # description: |
@@ -159,10 +157,7 @@ rule_names_ordered := [ref_static_to_string(rule.head.ref) | some rule in input.
 #   input = variable value set elsewhere in the policy
 #   output =  variable value set in this location (unification)
 # scope: document
-is_output_var(rule, var) if {
-	# test the cheap and common case first, and 'else' only when it's not
-	is_wildcard(var)
-} else if {
+is_output_var(rule, var) if is_wildcard(var) or {
 	not var.value in (rule_names | imported_identifiers)
 
 	num_above := count([1 |
@@ -263,6 +258,19 @@ _format_term(term) := concat("", [".", term.value]) if {
 
 # METADATA
 # description: |
+#   returns the static prefic of a terms array
+static_prefix(terms) := terms if {
+	count(terms) == 1
+} else := static if {
+	static := array.slice(terms, 0, [i |
+		some i, term in terms
+		i > 0
+		term.type == {"call", "var", "ref", "templatestring"}
+	][0])
+} else := terms
+
+# METADATA
+# description: |
 #   returns the string representation of a ref up until its first
 #   non-static (i.e. variable) value, if any:
 #   foo.bar -> foo.bar
@@ -311,10 +319,12 @@ function_decls[name] := info if {
 
 	some name, head in heads
 
-	info := {"decl": {
-		"args": [{"type": _custom_arg_type(arg.type), "name": arg.value} | some arg in head.args],
-		"result": {"type": "any"},
-	}}
+	info := {
+		"decl": {
+			"args": [{"type": _custom_arg_type(arg.type), "name": arg.value} | some arg in head.args],
+			"result": {"type": "any"},
+		},
+	}
 }
 
 _custom_arg_type(type) := type if type != "var"
@@ -414,7 +424,7 @@ assignment_terms(terms) := [terms[1], terms[2]] if is_assignment(terms[0])
 #   For a given rule head name, this rule contains a list of locations where
 #   there is a rule head with that name.
 rule_head_locations[name] contains {"row": loc.row, "col": loc.col} if {
-	some i, rule in input.rules
+	some i, rule in _rules
 
 	name := $"{package_name_full}.{rule_names_ordered[i]}"
 	loc := util.to_location_object(rule.head.location)

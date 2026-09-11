@@ -6,34 +6,66 @@ import (
 	_ "github.com/open-policy-agent/regal/pkg/roast/intern"
 )
 
+var (
+	astModuleCodec              = &moduleCodec{}
+	astPackageCodec             = &packageCodec{}
+	astImportCodec              = &importCodec{}
+	astAnnotationsCodec         = &annotationsCodec{}
+	astRuleCodec                = &ruleCodec{}
+	astHeadCodec                = &headCodec{}
+	astBodyCodec                = &bodyCodec{}
+	astExprCodec                = &exprCodec{}
+	astRefCodec                 = &refCodec{}
+	astTermCodec                = &termCodec{}
+	astSomeDeclCodec            = &someDeclCodec{}
+	astEveryCodec               = &everyCodec{}
+	astWithCodec                = &withCodec{}
+	astNotCodec                 = &notCodec{}
+	astLogicalAndCodec          = &logicalAndCodec{}
+	astLogicalOrCodec           = &logicalOrCodec{}
+	astCommentCodec             = &commentCodec{}
+	astLocationCodec            = &locationCodec{}
+	astArrayCodec               = &arrayCodec{}
+	astArrayComprehensionCodec  = &arrayComprehensionCodec{}
+	astObjectComprehensionCodec = &objectComprehensionCodec{}
+	astSetComprehensionCodec    = &setComprehensionCodec{}
+	astTemplateStringCodec      = &templateStringCodec{}
+	astNumberCodec              = &numberCodec{}
+	// special cases as these are not public — see implementation for details.
+	astSetCodec    = &setCodec{}
+	astObjectCodec = &objectCodec{}
+)
+
 func init() {
-	jsoniter.RegisterTypeEncoder("ast.Module", &moduleCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Package", &packageCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Import", &importCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Annotations", &annotationsCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Rule", &ruleCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Head", &headCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Body", &bodyCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Expr", &exprCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Ref", &refCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Term", &termCodec{})
-	jsoniter.RegisterTypeEncoder("ast.SomeDecl", &someDeclCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Every", &everyCodec{})
-	jsoniter.RegisterTypeEncoder("ast.With", &withCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Not", &notCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Comment", &commentCodec{})
+	jsoniter.RegisterTypeEncoder("ast.Module", astModuleCodec)
+	jsoniter.RegisterTypeEncoder("ast.Package", astPackageCodec)
+	jsoniter.RegisterTypeEncoder("ast.Import", astImportCodec)
+	jsoniter.RegisterTypeEncoder("ast.Annotations", astAnnotationsCodec)
+	jsoniter.RegisterTypeEncoder("ast.Rule", astRuleCodec)
+	jsoniter.RegisterTypeEncoder("ast.Head", astHeadCodec)
+	jsoniter.RegisterTypeEncoder("ast.Body", astBodyCodec)
+	jsoniter.RegisterTypeEncoder("ast.Expr", astExprCodec)
+	jsoniter.RegisterTypeEncoder("ast.Ref", astRefCodec)
+	jsoniter.RegisterTypeEncoder("ast.Term", astTermCodec)
+	jsoniter.RegisterTypeEncoder("ast.SomeDecl", astSomeDeclCodec)
+	jsoniter.RegisterTypeEncoder("ast.Every", astEveryCodec)
+	jsoniter.RegisterTypeEncoder("ast.With", astWithCodec)
+	jsoniter.RegisterTypeEncoder("ast.Not", astNotCodec)
+	jsoniter.RegisterTypeEncoder("ast.LogicalAnd", astLogicalAndCodec)
+	jsoniter.RegisterTypeEncoder("ast.LogicalOr", astLogicalOrCodec)
+	jsoniter.RegisterTypeEncoder("ast.Comment", astCommentCodec)
 
-	jsoniter.RegisterTypeEncoder("ast.Location", &locationCodec{})
-	jsoniter.RegisterTypeEncoder("location.Location", &locationCodec{})
+	jsoniter.RegisterTypeEncoder("ast.Location", astLocationCodec)
+	jsoniter.RegisterTypeEncoder("location.Location", astLocationCodec)
 
-	jsoniter.RegisterTypeEncoder("ast.Array", &arrayCodec{})
-	jsoniter.RegisterTypeEncoder("ast.ArrayComprehension", &arrayComprehensionCodec{})
-	jsoniter.RegisterTypeEncoder("ast.ObjectComprehension", &objectComprehensionCodec{})
-	jsoniter.RegisterTypeEncoder("ast.SetComprehension", &setComprehensionCodec{})
-	jsoniter.RegisterTypeEncoder("ast.TemplateString", &templateStringCodec{})
-	jsoniter.RegisterTypeEncoder("ast.Number", &numberCodec{})
+	jsoniter.RegisterTypeEncoder("ast.Array", astArrayCodec)
+	jsoniter.RegisterTypeEncoder("ast.ArrayComprehension", astArrayComprehensionCodec)
+	jsoniter.RegisterTypeEncoder("ast.ObjectComprehension", astObjectComprehensionCodec)
+	jsoniter.RegisterTypeEncoder("ast.SetComprehension", astSetComprehensionCodec)
+	jsoniter.RegisterTypeEncoder("ast.TemplateString", astTemplateStringCodec)
+	jsoniter.RegisterTypeEncoder("ast.Number", astNumberCodec)
 
 	// special cases as these are not public — see implementation for details
-	jsoniter.RegisterTypeEncoder("ast.set", &setCodec{})
-	jsoniter.RegisterTypeEncoder("ast.object", &objectCodec{})
+	jsoniter.RegisterTypeEncoder("ast.set", astSetCodec)
+	jsoniter.RegisterTypeEncoder("ast.object", astObjectCodec)
 }

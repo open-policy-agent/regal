@@ -372,8 +372,6 @@ allow if {
 				switch req.Method {
 				case "window/showDocument":
 					return new(json.RawMessage(`{"success":true}`)), nil
-				case "window/showMessage":
-					return struct{}{}, nil
 				default:
 					return struct{}{}, nil
 				}
@@ -415,9 +413,9 @@ allow if {
 			}
 
 			if tc.expectFile && !fileExists {
-				t.Errorf("Expected test file to be created, but it wasn't")
+				t.Error("Expected test file to be created, but it wasn't")
 			} else if !tc.expectFile && fileExists {
-				t.Errorf("Expected no test file, but one was created")
+				t.Error("Expected no test file, but one was created")
 			}
 
 			if fileExists {

@@ -50,13 +50,13 @@ _excepted_export_patterns := config.rules.imports["unresolved-reference"].except
 # an import is shadowed if it shares name with a rule
 _shadowed_imports contains rule_name if {
 	some rule_name in ast.rule_names
-	ast.resolved_imports[rule_name]
+	_ = ast.resolved_imports[rule_name]
 }
 
 # an import is shadowed if it shares name with a variable (or function argument)
 _shadowed_imports contains var_name if {
 	var_name := ast.found.vars[_][_][_].value
-	ast.resolved_imports[var_name]
+	_ = ast.resolved_imports[var_name]
 }
 
 _refs[name] contains terms[0].location if {

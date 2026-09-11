@@ -5,6 +5,9 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-in-operator
 package regal.rules.idiomatic["use-in-operator"]
 
+import future.keywords.and
+import future.keywords.or
+
 import data.regal.ast
 import data.regal.result
 
@@ -37,9 +40,7 @@ _loop_term(term) if {
 	ast.is_wildcard(regal.last(term.value))
 }
 
-_static_term(term) if term.type in {"array", "boolean", "object", "null", "number", "set", "string", "var"}
-
 _static_term(term) if {
-	term.type == "ref"
-	ast.static_ref(term)
+	term.type in {"array", "boolean", "object", "null", "number", "set", "string", "var"} or
+		term.type == "ref" and ast.static_ref(term)
 }

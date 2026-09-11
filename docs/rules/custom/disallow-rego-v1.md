@@ -1,6 +1,6 @@
 # disallow-rego-v1
 
-**Summary**: Use of disallowed `import rego v1`
+**Summary**: Use of disallowed `import rego.v1`
 
 **Category**: Custom
 
@@ -16,6 +16,18 @@ OPA (any prior to v1.0) are not being used.
 This rule is intended to be enabled for projects that have been configured to target versions of OPA from 1.0
 onwards, but Regal does not explicitly check which version of OPA is being targeted for this rule. If working
 with older versions of OPA and Rego, you probably don't want to enable this rule.
+
+## Configuration Options
+
+This linter rule provides the following [configuration options](https://www.openpolicyagent.org/projects/regal/configuration):
+
+```yaml title=".regal/config.yaml or .regal.yaml"
+rules:
+  custom:
+    disallow-rego-v1:
+      # one of "error", "warning", "ignore"
+      level: error
+```
 
 ## Related Resources
 

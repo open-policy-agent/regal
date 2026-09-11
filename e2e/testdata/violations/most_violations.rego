@@ -339,3 +339,7 @@ repeated_computation if {
 	count(input.items) > 0
 	count(input.items) > 1
 }
+
+unconditional_with_conditions := true if input.conditional
+
+unconditional_with_conditions := false

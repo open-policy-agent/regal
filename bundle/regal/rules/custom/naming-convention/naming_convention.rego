@@ -5,6 +5,9 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/custom/naming-convention
 package regal.rules.custom["naming-convention"]
 
+import future.keywords.not
+import future.keywords.or
+
 import data.regal.ast
 import data.regal.config
 import data.regal.result
@@ -27,8 +30,9 @@ report contains violation if {
 	some rule in ast.rules
 
 	name := ast.ref_to_string(rule.head.ref)
-
-	not _convention_matched(name, convention)
+	not {
+		name in convention.names or regex.match(convention.pattern, name)
+	}
 
 	violation := result.fail(
 		rego.metadata.chain(),
@@ -44,8 +48,9 @@ report contains violation if {
 	some rule in ast.functions
 
 	name := ast.ref_to_string(rule.head.ref)
-
-	not _convention_matched(name, convention)
+	not {
+		name in convention.names or regex.match(convention.pattern, name)
+	}
 
 	violation := result.fail(
 		rego.metadata.chain(),
@@ -63,7 +68,9 @@ report contains violation if {
 	var := ast.found.vars[_][_][_]
 
 	not startswith(var.value, "$")
-	not _convention_matched(var.value, convention)
+	not {
+		var.value in convention.names or regex.match(convention.pattern, var.value)
+	}
 
 	violation := result.fail(
 		rego.metadata.chain(),
@@ -75,14 +82,9 @@ _any_package_convention_violation if {
 	some convention in config.rules.custom["naming-convention"].conventions
 
 	"package" in convention.targets
-
-	not _convention_matched(ast.package_name, convention)
+	not {
+		ast.package_name in convention.names or regex.match(convention.pattern, ast.package_name)
+	}
 }
 
 _message(kind, name) := $`Naming violation: {kind} name "{name}" does not match configured convention`
-
-_convention_matched(name, convention) if {
-	name in convention.names
-} else if {
-	regex.match(convention.pattern, name)
-}

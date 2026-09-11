@@ -7,6 +7,8 @@
 #     ref: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#range
 package regal.lsp.util.range
 
+import future.keywords.or
+
 # METADATA
 # description: |
 #   turns a parsed AST location (with `end`` attribute present) into an LSP range,
@@ -50,15 +52,15 @@ parse(location_string) := {
 contains_position(range, pos) if {
 	pos.line > range.start.line
 	pos.line < range.end.line
-} else if {
+} or {
 	pos.line == range.start.line
 	pos.line < range.end.line
 	pos.character >= range.start.character
-} else if {
+} or {
 	pos.line > range.start.line
 	pos.line == range.end.line
 	pos.character <= range.end.character
-} else if {
+} or {
 	pos.line == range.start.line
 	pos.line == range.end.line
 	pos.character >= range.start.character

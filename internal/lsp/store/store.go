@@ -26,19 +26,17 @@ var (
 )
 
 func NewRegalStore() storage.Store {
-	return inmem.NewFromObjectWithOpts(map[string]any{
-		"workspace": map[string]any{
-			"config": map[string]any{},
-			"parsed": map[string]any{},
-			// should map[string][]string{}, but since we don't round trip on write,
-			// we'll need to conform to the most basic "JSON" format understood by the store
-			"defined_refs": map[string]any{},
-			"builtins":     map[string]any{},
-			"inputs":       map[string]any{},
-		},
-		"client": map[string]any{},
-		"server": map[string]any{},
-	}, inmem.OptRoundTripOnWrite(false), inmem.OptReturnASTValuesOnRead(true))
+	return inmem.NewFromASTObject(ast.NewObject(
+		rast.Item("workspace", ast.ObjectTerm(
+			rast.Item("config", ast.ObjectTerm()),
+			rast.Item("parsed", ast.ObjectTerm()),
+			rast.Item("defined_refs", ast.ObjectTerm()),
+			rast.Item("builtins", ast.ObjectTerm()),
+			rast.Item("inputs", ast.ObjectTerm()),
+		)),
+		rast.Item("client", ast.ObjectTerm()),
+		rast.Item("server", ast.ObjectTerm()),
+	))
 }
 
 func RemoveFileMod(ctx context.Context, store storage.Store, fileURI string) error {
@@ -84,17 +82,6 @@ func Put[T any](ctx context.Context, store storage.Store, path storage.Path, val
 	})
 }
 
-func Get(ctx context.Context, store storage.Store, path storage.Path) (val ast.Value, err error) {
-	var res any
-	if res, err = storage.ReadOne(ctx, store, path); err == nil {
-		if v, ok := res.(ast.Value); ok {
-			val = v
-		}
-	}
-
-	return val, err
-}
-
 func Remove(ctx context.Context, store storage.Store, path storage.Path) error {
 	return storage.Txn(ctx, store, storage.WriteParams, func(txn storage.Transaction) error {
 		return remove(ctx, store, txn, path)
@@ -115,10 +102,10 @@ func write[T any](ctx context.Context, store storage.Store, txn storage.Transact
 }
 
 func remove(ctx context.Context, store storage.Store, txn storage.Transaction, path storage.Path) error {
-	var stErr *storage.Error
-
 	err := store.Write(ctx, txn, storage.RemoveOp, path, nil)
-	if errors.As(err, &stErr) && stErr.Code == storage.NotFoundErr {
+
+	stErr, ok := errors.AsType[*storage.Error](err)
+	if ok && stErr.Code == storage.NotFoundErr {
 		return nil // No-op if the path does not exist
 	} else if err != nil {
 		return fmt.Errorf("failed to remove value at path %s in store: %w", path, err)

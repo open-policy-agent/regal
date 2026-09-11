@@ -31,10 +31,42 @@ import rego.v1
 	expected_item(items, "deny")
 }
 
+test_common_name_completion_on_typed_default_rule if {
+	policy := "package policy\n\n"
+	module := regal.parse_module("p.rego", policy)
+	items := provider.items with input as util.input_module_with_location(
+		module,
+		$`{policy}default d`, {"row": 3, "col": 10},
+	)
+
+	items == {{
+		"detail": "common rule name",
+		"documentation": {
+			"kind": "markdown",
+			"value": "\"deny\" is a common rule name",
+		},
+		"kind": 15,
+		"label": "deny",
+		"textEdit": {
+			"newText": "deny",
+			"range": {
+				"end": {
+					"character": 9,
+					"line": 2,
+				},
+				"start": {
+					"character": 8,
+					"line": 2,
+				},
+			},
+		},
+	}}
+}
+
 expected_item(items, label) if {
 	item := {
 		"label": label,
-		"detail": "common name",
+		"detail": "common rule name",
 		"documentation": {
 			"kind": "markdown",
 			"value": $`"{label}" is a common rule name`,

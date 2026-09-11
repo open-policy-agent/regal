@@ -121,7 +121,7 @@ func TestIndexByteNth(t *testing.T) {
 		t.Run(fmt.Sprintf("n=%d", n), func(t *testing.T) {
 			t.Parallel()
 
-			must.Equal(t, exp, IndexByteNth("foo\nbar\nbaz\nqux", '\n', uint(n))) //nolint:gosec
+			must.Equal(t, exp, IndexByteNth("foo\nbar\nbaz\nqux", '\n', uint(n)))
 		})
 	}
 }
@@ -137,7 +137,7 @@ func TestLine(t *testing.T) {
 		t.Run(fmt.Sprintf("line %d", i), func(t *testing.T) {
 			t.Parallel()
 
-			line, ok := Line(text, uint(i)) //nolint:gosec
+			line, ok := Line(text, uint(i))
 			must.Equal(t, true, ok, "not ok at line %d", i)
 			must.Equal(t, exp, line, "content at line %d", i)
 		})

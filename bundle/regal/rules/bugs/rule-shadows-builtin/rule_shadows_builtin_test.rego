@@ -23,7 +23,7 @@ test_fail_rule_name_shadows_builtin if {
 			"file": "policy.rego",
 			"row": 3,
 			"end": {
-				"col": 8,
+				"col": 3,
 				"row": 3,
 			},
 			"text": "or := 1",
@@ -50,7 +50,7 @@ test_fail_rule_name_shadows_builtin_namespace if {
 			"file": "policy.rego",
 			"row": 3,
 			"end": {
-				"col": 14,
+				"col": 5,
 				"row": 3,
 			},
 			"text": "http := \"yes\"",

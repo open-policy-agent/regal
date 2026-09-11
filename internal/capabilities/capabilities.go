@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/capabilities/embedded"
 	"github.com/open-policy-agent/regal/internal/io"
@@ -217,14 +218,12 @@ func semverSort(stringVersions []string) {
 		}
 	}
 
-	slices.SortStableFunc(versions, semver.Version.Compare)
-
-	for i, v := range util.Reversed(versions) {
+	for i, v := range util.Reversed(outil.SortedStableFunc(versions, semver.Version.Compare)) {
 		stringVersions[i] = v.String()
 	}
 
 	if len(invalid) > 0 {
-		copy(stringVersions[len(versions):], util.Reversed(util.Sorted(invalid)))
+		copy(stringVersions[len(versions):], util.Reversed(outil.Sorted(invalid)))
 	}
 }
 

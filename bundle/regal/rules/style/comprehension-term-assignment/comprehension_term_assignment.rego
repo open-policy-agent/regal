@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/style/comprehension-term-assignment
 package regal.rules.style["comprehension-term-assignment"]
 
+import future.keywords.or
+
 import data.regal.ast
 import data.regal.result
 
@@ -74,8 +76,5 @@ report contains violation if {
 _dynamic_ref(value) if {
 	value.type == "ref"
 
-	_call_or_non_static(value)
+	value.value[0].type == "call" or not ast.static_ref(value)
 }
-
-_call_or_non_static(ref) if ref.value[0].type == "call"
-_call_or_non_static(ref) if not ast.static_ref(ref)

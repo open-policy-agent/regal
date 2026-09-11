@@ -14,6 +14,10 @@ import rego.v1
 		"label": "import",
 		"detail": "import <path>",
 		"kind": 14,
+		"documentation": {
+			"kind": "markdown",
+			"value": provider.doc,
+		},
 		"textEdit": {
 			"newText": "import ",
 			"range": {
@@ -37,6 +41,10 @@ imp`
 		"label": "import",
 		"detail": "import <path>",
 		"kind": 14,
+		"documentation": {
+			"kind": "markdown",
+			"value": provider.doc,
+		},
 		"textEdit": {
 			"newText": "import ",
 			"range": {

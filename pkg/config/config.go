@@ -13,6 +13,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/bundle"
+	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/capabilities"
 	rio "github.com/open-policy-agent/regal/internal/io"
@@ -36,7 +37,6 @@ type (
 	// The receiver types is a bit of a mess, but we can probably not change
 	// these without breaking some integration. So this should be a 1.0 change.
 
-	//nolint:recvcheck
 	Config struct {
 		// Defaults state is loaded from configuration under rules and so is not (un)marshalled
 		// in the same way.
@@ -313,7 +313,7 @@ func FindBundleRootDirectories(path string) ([]string, error) {
 		return nil, fmt.Errorf("failed to walk path: %w", err)
 	}
 
-	return slices.Compact(util.Sorted(foundBundleRoots)), nil
+	return slices.Compact(outil.Sorted(foundBundleRoots)), nil
 }
 
 // TODO: this doesn't properly handle .regal.yaml??
@@ -359,7 +359,7 @@ func rootsFromRegalConfigDirOrFile(file *os.File) ([]string, error) {
 		return nil, fmt.Errorf("failed while looking for manifest locations: %w", err)
 	}
 
-	return append(foundBundleRoots, util.Map(manifestRoots, util.FilepathJoiner(parent))...), nil
+	return append(foundBundleRoots, outil.Map(manifestRoots, util.FilepathJoiner(parent))...), nil
 }
 
 // AllRegoVersions returns a map of all Rego versions found in the provided config and .manifest files,
@@ -728,7 +728,21 @@ func fromOPABuiltin(builtin ast.Builtin) *Builtin {
 		rb.Decl.Result = builtin.Decl.Result().String()
 	}
 
+	if corrected, ok := builtinResultOverrides[builtin.Name]; ok {
+		rb.Decl.Result = corrected
+	}
+
 	return rb
+}
+
+// builtinResultOverrides corrects imprecise return types in OPA's builtin
+// metadata. object.subset returns a boolean, but is declared `any` in the
+// pinned OPA version, which causes false positives for the
+// unassigned-return-value rule. Fixed upstream in
+// https://github.com/open-policy-agent/opa/pull/8849; remove entries here once
+// the depended-upon OPA release ships the fix.
+var builtinResultOverrides = map[string]string{
+	"object.subset": "boolean",
 }
 
 func fromOPACapabilities(capabilities *ast.Capabilities) *Capabilities {
@@ -821,12 +835,12 @@ func (rule *Rule) mapToConfig(result any) error {
 	}
 
 	if ignore, ok := ruleMap[keyIgnore]; ok {
-		dst, err := encoding.JSONRoundTripTo[Ignore](ignore)
+		dst, err := encoding.JSONRoundTripTo[*Ignore](ignore)
 		if err != nil {
 			return fmt.Errorf("unmarshalling rule ignore failed: %w", err)
 		}
 
-		rule.Ignore = &dst
+		rule.Ignore = dst
 	}
 
 	rule.Extra = ruleMap

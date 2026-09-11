@@ -1,5 +1,5 @@
 # METADATA
-# description: Yoda condition
+# description: Yoda condition, it is
 # related_resources:
 #   - description: documentation
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/style/yoda-condition

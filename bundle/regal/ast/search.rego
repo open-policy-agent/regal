@@ -1,5 +1,7 @@
 package regal.ast
 
+import future.keywords.or
+
 import data.regal.util
 
 _find_nested_vars(obj) := [value |
@@ -25,7 +27,7 @@ _find_assign_vars(value) := [value] if {
 has_named_var(node, name) if {
 	node.type == "var"
 	node.value == name
-} else if {
+} or {
 	node.type in {"array", "object", "set", "ref", "templatestring"}
 
 	walk(node.value, [_, nested])
@@ -137,7 +139,7 @@ found.vars[rule_index].term contains var if {
 	fn_name := ref_static_to_string(call[0].value)
 	undeclared_start := count(all_functions[fn_name].decl.args) + 1
 
-	call[undeclared_start]
+	_ = call[undeclared_start]
 	fn_name != "print"
 
 	some var in find_term_vars(array.slice(call, undeclared_start, 100))
@@ -236,7 +238,25 @@ found.expressions[rule_index] contains value if {
 
 	walk(rule[node], [_, value])
 
-	value.terms
+	_ = value.terms
+}
+
+# METADATA
+# description: |
+#   locations of the expressions that make up the entirety of an `and`/`or` operand in the
+#   rule at rule_index, i.e. those that can't be removed without leaving the enclosing
+#   expression without an operand
+logical_operand_locations[rule_index] contains expr.location if {
+	some rule_index, i
+
+	terms := found.expressions[rule_index][i].terms
+	terms.type in {"and", "or"}
+
+	some operand in [terms.lhs, terms.rhs]
+
+	count(operand) == 1
+
+	expr := operand[0]
 }
 
 # METADATA
@@ -258,8 +278,7 @@ is_in_local_scope(rule, location, value) if {
 #   assignments / unification, but it's likely good enough since other rules
 #   recommend against those
 find_vars_in_local_scope(rule, location) := [var |
-	some var
-	found.vars[_rule_index(rule)][_][var]
+	var := found.vars[_rule_index(rule)][_][_]
 
 	not startswith(var.value, "$")
 	_before_location(rule.head, var, util.to_location_object(location))

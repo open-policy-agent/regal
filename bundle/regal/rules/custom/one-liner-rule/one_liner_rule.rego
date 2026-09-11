@@ -42,7 +42,7 @@ report contains violation if {
 	# ideally we'd take style preference into account but for now assume tab == 4 spaces
 	# then just add the sum of the line counts minus the removed '{' character
 	# redundant parens added by `opa fmt` :/
-	((4 + count(lines[0])) + count(lines[1])) - 1 < _max_line_length
+	((4 + count(lines[0])) + count(_body_text(lines))) - 1 < _max_line_length
 
 	not {
 		num_lines := count(lines)
@@ -55,6 +55,15 @@ report contains violation if {
 
 	violation := result.fail(rego.metadata.chain(), result.location(rule.head))
 }
+
+# the body as it would read once joined into a single line — note that a single
+# expression may well span several lines, like when `and`/`or` operands are involved
+_body_text(lines) := concat(" ", [line |
+	some line in array.slice(lines, 1, count(lines) - 1)
+
+	# the opening bracket of an Allman style rule body is not part of the body
+	line != "{"
+])
 
 default _max_line_length := 120
 

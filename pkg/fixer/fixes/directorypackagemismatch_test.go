@@ -98,6 +98,30 @@ func TestFixDirectoryPackageMismatch(t *testing.T) {
 			},
 			includeTestSuffix: true,
 		},
+		// as the module is parsed with Regal's parser options, which allow keywords
+		// that OPA's default capabilities don't advertise
+		"policies using experimental keywords are handled": {
+			name:    "/root/foo.rego",
+			baseDir: "/root",
+			contents: `package foo
+
+import future.keywords.or
+
+allow if input.a or input.b
+`,
+			expected: &FixResult{
+				Contents: `package foo
+
+import future.keywords.or
+
+allow if input.a or input.b
+`,
+				Rename: &Rename{
+					FromPath: "/root/foo.rego",
+					ToPath:   "/root/foo/foo.rego",
+				},
+			},
+		},
 	}
 
 	for testCase, tc := range cases {
@@ -124,7 +148,7 @@ func TestFixDirectoryPackageMismatch(t *testing.T) {
 			}
 
 			if len(fr) == 0 && tc.expected != nil {
-				t.Fatalf("expected fix result, got none")
+				t.Fatal("expected fix result, got none")
 			}
 
 			fixResult := fr[0]

@@ -285,7 +285,7 @@ func DirCleanUpPaths(target string, preserve []string) ([]string, error) {
 // An interestng side-effect of pushing our builtins into ast.RegisterBuiltin is that
 // they end up in "OPA's" list of builtins. Hence why we reverse that here.
 func capabilities() *ast.Capabilities {
-	cpy := *ast.CapabilitiesForThisVersion()
+	cpy := *ast.CapabilitiesForThisVersion(ast.CapabilitiesExperimentalKeywords(true))
 
 	return &cpy
 }

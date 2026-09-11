@@ -27,6 +27,8 @@ import (
 	"github.com/open-policy-agent/regal/bundle"
 	"github.com/open-policy-agent/regal/internal/capabilities"
 	"github.com/open-policy-agent/regal/internal/compile"
+	"github.com/open-policy-agent/regal/internal/dap"
+	"github.com/open-policy-agent/regal/internal/dap/evaluate"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/lsp/bundles"
@@ -103,6 +105,11 @@ type lintJob struct {
 type fileJob struct {
 	Reason string
 	URI    string
+}
+
+type fileToLoad struct {
+	uri  string
+	path string
 }
 
 // DefaultServerFeatureFlags returns the default feature flags with all
@@ -199,7 +206,7 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 	c := cache.NewCache()
 	qc := query.NewCache()
 	rstore := store.NewRegalStore()
-	featureFlags := util.Or(opts.FeatureFlags, DefaultServerFeatureFlags)
+	featureFlags := outil.Or(opts.FeatureFlags, DefaultServerFeatureFlags)
 
 	_ = store.PutServer(ctx, rstore, types.ServerContext{FeatureFlags: *featureFlags, Version: version.Version})
 
@@ -297,9 +304,6 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return l.handleWorkspaceSymbol()
 	case "regal/runTests":
 		return handler.WithContextAndParams(ctx, req, l.handleRunTests)
-	case "shutdown":
-		// no-op as we wait for the exit signal before closing channel
-		return emptyStruct, nil
 	case "exit":
 		// close the channel, cancel the context for all workers, and exit
 		if err := l.conn.Close(); err != nil {
@@ -320,8 +324,9 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 
 			return emptyStruct, nil
 		})
-	case "$/cancelRequest":
-		// NOTE: no-op, implement if we want to support longer running, client-triggered operations
+	case "shutdown", "$/cancelRequest":
+		// shutdown: no-op as we wait for the exit signal before closing channel
+		// $/cancelRequest: no-op, implement if we want to support longer running, client-triggered operations
 		// https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#dollarRequests
 		return emptyStruct, nil
 	}
@@ -1258,6 +1263,18 @@ func (l *LanguageServer) initializeResultHandler(ctx context.Context, result any
 
 	if err := l.loadWorkspace(ctx, response.Regal.Workspace.URI, response.Regal.Client); err != nil {
 		l.log.Message("failed to load workspace: %w", err)
+	} else if l.featureFlags.DebugProvider {
+		// TODO: make interface binding configurable, unify logging between LSP and DAP
+		server := dap.NewServer("127.0.0.1:0", dap.NoOpLogger())
+		evaler := evaluate.NewHandler(l.debugArgsAssembler)
+
+		l.workspace = l.Workspace().WithDAPServer(server.WithEvaluateHandler(evaler))
+
+		go func() {
+			if err = l.workspace.DAP().Start(ctx); err != nil {
+				l.log.Message("failed to start DAP server: %w", err)
+			}
+		}()
 	}
 
 	for _, warning := range response.Regal.Warnings {
@@ -1331,11 +1348,6 @@ func (l *LanguageServer) loadWorkspace(ctx context.Context, rootURI string, clie
 	l.input.LoadFromWorkspace(ctx, workspace)
 
 	return nil
-}
-
-type fileToLoad struct {
-	uri  string
-	path string
 }
 
 func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool) ([]string, []fileLoadFailure, error) {

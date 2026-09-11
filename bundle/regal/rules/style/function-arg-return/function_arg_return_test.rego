@@ -11,7 +11,7 @@ test_fail_function_arg_return_value if {
 
 	r == {{
 		"category": "style",
-		"description": "Function argument used for return value",
+		"description": "Return value assigned in function argument",
 		"level": "error",
 		"location": {
 			"col": 35,
@@ -37,7 +37,7 @@ test_fail_function_arg_return_value_multi_part_ref if {
 
 	r == {{
 		"category": "style",
-		"description": "Function argument used for return value",
+		"description": "Return value assigned in function argument",
 		"level": "error",
 		"location": {
 			"col": 41,

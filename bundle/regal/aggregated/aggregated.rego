@@ -32,9 +32,9 @@ all_package_paths := {path | path := _aggregates[_][_].package_path}
 
 # METADATA
 # description: |
-#   like util.to_location_object, but with text and file passed in
-#   as we don't have access to the usual input.regal.file attributes
-#   in the context of reporting aggregated data
+#   like util.to_location_object, but with file passed in as we don't
+#   have access to the usual input.regal.file attributes in the context
+#   of reporting aggregated data
 location_object(loc, file) := {"location": {
 	"file": file,
 	"row": row,
@@ -52,7 +52,17 @@ location_object(loc, file) := {"location": {
 	text := util.any_set_item(input.aggregates_internal[file].common).lines[row - 1]
 
 	from_col := substring(text, col - 1, -1)
-	ref_text := substring(from_col, 0, indexof(from_col, " "))
+	ref_text := substring(from_col, 0, _ref_end(from_col))
+}
+
+default _ref_end(_) := -1
+
+_ref_end(text) := i if {
+	i := indexof(text, "(")
+	i != -1
+} else := i if {
+	i := indexof(text, " ")
+	i != -1
 }
 
 _aggregates[file] := input.aggregates_internal[file].common if some file

@@ -16,6 +16,24 @@ func TestParseModule(t *testing.T) {
 	assert.Equal(t, "data.p", must.Return(Module("test.rego", `package p`))(t).Package.Path.String())
 }
 
+func TestParseModuleExperimentalKeywords(t *testing.T) {
+	t.Parallel()
+
+	for _, keyword := range []string{"and", "or"} {
+		t.Run(keyword, func(t *testing.T) {
+			t.Parallel()
+
+			policy := `package p
+
+			import future.keywords.` + keyword + `
+
+			allow if input.a ` + keyword + ` input.b`
+
+			assert.Equal(t, "data.p", must.Return(Module("test.rego", policy))(t).Package.Path.String())
+		})
+	}
+}
+
 func TestModuleUnknownVersionWithOpts(t *testing.T) {
 	t.Parallel()
 

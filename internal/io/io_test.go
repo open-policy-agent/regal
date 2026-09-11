@@ -2,9 +2,11 @@ package io
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
+	outil "github.com/open-policy-agent/opa/v1/util"
 	"github.com/open-policy-agent/opa/v1/util/test"
 
 	"github.com/open-policy-agent/regal/internal/test/assert"
@@ -17,20 +19,19 @@ func TestFindManifestLocations(t *testing.T) {
 	t.Parallel()
 
 	fs := map[string]string{
-		filepath.FromSlash("/.git"):                          "",
-		filepath.FromSlash("/foo/bar/baz/.manifest"):         "",
-		filepath.FromSlash("/foo/bar/qux/.manifest"):         "",
-		filepath.FromSlash("/foo/bar/.regal/.manifest.yaml"): "",
-		filepath.FromSlash("/node_modules/.manifest"):        "",
+		".git":                          "",
+		"foo/bar/baz/.manifest":         "{}",
+		"foo/bar/qux/.manifest":         "{}",
+		"foo/bar/.regal/.manifest.yaml": "{}",
+		"node_modules/.manifest":        "{}",
 	}
 
-	test.WithTempFS(fs, func(root string) {
-		locations, err := FindManifestLocations(root)
-		expected := util.Map([]string{"foo/bar/baz", "foo/bar/qux"}, filepath.FromSlash)
+	root := test.TempDir(t, fs)
+	locations, err := FindManifestLocations(root)
+	expected := outil.Map([]string{"foo/bar/baz", "foo/bar/qux"}, filepath.FromSlash)
 
-		must.Equal(t, nil, err)
-		assert.SlicesEqual(t, expected, locations, "manifest locations")
-	})
+	must.Equal(t, nil, err)
+	assert.SlicesEqual(t, expected, locations, "manifest locations")
 }
 
 func TestDirCleanUpPaths(t *testing.T) {
@@ -91,7 +92,7 @@ func TestDirCleanUpPaths(t *testing.T) {
 			t.Parallel()
 
 			tempDir := testutil.TempDirectoryOf(t, test.State)
-			expected := util.Map(test.Expected, util.FilepathJoiner(tempDir))
+			expected := outil.Map(test.Expected, util.FilepathJoiner(tempDir))
 
 			additionalPreserveTargets := make([]string, 0, 1+len(test.AdditionalPreserveTargets))
 			additionalPreserveTargets = append(additionalPreserveTargets, tempDir)
@@ -138,6 +139,14 @@ func TestOPACapabilitiesIncludeNoRegalBuiltins(t *testing.T) {
 
 	for _, b := range OPACapabilities().Builtins {
 		must.Equal(t, false, strings.HasPrefix(b.Name, "regal."), "regal builtin in opa capabilities: %s", b.Name)
+	}
+}
+
+func TestCapabilitiesIncludeLogicalKeywords(t *testing.T) {
+	t.Parallel()
+
+	for _, keyword := range []string{"and", "or"} {
+		assert.True(t, slices.Contains(Capabilities().FutureKeywords, keyword))
 	}
 }
 

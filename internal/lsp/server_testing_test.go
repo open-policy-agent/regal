@@ -74,10 +74,10 @@ test_with_output if {
 	}
 
 	if !result[0].Pass() {
-		t.Errorf("expected test to pass, but it failed")
+		t.Error("expected test to pass, but it failed")
 	}
 
 	if len(result[0].Output) == 0 {
-		t.Errorf("expected output to be captured, but it was empty")
+		t.Error("expected output to be captured, but it was empty")
 	}
 }

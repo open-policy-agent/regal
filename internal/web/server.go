@@ -29,16 +29,6 @@ func NewServer(logger *log.Logger) *Server {
 	return &Server{log: logger}
 }
 
-func (s *Server) GetBaseURL() string {
-	return s.baseURL
-}
-
-// SetBaseURL sets the base URL for the server
-// NOTE: This is normally set by the server itself, and this method is provided only for testing purposes.
-func (s *Server) SetBaseURL(baseURL string) {
-	s.baseURL = baseURL
-}
-
 func (s *Server) Start(context.Context) {
 	mux := http.NewServeMux()
 	if err := statsviz.Register(mux); err != nil {

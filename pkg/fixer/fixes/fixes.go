@@ -1,6 +1,8 @@
 package fixes
 
 import (
+	"slices"
+
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
@@ -95,4 +97,44 @@ type FixResult struct {
 	// as not all fixes involve content changes. It is the responsibility of the caller to handle
 	// this.
 	Contents string
+}
+
+// removeLocations cuts the text spanned by each location out of lines, returning the
+// remaining lines and whether anything was removed. Locations spanning several rows
+// have those rows collapsed into one. Removal happens bottom-up and right-to-left, so
+// that cutting one location doesn't invalidate the coordinates of those before it.
+func removeLocations(lines []string, locations []report.Location) ([]string, bool) {
+	sorted := slices.Clone(locations)
+	slices.SortStableFunc(sorted, func(a, b report.Location) int {
+		if a.Row != b.Row {
+			return b.Row - a.Row
+		}
+
+		return b.Column - a.Column
+	})
+
+	fixed := false
+
+	for _, loc := range sorted {
+		if loc.End == nil {
+			continue
+		}
+
+		startRow, endRow := loc.Row-1, loc.End.Row-1
+		if startRow < 0 || endRow < startRow || endRow >= len(lines) {
+			continue
+		}
+
+		startCol, endCol := loc.Column-1, loc.End.Column-1
+		if startCol < 0 || startCol >= len(lines[startRow]) || endCol < 0 || endCol > len(lines[endRow]) {
+			continue
+		}
+
+		merged := lines[startRow][:startCol] + lines[endRow][endCol:]
+		lines = append(lines[:startRow], append([]string{merged}, lines[endRow+1:]...)...)
+
+		fixed = true
+	}
+
+	return lines, fixed
 }

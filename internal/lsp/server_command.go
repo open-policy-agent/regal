@@ -14,6 +14,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/explorer"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/lsp/command"
 	"github.com/open-policy-agent/regal/internal/lsp/testgen"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
@@ -26,6 +27,11 @@ import (
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
 	"github.com/open-policy-agent/regal/pkg/report"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
+)
+
+var (
+	deleteRecursiveIgnoreIfNotExists  = &types.DeleteFileOptions{Recursive: true, IgnoreIfNotExists: true}
+	renameNoOverwriteNoIgnoreIfExists = &types.RenameFileOptions{Overwrite: false, IgnoreIfExists: false}
 )
 
 func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
@@ -107,7 +113,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 						WithChanges(changes...)
 
 					if err = l.Workspace().ApplyEdit(ctx, edit); err != nil {
-						l.log.Message("failed workspace/applyEdit request: %s", err.Error())
+						l.log.Message("failed workspace/applyEdit request: %v", err)
 					}
 
 					// handle this ourselves as it's a rename and not a content edit
@@ -115,53 +121,16 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 				case "regal.eval":
 					err = l.handleEvalCommand(ctx, args)
 				case "regal.debug":
-					if !l.Workspace().Client().InitOptions.EnableDebugCodelens {
-						l.log.Message("regal.debug command called but client does not support debug functionality")
+					if l.featureFlags.DebugProvider {
+						port, ws := uint16(0), l.Workspace()
+						if dapServer := ws.DAP(); dapServer != nil {
+							port = dapServer.Port() // Port assigned dynamically, so must be passed to client
+						}
 
-						break
-					}
-
-					if !l.featureFlags.DebugProvider {
+						err = command.NewDebug(ws, l.input, port, args).Run(ctx)
+					} else {
 						l.log.Message("regal.debug command called but disabled in server")
-
-						break
 					}
-
-					if args.Target == "" || args.Query == "" {
-						l.log.Message("expected command target and query, got target %q, query %q", args.Target, args.Query)
-
-						break
-					}
-
-					// FindForPath returns a workspace-relative path (or ""); the OPA debugger
-					// resolves inputPath via os.Open against its own CWD, so pass an absolute path.
-					var inputPath string
-					if rel := l.input.FindForPath(args.Target); rel != "" {
-						inputPath = l.Workspace().Path(rel)
-					}
-
-					responseParams := map[string]any{
-						"type":        "opa-debug",
-						"name":        args.Query,
-						"request":     "launch",
-						"command":     "eval",
-						"query":       args.Query,
-						"enablePrint": true,
-						"stopOnEntry": true,
-						"inputPath":   inputPath,
-					}
-
-					responseResult := map[string]any{}
-
-					// Use a timeout context for RPC to ensure it completes even during shutdown
-					rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
-
-					//nolint:contextcheck
-					if err = l.conn.Call(rpcCtx, "regal/startDebugging", responseParams, &responseResult); err != nil {
-						l.log.Message("regal/startDebugging failed: %s", err.Error())
-					}
-
-					rpcCancel()
 				case "regal.config.disable-rule":
 					if err = l.handleIgnoreRuleCommand(ctx, args); err != nil {
 						l.log.Message("failed to ignore rule: %s", err)
@@ -175,7 +144,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 					l.window.ShowMessage(ctx, types.ErrorMessage, err.Error())
 				} else if len(editParams.Edit.DocumentChanges) > 0 {
 					if err := l.Workspace().ApplyEdit(ctx, editParams); err != nil {
-						l.log.Message("failed workspace/applyEdit request: %s", err.Error())
+						l.log.Message("failed workspace/applyEdit request: %v", err)
 					}
 				}
 			}
@@ -242,10 +211,13 @@ func (l *LanguageServer) fixRenameChanges(fileURI string) ([]workspace.DocumentC
 		return nil, fmt.Errorf("failed to get potential roots: %w", err)
 	}
 
-	fix := &fixes.DirectoryPackageMismatch{}
+	fix := fixes.DirectoryPackageMismatchFixer
 
 	// the default for the LSP is to rename on conflict
-	f := fixer.NewFixer().RegisterRoots(roots...).RegisterFixes(fix).SetOnConflictOperation(fixer.OnConflictRename)
+	f := fixer.NewFixer().
+		RegisterRoots(roots...).
+		RegisterFixes(fix).
+		SetOnConflictOperation(fixer.OnConflictRename)
 
 	violations := []report.Violation{{Title: fix.Name(), Location: report.Location{File: uri.ToPath(fileURI)}}}
 	cfprovider := fileprovider.NewCacheFileProvider(l.cache, ws.Client().Identifier)
@@ -294,14 +266,16 @@ func (l *LanguageServer) fixRenameChanges(fileURI string) ([]workspace.DocumentC
 		return nil, fmt.Errorf("failed to determine empty directories post rename: %w", err)
 	}
 
-	renopts := &types.RenameFileOptions{Overwrite: false, IgnoreIfExists: false}
 	changes := append(make([]workspace.DocumentChange, 0, len(dirs)+1),
-		types.RenameFile{Kind: "rename", OldURI: oldURI, NewURI: newURI, Options: renopts},
+		types.RenameFile{Kind: "rename", OldURI: oldURI, NewURI: newURI, Options: renameNoOverwriteNoIgnoreIfExists},
 	)
 
-	delopts := &types.DeleteFileOptions{Recursive: true, IgnoreIfNotExists: true}
 	for _, dir := range dirs {
-		changes = append(changes, types.DeleteFile{Kind: "delete", URI: ws.URI(dir), Options: delopts})
+		changes = append(changes, types.DeleteFile{
+			Kind:    "delete",
+			URI:     ws.URI(dir),
+			Options: deleteRecursiveIgnoreIfNotExists,
+		})
 	}
 
 	l.cache.Delete(oldURI)
@@ -333,7 +307,7 @@ func (l *LanguageServer) handleIgnoreRuleCommand(_ context.Context, args types.C
 
 	var currentContent string
 	if content, err := os.ReadFile(configPath); err == nil {
-		currentContent = string(content)
+		currentContent = outil.ByteSliceToString(content)
 	}
 
 	// default to empty set of rules
@@ -592,15 +566,14 @@ func (l *LanguageServer) handleCreateTestCommand(ctx context.Context, params typ
 		return err
 	}
 
-	//nolint:contextcheck
-	if err := l.displayTestResult(combinedTest, args.Target); err != nil {
+	if err := l.displayTestResult(ctx, combinedTest, args.Target); err != nil {
 		return fmt.Errorf("failed to display test result: %w", err)
 	}
 
 	return nil
 }
 
-func (l *LanguageServer) displayTestResult(testCode, sourceURI string) error {
+func (l *LanguageServer) displayTestResult(ctx context.Context, testCode, sourceURI string) error {
 	sourceFile := uri.ToPath(sourceURI)
 	baseName := strings.TrimSuffix(filepath.Base(sourceFile), ".rego")
 	testFileName := l.Workspace().Path(baseName + "_test.rego")
@@ -610,7 +583,7 @@ func (l *LanguageServer) displayTestResult(testCode, sourceURI string) error {
 	}
 
 	// Use a timeout context for RPC to ensure it completes during graceful shutdown
-	rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
+	rpcCtx, rpcCancel := context.WithTimeout(ctx, rpcTimeout)
 	defer rpcCancel()
 
 	l.window.ShowDocument(rpcCtx, l.Workspace().URI(testFileName), true)

@@ -84,7 +84,7 @@ func ArrayTerm(a []string) *ast.Term {
 		return ast.InternedEmptyArray
 	}
 
-	return ast.ArrayTerm(util.Map(a, ast.InternedTerm)...)
+	return ast.ArrayTerm(outil.Map(a, ast.InternedTerm)...)
 }
 
 func AppendLocation(buf []byte, location *ast.Location) []byte {

@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	outil "github.com/open-policy-agent/opa/v1/util"
 )
 
 // reMetaIdentifier matches pre-release and metadata identifiers against the spec requirements.
@@ -155,8 +157,8 @@ func (v Version) Compare(other Version) int {
 		}
 
 		if aIsInt && bIsInt {
-			aInt, _ := strconv.Atoi(a)
-			bInt, _ := strconv.Atoi(b)
+			aInt, _ := outil.Atoi(a)
+			bInt, _ := outil.Atoi(b)
 
 			if aInt > bInt {
 				return 1

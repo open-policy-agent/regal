@@ -58,7 +58,7 @@ test_all_cases_are_as_expected if {
 exclude(pattern, file) if {
 	some p in config.patterns_compiler([pattern])
 	glob.match(p, ["/"], file)
-}
+} else := false
 
 rules_config_error := {"rules": {"test": {"test-case": {"level": "error"}}}}
 

@@ -2,7 +2,6 @@ package util
 
 import (
 	"bytes"
-	"cmp"
 	"errors"
 	"fmt"
 	"iter"
@@ -10,8 +9,9 @@ import (
 	"net"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
+
+	outil "github.com/open-policy-agent/opa/v1/util"
 )
 
 type AnyUint interface {
@@ -58,14 +58,22 @@ func Must[T any](v T, err error) T {
 	return v
 }
 
-// Map applies a function to each element of a slice and returns a new slice with the results.
-func Map[T, U any](a []T, f func(T) U) []U {
-	b := make([]U, len(a))
-	for i := range a {
-		b[i] = f(a[i])
+// Mapper returns a function that applies f to each element in a and returns a new slice with the results.
+func Mapper[T, U any](f func(T) U) func(...T) []U {
+	return func(a ...T) []U {
+		return outil.Map(a, f)
+	}
+}
+
+// FindFirst returns the first element in a slice that satisfies pred, or the zero value of T and false if not found.
+func FindFirst[T any, S ~[]T](s S, pred func(T) bool) (v T, ok bool) {
+	for _, v := range s {
+		if pred(v) {
+			return v, true
+		}
 	}
 
-	return b
+	return v, false
 }
 
 // MapKeys applies a function to each key of a map and returns a new slice with the results.
@@ -293,35 +301,11 @@ func AnySliceTo[T any](in []any) ([]T, error) {
 	return out, nil
 }
 
-// Sorted sorts s in place using slices.Sort and returns it
-// Can be convenient for use in return values, map definitions, chaining, etc.
-func Sorted[T cmp.Ordered](s []T) []T {
-	slices.Sort(s)
-
-	return s
-}
-
 // Reversed reverses s in place using slices.Reverse and returns it.
 func Reversed[T any](s []T) []T {
 	slices.Reverse(s)
 
 	return s
-}
-
-// Or works like [cmp.Or] but allows supplier functions to be tried rather than
-// alternative values. This allows deferring computation of the alternatives to
-// only when needed.
-func Or[T comparable](val T, suppliers ...func() T) T {
-	var zero T
-	if val == zero {
-		for _, f := range suppliers {
-			if alt := f(); alt != zero {
-				return alt
-			}
-		}
-	}
-
-	return val
 }
 
 // LineContents returns the contents on line lineNum (0-indexed) from document.
@@ -363,12 +347,11 @@ func BytesNumLines(s []byte) uint {
 // IndexByteNth returns the index of the nth occurrence of b in s, or -1 if not found / out of range.
 func IndexByteNth(s string, b byte, n uint) (i int) {
 	for ; n > 0; n-- {
-		d := strings.IndexByte(s[i:], b)
-		if d == -1 {
+		if d := strings.IndexByte(s[i:], b); d == -1 {
 			return -1
+		} else {
+			i += d + 1
 		}
-
-		i += d + 1
 	}
 
 	return i - 1
@@ -399,8 +382,4 @@ func Line(s string, lineNum uint) (line string, ok bool) {
 	}
 
 	return s[idx+1 : idx+1+endIdx], true
-}
-
-func AppendUint[T AnyUint](bs []byte, i T) []byte {
-	return strconv.AppendUint(bs, uint64(i), 10)
 }

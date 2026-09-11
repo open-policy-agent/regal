@@ -15,10 +15,11 @@ type DebugLogger struct {
 }
 
 func NewDebugLogger(localLogger logging.Logger, level logging.Level) *DebugLogger {
-	return &DebugLogger{
-		Local: localLogger,
-		level: level,
-	}
+	return &DebugLogger{Local: localLogger, level: level}
+}
+
+func NoOpLogger() *DebugLogger {
+	return &DebugLogger{Local: logging.NewNoOpLogger(), level: logging.Error}
 }
 
 func (l *DebugLogger) Debug(fmt string, a ...any) {

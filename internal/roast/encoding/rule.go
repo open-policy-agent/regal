@@ -18,7 +18,7 @@ func (*ruleCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*ruleCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	rule := *((*ast.Rule)(ptr))
+	rule := *(*ast.Rule)(ptr)
 
 	write.ObjectStart(stream, rule.Location)
 

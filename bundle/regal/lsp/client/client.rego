@@ -54,3 +54,10 @@ identifiers["zed"] := 3
 # related_resources:
 #   - https://neovim.io/
 identifiers["neovim"] := 4
+
+# METADATA
+# description: True if client supports setting a default edit range for completion items, otherwise false
+# scope: document
+default supports["edit_range_defaults"] := false
+
+supports["edit_range_defaults"] if "editRange" in capabilities.textDocument.completion.completionList.itemDefaults

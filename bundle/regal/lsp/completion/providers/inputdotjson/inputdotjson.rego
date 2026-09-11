@@ -16,13 +16,44 @@ import data.regal.lsp.completion.kind
 import data.regal.lsp.location
 
 # METADATA
-# description: items contains found suggestions from `input.json`
+# description: items contains suggestions from `input.json` in expressions
+# scope: rule
 items contains item if {
 	input.regal.environment.input_path != ""
 
 	line := input.regal.file.lines[input.params.position.line]
 	line != ""
 	location.in_rule_body(line)
+
+	word := location.ref_at(line, input.params.position.character + 1)
+	startswith(word.text, "i")
+
+	edit := location.word_range(word, input.params.position)
+
+	some [suggestion, type] in _input_paths
+
+	startswith(suggestion, word.text)
+
+	item := {
+		"label": suggestion,
+		"kind": kind.variable,
+		"detail": type,
+		"documentation": _documentation,
+		"textEdit": {
+			"range": edit,
+			"newText": suggestion,
+		},
+	}
+}
+
+# METADATA
+# description: items contains suggestions from `input.json` in imports
+# scope: rule
+items contains item if {
+	input.regal.environment.input_path != ""
+
+	line := input.regal.file.lines[input.params.position.line]
+	startswith(line, "import ")
 
 	word := location.ref_at(line, input.params.position.character + 1)
 	startswith(word.text, "i")

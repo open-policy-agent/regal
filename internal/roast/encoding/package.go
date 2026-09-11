@@ -17,7 +17,7 @@ func (*packageCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*packageCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	pkg := *((*ast.Package)(ptr))
+	pkg := *(*ast.Package)(ptr)
 
 	write.ObjectStart(stream, pkg.Location)
 

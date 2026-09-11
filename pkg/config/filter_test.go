@@ -49,6 +49,23 @@ func TestFilterIgnoredPaths(t *testing.T) {
 			ignore:   []string{"foo/bar/**"},
 			expected: []string{"bar/foo.rego", "foo/baz/bar/bax.rego"},
 		},
+		// .gitignore has an interior "/**/" match zero directories as well as one or more
+		"middle wildcard ignore": {
+			paths: []string{
+				"foo/bar.rego",
+				"foo/baz/bar.rego",
+				"foo/baz/bax/bar.rego",
+				"foo/baz/qux.rego",
+				"other/bar.rego",
+			},
+			ignore:   []string{"foo/**/bar.rego"},
+			expected: []string{"foo/baz/qux.rego", "other/bar.rego"},
+		},
+		"multiple middle wildcards": {
+			paths:    []string{"a/b/c", "a/x/b/c", "a/b/y/c", "a/x/b/y/c", "a/b/d"},
+			ignore:   []string{"a/**/b/**/c"},
+			expected: []string{"a/b/d"},
+		},
 		"rootDir, explicit ignore": {
 			paths:    []string{"wow/foo/bar.rego", "wow/foo/baz.rego"},
 			ignore:   []string{"foo/bar.rego"},

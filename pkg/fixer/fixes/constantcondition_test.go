@@ -65,7 +65,7 @@ allow if {
 			contentAfterFix: `package test
 
 allow if {
-    
+` + "    " + `
     endswith(input.user.email, "@acmecorp.com")
 }`,
 		},
@@ -107,7 +107,7 @@ allow if { true }`,
 				Locations: []report.Location{
 					{
 						Row: 3, Column: 12, End: &report.Position{
-							Row: 4, Column: 16,
+							Row: 3, Column: 16,
 						},
 					},
 				},
@@ -116,6 +116,59 @@ allow if { true }`,
 			contentAfterFix: `package test
 
 allow if {  }`,
+		},
+		"multi line": {
+			fc: &FixCandidate{
+				Filename: "test.rego",
+				Contents: `package test
+
+allow if {
+	{
+		true
+	} or 2
+	input.x
+}`,
+			},
+			runtimeOptions: &RuntimeOptions{
+				Locations: []report.Location{
+					{
+						Row: 4, Column: 2, End: &report.Position{
+							Row: 6, Column: 8,
+						},
+					},
+				},
+			},
+			fixExpected:     true,
+			contentAfterFix: "package test\n\nallow if {\n\t\n\tinput.x\n}",
+		},
+		"collapse logical expression to remaining operand": {
+			fc: &FixCandidate{
+				Filename: "test.rego",
+				Contents: `package test
+
+import future.keywords.and
+
+allow if {
+	input.a and 1
+}`,
+			},
+			runtimeOptions: &RuntimeOptions{
+				Locations: []report.Location{
+					{
+						Row: 6, Column: 9, End: &report.Position{
+							Row: 6, Column: 15,
+						},
+					},
+				},
+			},
+			fixExpected: true,
+			contentAfterFix: `package test
+
+import future.keywords.and
+
+allow if {
+	input.a
+}`,
 		},
 		"many changes": {
 			fc: &FixCandidate{
@@ -137,7 +190,7 @@ allow if {
 					},
 					{
 						Row: 6, Column: 5, End: &report.Position{
-							Row: 4, Column: 11,
+							Row: 6, Column: 11,
 						},
 					},
 				},
@@ -146,9 +199,9 @@ allow if {
 			contentAfterFix: `package test
 
 allow if {
-    
+` + "    " + `
     endswith(input.user.email, "@acmecorp.com")
-    
+` + "    " + `
 }`,
 		},
 	}
@@ -164,7 +217,7 @@ allow if {
 			}
 
 			if !tc.fixExpected && len(fixResults) != 0 {
-				t.Fatalf("unexpected fix applied")
+				t.Fatal("unexpected fix applied")
 			}
 
 			if !tc.fixExpected {

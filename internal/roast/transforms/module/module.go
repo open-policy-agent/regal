@@ -39,7 +39,7 @@ func ToValue(mod *ast.Module) (ast.Value, error) {
 	}
 
 	if len(mod.Rules) > 0 {
-		value.Insert(ast.InternedTerm("rules"), ast.ArrayTerm(util.Map(mod.Rules, ruleToObject)...))
+		value.Insert(ast.InternedTerm("rules"), ast.ArrayTerm(outil.Map(mod.Rules, ruleToObject)...))
 	}
 
 	if len(mod.Comments) > 0 {
@@ -139,9 +139,9 @@ func termValueTerm(val ast.Value) *ast.Term {
 			return ast.InternedTerm(i)
 		}
 	case ast.Ref:
-		return ast.ArrayTerm(util.Map(v, termToObject)...)
+		return ast.ArrayTerm(outil.Map(v, termToObject)...)
 	case ast.Call:
-		return ast.ArrayTerm(util.Map(v, termToObject)...)
+		return ast.ArrayTerm(outil.Map(v, termToObject)...)
 	case *ast.Array:
 		if v.Len() == 0 {
 			return ast.InternedEmptyArray
@@ -169,7 +169,7 @@ func termValueTerm(val ast.Value) *ast.Term {
 			return ast.InternedEmptyArray
 		}
 
-		items := util.Map(v.Slice(), termToObject)
+		items := outil.Map(v.Slice(), termToObject)
 
 		return ast.ArrayTerm(items...)
 	case *ast.ArrayComprehension:
@@ -195,7 +195,7 @@ func termValueTerm(val ast.Value) *ast.Term {
 					case *ast.Term:
 						insert(exprObj, "terms", termToObject(t))
 					case []*ast.Term:
-						insert(exprObj, "terms", ast.ArrayTerm(util.Map(t, termToObject)...))
+						insert(exprObj, "terms", ast.ArrayTerm(outil.Map(t, termToObject)...))
 					}
 				}
 				// Mark expression as part of a template string as interpolated, as some linter rules
@@ -252,7 +252,7 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 	}
 
 	if len(a.Organizations) > 0 {
-		orgs := util.Map(a.Organizations, ast.InternedTerm)
+		orgs := outil.Map(a.Organizations, ast.InternedTerm)
 		obj.Insert(ast.InternedTerm("organizations"), ast.ArrayTerm(orgs...))
 	}
 
@@ -403,7 +403,7 @@ func headToObject(head *ast.Head) *ast.Term {
 	}
 
 	if len(head.Args) > 0 {
-		obj.Insert(ast.InternedTerm("args"), ast.ArrayTerm(util.Map(head.Args, termToObject)...))
+		obj.Insert(ast.InternedTerm("args"), ast.ArrayTerm(outil.Map(head.Args, termToObject)...))
 	}
 
 	if head.Assign {
@@ -463,7 +463,7 @@ func bodyToArray(body ast.Body) *ast.Term {
 		}
 
 		if len(expr.With) > 0 {
-			exprObj.Insert(ast.InternedTerm("with"), ast.ArrayTerm(util.Map(expr.With, withToObject)...))
+			exprObj.Insert(ast.InternedTerm("with"), ast.ArrayTerm(outil.Map(expr.With, withToObject)...))
 		}
 
 		if expr.Terms != nil {
@@ -471,10 +471,10 @@ func bodyToArray(body ast.Body) *ast.Term {
 			case *ast.Term:
 				insert(exprObj, "terms", termToObject(t))
 			case []*ast.Term:
-				insert(exprObj, "terms", ast.ArrayTerm(util.Map(t, termToObject)...))
+				insert(exprObj, "terms", ast.ArrayTerm(outil.Map(t, termToObject)...))
 			case *ast.SomeDecl:
 				terms := objectWithLocationAndCap(t.Location, 1)
-				insert(terms, "symbols", ast.ArrayTerm(util.Map(t.Symbols, termToObject)...))
+				insert(terms, "symbols", ast.ArrayTerm(outil.Map(t.Symbols, termToObject)...))
 				insert(exprObj, "terms", ast.NewTerm(terms))
 			case *ast.Every:
 				terms := objectWithLocationAndCap(t.Location, 5)
@@ -493,8 +493,12 @@ func bodyToArray(body ast.Body) *ast.Term {
 				insert(exprObj, "terms", ast.NewTerm(terms))
 
 				if t.ExplicitBody {
-					insert(terms, "explicit_body", ast.BooleanTerm(true))
+					insert(terms, "explicit_body", ast.InternedTerm(true))
 				}
+			case *ast.LogicalAnd:
+				insert(exprObj, "terms", logicalToTerm("and", t.Location, t.Lhs, t.Rhs, t.ExplicitLhs, t.ExplicitRhs))
+			case *ast.LogicalOr:
+				insert(exprObj, "terms", logicalToTerm("or", t.Location, t.Lhs, t.Rhs, t.ExplicitLhs, t.ExplicitRhs))
 			}
 		}
 
@@ -502,6 +506,26 @@ func bodyToArray(body ast.Body) *ast.Term {
 	}
 
 	return ast.ArrayTerm(exprs...)
+}
+
+// logicalToTerm converts an `and`/`or` expression, where explicit_lhs/explicit_rhs mark brace enclosed operands.
+func logicalToTerm(op string, loc *ast.Location, lhs, rhs ast.Body, explicitLhs, explicitRhs bool) *ast.Term {
+	terms := objectWithLocationAndCap(loc, 5)
+
+	insert(terms, "type", ast.InternedTerm(op))
+
+	if explicitLhs {
+		insert(terms, "explicit_lhs", ast.BooleanTerm(true))
+	}
+
+	if explicitRhs {
+		insert(terms, "explicit_rhs", ast.BooleanTerm(true))
+	}
+
+	insert(terms, "lhs", bodyToArray(lhs))
+	insert(terms, "rhs", bodyToArray(rhs))
+
+	return ast.NewTerm(terms)
 }
 
 func objectWithLocationAndCap(loc *ast.Location, c int) ast.Object {

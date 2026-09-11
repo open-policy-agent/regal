@@ -3,6 +3,8 @@ package util_test
 import (
 	"testing"
 
+	outil "github.com/open-policy-agent/opa/v1/util"
+
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/util"
@@ -75,10 +77,10 @@ func TestItems(t *testing.T) {
 	t.Parallel()
 
 	s := util.NewSet(1, 2, 3, 4)
-	assert.SlicesEqual(t, []int{1, 2, 3, 4}, util.Sorted(s.Items()))
+	assert.SlicesEqual(t, []int{1, 2, 3, 4}, outil.Sorted(s.Items()))
 
 	s.Remove(2, 3)
-	assert.SlicesEqual(t, []int{1, 4}, util.Sorted(s.Items()))
+	assert.SlicesEqual(t, []int{1, 4}, outil.Sorted(s.Items()))
 }
 
 func TestEmptySet(t *testing.T) {
@@ -93,5 +95,5 @@ func TestDiff(t *testing.T) {
 	t.Parallel()
 
 	diff := util.NewSet(1, 2, 3, 4, 5).Diff(util.NewSet(3, 4, 5, 6, 7))
-	assert.SlicesEqual(t, []int{1, 2}, util.Sorted(diff.Items()))
+	assert.SlicesEqual(t, []int{1, 2}, outil.Sorted(diff.Items()))
 }

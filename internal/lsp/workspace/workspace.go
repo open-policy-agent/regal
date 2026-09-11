@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/open-policy-agent/regal/internal/dap"
 	"github.com/open-policy-agent/regal/internal/lsp/client"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 )
@@ -22,6 +23,11 @@ type (
 		path   string
 		fs     fs.FS
 		client client.Client
+		// The DAP can be launched in standalone mode, but for clients that support both the
+		// required LSP and DAP functionality, integrating the DAP with the workspace unlocks
+		// debugging features like eval-in-REPL and completion suggestions based on the current
+		// debug state.
+		dapServer *dap.Server
 	}
 	DocumentChange interface {
 		AppendJSON(bs []byte) []byte
@@ -121,6 +127,16 @@ func (w Workspace) ApplyEdit(ctx context.Context, params ApplyEditParams) error 
 	rpcCancel()
 
 	return err
+}
+
+func (w Workspace) WithDAPServer(dapServer *dap.Server) Workspace {
+	w.dapServer = dapServer
+
+	return w
+}
+
+func (w Workspace) DAP() *dap.Server {
+	return w.dapServer
 }
 
 func NewApplyEditParams(label string) ApplyEditParams {

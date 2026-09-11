@@ -56,7 +56,7 @@ ignore:
 	// Wait for custom config to load with directory-package-mismatch set to ignore
 	select {
 	case <-timeout.C:
-		t.Fatalf("timed out waiting for server to load config")
+		t.Fatal("timed out waiting for server to load config")
 	default:
 		for {
 			time.Sleep(testPollInterval)

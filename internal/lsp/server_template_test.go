@@ -207,7 +207,7 @@ func TestNewFileTemplating(t *testing.T) {
 	timeout := time.NewTimer(determineTimeout())
 	select {
 	case <-timeout.C:
-		t.Fatalf("timed out waiting for server to load config")
+		t.Fatal("timed out waiting for server to load config")
 	default:
 		for {
 			time.Sleep(testPollInterval)
@@ -322,7 +322,7 @@ func TestNewFileTemplating(t *testing.T) {
 			success = allLinesMatch
 		case <-timeout.C:
 			t.Log("never received expected message", expectedMessage)
-			t.Fatalf("timed out waiting for expected message to be sent")
+			t.Fatal("timed out waiting for expected message to be sent")
 		}
 	}
 }
@@ -352,7 +352,7 @@ func TestTemplateWorkerSkipsDidOpenWhenTemplating(t *testing.T) {
 	timeout := time.NewTimer(determineTimeout())
 	select {
 	case <-timeout.C:
-		t.Fatalf("timed out waiting for server to initialize")
+		t.Fatal("timed out waiting for server to initialize")
 	default:
 		for {
 			time.Sleep(testPollInterval)

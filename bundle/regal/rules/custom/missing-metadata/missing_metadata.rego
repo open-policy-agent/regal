@@ -89,7 +89,7 @@ aggregate_report contains violation if {
 
 	violation := result.fail(rego.metadata.chain(), {"location": object.union(any_item.location, {
 		"file": any_item.file,
-		"text": split(any_item.location.text, "\n")[0],
+		"text": strings.split_n(any_item.location.text, "\n", 1)[0],
 	})})
 }
 

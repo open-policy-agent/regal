@@ -2,9 +2,10 @@ package report
 
 import (
 	"fmt"
-	"slices"
+	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
@@ -101,11 +102,11 @@ func FromQueryResult(result ast.Value, aggregate bool) (r Report, err error) {
 
 	if val, ok := rast.GetValue[ast.Set](obj, "violations"); ok {
 		r.Violations = make([]Violation, 0, val.Len())
-		val.Foreach(func(v *ast.Term) {
+		for _, v := range val.Slice() {
 			if vObj, ok := v.Value.(ast.Object); ok {
 				r.Violations = append(r.Violations, violationFromObject(vObj))
 			}
-		})
+		}
 	}
 
 	if notices, ok := rast.GetValue[ast.Set](obj, "notices"); ok {
@@ -131,7 +132,7 @@ func FromQueryResult(result ast.Value, aggregate bool) (r Report, err error) {
 
 func (r *Report) AddProfileEntries(prof map[string]ProfileEntry) {
 	if r.AggregateProfile == nil {
-		r.AggregateProfile = map[string]ProfileEntry{}
+		r.AggregateProfile = make(map[string]ProfileEntry, len(prof))
 	}
 
 	for loc, entry := range prof {
@@ -154,20 +155,20 @@ func (r *Report) AggregateProfileToSortedProfile(numResults int) {
 		r.Profile = append(r.Profile, r.AggregateProfile[loc])
 	}
 
-	slices.SortFunc(r.Profile, func(a, b ProfileEntry) int {
-		return int(b.TotalTimeNs - a.TotalTimeNs)
-	})
-
 	if numResults <= 0 || numResults > len(r.Profile) {
 		return
 	}
 
-	r.Profile = r.Profile[:numResults]
+	r.Profile = util.SortedFunc(r.Profile, ProfileEntry.ByTotalTimeNs)[:numResults]
+}
+
+func (p ProfileEntry) ByTotalTimeNs(other ProfileEntry) int {
+	return int(p.TotalTimeNs - other.TotalTimeNs)
 }
 
 // ViolationsFileCount returns the number of files containing violations.
 func (r *Report) ViolationsFileCount() map[string]int {
-	fc := map[string]int{}
+	fc := make(map[string]int, len(r.Violations)/2)
 	for i := range r.Violations {
 		fc[r.Violations[i].Location.File]++
 	}
@@ -181,7 +182,13 @@ func (l Location) String() string {
 		return l.File
 	}
 
-	return fmt.Sprintf("%s:%d:%d", l.File, l.Row, l.Column)
+	buf := append(make([]byte, 0, len(l.File)+10), l.File...)
+
+	return util.ByteSliceToString(util.AppendInt(append(util.AppendInt(append(buf, ':'), l.Row), ':'), l.Column))
+}
+
+func (n Notice) ByTitle(other Notice) int {
+	return strings.Compare(n.Title, other.Title)
 }
 
 func violationFromObject(obj ast.Object) Violation {
@@ -226,9 +233,9 @@ func LocationFromObject(obj ast.Object) Location {
 	return l
 }
 
-func relatedResourcesValue(obj ast.Object, key string) []RelatedResource {
+func relatedResourcesValue(obj ast.Object, key string) (resources []RelatedResource) {
 	if arr, ok := rast.GetValue[*ast.Array](obj, key); ok {
-		resources := make([]RelatedResource, 0, arr.Len())
+		resources = make([]RelatedResource, 0, arr.Len())
 		for i := range arr.Len() {
 			term := arr.Elem(i)
 			if resObj, ok := term.Value.(ast.Object); ok {
@@ -238,11 +245,9 @@ func relatedResourcesValue(obj ast.Object, key string) []RelatedResource {
 				})
 			}
 		}
-
-		return resources
 	}
 
-	return nil
+	return resources
 }
 
 func locationValue(obj ast.Object, key string) Location {

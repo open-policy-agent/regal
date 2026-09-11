@@ -17,7 +17,7 @@ func (*importCodec) IsEmpty(_ unsafe.Pointer) bool {
 }
 
 func (*importCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	imp := *((*ast.Import)(ptr))
+	imp := *(*ast.Import)(ptr)
 
 	write.ObjectStart(stream, imp.Location)
 

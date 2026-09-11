@@ -26,7 +26,7 @@ type set struct {
 }
 
 func (*setCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	s := *((*set)(ptr))
+	s := *(*set)(ptr)
 
 	write.ValsArray(stream, s.keys)
 }

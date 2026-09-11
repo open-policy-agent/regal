@@ -1,4 +1,3 @@
-//nolint:dupl // Same implementation as constant-condition fixer. Could consider refactoring later.
 package fixes
 
 import (
@@ -17,24 +16,7 @@ func (p *RedundantExistenceCheck) Fix(fc *FixCandidate, opts *RuntimeOptions) ([
 		return nil, errors.New("missing runtime options")
 	}
 
-	lines := strings.Split(fc.Contents, "\n")
-	fixed := false
-
-	for _, loc := range opts.Locations {
-		line := lines[loc.Row-1]
-
-		if loc.Row > len(lines) || loc.Column-1 < 0 || loc.Column-1 >= len(line) {
-			continue
-		}
-
-		startIndex := loc.Column - 1
-		endIndex := loc.End.Column - 1
-
-		lines[loc.Row-1] = line[0:startIndex] + line[endIndex:]
-
-		fixed = true
-	}
-
+	lines, fixed := removeLocations(strings.Split(fc.Contents, "\n"), opts.Locations)
 	if !fixed {
 		return nil, nil
 	}

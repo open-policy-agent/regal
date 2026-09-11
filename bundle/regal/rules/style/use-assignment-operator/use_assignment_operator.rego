@@ -16,7 +16,7 @@ report contains violation if {
 	# default foo(_) = "bar"
 	some rule in input.rules
 
-	rule.head.value.location
+	_ = rule.head.value.location
 	not rule.head.assign
 	not rule.head.key
 	not ast.is_chained_rule_body(rule, input.regal.file.lines)

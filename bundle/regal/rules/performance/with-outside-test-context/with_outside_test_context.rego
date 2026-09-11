@@ -1,5 +1,5 @@
 # METADATA
-# description: '`with` used outside test context'
+# description: '`with` used outside of test context'
 # related_resources:
 #   - description: documentation
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/performance/with-outside-test-context
