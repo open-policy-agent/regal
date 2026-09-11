@@ -52,6 +52,8 @@ rules:
       level: error
     unassigned-return-value:
       level: error
+    unconditional-with-conditions:
+      level: error
     unused-output-variable:
       level: error
     var-shadows-builtin:
