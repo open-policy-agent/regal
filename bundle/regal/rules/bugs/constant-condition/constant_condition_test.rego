@@ -184,7 +184,7 @@ test_success_adding_constant_to_set if {
 	r == set()
 }
 
-test_success_constant_and_or_operand if {
+test_fail_constant_and_or_operand if {
 	r := rule.report with input as ast.policy(`import future.keywords.and
 	import future.keywords.or
 
@@ -192,6 +192,82 @@ test_success_constant_and_or_operand if {
 		input.a and 1
 		input.b or "str"
 		input.c and 1 == 1
+	}`)
+
+	# the reported range covers the operator as well, as removing it is what
+	# collapses the expression to its remaining operand
+	locations := {[violation.location.row, violation.location.col, violation.location.end.col] | some violation in r}
+
+	locations == {[7, 10, 16], [8, 10, 19], [9, 10, 21]}
+	count(r) == 3
+}
+
+test_fail_constant_operand_reported_with_operator_range if {
+	r := rule.report with input as ast.policy(`import future.keywords.and
+
+	allow if input.a and 1`)
+
+	r == {{
+		"category": "bugs",
+		"description": "Constant condition",
+		"location": {
+			"col": 18,
+			"file": "policy.rego",
+			"row": 5,
+			"text": "\tallow if input.a and 1",
+			"end": {
+				"row": 5,
+				"col": 24,
+			},
+		},
+		"related_resources": [{
+			"description": "documentation",
+			"ref": "https://www.openpolicyagent.org/projects/regal/rules/bugs/constant-condition",
+		}],
+		"title": "constant-condition",
+		"level": "error",
+	}}
+}
+
+test_fail_constant_operand_of_nested_logical_expr if {
+	r := rule.report with input as ast.policy(`import future.keywords.and
+
+	allow if input.a and 1 and input.b`)
+
+	locations := {[violation.location.row, violation.location.col, violation.location.end.col] | some violation in r}
+
+	# only ` and 1` of the nested `input.a and 1` expression is reported
+	locations == {[5, 18, 24]}
+}
+
+test_fail_brace_enclosed_and_nested_constant_operand if {
+	r := rule.report with input as ast.policy(`import future.keywords.and
+	import future.keywords.or
+
+	allow if {
+		input.a and { 1 }
+		{ 1 } or input.b
+		1 and 2 and input.c
+	}`)
+
+	locations := {[violation.location.row, violation.location.col, violation.location.end.col] | some violation in r}
+
+	# the braces of a brace enclosed operand are part of the reported range, and
+	# a nested `and`/`or` expression is reported as one operand when constant
+	locations == {[7, 10, 20], [8, 3, 12], [9, 3, 15]}
+	count(r) == 3
+}
+
+test_success_constant_operand_where_other_operand_cant_stand_alone if {
+	# the `1` is left alone here, as the operand kept can't make up an expression
+	# of its own, and so there's no way of collapsing the expression
+	r := rule.report with input as ast.policy(`import future.keywords.and
+
+	allow if {
+		{
+			input.a
+			input.b
+		} and 1
 	}`)
 
 	r == set()
@@ -230,7 +306,7 @@ test_fail_constant_condition_in_body_of_and_operand if {
 	}}
 }
 
-test_success_logical_expr_with_non_constant_operand if {
+test_fail_constant_operand_variations if {
 	r := rule.report with input as ast.policy(`import future.keywords.and
 	import future.keywords.or
 
@@ -242,6 +318,25 @@ test_success_logical_expr_with_non_constant_operand if {
 			x := 1
 			x == 1
 		} or 2
+	}`)
+
+	locations := {[violation.location.row, violation.location.col, violation.location.end.col] | some violation in r}
+
+	locations == {[7, 3, 8], [8, 10, 20], [9, 15, 20]}
+	count(r) == 3
+}
+
+test_success_logical_expr_without_constant_operand if {
+	r := rule.report with input as ast.policy(`import future.keywords.and
+	import future.keywords.or
+
+	allow if {
+		input.a and input.b
+		input.c or count(input.d) > 1
+		{
+			x := input.e
+			x == input.f
+		} or input.g
 	}`)
 
 	r == set()

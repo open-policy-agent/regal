@@ -141,6 +141,35 @@ allow if {
 			fixExpected:     true,
 			contentAfterFix: "package test\n\nallow if {\n\t\n\tinput.x\n}",
 		},
+		"collapse logical expression to remaining operand": {
+			fc: &FixCandidate{
+				Filename: "test.rego",
+				Contents: `package test
+
+import future.keywords.and
+
+allow if {
+	input.a and 1
+}`,
+			},
+			runtimeOptions: &RuntimeOptions{
+				Locations: []report.Location{
+					{
+						Row: 6, Column: 9, End: &report.Position{
+							Row: 6, Column: 15,
+						},
+					},
+				},
+			},
+			fixExpected: true,
+			contentAfterFix: `package test
+
+import future.keywords.and
+
+allow if {
+	input.a
+}`,
+		},
 		"many changes": {
 			fc: &FixCandidate{
 				Filename: "test.rego",

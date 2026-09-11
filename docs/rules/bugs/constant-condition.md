@@ -27,9 +27,11 @@ allow := true
 While most often a mistake, constant conditions are sometimes used as placeholders, or "TODO logic". While this is
 harmless, it has no place in production policy, and should be replaced or removed before deployment.
 
-Note that an operand of an `and`/`or` expression is only reported when the *whole* expression is constant, as in
-`1 or 2`. A constant operand of an otherwise meaningful expression — like the `1` in `input.a and 1` — is left alone,
-since removing it would leave the enclosing expression without an operand.
+Constant operands of `and`/`or` expressions are reported as well. An expression that is constant in its entirety,
+like `1 or 2`, is removed when fixed, while one where only a single operand is constant is collapsed to the operand
+kept, so that `input.a and 1` becomes `input.a`. The exception is when the operand kept can't make up an expression
+of its own, as brace enclosed and multi expression operands can't. There's no way of collapsing
+`{ input.a; input.b } and 1`, so the constant operand of an expression like that is left alone.
 
 ## Configuration Options
 
