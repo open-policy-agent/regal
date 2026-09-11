@@ -132,6 +132,10 @@ rules:
       ignore:
         files:
           - "*_test.rego"
+    repeated-computation:
+      ignore:
+        files:
+          - "*_test.rego"
   style:
     line-length:
       level: error
