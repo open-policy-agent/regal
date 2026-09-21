@@ -26,14 +26,13 @@ report contains violation if {
 
 _message(locations) := $"Duplicate rule found at line {locations[0].row}" if count(locations) == 1
 
-_message(locations) := sprintf(
-	"Duplicate rules found at lines %s",
-	[concat(", ", [line |
+_message(locations) := $`Duplicate rules found at lines {lines}` if {
+	count(locations) > 1
+
+	lines := concat(", ", [line |
 		some location in locations
 		line := sprintf("%d", [location.row])
-	])],
-) if {
-	count(locations) > 1
+	])
 }
 
 _duplicates contains indices if {

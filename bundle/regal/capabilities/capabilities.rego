@@ -19,11 +19,16 @@ provided := data.internal.capabilities
 
 # METADATA
 # description: true if `object.keys` is available
-has_object_keys if "object.keys" in object.keys(config.capabilities.builtins)
+has_object_keys if "object.keys" in config.builtin_names
 
 # METADATA
 # description: true if `strings.count` is available
-has_strings_count if "strings.count" in object.keys(config.capabilities.builtins)
+has_strings_count if "strings.count" in config.builtin_names
+
+# METADATA
+# description: true if `sprintf` is available
+# scope: document
+has_sprintf if "sprintf" in config.builtin_names
 
 # if if if!
 # METADATA
@@ -43,6 +48,10 @@ has_contains if is_opa_v1
 # METADATA
 # description: true if `rego.v1` is available
 has_rego_v1_feature if "rego_v1_import" in config.capabilities.features
+
+# METADATA
+# description: true if `OPA 1.0+` policy is targeted
+has_string_interpolation if "template_strings" in config.capabilities.features
 
 # METADATA
 # description: true if `OPA 1.0+` policy is targeted
