@@ -11,9 +11,11 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/cover"
 	"github.com/open-policy-agent/opa/v1/dependencies"
 	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/open-policy-agent/opa/v1/topdown"
+	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
@@ -102,9 +104,33 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		}
 	}
 
-	var result EvalResult
+	var (
+		result EvalResult
+		report *cover.Report
+	)
 
-	if result, err = l.EvalInWorkspace(ctx, args.Query, inputValue); err != nil {
+	// This eval sends coverage only if the server and the client both support it, and inline eval too.
+	evalWithCoverage := l.featureFlags.InlineEvaluationCoverageProvider &&
+		l.Workspace().Client().InitOptions.EnableEvalInlineCoverage &&
+		l.featureFlags.InlineEvaluationProvider &&
+		l.Workspace().Client().InitOptions.EvalCodelensDisplayInline
+
+	var inputOpts []rego.EvalOption
+	if inputValue != nil {
+		inputOpts = append(inputOpts, rego.EvalParsedInput(inputValue))
+	}
+
+	if evalWithCoverage {
+		if result, report, err = l.EvalInWorkspace(ctx, args.Query, cover.New(), inputOpts...); err != nil {
+			l.log.Message(
+				"failed to evaluate coverage for %q, falling back to eval without coverage: %v", args.Query, err.Error(),
+			)
+
+			if result, _, err = l.EvalInWorkspace(ctx, args.Query, nil, inputOpts...); err != nil {
+				return fmt.Errorf("failed to evaluate workspace path: %w", err)
+			}
+		}
+	} else if result, _, err = l.EvalInWorkspace(ctx, args.Query, nil, inputOpts...); err != nil {
 		return fmt.Errorf("failed to evaluate workspace path: %w", err)
 	}
 
@@ -127,6 +153,10 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 			"package": strings.TrimPrefix(packagePath, "data."),
 			// only used when the target is a rule
 			"rule_head_locations": ruleHeadLocations,
+		}
+
+		if report != nil {
+			responseParams["coverage"] = report
 		}
 
 		responseResult := map[string]any{}
@@ -183,47 +213,88 @@ func (l *LanguageServer) getRuleHeadLocations(
 	return ruleHeadLocations, nil
 }
 
-func (l *LanguageServer) Eval(
-	ctx context.Context, query string, input ast.Value, printHook print.Hook,
-) (rego.ResultSet, error) {
-	regoArgs := prepareRegoArgs(ast.MustParseBody(query), l.assembleBundles(), printHook, l.getLoadedConfig())
-
-	// TODO: Let's try to avoid preparing on each eval, but only when the contents
-	// of the workspace modules change, and before the user requests an eval.
-	pq, err := rego.New(regoArgs...).PrepareForEval(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed preparing query %s: %w", query, err)
-	}
-
-	if input != nil {
-		return pq.Eval(ctx, rego.EvalParsedInput(input))
-	}
-
-	return pq.Eval(ctx)
-}
-
-func (l *LanguageServer) EvalInWorkspace(ctx context.Context, query string, input ast.Value) (EvalResult, error) {
+func (l *LanguageServer) EvalInWorkspace(
+	ctx context.Context,
+	query string,
+	cov *cover.Cover,
+	opts ...rego.EvalOption,
+) (EvalResult, *cover.Report, error) {
 	resultQuery := `result := ` + query
 	hook := PrintHook{
 		Output:       make(map[string]map[int][]string),
 		FileNameBase: l.Workspace().URI(),
 	}
 
-	result, err := l.Eval(ctx, resultQuery, input, hook)
+	regoArgs := prepareRegoArgs(ast.MustParseBody(resultQuery), l.assembleBundles(), hook, l.getLoadedConfig())
+
+	// TODO: Let's try to avoid preparing on each eval, but only when the contents
+	// of the workspace modules change, and before the user requests an eval.
+	pq, err := rego.New(regoArgs...).PrepareForEval(ctx)
 	if err != nil {
-		return emptyEvalResult, fmt.Errorf("failed evaluating query: %w", err)
+		return emptyEvalResult, nil, fmt.Errorf("failed preparing query %s: %w", resultQuery, err)
 	}
 
-	if len(result) == 0 {
-		return EvalResult{IsUndefined: true, PrintOutput: hook.Output}, nil
+	var (
+		resultSet rego.ResultSet
+		ndCache   builtins.NDBCache
+	)
+
+	if cov != nil {
+		ndCache = builtins.NDBCache{}
+		resultSet, err = pq.Eval(
+			ctx, append([]rego.EvalOption{rego.EvalQueryTracer(cov), rego.EvalNDBuiltinCache(ndCache)}, opts...)...,
+		)
+	} else {
+		resultSet, err = pq.Eval(ctx, opts...)
 	}
 
-	res, ok := result[0].Bindings["result"]
-	if !ok {
-		return emptyEvalResult, errors.New("expected result in bindings, didn't get it")
+	if err != nil {
+		return emptyEvalResult, nil, fmt.Errorf("failed evaluating query: %w", err)
 	}
 
-	return EvalResult{Value: res, PrintOutput: hook.Output}, nil
+	result := EvalResult{IsUndefined: true, PrintOutput: hook.Output}
+
+	if len(resultSet) > 0 {
+		res, ok := resultSet[0].Bindings["result"]
+		if !ok {
+			return emptyEvalResult, nil, errors.New("expected result in bindings, didn't get it")
+		}
+
+		result = EvalResult{Value: res, PrintOutput: hook.Output}
+	}
+
+	if cov == nil {
+		return result, nil, nil
+	}
+
+	// TODO: this hardcodes the two known cover.Kind values. OPA's own tester.Runner
+	// does the same (opa/v1/tester/runner.go). If OPA adds a new kind, add its
+	// supplementary pass here too.
+	indexExcluded := cover.New()
+
+	if _, err = pq.Eval(ctx, append(cover.NoIndexingEvalOptions(indexExcluded, ndCache), opts...)...); err != nil {
+		return result, nil, fmt.Errorf("failed evaluating index-excluded coverage query: %w", err)
+	}
+
+	earlyExit := cover.New()
+
+	if _, err = pq.Eval(ctx, append(cover.NoEarlyExitEvalOptions(earlyExit, ndCache), opts...)...); err != nil {
+		return result, nil, fmt.Errorf("failed evaluating early-exit coverage query: %w", err)
+	}
+
+	cov.AddRun(cover.KindIndexExcluded, indexExcluded)
+	cov.AddRun(cover.KindEarlyExit, earlyExit)
+
+	modules := l.cache.GetAllModules()
+	modulesByPath := make(map[string]*ast.Module, len(modules))
+
+	for fileURI, module := range modules {
+		modulesByPath[l.Workspace().RelativePath(fileURI)] = module
+	}
+
+	report := cov.Report(modulesByPath)
+
+	return result, &report, nil
 }
 
 func (l *LanguageServer) debugArgsAssembler(query ast.Body) []func(*rego.Rego) {

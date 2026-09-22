@@ -185,6 +185,13 @@ _capabilities.experimental.inlineEvalProvider := data.server.feature_flags.inlin
 
 # METADATA
 # description: |
+#   evalInlineCoverageProvider indicates whether the server supports including coverage
+#   results in the "coverage" field of the regal/showEvalResult notification
+#   sent after a regal.eval command.
+_capabilities.experimental.evalInlineCoverageProvider := data.server.feature_flags.inline_evaluation_coverage_provider
+
+# METADATA
+# description: |
 #   debugProvider indicates whether the server supports the regal.debug
 #   command and regal/startDebugging request.
 _capabilities.experimental.debugProvider := data.server.feature_flags.debug_provider

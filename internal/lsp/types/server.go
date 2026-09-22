@@ -10,6 +10,9 @@ type ServerFeatureFlags struct {
 	// InlineEvaluationProvider indicates whether the server supports the regal.eval
 	// command response being sent rather than written to file.
 	InlineEvaluationProvider bool `json:"inline_evaluation_provider"`
+	// InlineEvaluationCoverageProvider indicates whether regal.eval responses include
+	// a "coverage" field.
+	InlineEvaluationCoverageProvider bool `json:"inline_evaluation_coverage_provider"`
 	// DebugProvider indicates whether the server supports the regal.debug
 	// command and regal/startDebugging request.
 	DebugProvider bool `json:"debug_provider"`

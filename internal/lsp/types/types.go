@@ -34,6 +34,10 @@ type (
 		// EvalCodelensDisplayInline, if set, will show evaluation results natively
 		// in the calling editor, rather than in an output file.
 		EvalCodelensDisplayInline bool `json:"evalCodelensDisplayInline,omitempty"`
+		// EnableEvalInlineCoverage, if set, will cause a regal.eval command to also
+		// evaluate coverage and include the results in the regal/showEvalResult
+		// notification's "coverage" field.
+		EnableEvalInlineCoverage bool `json:"enableEvalInlineCoverage,omitempty"`
 		// EnableExplorer, if set, will enable the regal.explorer command
 		// and related functionality.
 		EnableExplorer bool `json:"enableExplorer,omitempty"`
