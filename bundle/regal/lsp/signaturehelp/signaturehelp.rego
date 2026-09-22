@@ -66,9 +66,9 @@ _text_up_to_position(lines, _, position) := concat("\n", all_lines) if {
 	])
 }
 
-_build_function_label(declaration, func_name) := label if {
+_build_function_label(declaration, func_name) := $"{func_name}({param_labels}) -> {result_type}" if {
 	param_labels := concat(", ", [_param_label(arg) | some arg in declaration.args])
-	label := sprintf("%s(%s) -> %s", [func_name, param_labels, declaration.result.type])
+	result_type := object.get(declaration, ["result", "type"], "")
 }
 
 _build_parameters(args) := [param |

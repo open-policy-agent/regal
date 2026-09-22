@@ -28,12 +28,9 @@ report contains violation if {
 	))
 }
 
-_message(1, arg, narrowed) := $"Argument {arg} only referenced as {narrowed}, value passed can be narrowed"
+_message(1, arg, x) := $"Argument {arg} only referenced as {x}, value passed can be narrowed"
 
-_message(n, arg, narrowed) := sprintf(
-	"Argument %s always referenced by a common prefix, value passed can be narrowed to %s",
-	[arg, narrowed],
-) if {
+_message(n, arg, x) := $"Argument {arg} always referenced by a common prefix, value passed can be narrowed to {x}" if {
 	n > 1
 }
 

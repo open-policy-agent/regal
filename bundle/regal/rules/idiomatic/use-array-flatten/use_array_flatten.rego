@@ -14,7 +14,7 @@ import data.regal.result
 # custom:
 #   severity: none
 notices contains result.notice(rego.metadata.chain()) if {
-	not object.subset(object.keys(config.capabilities.builtins), {"array.flatten", "array.concat"})
+	not object.subset(config.builtin_names, {"array.flatten", "array.concat"})
 }
 
 report contains violation if {

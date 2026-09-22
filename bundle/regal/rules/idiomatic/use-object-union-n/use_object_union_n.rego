@@ -14,7 +14,7 @@ import data.regal.result
 # custom:
 #   severity: none
 notices contains result.notice(rego.metadata.chain()) if {
-	not object.subset(object.keys(config.capabilities.builtins), {"object.union", "object.union_n"})
+	not object.subset(config.builtin_names, {"object.union", "object.union_n"})
 }
 
 report contains violation if {

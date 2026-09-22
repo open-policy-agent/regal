@@ -103,6 +103,8 @@ rules:
       level: error
     prefer-set-or-object-rule:
       level: error
+    prefer-string-interpolation:
+      level: error
     single-item-in:
       level: error
     superfluous-object-get:

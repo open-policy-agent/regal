@@ -55,9 +55,11 @@ is_wildcard(term) if {
 default builtin_names := set()
 
 # METADATA
-# description: set containing the name of all built-in functions (given the active capabilities)
+# description: |
+#   set containing the name of all built-in functions (given the active capabilities)
+#   deprecated: prefer to use `regal.config.builtin_names`
 # scope: document
-builtin_names := object.keys(config.capabilities.builtins)
+builtin_names := config.builtin_names
 
 # METADATA
 # description: |

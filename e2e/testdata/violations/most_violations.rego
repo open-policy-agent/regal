@@ -177,6 +177,8 @@ use_array_flatten if array.concat([1], array.concat([2], [3]))
 
 use_object_union_n if object.union(a, object.union(b, c))
 
+prefer_string_interpolation if sprintf("%s", [abs])
+
 ### Style ###
 
 # avoid-get-and-list-prefix
