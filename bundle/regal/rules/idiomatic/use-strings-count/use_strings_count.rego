@@ -1,5 +1,5 @@
 # METADATA
-# description: Use `strings.count` where possible
+# description: Use `strings.count`
 # related_resources:
 #   - description: documentation
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-strings-count

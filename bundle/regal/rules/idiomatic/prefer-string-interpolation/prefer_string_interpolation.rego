@@ -1,10 +1,11 @@
 # METADATA
-# description: Prefer string interpolation where possible
+# description: Prefer string interpolation
 # related_resources:
 #   - description: documentation
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/prefer-string-interpolation
 package regal.rules.idiomatic["prefer-string-interpolation"]
 
+import future.keywords.not
 import future.keywords.or
 
 import data.regal.ast
@@ -19,11 +20,8 @@ import data.regal.result
 notices contains result.notice(rego.metadata.chain()) if not capabilities.has_string_interpolation
 
 # METADATA
-# description: Capabilities missing sprintf built-in function
-# custom:
-#   severity: none
-notices contains result.notice(rego.metadata.chain()) if not capabilities.has_sprintf
-
+# description: Prefer string interpolation over `sprintf`
+# scope: rule
 report contains violation if {
 	some rule_index, fun
 	ast.function_calls[rule_index][fun].name == "sprintf"
@@ -44,9 +42,7 @@ report contains violation if {
 	# the semantics of policy evaluation for potentially undefined references:
 	# - `sprintf` = evaluation fails on undefined ref
 	# - interpolation = writes `<undefined>` in place of ref
-	{
-		config.rules.idiomatic["prefer-string-interpolation"]["include-non-var-args"] == true
-	} or {
+	_include_non_var_args or {
 		every arg in fun.args[1].value {
 			arg.type == "var"
 		}
@@ -54,3 +50,39 @@ report contains violation if {
 
 	violation := result.fail(rego.metadata.chain(), result.location(fun.location))
 }
+
+# METADATA
+# description: Prefer string interpolation over `concat`
+# scope: rule
+report contains violation if {
+	some rule_index, fun
+	ast.function_calls[rule_index][fun].name == "concat"
+
+	fun.args[1].type == "array" # only array literals, not vars or refs
+	_include_non_var_args or {
+		every arg in fun.args[1].value {
+			arg.type == "var" or arg.type == "string"
+		}
+	}
+
+	not {
+		# concat sometimes used to break up long static strings in places
+		# where raw strings don't work well, like text containing multiple
+		# backticks - don't suggest interpolation in this case
+		delim := fun.args[0].value
+		delim == "\n" or delim == ""
+
+		every arg in fun.args[1].value {
+			arg.type == "string"
+		}
+	}
+
+	# to consider:
+	# perhaps we should have an option for max number of arguments to consider for interpolation?
+	# or better (but complex) — to measure the length of the resulting string and decide based on that?
+	# it's not ideal if we recommend interpolation in cases where the string would be extremely long
+
+	violation := result.fail(rego.metadata.chain(), result.location(fun.location))
+}
+
+_include_non_var_args if config.rules.idiomatic["prefer-string-interpolation"]["include-non-var-args"] == true

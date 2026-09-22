@@ -11,7 +11,7 @@ test_fail_can_use_strings_count if {
 
 	r == {{
 		"category": "idiomatic",
-		"description": "Use `strings.count` where possible",
+		"description": "Use `strings.count`",
 		"level": "error",
 		"location": {
 			"col": 6,

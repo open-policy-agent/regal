@@ -158,7 +158,7 @@ aggregate[input.regal.file.name][key] contains entry if {
 # METADATA
 # description: collects aggregates in custom rules
 # scope: rule
-aggregate[input.regal.file.name][category_title] contains entry if {
+aggregate[input.regal.file.name][$"{category}/{title}"] contains entry if {
 	not _globally_ignored
 
 	some category, title
@@ -166,11 +166,7 @@ aggregate[input.regal.file.name][category_title] contains entry if {
 	not config.ignored_rule(category, title)
 	not config.excluded_file(category, title, input.regal.file.name)
 
-	entries := _mark_if_empty(data.custom.regal.rules[category][title].aggregate)
-
-	category_title := concat("/", [category, title])
-
-	some entry in entries
+	some entry in _mark_if_empty(data.custom.regal.rules[category][title].aggregate)
 }
 
 # a custom aggregate rule may not come back with entries, but we still need
