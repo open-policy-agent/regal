@@ -121,16 +121,12 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 	}
 
 	if evalWithCoverage {
-		if result, report, err = l.EvalInWorkspace(ctx, args.Query, cover.New(), inputOpts...); err != nil {
-			l.log.Message(
-				"failed to evaluate coverage for %q, falling back to eval without coverage: %v", args.Query, err.Error(),
-			)
+		result, report, err = l.EvalInWorkspace(ctx, args.Query, cover.New(), inputOpts...)
+	} else {
+		result, _, err = l.EvalInWorkspace(ctx, args.Query, nil, inputOpts...)
+	}
 
-			if result, _, err = l.EvalInWorkspace(ctx, args.Query, nil, inputOpts...); err != nil {
-				return fmt.Errorf("failed to evaluate workspace path: %w", err)
-			}
-		}
-	} else if result, _, err = l.EvalInWorkspace(ctx, args.Query, nil, inputOpts...); err != nil {
+	if err != nil {
 		return fmt.Errorf("failed to evaluate workspace path: %w", err)
 	}
 
@@ -267,19 +263,35 @@ func (l *LanguageServer) EvalInWorkspace(
 		return result, nil, nil
 	}
 
-	// TODO: this hardcodes the two known cover.Kind values. OPA's own tester.Runner
-	// does the same (opa/v1/tester/runner.go). If OPA adds a new kind, add its
-	// supplementary pass here too.
+	report, err := l.coverageReport(ctx, pq, cov, ndCache, opts)
+	if err != nil {
+		l.log.Message("failed to evaluate coverage for %q, continuing without it: %v", query, err.Error())
+
+		return result, nil, nil
+	}
+
+	return result, report, nil
+}
+
+// coverageReport runs the two supplementary coverage passes (index-excluded, early-exit)
+// against the already-prepared query, and merges them into cov's baseline report.
+//
+// TODO: this hardcodes the two known cover.Kind values. OPA's own tester.Runner
+// does the same (opa/v1/tester/runner.go). If OPA adds a new kind, add its
+// supplementary pass here too.
+func (l *LanguageServer) coverageReport(
+	ctx context.Context, pq rego.PreparedEvalQuery, cov *cover.Cover, ndCache builtins.NDBCache, opts []rego.EvalOption,
+) (*cover.Report, error) {
 	indexExcluded := cover.New()
 
-	if _, err = pq.Eval(ctx, append(cover.NoIndexingEvalOptions(indexExcluded, ndCache), opts...)...); err != nil {
-		return result, nil, fmt.Errorf("failed evaluating index-excluded coverage query: %w", err)
+	if _, err := pq.Eval(ctx, append(cover.NoIndexingEvalOptions(indexExcluded, ndCache), opts...)...); err != nil {
+		return nil, fmt.Errorf("failed evaluating index-excluded coverage query: %w", err)
 	}
 
 	earlyExit := cover.New()
 
-	if _, err = pq.Eval(ctx, append(cover.NoEarlyExitEvalOptions(earlyExit, ndCache), opts...)...); err != nil {
-		return result, nil, fmt.Errorf("failed evaluating early-exit coverage query: %w", err)
+	if _, err := pq.Eval(ctx, append(cover.NoEarlyExitEvalOptions(earlyExit, ndCache), opts...)...); err != nil {
+		return nil, fmt.Errorf("failed evaluating early-exit coverage query: %w", err)
 	}
 
 	cov.AddRun(cover.KindIndexExcluded, indexExcluded)
@@ -294,7 +306,7 @@ func (l *LanguageServer) EvalInWorkspace(
 
 	report := cov.Report(modulesByPath)
 
-	return result, &report, nil
+	return &report, nil
 }
 
 func (l *LanguageServer) debugArgsAssembler(query ast.Body) []func(*rego.Rego) {
