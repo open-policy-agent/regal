@@ -70,6 +70,8 @@ The linter rules with automatic fixes available are currently:
 		},
 
 		RunE: wrapProfiling(func(args []string) error {
+			relaxGC()
+
 			if err := fix(args, params); err != nil {
 				log.SetOutput(os.Stderr)
 				log.Println(err)

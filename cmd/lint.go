@@ -114,6 +114,8 @@ func init() {
 			return nil
 		},
 		RunE: wrapProfiling(func(args []string) error {
+			relaxGC()
+
 			rep, err := lint(args, params)
 			if err != nil {
 				log.SetOutput(os.Stderr)
