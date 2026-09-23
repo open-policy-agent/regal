@@ -27,6 +27,10 @@
               "type": "boolean",
               "description": "If the server is configured to operate as an inline evaluation provider"
             },
+            "inline_evaluation_coverage_provider": {
+              "type": "boolean",
+              "description": "If the server is configured to include coverage results with inline evaluation"
+            },
             "opa_test_provider": {
               "type": "boolean",
               "description": "If the server is configured to operate as an OPA test API provider"

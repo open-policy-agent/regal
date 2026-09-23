@@ -116,11 +116,12 @@ type fileToLoad struct {
 // custom features enabled.
 func DefaultServerFeatureFlags() *types.ServerFeatureFlags {
 	return &types.ServerFeatureFlags{
-		ExplorerProvider:         true,
-		InlineEvaluationProvider: true,
-		DebugProvider:            true,
-		OPATestProvider:          true,
-		TestCreationProvider:     true,
+		ExplorerProvider:                 true,
+		InlineEvaluationProvider:         true,
+		InlineEvaluationCoverageProvider: true,
+		DebugProvider:                    true,
+		OPATestProvider:                  true,
+		TestCreationProvider:             true,
 	}
 }
 
