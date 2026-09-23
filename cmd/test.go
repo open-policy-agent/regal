@@ -94,6 +94,8 @@ rules.
 	},
 
 	RunE: wrapProfiling(func(args []string) error {
+		relaxGC()
+
 		if c := opaTest(args); c != 0 {
 			return ExitError{code: c}
 		}
