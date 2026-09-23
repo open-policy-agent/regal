@@ -81,7 +81,7 @@ package_name := concat(".", package_path)
 
 # METADATA
 # description: provides the full package name including the "data." prefix,
-package_name_full := concat("", ["data.", package_name])
+package_name_full := $"data.{package_name}"
 
 # METADATA
 # description: provides all static string values from ref

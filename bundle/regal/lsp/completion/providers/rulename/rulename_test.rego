@@ -44,7 +44,7 @@ test_rule_name_completion_only_start_of_line if {
 				"textDocument": {"uri": "file:///ws/p.rego"},
 				"position": {"line": 2, "character": count(typed)},
 			},
-			"regal": {"file": {"lines": split(concat("", [above, typed, below]), "\n")}},
+			"regal": {"file": {"lines": split($"{above}{typed}{below}", "\n")}},
 		}
 
 	count(items) == 0

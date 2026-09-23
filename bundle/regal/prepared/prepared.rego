@@ -33,7 +33,7 @@ prepare.notices[category][title] contains notice if {
 
 # METADATA
 # description: store keys for aggregate rules to avoid repeating it for each input file
-prepare.aggregate_keys[category][title] := concat("/", [category, title]) if {
+prepare.aggregate_keys[category][title] := $"{category}/{title}" if {
 	some category, title
 	prepare.rules_to_run[category][title]
 }

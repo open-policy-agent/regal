@@ -153,6 +153,7 @@ test_builtin_json_filter if {
 	res.range.end.line == 2
 	res.range.end.character == 20
 
+	# regal ignore:prefer-string-interpolation
 	exp := concat("\n", [
 		"### [json.filter](https://www.openpolicyagent.org/docs/policy-reference/#builtin-object-jsonfilter)",
 		"",
