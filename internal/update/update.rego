@@ -22,7 +22,7 @@ check["latest_version"] := input.latest_version if input.latest_version != ""
 check["latest_version"] := response.body.tag_name if {
 	input.latest_version == ""
 
-	response := http.send({"url": _release_server_url, "method": "GET"})
+	response := http.send({"url": $"{_release_server_host}{_release_server_path}", "method": "GET"})
 }
 
 # METADATA
@@ -34,8 +34,6 @@ check["cta"] := sprintf(
 ) if {
 	check.needs_update
 }
-
-_release_server_url := concat("", [_release_server_host, _release_server_path])
 
 default _release_server_host := "https://api.github.com"
 
@@ -50,4 +48,4 @@ default _cta_url_prefix := "https://github.com/open-policy-agent/regal/releases/
 _cta_url_prefix := input.cta_url_prefix if input.cta_url_prefix != ""
 
 _ensure_http(url) := url if startswith(url, "http")
-_ensure_http(url) := concat("", ["https://", url]) if not startswith(url, "http")
+_ensure_http(url) := $"https://{url}" if not startswith(url, "http")

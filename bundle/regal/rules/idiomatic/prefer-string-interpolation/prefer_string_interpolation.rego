@@ -69,9 +69,7 @@ report contains violation if {
 		# concat sometimes used to break up long static strings in places
 		# where raw strings don't work well, like text containing multiple
 		# backticks - don't suggest interpolation in this case
-		delim := fun.args[0].value
-		delim == "\n" or delim == ""
-
+		fun.args[0].value in {"\n", "", " "}
 		every arg in fun.args[1].value {
 			arg.type == "string"
 		}

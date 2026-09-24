@@ -146,7 +146,6 @@ func TestConvertReportToDiagnostics(t *testing.T) {
 		Category:    "mock_category",
 		Title:       "mock_title",
 		Location:    report.Location{File: ""},
-		IsAggregate: true,
 	}
 
 	rpt := &report.Report{Violations: []report.Violation{violation1, violation2}}

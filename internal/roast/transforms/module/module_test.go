@@ -2,7 +2,6 @@ package module
 
 import (
 	"bytes"
-	"strconv"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -267,9 +266,9 @@ func BenchmarkObjectInsertManyVsObjectNew(b *testing.B) {
 
 	b.Run("InsertMany", func(b *testing.B) {
 		for b.Loop() {
-			obj := ast.NewObject()
-			for j := range n {
-				obj.Insert(ast.InternedTerm(strconv.Itoa(j)), ast.InternedTerm(strconv.Itoa(j)))
+			obj := ast.NewObjectWithCapacity(n)
+			for term := range ast.InternedIntRange(0, n) {
+				obj.Insert(term, term)
 			}
 
 			if obj.Len() != n {
@@ -281,8 +280,8 @@ func BenchmarkObjectInsertManyVsObjectNew(b *testing.B) {
 	b.Run("New", func(b *testing.B) {
 		for b.Loop() {
 			terms := make([][2]*ast.Term, 0, n)
-			for j := range n {
-				terms = append(terms, ast.Item(ast.InternedTerm(strconv.Itoa(j)), ast.InternedTerm(strconv.Itoa(j))))
+			for term := range ast.InternedIntRange(0, n) {
+				terms = append(terms, ast.Item(term, term))
 			}
 
 			if obj := ast.NewObject(terms...); obj.Len() != n {

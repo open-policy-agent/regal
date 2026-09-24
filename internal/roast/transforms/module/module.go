@@ -18,7 +18,7 @@ func ToValue(mod *ast.Module) (ast.Value, error) {
 	)
 
 	if mod.Package != nil {
-		value.Insert(ast.InternedTerm("package"), ast.NewTerm(packageToValue(mod.Package, mod.Annotations)))
+		rast.Insert(value, "package", ast.NewTerm(packageToValue(mod.Package, mod.Annotations)))
 	}
 
 	if len(mod.Imports) > 0 {
@@ -26,20 +26,20 @@ func ToValue(mod *ast.Module) (ast.Value, error) {
 
 		for i, imp := range mod.Imports {
 			impObj := objectWithLocationAndCap(imp.Location, 1+min(1, len(imp.Alias)))
-			impObj.Insert(ast.InternedTerm("path"), termToObjectLoc(imp.Path, true))
+			rast.Insert(impObj, "path", termToObjectLoc(imp.Path, true))
 
 			if imp.Alias != "" {
-				impObj.Insert(ast.InternedTerm("alias"), ast.InternedTerm(string(imp.Alias)))
+				rast.Insert(impObj, "alias", ast.InternedTerm(string(imp.Alias)))
 			}
 
 			imports[i] = ast.NewTerm(impObj)
 		}
 
-		value.Insert(ast.InternedTerm("imports"), ast.ArrayTerm(imports...))
+		rast.Insert(value, "imports", ast.ArrayTerm(imports...))
 	}
 
 	if len(mod.Rules) > 0 {
-		value.Insert(ast.InternedTerm("rules"), ast.ArrayTerm(outil.Map(mod.Rules, ruleToObject)...))
+		rast.Insert(value, "rules", ast.ArrayTerm(outil.Map(mod.Rules, ruleToObject)...))
 	}
 
 	if len(mod.Comments) > 0 {
@@ -48,7 +48,7 @@ func ToValue(mod *ast.Module) (ast.Value, error) {
 			comments[i] = ast.InternedTerm(outil.ByteSliceToString(rast.AppendLocation(nil, comment.Location)))
 		}
 
-		value.Insert(ast.InternedTerm("comments"), ast.ArrayTerm(comments...))
+		rast.Insert(value, "comments", ast.ArrayTerm(comments...))
 	}
 
 	return value, nil
@@ -58,7 +58,7 @@ func packageToValue(pkg *ast.Package, annotations []*ast.Annotations) ast.Value 
 	value := objectWithLocationAndCap(pkg.Location, 1+min(1, len(pkg.Path)+min(1, len(annotations))))
 
 	if pkg.Path != nil {
-		value.Insert(ast.InternedTerm("path"), pathArray(pkg.Path))
+		rast.Insert(value, "path", pathArray(pkg.Path))
 	}
 
 	if len(annotations) > 0 {
@@ -71,7 +71,7 @@ func packageToValue(pkg *ast.Package, annotations []*ast.Annotations) ast.Value 
 		}
 
 		if len(pkgan) > 0 {
-			value.Insert(ast.InternedTerm("annotations"), ast.ArrayTerm(pkgan...))
+			rast.Insert(value, "annotations", ast.ArrayTerm(pkgan...))
 		}
 	}
 
@@ -92,7 +92,7 @@ func pathArray(terms []*ast.Term) *ast.Term {
 }
 
 func locationItem(location *ast.Location) [2]*ast.Term {
-	return item("location", ast.InternedTerm(outil.ByteSliceToString(rast.AppendLocation(nil, location))))
+	return rast.Item("location", ast.InternedTerm(outil.ByteSliceToString(rast.AppendLocation(nil, location))))
 }
 
 func termToObjectLoc(term *ast.Term, includeLocation bool) *ast.Term {
@@ -105,15 +105,15 @@ func termToObjectLoc(term *ast.Term, includeLocation bool) *ast.Term {
 	if term.Value != nil {
 		if term.Location != nil && includeLocation {
 			return ast.ObjectTerm(
-				item("type", ast.InternedTerm(ast.ValueName(term.Value))),
-				item("value", termValueTerm(term.Value)),
+				rast.Item("type", ast.InternedTerm(ast.ValueName(term.Value))),
+				rast.Item("value", termValueTerm(term.Value)),
 				locationItem(term.Location),
 			)
 		}
 
 		return ast.ObjectTerm(
-			item("type", ast.InternedTerm(ast.ValueName(term.Value))),
-			item("value", termValueTerm(term.Value)),
+			rast.Item("type", ast.InternedTerm(ast.ValueName(term.Value))),
+			rast.Item("value", termValueTerm(term.Value)),
 		)
 	}
 
@@ -173,14 +173,14 @@ func termValueTerm(val ast.Value) *ast.Term {
 
 		return ast.ArrayTerm(items...)
 	case *ast.ArrayComprehension:
-		return ast.ObjectTerm(item("term", termToObject(v.Term)), item("body", bodyToArray(v.Body)))
+		return ast.ObjectTerm(rast.Item("term", termToObject(v.Term)), rast.Item("body", bodyToArray(v.Body)))
 	case *ast.SetComprehension:
-		return ast.ObjectTerm(item("term", termToObject(v.Term)), item("body", bodyToArray(v.Body)))
+		return ast.ObjectTerm(rast.Item("term", termToObject(v.Term)), rast.Item("body", bodyToArray(v.Body)))
 	case *ast.ObjectComprehension:
 		return ast.ObjectTerm(
-			item("key", termToObject(v.Key)),
-			item("value", termToObject(v.Value)),
-			item("body", bodyToArray(v.Body)),
+			rast.Item("key", termToObject(v.Key)),
+			rast.Item("value", termToObject(v.Value)),
+			rast.Item("body", bodyToArray(v.Body)),
 		)
 	case *ast.TemplateString:
 		parts := make([]*ast.Term, 0, len(v.Parts))
@@ -193,26 +193,26 @@ func termValueTerm(val ast.Value) *ast.Term {
 				if p.Terms != nil {
 					switch t := p.Terms.(type) {
 					case *ast.Term:
-						insert(exprObj, "terms", termToObject(t))
+						rast.Insert(exprObj, "terms", termToObject(t))
 					case []*ast.Term:
-						insert(exprObj, "terms", ast.ArrayTerm(outil.Map(t, termToObject)...))
+						rast.Insert(exprObj, "terms", ast.ArrayTerm(outil.Map(t, termToObject)...))
 					}
 				}
 				// Mark expression as part of a template string as interpolated, as some linter rules
 				// apply differently or not at all in that context, like e.g. unassigned-return-value
-				insert(exprObj, "interpolated", ast.InternedTerm(true))
+				rast.Insert(exprObj, "interpolated", ast.InternedBooleanTrue)
 				parts = append(parts, ast.NewTerm(exprObj))
 			}
 		}
 
 		if v.MultiLine {
 			return ast.ObjectTerm(
-				item("parts", ast.ArrayTerm(parts...)),
-				item("multi_line", ast.InternedTerm(true)),
+				rast.Item("parts", ast.ArrayTerm(parts...)),
+				rast.Item("multi_line", ast.InternedBooleanTrue),
 			)
 		}
 
-		return ast.ObjectTerm(item("parts", ast.ArrayTerm(parts...)))
+		return ast.ObjectTerm(rast.Item("parts", ast.ArrayTerm(parts...)))
 	}
 
 	return ast.NewTerm(val)
@@ -236,39 +236,38 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 	obj := objectWithLocationAndCap(a.Location, preAlloc)
 
 	if a.Scope != "" {
-		obj.Insert(ast.InternedTerm("scope"), ast.InternedTerm(a.Scope))
+		rast.Insert(obj, "scope", ast.InternedTerm(a.Scope))
 	}
 
 	if a.Title != "" {
-		obj.Insert(ast.InternedTerm("title"), ast.InternedTerm(a.Title))
+		rast.Insert(obj, "title", ast.InternedTerm(a.Title))
 	}
 
 	if a.Entrypoint {
-		obj.Insert(ast.InternedTerm("entrypoint"), ast.InternedTerm(true))
+		rast.Insert(obj, "entrypoint", ast.InternedBooleanTrue)
 	}
 
 	if a.Description != "" {
-		obj.Insert(ast.InternedTerm("description"), ast.StringTerm(a.Description))
+		rast.Insert(obj, "description", ast.StringTerm(a.Description))
 	}
 
 	if len(a.Organizations) > 0 {
-		orgs := outil.Map(a.Organizations, ast.InternedTerm)
-		obj.Insert(ast.InternedTerm("organizations"), ast.ArrayTerm(orgs...))
+		rast.Insert(obj, "organizations", ast.ArrayTerm(outil.Map(a.Organizations, ast.InternedTerm)...))
 	}
 
 	if len(a.RelatedResources) > 0 {
 		rrs := make([]*ast.Term, 0, len(a.RelatedResources))
 
 		for _, rr := range a.RelatedResources {
-			rrObj := ast.NewObject(item("ref", ast.StringTerm(rr.Ref.String())))
+			rrObj := ast.NewObject(rast.Item("ref", ast.StringTerm(rr.Ref.String())))
 			if rr.Description != "" {
-				rrObj.Insert(ast.InternedTerm("description"), ast.StringTerm(rr.Description))
+				rast.Insert(rrObj, "description", ast.StringTerm(rr.Description))
 			}
 
 			rrs = append(rrs, ast.NewTerm(rrObj))
 		}
 
-		obj.Insert(ast.InternedTerm("related_resources"), ast.ArrayTerm(rrs...))
+		rast.Insert(obj, "related_resources", ast.ArrayTerm(rrs...))
 	}
 
 	if len(a.Authors) > 0 {
@@ -277,17 +276,17 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 		for _, author := range a.Authors {
 			aObj := ast.NewObjectWithCapacity(min(1, len(author.Name)) + min(1, len(author.Email)))
 			if author.Name != "" {
-				aObj.Insert(ast.InternedTerm("name"), ast.InternedTerm(author.Name))
+				rast.Insert(aObj, "name", ast.InternedTerm(author.Name))
 			}
 
 			if author.Email != "" {
-				aObj.Insert(ast.InternedTerm("email"), ast.InternedTerm(author.Email))
+				rast.Insert(aObj, "email", ast.InternedTerm(author.Email))
 			}
 
 			as = append(as, ast.NewTerm(aObj))
 		}
 
-		obj.Insert(ast.InternedTerm("authors"), ast.ArrayTerm(as...))
+		rast.Insert(obj, "authors", ast.ArrayTerm(as...))
 	}
 
 	if len(a.Schemas) > 0 {
@@ -301,11 +300,11 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 
 			sObj := ast.NewObjectWithCapacity(preAlloc + min(1, len(s.Path)) + min(1, len(s.Schema)))
 			if len(s.Path) > 0 {
-				sObj.Insert(ast.InternedTerm("path"), ast.NewTerm(refToArray(s.Path)))
+				rast.Insert(sObj, "path", ast.NewTerm(refToArray(s.Path)))
 			}
 
 			if len(s.Schema) > 0 {
-				sObj.Insert(ast.InternedTerm("schema"), ast.NewTerm(refToArray(s.Schema)))
+				rast.Insert(sObj, "schema", ast.NewTerm(refToArray(s.Schema)))
 			}
 
 			if s.Definition != nil {
@@ -314,13 +313,13 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 					panic(err)
 				}
 
-				sObj.Insert(ast.InternedTerm("definition"), ast.NewTerm(def))
+				rast.Insert(sObj, "definition", ast.NewTerm(def))
 			}
 
 			ss = append(ss, ast.NewTerm(sObj))
 		}
 
-		obj.Insert(ast.InternedTerm("schemas"), ast.ArrayTerm(ss...))
+		rast.Insert(obj, "schemas", ast.ArrayTerm(ss...))
 	}
 
 	if len(a.Custom) > 0 {
@@ -329,7 +328,7 @@ func annotationsToObject(a *ast.Annotations) ast.Object {
 			panic(err)
 		}
 
-		obj.Insert(ast.InternedTerm("custom"), ast.NewTerm(c))
+		rast.Insert(obj, "custom", ast.NewTerm(c))
 	}
 
 	return obj
@@ -366,24 +365,24 @@ func ruleToObject(rule *ast.Rule) *ast.Term {
 		}
 
 		if len(annotations) > 0 {
-			obj.Insert(ast.InternedTerm("annotations"), ast.ArrayTerm(annotations...))
+			rast.Insert(obj, "annotations", ast.ArrayTerm(annotations...))
 		}
 	}
 
 	if rule.Default {
-		obj.Insert(ast.InternedTerm("default"), ast.InternedTerm(true))
+		rast.Insert(obj, "default", ast.InternedTerm(true))
 	}
 
 	if rule.Head != nil {
-		obj.Insert(ast.InternedTerm("head"), headToObject(rule.Head))
+		rast.Insert(obj, "head", headToObject(rule.Head))
 	}
 
 	if !generated {
-		obj.Insert(ast.InternedTerm("body"), bodyToArray(rule.Body))
+		rast.Insert(obj, "body", bodyToArray(rule.Body))
 	}
 
 	if rule.Else != nil {
-		obj.Insert(ast.InternedTerm("else"), ruleToObject(rule.Else))
+		rast.Insert(obj, "else", ruleToObject(rule.Else))
 	}
 
 	return ast.NewTerm(obj)
@@ -432,15 +431,12 @@ func withToObject(with *ast.With) *ast.Term {
 	if with.Location != nil {
 		return ast.ObjectTerm(
 			locationItem(with.Location),
-			item("target", termToObject(with.Target)),
-			item("value", termToObject(with.Value)),
+			rast.Item("target", termToObject(with.Target)),
+			rast.Item("value", termToObject(with.Value)),
 		)
 	}
 
-	return ast.ObjectTerm(
-		item("target", termToObject(with.Target)),
-		item("value", termToObject(with.Value)),
-	)
+	return ast.ObjectTerm(rast.Item("target", termToObject(with.Target)), rast.Item("value", termToObject(with.Value)))
 }
 
 func bodyToArray(body ast.Body) *ast.Term {
@@ -455,50 +451,50 @@ func bodyToArray(body ast.Body) *ast.Term {
 		exprObj := objectWithLocationAndCap(expr.Location, preAlloc)
 
 		if expr.Negated {
-			exprObj.Insert(ast.InternedTerm("negated"), ast.InternedTerm(true))
+			rast.Insert(exprObj, "negated", ast.InternedBooleanTrue)
 		}
 
 		if expr.Generated {
-			exprObj.Insert(ast.InternedTerm("generated"), ast.InternedTerm(expr.Generated))
+			rast.Insert(exprObj, "generated", ast.InternedBooleanTrue)
 		}
 
 		if len(expr.With) > 0 {
-			exprObj.Insert(ast.InternedTerm("with"), ast.ArrayTerm(outil.Map(expr.With, withToObject)...))
+			rast.Insert(exprObj, "with", ast.ArrayTerm(outil.Map(expr.With, withToObject)...))
 		}
 
 		if expr.Terms != nil {
 			switch t := expr.Terms.(type) {
 			case *ast.Term:
-				insert(exprObj, "terms", termToObject(t))
+				rast.Insert(exprObj, "terms", termToObject(t))
 			case []*ast.Term:
-				insert(exprObj, "terms", ast.ArrayTerm(outil.Map(t, termToObject)...))
+				rast.Insert(exprObj, "terms", ast.ArrayTerm(outil.Map(t, termToObject)...))
 			case *ast.SomeDecl:
-				terms := objectWithLocationAndCap(t.Location, 1)
-				insert(terms, "symbols", ast.ArrayTerm(outil.Map(t.Symbols, termToObject)...))
-				insert(exprObj, "terms", ast.NewTerm(terms))
+				terms := objectWithLocationAndCap(t.Location, 2)
+				rast.Insert(terms, "symbols", ast.ArrayTerm(outil.Map(t.Symbols, termToObject)...))
+				rast.Insert(exprObj, "terms", ast.NewTerm(terms))
 			case *ast.Every:
-				terms := objectWithLocationAndCap(t.Location, 5)
+				terms := objectWithLocationAndCap(t.Location, 4+util.BoolToInt(t.Key != nil))
 				if t.Key != nil {
-					insert(terms, "key", termToObject(t.Key))
+					rast.Insert(terms, "key", termToObject(t.Key))
 				}
 
-				insert(terms, "value", termToObject(t.Value))
-				insert(terms, "domain", termToObject(t.Domain))
-				insert(terms, "body", bodyToArray(t.Body))
-				insert(exprObj, "terms", ast.NewTerm(terms))
+				rast.Insert(terms, "value", termToObject(t.Value))
+				rast.Insert(terms, "domain", termToObject(t.Domain))
+				rast.Insert(terms, "body", bodyToArray(t.Body))
+				rast.Insert(exprObj, "terms", ast.NewTerm(terms))
 			case *ast.Not:
-				terms := objectWithLocationAndCap(t.Location, 3)
-				insert(terms, "type", ast.InternedTerm("not"))
-				insert(terms, "body", bodyToArray(t.Body))
-				insert(exprObj, "terms", ast.NewTerm(terms))
+				terms := objectWithLocationAndCap(t.Location, 3+util.BoolToInt(t.ExplicitBody))
+				rast.Insert(terms, "type", ast.InternedTerm("not"))
+				rast.Insert(terms, "body", bodyToArray(t.Body))
+				rast.Insert(exprObj, "terms", ast.NewTerm(terms))
 
 				if t.ExplicitBody {
-					insert(terms, "explicit_body", ast.InternedTerm(true))
+					rast.Insert(terms, "explicit_body", ast.InternedTerm(true))
 				}
 			case *ast.LogicalAnd:
-				insert(exprObj, "terms", logicalToTerm("and", t.Location, t.Lhs, t.Rhs, t.ExplicitLhs, t.ExplicitRhs))
+				rast.Insert(exprObj, "terms", logicalToTerm("and", t.Location, t.Lhs, t.Rhs, t.ExplicitLhs, t.ExplicitRhs))
 			case *ast.LogicalOr:
-				insert(exprObj, "terms", logicalToTerm("or", t.Location, t.Lhs, t.Rhs, t.ExplicitLhs, t.ExplicitRhs))
+				rast.Insert(exprObj, "terms", logicalToTerm("or", t.Location, t.Lhs, t.Rhs, t.ExplicitLhs, t.ExplicitRhs))
 			}
 		}
 
@@ -510,22 +506,19 @@ func bodyToArray(body ast.Body) *ast.Term {
 
 // logicalToTerm converts an `and`/`or` expression, where explicit_lhs/explicit_rhs mark brace enclosed operands.
 func logicalToTerm(op string, loc *ast.Location, lhs, rhs ast.Body, explicitLhs, explicitRhs bool) *ast.Term {
-	terms := objectWithLocationAndCap(loc, 5)
+	terms := objectWithLocationAndCap(loc, 3+util.BoolToInt(explicitLhs)+util.BoolToInt(explicitRhs))
 
-	insert(terms, "type", ast.InternedTerm(op))
+	rast.Insert(terms, "type", ast.InternedTerm(op))
 
 	if explicitLhs {
-		insert(terms, "explicit_lhs", ast.BooleanTerm(true))
+		rast.Insert(terms, "explicit_lhs", ast.InternedBooleanTrue)
 	}
 
 	if explicitRhs {
-		insert(terms, "explicit_rhs", ast.BooleanTerm(true))
+		rast.Insert(terms, "explicit_rhs", ast.InternedBooleanTrue)
 	}
 
-	insert(terms, "lhs", bodyToArray(lhs))
-	insert(terms, "rhs", bodyToArray(rhs))
-
-	return ast.NewTerm(terms)
+	return ast.NewTerm(rast.Insert(rast.Insert(terms, "lhs", bodyToArray(lhs)), "rhs", bodyToArray(rhs)))
 }
 
 func objectWithLocationAndCap(loc *ast.Location, c int) ast.Object {
@@ -533,24 +526,7 @@ func objectWithLocationAndCap(loc *ast.Location, c int) ast.Object {
 		return ast.NewObjectWithCapacity(c)
 	}
 
-	obj := ast.NewObjectWithCapacity(c + 1)
-	obj.Insert(ast.InternedTerm("location"), ast.InternedTerm(outil.ByteSliceToString(rast.AppendLocation(nil, loc))))
+	trm := ast.InternedTerm(outil.ByteSliceToString(rast.AppendLocation(nil, loc)))
 
-	return obj
-}
-
-func item(key string, value *ast.Term) [2]*ast.Term {
-	if value == nil {
-		return [2]*ast.Term{ast.InternedTerm(key), ast.InternedNullTerm}
-	}
-
-	return [2]*ast.Term{ast.InternedTerm(key), value}
-}
-
-func insert(obj ast.Object, key string, value *ast.Term) {
-	if value == nil {
-		return
-	}
-
-	obj.Insert(ast.InternedTerm(key), value)
+	return rast.Insert(ast.NewObjectWithCapacity(c+1), "location", trm)
 }

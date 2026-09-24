@@ -10,8 +10,6 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
 
-var emptyObject = ast.NewObject()
-
 // RelatedResource provides documentation on a violation.
 type RelatedResource struct {
 	Description string `json:"description"`
@@ -43,7 +41,6 @@ type Violation struct {
 	Level            string            `json:"level"`
 	RelatedResources []RelatedResource `json:"related_resources,omitempty"`
 	Location         Location          `json:"location"`
-	IsAggregate      bool              `json:"-"`
 }
 
 // Notice describes any notice found by Regal.
@@ -86,7 +83,7 @@ type ProfileEntry struct {
 	NumGenExpr  int    `json:"num_gen_expr"`
 }
 
-func FromQueryResult(result ast.Value, aggregate bool) (r Report, err error) {
+func FromQueryResult(result ast.Value, aggregate bool) (r *Report, err error) {
 	obj, ok := result.(ast.Object)
 	if !ok {
 		return r, fmt.Errorf("expected result to be an object, got %T", result)
@@ -98,7 +95,7 @@ func FromQueryResult(result ast.Value, aggregate bool) (r Report, err error) {
 		}
 	}
 
-	r = Report{}
+	r = &Report{}
 
 	if val, ok := rast.GetValue[ast.Set](obj, "violations"); ok {
 		r.Violations = make([]Violation, 0, val.Len())
@@ -118,7 +115,7 @@ func FromQueryResult(result ast.Value, aggregate bool) (r Report, err error) {
 	// Both aggregates and ignore_directives are internal transport fields passed
 	// from the linter to the aggregate report phase. As such, they are best kept
 	// as ast.Objects without conversion.
-	r.Aggregates = emptyObject
+	r.Aggregates = ast.InternedEmptyObjectValue.(ast.Object) //nolint:forcetypeassert
 	if val, ok := rast.GetValue[ast.Object](obj, "aggregates"); ok {
 		r.Aggregates = val
 	}

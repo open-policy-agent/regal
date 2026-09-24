@@ -81,8 +81,8 @@ func CheckAndWarn(ctx context.Context, opts Options, w io.Writer) {
 
 	var result decision
 
-	err = q.Evaluator().WithInput(input).WithResultHandler(func(qr ast.Value) (err error) {
-		if obj, ok := qr.(ast.Object); ok {
+	handler := ogre.ResultHandlerFunc(func(r ogre.Result) error {
+		if obj, ok := r.Value.(ast.Object); ok {
 			result = decision{
 				NeedsUpdate:   rast.GetBool(obj, "needs_update"),
 				LatestVersion: rast.GetString(obj, "latest_version"),
@@ -93,7 +93,9 @@ func CheckAndWarn(ctx context.Context, opts Options, w io.Writer) {
 		}
 
 		return errors.New("no result set")
-	}).Eval(ctx)
+	})
+
+	err = q.Evaluator().WithInput(input).WithResultHandler(handler).Eval(ctx)
 	if err != nil {
 		if opts.Debug {
 			w.Write([]byte(err.Error()))
