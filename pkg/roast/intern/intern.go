@@ -2,20 +2,19 @@ package intern
 
 import "github.com/open-policy-agent/opa/v1/ast"
 
-var (
-	EmptyObject = ast.NewObject()
-	EmptyRef    = ast.Ref{}
-)
-
 func init() {
 	ast.InternStringTerm(
 		// Rego
 		"",
 		" ",
+		".",
 		",",
 		"/",
+		"{",
 		"}",
 		"},",
+		":",
+		"$",
 		"\n",
 		"\n\n",
 		"\t",
@@ -162,9 +161,6 @@ func init() {
 		"not",
 		"some",
 		"every",
-		".",
-		":",
-		"$",
 
 		// Common
 		"a", "b", "c",

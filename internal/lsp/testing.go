@@ -11,6 +11,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/ogre"
 	"github.com/open-policy-agent/regal/pkg/config"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
@@ -99,11 +100,7 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 
 	relativePath := l.Workspace().RelativePath(fileURI)
 	regalContext, _ := transform.RegalContext(relativePath, contents, module.RegoVersion().String()).Merge(
-		ast.NewObject(
-			ast.Item(ast.InternedTerm("file"), ast.ObjectTerm(
-				ast.Item(ast.InternedTerm("root"), ast.StringTerm(root)),
-			)),
-		))
+		ast.NewObject(rast.Item("file", ast.ObjectTerm(rast.Item("root", ast.StringTerm(root))))))
 
 	astValue, err := transform.ToASTWithRegalContext(module, regalContext)
 	if err != nil {
@@ -112,30 +109,17 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 		return l.sendTestLocations(ctx, fileURI, emptyLocations)
 	}
 
-	var result ast.Value
-
-	err = testLocationsQuery().Evaluator().
+	return testLocationsQuery().Evaluator().
 		WithInput(astValue).
-		WithResultHandler(func(value ast.Value) error {
-			result = value
+		WithResultHandler(ogre.ResultHandlerFunc(func(r ogre.Result) error {
+			nativeResult, err := ast.JSON(r.Value)
+			if err != nil {
+				return l.sendTestLocations(ctx, fileURI, emptyLocations)
+			}
 
-			return nil
-		}).
+			return l.sendTestLocations(ctx, fileURI, nativeResult)
+		})).
 		Eval(ctx)
-	if err != nil {
-		l.log.Message("failed to evaluate test locations query: %s", err)
-
-		return l.sendTestLocations(ctx, fileURI, emptyLocations)
-	}
-
-	nativeResult, err := ast.JSON(result)
-	if err != nil {
-		l.log.Message("failed to convert test locations to JSON: %s", err)
-
-		return l.sendTestLocations(ctx, fileURI, emptyLocations)
-	}
-
-	return l.sendTestLocations(ctx, fileURI, nativeResult)
 }
 
 func (l *LanguageServer) sendTestLocations(ctx context.Context, fileURI string, locations any) error {

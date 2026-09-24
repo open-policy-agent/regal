@@ -33,8 +33,21 @@ var (
 func TestEval(t *testing.T) {
 	t.Parallel()
 
-	resultHandler := func(result ast.Value) error {
-		violations, ok := rast.GetValue[ast.Set](must.Be[ast.Object](t, result), "violations")
+	q := must.Return(ogre.New(lintQuery).
+		WithPrintHook(topdown.NewPrintHook(t.Output())).
+		WithStore(ogre.NewStoreFromObject(t.Context(), mockData(t))).
+		Prepare(t.Context()))(t)
+
+	policy := "package foo\n\nx = 1"
+	input := must.Return(transform.ToAST("p.rego", policy, parse.MustParseModule(policy), false))(t)
+
+	resultHandler := ogre.ResultHandlerFunc(func(result ogre.Result) error {
+		obj, ok := result.Value.(ast.Object)
+		if !ok {
+			return errors.New("expected result to be an object")
+		}
+
+		violations, ok := rast.GetValue[ast.Set](obj, "violations")
 		if !ok {
 			return errors.New("expected violations in result")
 		}
@@ -44,15 +57,7 @@ func TestEval(t *testing.T) {
 		}
 
 		return nil
-	}
-
-	q := must.Return(ogre.New(lintQuery).
-		WithPrintHook(topdown.NewPrintHook(t.Output())).
-		WithStore(ogre.NewStoreFromObject(t.Context(), mockData(t))).
-		Prepare(t.Context()))(t)
-
-	policy := "package foo\n\nx = 1"
-	input := must.Return(transform.ToAST("p.rego", policy, parse.MustParseModule(policy), false))(t)
+	})
 
 	must.Equal(t, nil, q.Evaluator().WithResultHandler(resultHandler).WithInput(input).Eval(t.Context()))
 }

@@ -17,22 +17,25 @@ import (
 	_ "github.com/open-policy-agent/regal/pkg/builtins"
 )
 
-var errNoResultHandler = errors.New("result handler must be provided")
+var errNoResultHandler = errors.New("no result handler provided")
 
 type Evaluator struct {
-	prepared      *Query
-	input         ast.Value
-	outputHandler func(result topdown.QueryResult) error
-	profiler      *profiler.Profiler
 	txn           storage.Transaction
+	input         ast.Value
+	resultHandler ResultHandler
+	profiler      *profiler.Profiler
+	prepared      *Query
+	id            int64
 }
 
-type qcWrapper struct {
-	*profiler.Profiler
+func (e *Evaluator) WithID(id int64) *Evaluator {
+	e.id = id
+
+	return e
 }
 
-func (w qcWrapper) Enabled() bool {
-	return w.Profiler != nil
+func (e *Evaluator) ID() int64 {
+	return e.id
 }
 
 func (e *Evaluator) WithInput(input ast.Value) *Evaluator {
@@ -57,27 +60,14 @@ func (e *Evaluator) Profiler() *profiler.Profiler {
 	return e.profiler
 }
 
-func (e *Evaluator) WithResultHandler(f func(ast.Value) error) *Evaluator {
-	// Since we expect a single output binding, extract the bound variable from the query
-	// and create an output handler that maps to the provided function. This is merely a
-	// convenience to avoid topdown.QueryResult boilerplate code at every call site.
-	if terms, ok := e.prepared.query[0].Terms.([]*ast.Term); ok {
-		if bound, ok := terms[1].Value.(ast.Var); ok {
-			e.outputHandler = func(r topdown.QueryResult) error {
-				if output, ok := r[bound]; ok {
-					return f(output.Value)
-				}
-
-				return fmt.Errorf("expected variable %q in result", bound)
-			}
-		}
-	}
+func (e *Evaluator) WithResultHandler(r ResultHandler) *Evaluator {
+	e.resultHandler = r
 
 	return e
 }
 
 func (e *Evaluator) Eval(ctx context.Context) (err error) {
-	if e.outputHandler == nil {
+	if e.resultHandler == nil {
 		return errNoResultHandler
 	}
 
@@ -106,10 +96,10 @@ func (e *Evaluator) Eval(ctx context.Context) (err error) {
 		WithStore(store).
 		WithTransaction(txn).
 		WithBaseCache(e.prepared.store.BaseCache()).
-		WithQueryTracer(qcWrapper{Profiler: e.profiler}).
+		WithQueryTracer(e.profiler).
 		WithInput(inputTerm)
 
-	err = q.Iter(ctx, e.outputHandler)
+	err = q.Iter(ctx, e.handleResult)
 
 	inputTerm.Value = nil
 	ast.TermPtrPool.Put(inputTerm)
@@ -119,4 +109,25 @@ func (e *Evaluator) Eval(ctx context.Context) (err error) {
 	}
 
 	return err
+}
+
+func (e *Evaluator) handleResult(qr topdown.QueryResult) error {
+	if e.resultHandler == nil {
+		return errNoResultHandler
+	}
+
+	// Since we expect a single output binding, extract the bound variable from the query
+	// and create an output handler that maps to the provided function. This is merely a
+	// convenience to avoid topdown.QueryResult boilerplate code at every call site.
+	if terms, ok := e.prepared.query[0].Terms.([]*ast.Term); ok {
+		if bound, ok := terms[1].Value.(ast.Var); ok {
+			if output, ok := qr[bound]; ok {
+				return e.resultHandler.Handle(Result{Evaluator: e, Value: output.Value})
+			}
+
+			return fmt.Errorf("expected variable %q in result", bound)
+		}
+	}
+
+	return fmt.Errorf("unsupported query format: %v", e.prepared.query)
 }

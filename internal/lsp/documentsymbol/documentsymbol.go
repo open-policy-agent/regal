@@ -92,7 +92,7 @@ func All(contents string, module *ast.Module, builtins map[string]*ast.Builtin) 
 }
 
 func locationToRange(location *ast.Location) types.Range {
-	startLine := util.SafeIntToUint(location.Row - 1)
+	startLine := util.IntTo[uint](location.Row - 1)
 	numLines := util.BytesNumLines(location.Text)
 
 	endLine := startLine
