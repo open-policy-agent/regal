@@ -3107,7 +3107,8 @@
           "type": "array"
         },
         "type": "function"
-      }
+      },
+      "nondeterministic": true
     },
     {
       "name": "json.patch",
@@ -3314,7 +3315,8 @@
           "type": "array"
         },
         "type": "function"
-      }
+      },
+      "nondeterministic": true
     },
     {
       "name": "lower",
