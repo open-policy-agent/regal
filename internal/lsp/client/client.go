@@ -59,7 +59,7 @@ func (c *Client) UnmarshalJSON(data []byte) (err error) {
 
 	idInt, _ := idNum.Int64()
 
-	c.Identifier = clients.Identifier(util.SafeIntToUint(int(idInt))) //nolint: gosec
+	c.Identifier = clients.Identifier(util.IntTo[uint8](idInt))
 
 	if initOptions, ok := m["initializationOptions"]; ok {
 		if err := encoding.JSONRoundTrip(initOptions, &c.InitOptions); err != nil {

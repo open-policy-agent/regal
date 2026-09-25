@@ -25,9 +25,9 @@ func TestRoastAndOPAInterfaceToValueSameOutput(t *testing.T) {
 	}
 }
 
-// BenchmarkInterfaceToValue-10    	 741	   1615548 ns/op	 1376979 B/op	   24189 allocs/op
+// BenchmarkAnyToValue-16    	    2046	    583693 ns/op	 1040373 B/op	   17709 allocs/op
 // ...
-func BenchmarkInterfaceToValue(b *testing.B) {
+func BenchmarkAnyToValue(b *testing.B) {
 	inputMap := inputMap(b)
 
 	for b.Loop() {

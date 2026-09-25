@@ -26,18 +26,13 @@ func (p *PreferEqualsComparison) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]
 		}
 
 		targetedLocation := line[loc.Column-1:]
-
 		targetedEqIndex := strings.Index(targetedLocation, "=")
 
-		// unification operator not found, skipping
-		if targetedEqIndex == -1 {
-			continue
+		if targetedEqIndex != -1 {
+			eqIndex := targetedEqIndex + loc.Column - 1
+			lines[loc.Row-1] = line[0:eqIndex] + "=" + line[eqIndex:]
+			fixed = true
 		}
-
-		eqIndex := targetedEqIndex + loc.Column - 1
-
-		lines[loc.Row-1] = line[0:eqIndex] + "=" + line[eqIndex:]
-		fixed = true
 	}
 
 	if !fixed {

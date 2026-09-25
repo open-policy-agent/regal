@@ -16,15 +16,12 @@ import (
 
 var (
 	pathSeparatorTerm              = ast.InternedTerm(string(os.PathSeparator))
-	environment       [2]*ast.Term = ast.Item(ast.InternedTerm("environment"), ast.ObjectTerm(
-		ast.Item(ast.InternedTerm("path_separator"), pathSeparatorTerm),
+	environment       [2]*ast.Term = rast.Item("environment", ast.ObjectTerm(
+		rast.Item("path_separator", pathSeparatorTerm),
 	))
 
-	operationsLintItem        = ast.Item(ast.InternedTerm("operations"), ast.ArrayTerm(ast.InternedTerm("lint")))
-	operationsLintCollectItem = ast.Item(ast.InternedTerm("operations"), ast.ArrayTerm(
-		ast.InternedTerm("lint"),
-		ast.InternedTerm("collect")),
-	)
+	operationsLintItem        = rast.Item("operations", rast.ArrayTerm("lint"))
+	operationsLintCollectItem = rast.Item("operations", rast.ArrayTerm("lint", "collect"))
 )
 
 // AnyToValue converts a native Go value x to a Value.
@@ -43,7 +40,7 @@ func ToAST(name, content string, mod *ast.Module, collect bool) (ast.Value, erro
 	}
 
 	//nolint:forcetypeassert
-	value.(ast.Object).Insert(ast.InternedTerm("regal"), ast.NewTerm(
+	rast.Insert(value.(ast.Object), "regal", ast.NewTerm(
 		RegalContextWithOperations(name, content, mod.RegoVersion().String(), collect),
 	))
 
@@ -68,13 +65,12 @@ func ToASTWithRegalContext(mod *ast.Module, regalContext ast.Object) (ast.Value,
 // common to most / all Regal use cases.
 func RegalContext(name, content, regoVersion string) ast.Object {
 	abs, _ := filepath.Abs(name)
-
 	context := ast.NewObject(
-		ast.Item(ast.InternedTerm("file"), ast.ObjectTerm(
-			ast.Item(ast.InternedTerm("name"), ast.StringTerm(name)),
-			ast.Item(ast.InternedTerm("lines"), rast.LinesArrayTerm(content)),
-			ast.Item(ast.InternedTerm("abs"), ast.StringTerm(abs)),
-			ast.Item(ast.InternedTerm("rego_version"), ast.InternedTerm(regoVersion)),
+		rast.Item("file", ast.ObjectTerm(
+			rast.Item("name", ast.StringTerm(name)),
+			rast.Item("lines", rast.LinesArrayTerm(content)),
+			rast.Item("abs", ast.StringTerm(abs)),
+			rast.Item("rego_version", ast.InternedTerm(regoVersion)),
 		)),
 		environment,
 	)

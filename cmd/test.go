@@ -32,6 +32,7 @@ import (
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
 
 const benchmarkGoBenchOutput = "gobench"
@@ -407,9 +408,9 @@ func Runtime() *ast.Term {
 		}
 	}
 
-	obj.Insert(ast.InternedTerm("env"), ast.NewTerm(env))
-	obj.Insert(ast.InternedTerm("version"), ast.StringTerm(version.Version))
-	obj.Insert(ast.InternedTerm("commit"), ast.StringTerm(version.Vcs))
+	rast.Insert(obj, "env", ast.NewTerm(env))
+	rast.Insert(obj, "version", ast.StringTerm(version.Version))
+	rast.Insert(obj, "commit", ast.StringTerm(version.Vcs))
 
 	return ast.NewTerm(obj)
 }

@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+	"github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/pkg/config"
@@ -104,8 +105,7 @@ type FixResult struct {
 // have those rows collapsed into one. Removal happens bottom-up and right-to-left, so
 // that cutting one location doesn't invalidate the coordinates of those before it.
 func removeLocations(lines []string, locations []report.Location) ([]string, bool) {
-	sorted := slices.Clone(locations)
-	slices.SortStableFunc(sorted, func(a, b report.Location) int {
+	sorted := util.SortedStableFunc(slices.Clone(locations), func(a, b report.Location) int {
 		if a.Row != b.Row {
 			return b.Row - a.Row
 		}

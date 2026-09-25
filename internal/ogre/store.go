@@ -9,7 +9,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown"
 
 	"github.com/open-policy-agent/regal/internal/cache"
-	"github.com/open-policy-agent/regal/pkg/roast/intern"
 )
 
 type Store struct {
@@ -26,12 +25,11 @@ func NewStore() *Store {
 
 func NewStoreFromObject(ctx context.Context, data ast.Object) *Store {
 	s := NewStore()
-
 	if err := storage.WriteOne(ctx, s.store, storage.AddOp, storage.RootPath, data); err != nil {
 		panic(err)
 	}
 
-	s.baseCache.Put(intern.EmptyRef, data)
+	s.baseCache.Put(ast.InternedEmptyRefValue.(ast.Ref), data) //nolint:forcetypeassert
 
 	return s
 }
