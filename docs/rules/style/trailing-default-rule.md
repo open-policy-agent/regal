@@ -29,7 +29,7 @@ allow if {
 ## Rationale
 
 Presenting the default value of a rule (if one is used) before the conditional rule assignments is a common practice,
-and it's often easier to to reason about conditional assignments knowing there is a default fallback value in place.
+and it's often easier to reason about conditional assignments knowing there is a default fallback value in place.
 For that reason, it's recommended to follow the convention and place the default rule declaration before rules
 conditionally assigning values.
 

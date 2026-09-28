@@ -34,7 +34,7 @@ unrelated_rule if {
 
 ## Rationale
 
-In Rego, rules can can be formed of many 'rule heads', partial definitions
+In Rego, rules can be formed of many 'rule heads', partial definitions
 covering specific cases which together make up the behaviour of the whole rule.
 Rules that are defined incrementally should have their definitions grouped together, as this makes the code easier to
 follow. While this is mostly a style preference, having incremental rules grouped also allows editors like VS Code to
