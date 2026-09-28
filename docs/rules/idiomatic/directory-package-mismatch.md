@@ -105,7 +105,7 @@ demonstrates a new policy being created inside an `authorization/rbac/roles` dir
 src={require('../../assets/rules/pkg_name_completion.png').default}
 alt="Package path auto-completion in VS Code"/>
 
-In addition, empty files will be be 'formatted' to have the correct package
+In addition, empty files will be 'formatted' to have the correct package
 based on the directory structure. Newly created Rego files are treated in much
 the same way. When a new file is created, the server will send a series of edits
 back to set the content. If `exclude-test-suffix` is set to `false`, the file
