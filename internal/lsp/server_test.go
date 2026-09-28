@@ -250,11 +250,11 @@ func TestPositionToOffset(t *testing.T) {
 
 	text := "line1\nline2\nline3"
 
-	for line := range uint(2) {
-		for char := range uint(5) {
+	for line := range uint32(2) {
+		for char := range uint32(5) {
 			pos := types.Position{Line: line, Character: char}
 			exp := line*6 + char
-			got := util.SafeIntToUint(pos.ToOffset(text))
+			got := util.IntTo[uint32](pos.ToOffset(text))
 
 			if exp != got {
 				t.Fatalf("expected offset for line %d char %d to be %d, got %d", line, char, exp, got)

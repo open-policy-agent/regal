@@ -169,11 +169,11 @@ func (l *LanguageServer) fixEditParams(
 	rto := &fixes.RuntimeOptions{BaseDir: ws.Path()}
 	if args.Diagnostic != nil {
 		rto.Locations = []report.Location{{
-			Row:    util.SafeUintToInt(args.Diagnostic.Range.Start.Line + 1),
-			Column: util.SafeUintToInt(args.Diagnostic.Range.Start.Character + 1),
+			Row:    int(args.Diagnostic.Range.Start.Line) + 1,
+			Column: int(args.Diagnostic.Range.Start.Character) + 1,
 			End: &report.Position{
-				Row:    util.SafeUintToInt(args.Diagnostic.Range.End.Line + 1),
-				Column: util.SafeUintToInt(args.Diagnostic.Range.End.Character + 1),
+				Row:    int(args.Diagnostic.Range.End.Line) + 1,
+				Column: int(args.Diagnostic.Range.End.Character) + 1,
 			},
 		}}
 	}

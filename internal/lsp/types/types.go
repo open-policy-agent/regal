@@ -21,7 +21,7 @@ type (
 
 	FileEvent struct {
 		URI  string `json:"uri"`
-		Type uint   `json:"type"`
+		Type uint8  `json:"type"`
 	}
 
 	InitializationOptions struct {
@@ -231,8 +231,8 @@ type (
 	}
 
 	Position struct {
-		Line      uint `json:"line"`
-		Character uint `json:"character"`
+		Line      uint32 `json:"line"`
+		Character uint32 `json:"character"`
 	}
 
 	DidOpenTextDocumentParams struct {
@@ -322,11 +322,11 @@ type (
 
 func (p Position) ToOffset(text string) int {
 	if p.Line == 0 {
-		return util.SafeUintToInt(p.Character)
+		return util.UintToInt(p.Character)
 	}
 
-	if offset := util.IndexByteNth(text, '\n', p.Line); offset > -1 {
-		return offset + 1 + util.SafeUintToInt(p.Character)
+	if offset := util.IndexByteNth(text, '\n', uint(p.Line)); offset > -1 {
+		return offset + 1 + util.UintToInt(p.Character)
 	}
 
 	return len(text)
@@ -441,16 +441,16 @@ func (t TextDocumentEdit) AppendJSON(bs []byte) []byte {
 
 func RangeBetween[T1, T2, T3, T4 iuint](startLine T1, startCharacter T2, endLine T3, endCharacter T4) Range {
 	return Range{
-		Start: Position{Line: uint(startLine), Character: uint(startCharacter)},
-		End:   Position{Line: uint(endLine), Character: uint(endCharacter)},
+		Start: Position{Line: uint32(startLine), Character: uint32(startCharacter)},
+		End:   Position{Line: uint32(endLine), Character: uint32(endCharacter)},
 	}
 }
 
 func (r Range) AppendJSON(bs []byte) []byte {
-	bs = outil.AppendInt(append(bs, `{"start":{"line":`...), int(r.Start.Line))
-	bs = outil.AppendInt(append(bs, `,"character":`...), int(r.Start.Character))
-	bs = outil.AppendInt(append(bs, `},"end":{"line":`...), int(r.End.Line))
-	bs = outil.AppendInt(append(bs, `,"character":`...), int(r.End.Character))
+	bs = outil.AppendInt(append(bs, `{"start":{"line":`...), r.Start.Line)
+	bs = outil.AppendInt(append(bs, `,"character":`...), r.Start.Character)
+	bs = outil.AppendInt(append(bs, `},"end":{"line":`...), r.End.Line)
+	bs = outil.AppendInt(append(bs, `,"character":`...), r.End.Character)
 
 	return append(bs, '}', '}')
 }

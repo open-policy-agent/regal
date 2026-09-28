@@ -73,7 +73,7 @@ func AnyToValue(x any) (ast.Value, error) {
 		return ast.NewArray(r...), nil
 	case map[string]any:
 		if len(x) == 0 {
-			return ast.InternedEmptyObject.Value, nil
+			return ast.InternedEmptyObjectValue, nil
 		}
 
 		kvs := util.NewPtrSlice[ast.Term](len(x) * 2)

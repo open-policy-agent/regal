@@ -169,22 +169,25 @@ func FilepathJoiner(base string) func(string) string {
 	}
 }
 
-// SafeUintToInt will convert a uint to an int, clamping the result to math.MaxInt.
-func SafeUintToInt(u uint) int {
-	if u > math.MaxInt {
+// UintToInt will convert a uint to an int, clamping the result to math.MaxInt.
+func UintToInt[U outil.UnsignedInteger](u U) int {
+	// Note: we can't easily return a generic int type here as we'd need interface
+	// conversion to be able to correctly clamp the value to the max value for the
+	// target integer type.
+	if uint64(u) > math.MaxInt {
 		return math.MaxInt // Clamp to prevent overflow
 	}
 
 	return int(u)
 }
 
-// SafeIntToUint will convert an int to a uint, clamping negative values to 0.
-func SafeIntToUint(i int) uint {
+// IntTo will convert an int to a uint, clamping negative values to 0.
+func IntTo[T outil.UnsignedInteger, I outil.SignedInteger](i I) T {
 	if i < 0 {
 		return 0 // Clamp negative values to 0
 	}
 
-	return uint(i)
+	return T(i)
 }
 
 // BoolToInt is a silly little helper to help with pre-allocation.
@@ -336,12 +339,12 @@ func Lines(s []byte) iter.Seq2[uint, []byte] {
 
 // NumLines returns the number of lines in s, as uint for convenience with LSP spec types and more.
 func NumLines(s string) uint {
-	return SafeIntToUint(strings.Count(s, "\n")) + 1
+	return IntTo[uint](strings.Count(s, "\n")) + 1
 }
 
 // BytesNumLines returns the number of lines in s, as uint for convenience with LSP spec types and more.
 func BytesNumLines(s []byte) uint {
-	return SafeIntToUint(bytes.Count(s, []byte{'\n'})) + 1
+	return IntTo[uint](bytes.Count(s, []byte{'\n'})) + 1
 }
 
 // IndexByteNth returns the index of the nth occurrence of b in s, or -1 if not found / out of range.

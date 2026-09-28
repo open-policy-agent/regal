@@ -15,7 +15,7 @@ type objectable interface {
 func mapToObject[T objectable](items map[string]T) ast.Object {
 	obj := ast.NewObjectWithCapacity(len(items))
 	for name, item := range items {
-		obj.Insert(ast.InternedTerm(name), ast.NewTerm(item.toObject()))
+		rast.Insert(obj, name, ast.NewTerm(item.toObject()))
 	}
 
 	return obj
@@ -35,41 +35,37 @@ func (c Config) toObject() ast.Object {
 	)
 
 	if len(c.Rules) > 0 {
-		obj.Insert(ast.InternedTerm("rules"), ast.NewTerm(mapToObject(c.Rules)))
+		rast.Insert(obj, "rules", ast.NewTerm(mapToObject(c.Rules)))
 	}
 
 	if c.Capabilities != nil {
-		obj.Insert(ast.InternedTerm("capabilities"), ast.NewTerm(c.Capabilities.toObject()))
+		rast.Insert(obj, "capabilities", ast.NewTerm(c.Capabilities.toObject()))
 	}
 
 	if !c.Features.IsZero() {
-		obj.Insert(ast.InternedTerm("features"), ast.NewTerm(c.Features.toObject()))
+		rast.Insert(obj, "features", ast.NewTerm(c.Features.toObject()))
 	}
 
 	if len(c.Ignore.Files) > 0 {
-		obj.Insert(ast.InternedTerm("ignore"), ast.NewTerm(c.Ignore.toObject()))
+		rast.Insert(obj, "ignore", ast.NewTerm(c.Ignore.toObject()))
 	}
 
 	if c.Project != nil {
-		obj.Insert(ast.InternedTerm("project"), ast.NewTerm(c.Project.toObject()))
+		rast.Insert(obj, "project", ast.NewTerm(c.Project.toObject()))
 	}
 
 	if c.CapabilitiesURL != "" {
-		obj.Insert(ast.InternedTerm("capabilities_url"), ast.InternedTerm(c.CapabilitiesURL))
+		rast.Insert(obj, "capabilities_url", ast.InternedTerm(c.CapabilitiesURL))
 	}
 
 	return obj
 }
 
 func (rule Rule) toObject() ast.Object {
-	obj := ast.NewObject(
-		ast.Item(ast.InternedTerm(keyLevel), ast.InternedTerm(rule.Level)),
-	)
+	obj := ast.NewObject(rast.Item(keyLevel, ast.InternedTerm(rule.Level)))
 
 	if rule.Ignore != nil && len(rule.Ignore.Files) != 0 {
-		obj.Insert(ast.InternedTerm(keyIgnore), ast.ObjectTerm(
-			ast.Item(ast.InternedTerm("files"), rast.ArrayTerm(rule.Ignore.Files)),
-		))
+		obj.Insert(ast.InternedTerm(keyIgnore), ast.ObjectTerm(rast.Item("files", rast.ArrayTerm(rule.Ignore.Files...))))
 	}
 
 	for key, val := range rule.Extra {
@@ -82,7 +78,7 @@ func (rule Rule) toObject() ast.Object {
 }
 
 func (i Ignore) toObject() ast.Object {
-	return ast.NewObject(ast.Item(ast.InternedTerm("files"), rast.ArrayTerm(i.Files)))
+	return ast.NewObject(rast.Item("files", rast.ArrayTerm(i.Files...)))
 }
 
 func (c Category) toObject() ast.Object {
@@ -90,7 +86,12 @@ func (c Category) toObject() ast.Object {
 }
 
 func (p *Project) toObject() ast.Object {
-	obj := ast.NewObject()
+	n := util.BoolToInt(p.Roots != nil)
+	if p.Roots != nil {
+		n += len(*p.Roots)
+	}
+
+	obj := ast.NewObjectWithCapacity(n)
 
 	if p.Roots != nil {
 		rootsArr := make([]*ast.Term, len(*p.Roots))
@@ -112,7 +113,7 @@ func (f *Features) toObject() ast.Object {
 	obj := ast.NewObject()
 
 	if f.Remote != nil {
-		remoteObj := ast.NewObject(ast.Item(ast.InternedTerm("check-version"), ast.InternedTerm(f.Remote.CheckVersion)))
+		remoteObj := ast.NewObject(rast.Item("check-version", ast.InternedTerm(f.Remote.CheckVersion)))
 		obj.Insert(ast.InternedTerm("remote"), ast.NewTerm(remoteObj))
 	}
 
@@ -122,29 +123,29 @@ func (f *Features) toObject() ast.Object {
 func (r Root) toObject() ast.Object {
 	if r.RegoVersion != nil {
 		return ast.NewObject(
-			ast.Item(ast.InternedTerm("path"), ast.InternedTerm(r.Path)),
-			ast.Item(ast.InternedTerm("rego_version"), ast.InternedTerm(*r.RegoVersion)),
+			rast.Item("path", ast.InternedTerm(r.Path)),
+			rast.Item("rego_version", ast.InternedTerm(*r.RegoVersion)),
 		)
 	}
 
-	return ast.NewObject(ast.Item(ast.InternedTerm("path"), ast.InternedTerm(r.Path)))
+	return ast.NewObject(rast.Item("path", ast.InternedTerm(r.Path)))
 }
 
 func (d Decl) toObject() ast.Object {
 	return ast.NewObject(
-		ast.Item(ast.InternedTerm("result"), ast.InternedTerm(d.Result)),
-		ast.Item(ast.InternedTerm("args"), rast.ArrayTerm(d.Args)),
+		rast.Item("result", ast.InternedTerm(d.Result)),
+		rast.Item("args", rast.ArrayTerm(d.Args...)),
 	)
 }
 
 func (b *Builtin) toObject() ast.Object {
-	return ast.NewObject(ast.Item(ast.InternedTerm("decl"), ast.NewTerm(b.Decl.toObject())))
+	return ast.NewObject(rast.Item("decl", ast.NewTerm(b.Decl.toObject())))
 }
 
 func (c *Capabilities) toObject() ast.Object {
 	return ast.NewObject(
-		ast.Item(ast.InternedTerm("builtins"), ast.NewTerm(mapToObject(c.Builtins))),
-		ast.Item(ast.InternedTerm("future_keywords"), rast.ArrayTerm(c.FutureKeywords)),
-		ast.Item(ast.InternedTerm("features"), rast.ArrayTerm(c.Features)),
+		rast.Item("builtins", ast.NewTerm(mapToObject(c.Builtins))),
+		rast.Item("future_keywords", rast.ArrayTerm(c.FutureKeywords...)),
+		rast.Item("features", rast.ArrayTerm(c.Features...)),
 	)
 }
