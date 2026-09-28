@@ -1,10 +1,10 @@
 package capabilities
 
 import (
-	"path/filepath"
 	"runtime"
 	"testing"
 
+	"github.com/open-policy-agent/regal/internal/io/paths"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 )
@@ -18,7 +18,7 @@ func TestLookupFromFile(t *testing.T) {
 	}
 
 	// Test that we are able to load a capabilities file using a file:// URL.
-	caps, err := Lookup(t.Context(), "file://"+must.Return(filepath.Abs("./testdata/capabilities.json"))(t))
+	caps, err := Lookup(t.Context(), "file://"+paths.Abs("./testdata/capabilities.json"))
 
 	assert.Equal(t, nil, err, "unexpected error from Lookup")
 	assert.Equal(t, 1, len(caps.Builtins), "expected capabilities to have exactly 1 builtin")

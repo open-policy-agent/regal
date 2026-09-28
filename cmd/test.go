@@ -32,6 +32,7 @@ import (
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
+	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
 
@@ -175,9 +176,11 @@ func opaTest(args []string) int {
 		panic(err)
 	}
 
-	if err := store.Write(ctx, txn, storage.AddOp,
-		[]string{"internal", "capabilities"},
-		rio.ToMap(config.CapabilitiesForThisVersion())); err != nil {
+	r := make(map[string]any)
+
+	encoding.MustJSONRoundTrip(config.CapabilitiesForThisVersion(), &r)
+
+	if err := store.Write(ctx, txn, storage.AddOp, []string{"internal", "capabilities"}, r); err != nil {
 		panic(err)
 	}
 
@@ -396,7 +399,6 @@ func init() {
 }
 
 func Runtime() *ast.Term {
-	obj := ast.NewObject()
 	env := ast.NewObject()
 
 	for _, s := range os.Environ() {
@@ -408,11 +410,11 @@ func Runtime() *ast.Term {
 		}
 	}
 
-	rast.Insert(obj, "env", ast.NewTerm(env))
-	rast.Insert(obj, "version", ast.StringTerm(version.Version))
-	rast.Insert(obj, "commit", ast.StringTerm(version.Vcs))
-
-	return ast.NewTerm(obj)
+	return ast.ObjectTerm(
+		rast.Item("env", ast.NewTerm(env)),
+		rast.Item("version", ast.StringTerm(version.Version)),
+		rast.Item("commit", ast.StringTerm(version.Vcs)),
+	)
 }
 
 func addBundleModeFlag(fs *pflag.FlagSet, bundle *bool, value bool) {

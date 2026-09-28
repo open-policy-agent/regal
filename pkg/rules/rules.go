@@ -11,6 +11,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/util"
 
+	"github.com/open-policy-agent/regal/internal/io/paths"
 	"github.com/open-policy-agent/regal/internal/parse"
 	rutil "github.com/open-policy-agent/regal/internal/util"
 )
@@ -126,9 +127,7 @@ func RegoVersionFromMap(
 	var longestMatch int
 
 	for versionedDir := range versionsMap {
-		matchingVersionedDir := filepath.Join(
-			string(os.PathSeparator), filepath.FromSlash(versionedDir), string(os.PathSeparator),
-		)
+		matchingVersionedDir := filepath.Join(paths.Separator, filepath.FromSlash(versionedDir), paths.Separator)
 
 		if strings.HasPrefix(dir, matchingVersionedDir) {
 			// >= as the versioned dir might be "" for the project root

@@ -20,6 +20,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/embeds"
 	"github.com/open-policy-agent/regal/internal/io"
+	"github.com/open-policy-agent/regal/internal/io/paths"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
 
@@ -90,7 +91,7 @@ regal new rule --type custom --category naming --name camel-case`,
 				return errors.New("name must consist only of lowercase letters, numbers, underscores and dashes")
 			}
 
-			params.output = cmp.Or(params.output, io.Getwd())
+			params.output = cmp.Or(params.output, paths.WorkingDir)
 
 			return nil
 		},

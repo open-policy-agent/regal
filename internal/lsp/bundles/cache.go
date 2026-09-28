@@ -19,6 +19,7 @@ import (
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
+	"github.com/open-policy-agent/regal/internal/io/paths"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
 	rutil "github.com/open-policy-agent/regal/internal/util"
 )
@@ -34,7 +35,7 @@ type Cache struct {
 
 func NewCache(workspacePath string, logger *log.Logger) *Cache {
 	return &Cache{
-		workspacePath: rutil.EnsureSuffix(workspacePath, string(os.PathSeparator)),
+		workspacePath: rutil.EnsureSuffix(workspacePath, paths.Separator),
 		bundles:       make(map[string]*cacheBundle),
 		log:           logger,
 	}
