@@ -2,11 +2,10 @@ package transform
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
+	"github.com/open-policy-agent/regal/internal/io/paths"
 	"github.com/open-policy-agent/regal/internal/roast/transforms"
 	"github.com/open-policy-agent/regal/internal/roast/transforms/module"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
@@ -15,7 +14,7 @@ import (
 )
 
 var (
-	pathSeparatorTerm              = ast.InternedTerm(string(os.PathSeparator))
+	pathSeparatorTerm              = ast.InternedTerm(paths.Separator)
 	environment       [2]*ast.Term = rast.Item("environment", ast.ObjectTerm(
 		rast.Item("path_separator", pathSeparatorTerm),
 	))
@@ -64,12 +63,11 @@ func ToASTWithRegalContext(mod *ast.Module, regalContext ast.Object) (ast.Value,
 // RegalContext creates a context object for a Regal input, containing the attributes
 // common to most / all Regal use cases.
 func RegalContext(name, content, regoVersion string) ast.Object {
-	abs, _ := filepath.Abs(name)
 	context := ast.NewObject(
 		rast.Item("file", ast.ObjectTerm(
 			rast.Item("name", ast.StringTerm(name)),
 			rast.Item("lines", rast.LinesArrayTerm(content)),
-			rast.Item("abs", ast.StringTerm(abs)),
+			rast.Item("abs", ast.StringTerm(paths.Abs(name))),
 			rast.Item("rego_version", ast.InternedTerm(regoVersion)),
 		)),
 		environment,

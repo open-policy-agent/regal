@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/open-policy-agent/regal/internal/io/paths"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/util"
 )
@@ -83,7 +84,7 @@ func ToRelativePath(uri, workspaceRootURI string) string {
 
 	// Ensure workspace root path has trailing separator for consistent trimming
 	if workspaceRootPath != "" {
-		workspaceRootPath = util.EnsureSuffix(workspaceRootPath, string(filepath.Separator))
+		workspaceRootPath = util.EnsureSuffix(workspaceRootPath, paths.Separator)
 	}
 
 	return strings.TrimPrefix(absolutePath, workspaceRootPath)

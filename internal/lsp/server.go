@@ -31,6 +31,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/dap/evaluate"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/io/files"
+	"github.com/open-policy-agent/regal/internal/io/paths"
 	"github.com/open-policy-agent/regal/internal/lsp/bundles"
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/client"
@@ -800,7 +801,7 @@ func (l *LanguageServer) templateContentsForFile(fileURI string) (string, error)
 		return "", fmt.Errorf("failed to find longest prefix root for templating of new file: %s", path)
 	}
 
-	parts := slices.Compact(strings.Split(strings.TrimPrefix(dir, longestPrefixRoot), string(os.PathSeparator)))
+	parts := slices.Compact(strings.Split(strings.TrimPrefix(dir, longestPrefixRoot), paths.Separator))
 
 	var pkg string
 
@@ -1291,7 +1292,7 @@ func (l *LanguageServer) loadWorkspace(ctx context.Context, rootURI string, clie
 	}
 
 	// rootURI not expected to have a trailing slash, remove if present for consistency
-	normalizedRootURI := strings.TrimSuffix(rootURI, string(os.PathSeparator))
+	normalizedRootURI := strings.TrimSuffix(rootURI, paths.Separator)
 
 	configRoots, err := lsconfig.FindConfigRoots(uri.ToPath(normalizedRootURI))
 	if err != nil {
@@ -1641,7 +1642,7 @@ func (l *LanguageServer) regalContext(fileURI string, _ rego.Requirements) *rego
 			URI:         fileURI,
 		},
 		Environment: rego.Environment{
-			PathSeparator:     string(os.PathSeparator),
+			PathSeparator:     paths.Separator,
 			WorkspaceRootURI:  l.Workspace().URI(),
 			WorkspaceRootPath: l.Workspace().Path(),
 		},

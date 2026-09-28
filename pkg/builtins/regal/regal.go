@@ -14,6 +14,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/types"
 	"github.com/open-policy-agent/opa/v1/util"
 
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
 
@@ -143,11 +144,8 @@ func RegalIsFormatted(_ rego.BuiltinContext, operands []*ast.Term, iter func(*as
 	}
 
 	regoVersion := ast.RegoV1
-
-	if versionTerm := optionsObj.Get(ast.InternedTerm("rego_version")); versionTerm != nil {
-		if v, ok := versionTerm.Value.(ast.String); ok && v == "v0" {
-			regoVersion = ast.RegoV0
-		}
+	if rast.GetString(optionsObj, "rego_version") == "v0" {
+		regoVersion = ast.RegoV0
 	}
 
 	// We don't need to process annotations for formatting.
@@ -166,8 +164,6 @@ func formatRego(source []byte, opts format.Opts) (result []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			switch r := r.(type) {
-			case string:
-				err = fmt.Errorf("error formatting: %s", r)
 			case error:
 				err = r
 			default:

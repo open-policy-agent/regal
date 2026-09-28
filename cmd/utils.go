@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	rio "github.com/open-policy-agent/regal/internal/io"
+	"github.com/open-policy-agent/regal/internal/io/paths"
 	"github.com/open-policy-agent/regal/pkg/config"
 )
 
@@ -39,18 +40,12 @@ func (f *repeatedStringFlag) Set(s string) error {
 // for a Regal directory, custom rules, and user config.
 func getSearchPath(args []string) (searchPath string) {
 	if len(args) > 0 {
-		searchPath = args[0]
-		if !filepath.IsAbs(searchPath) {
-			searchPath, _ = filepath.Abs(args[0])
-		}
-
-		if !rio.Exists(searchPath) {
+		if searchPath = paths.Abs(args[0]); !rio.Exists(searchPath) {
 			searchPath = "" // This is handled elsewhere — we don't need to fail here
 		}
 	}
 
-	searchPath = cmp.Or(searchPath, rio.Getwd())
-	if searchPath == "" {
+	if searchPath = cmp.Or(searchPath, paths.WorkingDir); searchPath == "" {
 		log.Println("could not determine config search directory - won't search for custom config or rules")
 	}
 

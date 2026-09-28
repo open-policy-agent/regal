@@ -18,6 +18,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
+	"github.com/open-policy-agent/regal/internal/io/paths"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 
@@ -227,7 +228,7 @@ func DirCleanUpPaths(target string, preserve []string) ([]string, error) {
 			preserveDirs.Add(p)
 
 			p = filepath.Dir(p)
-			if p == "." || p == "/" || p == string(filepath.Separator) ||
+			if p == "." || p == "/" || p == paths.Separator ||
 				p == filepath.VolumeName(p) || preserveDirs.Contains(p) {
 				break
 			}
@@ -237,7 +238,7 @@ func DirCleanUpPaths(target string, preserve []string) ([]string, error) {
 	dir := filepath.Dir(target)
 
 	for !preserveDirs.Contains(dir) {
-		if !strings.Contains(dir, string(os.PathSeparator)) {
+		if !strings.Contains(dir, paths.Separator) {
 			break
 		}
 

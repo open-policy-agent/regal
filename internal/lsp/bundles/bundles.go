@@ -11,6 +11,8 @@ import (
 	rio "github.com/open-policy-agent/regal/internal/io"
 )
 
+var manifestOrData = []string{".manifest", "data.json", "data.yml", "data.yaml"}
+
 // LoadDataBundle loads a bundle from the given path but only includes data
 // files. The path must contain a bundle manifest file.
 func LoadDataBundle(path string) (bundle.Bundle, error) {
@@ -27,6 +29,5 @@ func LoadDataBundle(path string) (bundle.Bundle, error) {
 }
 
 func dataFileLoaderFilter(abspath string, info os.FileInfo, _ int) bool {
-	return !info.IsDir() &&
-		!slices.Contains([]string{".manifest", "data.json", "data.yml", "data.yaml"}, filepath.Base(abspath))
+	return !info.IsDir() && !slices.Contains(manifestOrData, filepath.Base(abspath))
 }
