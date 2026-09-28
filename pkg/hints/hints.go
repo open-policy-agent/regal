@@ -1,40 +1,13 @@
-//nolint:lll
 package hints
 
 import (
 	"errors"
-	"fmt"
+	"reflect"
 	"regexp"
-
-	"github.com/go-viper/mapstructure/v2"
+	"strings"
 )
 
-// GetForError will return any matched, Styra-documented, errors for a given Go error.
-func GetForError(e error) ([]string, error) {
-	e0 := unwrapToFP(e)
-
-	msgs, err := extractMessages(e0)
-	if err != nil {
-		return []string{}, fmt.Errorf("failed to extract messages: %w", err)
-	}
-
-	if len(msgs) < 1 {
-		return []string{}, errors.New("no messages found")
-	}
-
-	msg := msgs[0]
-
-	var hintKeys []string
-
-	for u, r := range patterns {
-		if r.MatchString(msg) {
-			hintKeys = append(hintKeys, u)
-		}
-	}
-
-	return hintKeys, nil
-}
-
+//nolint:lll
 var patterns = map[string]*regexp.Regexp{
 	`eval-conflict-error/complete-rules-must-not-produce-multiple-outputs`: regexp.MustCompile(`^eval_conflict_error: complete rules must not produce multiple outputs$`),
 	`eval-conflict-error/object-keys-must-be-unique`:                       regexp.MustCompile(`^object insert conflict$|^eval_conflict_error: object keys must be unique$`),
@@ -55,46 +28,53 @@ var patterns = map[string]*regexp.Regexp{
 	`rego-type-error/multiple-default-rules-name-found`:                    regexp.MustCompile(`^rego_type_error: multiple default rules .* found`),
 }
 
+// GetForError will return the key of any matched, documented, error
+// for a given Go error, or empty string if none was found.
+func GetForError(e error) string {
+	value := reflect.Indirect(reflect.ValueOf(unwrapToFP(e)))
+	switch value.Kind() {
+	case reflect.Slice:
+		for _, value := range value.Seq2() {
+			if value = reflect.Indirect(value); value.Kind() == reflect.Struct {
+				if key := matchMessage(value); key != "" {
+					return key
+				}
+			}
+		}
+	case reflect.Struct:
+		return matchMessage(value)
+	}
+
+	return ""
+}
+
+func matchMessage(value reflect.Value) string {
+	var msg string
+
+	for field, value := range value.Fields() {
+		switch jsonTag := field.Tag.Get("json"); jsonTag {
+		case "code":
+			msg = value.String() + ": " + msg
+		case "message":
+			msg += value.String()
+		}
+	}
+
+	if msg = strings.TrimSuffix(msg, ": "); msg != "" {
+		for path, r := range patterns {
+			if r.MatchString(msg) {
+				return path
+			}
+		}
+	}
+
+	return ""
+}
+
 func unwrapToFP(e error) error {
 	if w := errors.Unwrap(e); w != nil {
 		return unwrapToFP(w)
 	}
 
 	return e
-}
-
-type message struct {
-	Message string `json:"message"`
-	Code    string `json:"code"`
-}
-
-func extractMessages(e error) ([]string, error) {
-	msgs := []message{}
-
-	decoder, err := mapstructure.NewDecoder(
-		&mapstructure.DecoderConfig{
-			TagName: "json",
-			Result:  &msgs,
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create decoder: %w", err)
-	}
-
-	if err := decoder.Decode(e); err != nil {
-		return nil, fmt.Errorf("failed to decode error: %w", err)
-	}
-
-	m := make([]string, len(msgs))
-
-	for i := range msgs {
-		m[i] = msgs[i].Code
-		if m[i] != "" {
-			m[i] += ": "
-		}
-
-		m[i] += msgs[i].Message
-	}
-
-	return m, nil
 }

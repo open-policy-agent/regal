@@ -127,11 +127,9 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		key := regalParseKey
 		link := "https://www.openpolicyagent.org/docs/errors/" // overview page
 
-		hints, _ := hints.GetForError(err)
-		if len(hints) > 0 {
-			// there should only be one hint, so take the first
-			key = &hints[0]
-			link += hints[0]
+		if hint := hints.GetForError(err); hint != "" {
+			key = &hint
+			link += hint
 		}
 
 		diags = append(diags, types.Diagnostic{
@@ -193,25 +191,24 @@ func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (e
 func convertReportToDiagnostics(rpt *report.Report, workspaceRootURI string) map[string][]types.Diagnostic {
 	fileDiags := make(map[string][]types.Diagnostic, len(rpt.Violations))
 
-	// rangeValCopy necessary, as value copied in loop anyway
-	//nolint:gocritic
-	for _, item := range rpt.Violations {
+	for i := range rpt.Violations {
 		// to differentiate from parse errors: errors presented as warnings and warnings as info
 		severity := diagWarnLevel
-		if item.Level == "warning" {
+		if rpt.Violations[i].Level == "warning" {
 			severity = diagInfoLevel
 		}
 
-		file := cmp.Or(item.Location.File, workspaceRootURI)
+		file := cmp.Or(rpt.Violations[i].Location.File, workspaceRootURI)
 
 		fileDiags[file] = append(fileDiags[file], types.Diagnostic{
 			Severity: severity,
-			Range:    getRangeForViolation(item),
-			Message:  item.Description,
-			Source:   new("regal/" + item.Category),
-			Code:     item.Title,
+			Range:    getRangeForViolation(rpt.Violations[i]),
+			Message:  rpt.Violations[i].Description,
+			Source:   new("regal/" + rpt.Violations[i].Category),
+			Code:     rpt.Violations[i].Title,
 			CodeDescription: &types.CodeDescription{
-				Href: fmt.Sprintf("https://www.openpolicyagent.org/projects/regal/rules/%s/%s", item.Category, item.Title),
+				Href: fmt.Sprintf("https://www.openpolicyagent.org/projects/regal/rules/%s/%s",
+					rpt.Violations[i].Category, rpt.Violations[i].Title),
 			},
 		})
 	}
