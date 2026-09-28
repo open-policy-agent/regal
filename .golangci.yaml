@@ -57,6 +57,8 @@ linters:
         - whyNoLint # not all nolint comments need explanations
         - hugeParam # investigate later, but some of these breaks API signatures
         - unnamedResult
+    gomoddirectives:
+      replace-local: true # for development
     gosec:
       excludes:
         # taint analysis. not relevant as Regal assumes trusted user
