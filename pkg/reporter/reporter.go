@@ -331,16 +331,14 @@ func (tr GitHubReporter) Publish(ctx context.Context, r report.Report) error {
 	r.Violations = util.NilSliceToEmpty(r.Violations)
 
 	for _, violation := range r.Violations { //nolint:gocritic
-		if _, err := fmt.Fprintf(tr.out,
+		_, _ = fmt.Fprintf(tr.out,
 			"::%s file=%s,line=%d,col=%d::%s\n",
 			violation.Level,
 			violation.Location.File,
 			violation.Location.Row,
 			violation.Location.Column,
 			fmt.Sprintf("%s. To learn more, see: %s", violation.Description, getDocumentationURL(violation)),
-		); err != nil {
-			return err
-		}
+		)
 	}
 
 	// https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary

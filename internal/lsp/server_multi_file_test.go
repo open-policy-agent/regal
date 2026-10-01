@@ -83,7 +83,7 @@ ignore:
 
 	// 3. Client sends textDocument/didChange notification with new contents
 	// for authz.rego no response to the call is expected
-	if err := connClient.Notify(ctx, "textDocument/didChange", types.DidChangeTextDocumentParams{
+	params := types.DidChangeTextDocumentParams{
 		TextDocument: types.VersionedTextDocumentIdentifier{
 			URI: uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "authz.rego")),
 		},
@@ -104,7 +104,8 @@ allow if input.user in admins.users
 `,
 			},
 		},
-	}, nil); err != nil {
+	}
+	if err := connClient.Notify(ctx, "textDocument/didChange", params, nil); err != nil {
 		t.Fatalf("failed to send didChange notification: %s", err)
 	}
 

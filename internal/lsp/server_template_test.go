@@ -233,10 +233,10 @@ func TestNewFileTemplating(t *testing.T) {
 	must.MkdirAll(t, filepath.Dir(newFilePath))
 	must.WriteFile(t, newFilePath, []byte(""))
 
+	params := types.CreateFilesParams{Files: []types.File{{URI: newFileURI}}}
+
 	// Client sends workspace/didCreateFiles notification
-	if err := connClient.Notify(ctx, "workspace/didCreateFiles", types.CreateFilesParams{
-		Files: []types.File{{URI: newFileURI}},
-	}, nil); err != nil {
+	if err := connClient.Notify(ctx, "workspace/didCreateFiles", params, nil); err != nil {
 		t.Fatalf("failed to send didChange notification: %s", err)
 	}
 
@@ -370,15 +370,12 @@ func TestTemplateWorkerSkipsDidOpenWhenTemplating(t *testing.T) {
 	// Simulate templating in progress
 	ls.templatingFiles.Set(newFileURI, true)
 
+	params := types.DidOpenTextDocumentParams{
+		TextDocument: types.TextDocumentItem{URI: newFileURI, LanguageID: "rego", Version: 1, Text: ""},
+	}
+
 	// Send didOpen while "templating" - should be skipped
-	if err := connClient.Notify(ctx, "textDocument/didOpen", types.DidOpenTextDocumentParams{
-		TextDocument: types.TextDocumentItem{
-			URI:        newFileURI,
-			LanguageID: "rego",
-			Version:    1,
-			Text:       "",
-		},
-	}, nil); err != nil {
+	if err := connClient.Notify(ctx, "textDocument/didOpen", params, nil); err != nil {
 		t.Fatalf("failed to send didOpen notification: %s", err)
 	}
 
@@ -410,14 +407,11 @@ func TestTemplateWorkerSkipsDidOpenWhenTemplating(t *testing.T) {
 
 	// Now didOpen should work normally
 	newContent := "package foo.bar\n\nimport rego.v1\n"
-	if err := connClient.Notify(ctx, "textDocument/didOpen", types.DidOpenTextDocumentParams{
-		TextDocument: types.TextDocumentItem{
-			URI:        newFileURI,
-			LanguageID: "rego",
-			Version:    2,
-			Text:       newContent,
-		},
-	}, nil); err != nil {
+	openParams := types.DidOpenTextDocumentParams{
+		TextDocument: types.TextDocumentItem{URI: newFileURI, LanguageID: "rego", Version: 2, Text: newContent},
+	}
+
+	if err := connClient.Notify(ctx, "textDocument/didOpen", openParams, nil); err != nil {
 		t.Fatalf("failed to send second didOpen notification: %s", err)
 	}
 

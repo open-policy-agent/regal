@@ -52,14 +52,15 @@ allow if {
 	clientHandler := createPublishDiagnosticsHandler(t, test.DebugLogger(t), receivedMessages)
 
 	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
-
-	// send textDocument/didOpen notification to trigger diagnostics
-	if err := connClient.Notify(ctx, "textDocument/didOpen", types.DidOpenTextDocumentParams{
+	params := types.DidOpenTextDocumentParams{
 		TextDocument: types.TextDocumentItem{
 			URI:  uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "example", "foo.rego")),
 			Text: files["example/foo.rego"],
 		},
-	}, nil); err != nil {
+	}
+
+	// send textDocument/didOpen notification to trigger diagnostics
+	if err := connClient.Notify(ctx, "textDocument/didOpen", params, nil); err != nil {
 		t.Fatalf("failed to send didOpen notification: %s", err)
 	}
 

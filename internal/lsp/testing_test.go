@@ -52,13 +52,11 @@ test_bar if {
 	}
 
 	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
+	params := types.DidOpenTextDocumentParams{
+		TextDocument: types.TextDocumentItem{URI: testRegoURI, Text: testRegoContents},
+	}
 
-	if err := connClient.Notify(ctx, "textDocument/didOpen", types.DidOpenTextDocumentParams{
-		TextDocument: types.TextDocumentItem{
-			URI:  testRegoURI,
-			Text: testRegoContents,
-		},
-	}); err != nil {
+	if err := connClient.Notify(ctx, "textDocument/didOpen", params); err != nil {
 		t.Fatalf("failed to send didOpen notification: %s", err)
 	}
 

@@ -36,13 +36,11 @@ test_with_output if {
 	clientHandler := test.HandlerFor(methodTdPublishDiagnostics, test.SendsToChannel(receivedMessages))
 
 	_, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
+	openParams := types.DidOpenTextDocumentParams{
+		TextDocument: types.TextDocumentItem{URI: testRegoURI, Text: testRegoContents},
+	}
 
-	if err := connClient.Notify(ctx, "textDocument/didOpen", types.DidOpenTextDocumentParams{
-		TextDocument: types.TextDocumentItem{
-			URI:  testRegoURI,
-			Text: testRegoContents,
-		},
-	}); err != nil {
+	if err := connClient.Notify(ctx, "textDocument/didOpen", openParams); err != nil {
 		t.Fatalf("failed to send didOpen notification: %s", err)
 	}
 

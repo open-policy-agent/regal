@@ -161,14 +161,9 @@ func opaTest(args []string) int {
 	}
 
 	regalBundle := rbundle.Loaded()
+	path := storage.MustParsePath("/regal")
 
-	if err := store.Write(
-		ctx,
-		txn,
-		storage.AddOp,
-		storage.MustParsePath("/regal"),
-		regalBundle.Data["regal"],
-	); err != nil {
+	if err := store.Write(ctx, txn, storage.AddOp, path, regalBundle.Data["regal"]); err != nil {
 		panic(err)
 	}
 

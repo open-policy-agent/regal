@@ -14,10 +14,6 @@ import (
 	outil "github.com/open-policy-agent/opa/v1/util"
 )
 
-type AnyUint interface {
-	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
-}
-
 // NilSliceToEmpty returns empty slice if provided slice is nil.
 func NilSliceToEmpty[T any](a []T) []T {
 	if a == nil {
@@ -74,16 +70,6 @@ func FindFirst[T any, S ~[]T](s S, pred func(T) bool) (v T, ok bool) {
 	}
 
 	return v, false
-}
-
-// MapKeys applies a function to each key of a map and returns a new slice with the results.
-func MapKeys[K comparable, V any, U any](m map[K]V, f func(K) U) []U {
-	keys := make([]U, 0, len(m))
-	for k := range m {
-		keys = append(keys, f(k))
-	}
-
-	return keys
 }
 
 // MapGetOr returns the value for key in m if found, else defaultVal.
