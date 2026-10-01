@@ -35,12 +35,10 @@ type (
 // NewResponse creates a new EvaluateResponse with the given body.
 func NewResponse(body godap.EvaluateResponseBody) Response {
 	return &godap.EvaluateResponse{
-		Response: godap.Response{
-			ProtocolMessage: godap.ProtocolMessage{Type: "response"},
-			Command:         "evaluate",
-			Success:         true,
-		},
-		Body: body,
+		Type:    "response",
+		Command: "evaluate",
+		Success: true,
+		Body:    body,
 	}
 }
 

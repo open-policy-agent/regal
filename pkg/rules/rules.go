@@ -53,19 +53,15 @@ func InputFromPaths(paths []string, prefix string, versionsMap map[string]ast.Re
 	}
 
 	wg := new(sync.WaitGroup)
-	wg.Add(numPaths)
-
 	errors := make([]error, numPaths)
 	parsed := make([]*regoFile, numPaths)
 
 	for i, path := range paths {
-		go func(i int, path string) {
+		wg.Go(func() {
 			opts := parse.ParserOptions()
 			opts.RegoVersion = RegoVersionFromMap(versionsMap, strings.TrimPrefix(path, prefix), ast.RegoUndefined)
 			parsed[i], errors[i] = regoWithOpts(path, opts)
-
-			wg.Done()
-		}(i, path)
+		})
 	}
 
 	wg.Wait()

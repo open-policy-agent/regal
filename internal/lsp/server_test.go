@@ -238,7 +238,7 @@ func createPublishDiagnosticsHandler(
 
 func createMessageChannels(files map[string]string) receivedMessagesMap {
 	receivedMessages := make(receivedMessagesMap, len(files))
-	for _, file := range util.MapKeys(files, filepath.Base) {
+	for _, file := range outil.MapKeys(files, filepath.Base) {
 		receivedMessages[file] = make(chan []string, 10)
 	}
 

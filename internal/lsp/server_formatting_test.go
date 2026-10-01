@@ -26,13 +26,11 @@ func TestFormatting(t *testing.T) {
 	ls, connClient, ctx := createAndInitServer(t, tempDir, clientHandler)
 
 	mainRegoURI := uri.FromPath(clients.IdentifierGoTest, filepath.Join(tempDir, "main", "main.rego"))
+	params := types.WorkspaceDidChangeWatchedFilesParams{
+		Changes: []types.FileEvent{{URI: mainRegoURI, Type: 1}},
+	}
 
-	if err := connClient.Notify(ctx, "workspace/didChangeWatchedFiles", types.WorkspaceDidChangeWatchedFilesParams{
-		Changes: []types.FileEvent{{
-			URI:  mainRegoURI,
-			Type: 1, // created
-		}},
-	}, nil); err != nil {
+	if err := connClient.Notify(ctx, "workspace/didChangeWatchedFiles", params, nil); err != nil {
 		t.Fatalf("failed to send didChange notification: %s", err)
 	}
 

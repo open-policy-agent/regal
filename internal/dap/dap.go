@@ -264,10 +264,7 @@ func NewStoppedBreakpointEvent(threadID debug.ThreadID, bp *godap.Breakpoint) *g
 
 func NewStoppedEvent(reason string, id debug.ThreadID, bps []int, description, text string) *godap.StoppedEvent {
 	return &godap.StoppedEvent{
-		Event: godap.Event{
-			ProtocolMessage: godap.ProtocolMessage{Type: "event"},
-			Event:           "stopped",
-		},
+		Event: godap.Event{Event: "stopped", ProtocolMessage: godap.ProtocolMessage{Type: "event"}},
 		Body: godap.StoppedEventBody{
 			Reason:            reason,
 			ThreadId:          int(id),
@@ -281,16 +278,9 @@ func NewStoppedEvent(reason string, id debug.ThreadID, bps []int, description, t
 }
 
 func createResponse(command string, success bool) godap.Response { //nolint:unparam
-	return godap.Response{
-		ProtocolMessage: godap.ProtocolMessage{Type: "response"},
-		Command:         command,
-		Success:         success,
-	}
+	return godap.Response{Type: "response", Command: command, Success: success}
 }
 
 func createEvent(event string) godap.Event {
-	return godap.Event{
-		ProtocolMessage: godap.ProtocolMessage{Type: "event"},
-		Event:           event,
-	}
+	return godap.Event{Type: "event", Event: event}
 }

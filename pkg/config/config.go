@@ -289,8 +289,7 @@ func FindBundleRootDirectories(path string) ([]string, error) {
 		foundBundleRoots = append(foundBundleRoots, roots...)
 	}
 
-	// This will traverse the tree **downwards** searching for .regal directories
-	if err := files.NewWalker(path).WithSkipFunc(filter.DefaultSkipDirectories).Walk(func(path string) error {
+	f := func(path string) error {
 		if filepath.Dir(path) == regalDirName {
 			// Opening files as part of walking is generally not a good idea...
 			// but I think we can assume the number of .regal directories in a project
@@ -309,7 +308,10 @@ func FindBundleRootDirectories(path string) ([]string, error) {
 		}
 
 		return nil
-	}); err != nil {
+	}
+
+	// This will traverse the tree **downwards** searching for .regal directories
+	if err := files.NewWalker(path).WithSkipFunc(filter.DefaultSkipDirectories).Walk(f); err != nil {
 		return nil, fmt.Errorf("failed to walk path: %w", err)
 	}
 
@@ -777,7 +779,7 @@ func ToMap(config Config) map[string]any {
 	return confMap
 }
 
-func (rule *Rule) MarshalJSON() ([]byte, error) {
+func (rule Rule) MarshalJSON() ([]byte, error) {
 	result, err := rule.MarshalYAML()
 	if err != nil {
 		return nil, fmt.Errorf("marshalling rule failed %w", err)
@@ -795,7 +797,7 @@ func (rule *Rule) UnmarshalJSON(data []byte) error {
 	return rule.mapToConfig(result)
 }
 
-func (rule *Rule) MarshalYAML() (any, error) {
+func (rule Rule) MarshalYAML() (any, error) {
 	result := map[string]any{keyLevel: rule.Level}
 
 	if rule.Ignore != nil && len(rule.Ignore.Files) != 0 {

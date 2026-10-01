@@ -44,14 +44,12 @@ rules:
 
 	// note using a blank tempDir here so we can simulate the single file mode
 	_, connClient, ctx := createAndInitServer(t, "", clientHandler)
+	params := types.DidOpenTextDocumentParams{
+		TextDocument: types.TextDocumentItem{URI: mainRegoURI, Text: mainRegoContents},
+	}
 
 	// client sends textDocument/didOpen notification with contents for main.rego
-	if err := connClient.Notify(ctx, "textDocument/didOpen", types.DidOpenTextDocumentParams{
-		TextDocument: types.TextDocumentItem{
-			URI:  mainRegoURI,
-			Text: mainRegoContents,
-		},
-	}, nil); err != nil {
+	if err := connClient.Notify(ctx, "textDocument/didOpen", params, nil); err != nil {
 		t.Fatalf("failed to send didOpen notification: %s", err)
 	}
 

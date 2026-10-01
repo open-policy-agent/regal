@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
@@ -33,7 +34,7 @@ func NewCacheFileProvider(c *cache.Cache, ci clients.Identifier) *CacheFileProvi
 }
 
 func (c *CacheFileProvider) List() ([]string, error) {
-	return util.MapKeys(c.Cache.GetAllFiles(), c.toPath), nil
+	return outil.MapKeys(c.Cache.GetAllFiles(), c.toPath), nil
 }
 
 func (c *CacheFileProvider) Get(file string) (string, error) {
