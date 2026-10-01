@@ -2,7 +2,6 @@ package lsp
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -54,6 +53,26 @@ type (
 		// because rego files are evaluated with relative paths (so errors match
 		// OPA CLI format) but print hook output consumers need full URIs.
 		FileNameBase string
+	}
+	EvalWorkspaceOptions struct {
+		// Query can be an arbitrary selection, so it is not guaranteed to be well-formed
+		// Rego.
+		Query string
+		// Package and Imports let package-relative names and aliases in Query resolve the
+		// way they do in the source file they were taken from.
+		Package  *ast.Package
+		Imports  []*ast.Import
+		Coverage *cover.Cover
+		RegoOpts []rego.EvalOption
+	}
+	regoArgsOptions struct {
+		Body    ast.Body
+		Package *ast.Package
+		Imports []*ast.Import
+
+		Bundles   map[string]*bundle.Bundle
+		PrintHook print.Hook
+		Config    *config.Config
 	}
 )
 
@@ -120,12 +139,17 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		inputOpts = append(inputOpts, rego.EvalParsedInput(inputValue))
 	}
 
+	workspaceOpts := EvalWorkspaceOptions{
+		Query:    args.Query,
+		Package:  module.Package,
+		Imports:  module.Imports,
+		RegoOpts: inputOpts,
+	}
 	if evalWithCoverage {
-		result, report, err = l.EvalInWorkspace(ctx, args.Query, cover.New(), inputOpts...)
-	} else {
-		result, _, err = l.EvalInWorkspace(ctx, args.Query, nil, inputOpts...)
+		workspaceOpts.Coverage = cover.New()
 	}
 
+	result, report, err = l.EvalInWorkspace(ctx, workspaceOpts)
 	if err != nil {
 		return fmt.Errorf("failed to evaluate workspace path: %w", err)
 	}
@@ -211,23 +235,37 @@ func (l *LanguageServer) getRuleHeadLocations(
 
 func (l *LanguageServer) EvalInWorkspace(
 	ctx context.Context,
-	query string,
-	cov *cover.Cover,
-	opts ...rego.EvalOption,
+	opts EvalWorkspaceOptions,
 ) (EvalResult, *cover.Report, error) {
-	resultQuery := `result := ` + query
+	body, err := ast.ParseBody(opts.Query)
+	if err != nil {
+		return emptyEvalResult, nil, fmt.Errorf("failed parsing query %q: %w", opts.Query, err)
+	}
+
+	// A whitespace-only or comment-only selection parses to an empty body.
+	if len(body) == 0 {
+		return EvalResult{IsUndefined: true, PrintOutput: map[string]map[int][]string{}}, nil, nil
+	}
+
 	hook := PrintHook{
 		Output:       make(map[string]map[int][]string),
 		FileNameBase: l.Workspace().URI(),
 	}
 
-	regoArgs := prepareRegoArgs(ast.MustParseBody(resultQuery), l.assembleBundles(), hook, l.getLoadedConfig())
+	regoArgs := prepareRegoArgs(regoArgsOptions{
+		Body:      body,
+		Package:   opts.Package,
+		Imports:   opts.Imports,
+		Bundles:   l.assembleBundles(),
+		PrintHook: hook,
+		Config:    l.getLoadedConfig(),
+	})
 
 	// TODO: Let's try to avoid preparing on each eval, but only when the contents
 	// of the workspace modules change, and before the user requests an eval.
 	pq, err := rego.New(regoArgs...).PrepareForEval(ctx)
 	if err != nil {
-		return emptyEvalResult, nil, fmt.Errorf("failed preparing query %s: %w", resultQuery, err)
+		return emptyEvalResult, nil, fmt.Errorf("failed preparing query %q: %w", opts.Query, err)
 	}
 
 	var (
@@ -235,42 +273,81 @@ func (l *LanguageServer) EvalInWorkspace(
 		ndCache   builtins.NDBCache
 	)
 
-	if cov != nil {
+	if opts.Coverage != nil {
 		ndCache = builtins.NDBCache{}
 		resultSet, err = pq.Eval(
-			ctx, append([]rego.EvalOption{rego.EvalQueryTracer(cov), rego.EvalNDBuiltinCache(ndCache)}, opts...)...,
+			ctx,
+			append(
+				[]rego.EvalOption{rego.EvalQueryTracer(opts.Coverage), rego.EvalNDBuiltinCache(ndCache)},
+				opts.RegoOpts...,
+			)...,
 		)
 	} else {
-		resultSet, err = pq.Eval(ctx, opts...)
+		resultSet, err = pq.Eval(ctx, opts.RegoOpts...)
 	}
 
 	if err != nil {
 		return emptyEvalResult, nil, fmt.Errorf("failed evaluating query: %w", err)
 	}
 
-	result := EvalResult{IsUndefined: true, PrintOutput: hook.Output}
+	result := EvalResult{IsUndefined: len(resultSet) == 0, PrintOutput: hook.Output}
 
 	if len(resultSet) > 0 {
-		res, ok := resultSet[0].Bindings["result"]
-		if !ok {
-			return emptyEvalResult, nil, errors.New("expected result in bindings, didn't get it")
-		}
-
-		result = EvalResult{Value: res, PrintOutput: hook.Output}
+		result.Value = finalExpressionValue(body, resultSet[0])
 	}
 
-	if cov == nil {
+	if opts.Coverage == nil {
 		return result, nil, nil
 	}
 
-	report, err := l.coverageReport(ctx, pq, cov, ndCache, opts)
+	report, err := l.coverageReport(ctx, pq, opts.Coverage, ndCache, opts.RegoOpts)
 	if err != nil {
-		l.log.Message("failed to evaluate coverage for %q, continuing without it: %v", query, err.Error())
+		l.log.Message("failed to evaluate coverage for %q, continuing without it: %v", opts.Query, err.Error())
 
 		return result, nil, nil
 	}
 
 	return result, report, nil
+}
+
+// finalExpressionValue returns the value of the final expression in a query body's result.
+//
+//   - data.pkg.rule -> the rule's value.
+//   - x := 1; y := x + 1; y -> 2, y's bound value.
+//   - x := 1; y := x + 1 -> 2, resolved from the := binding, not the raw true.
+//   - 1 = x -> 1, resolved from the right-hand side: "=" can bind either side.
+//   - [a, b] := [1, 2] -> true, the raw expression value: neither side is a plain
+//     variable, so there is no single bound value to return.
+func finalExpressionValue(body ast.Body, result rego.Result) any {
+	if len(result.Expressions) == 0 {
+		return nil
+	}
+
+	last := result.Expressions[len(result.Expressions)-1]
+
+	lastExpr := body[len(body)-1]
+	if !lastExpr.IsAssignment() && !lastExpr.IsEquality() {
+		return last.Value
+	}
+
+	// ":=" always binds the left operand; "=" (unification) can bind either side.
+	operands := []*ast.Term{lastExpr.Operand(0)}
+	if lastExpr.IsEquality() {
+		operands = append(operands, lastExpr.Operand(1))
+	}
+
+	for _, operand := range operands {
+		v, ok := operand.Value.(ast.Var)
+		if !ok {
+			continue
+		}
+
+		if bound, ok := result.Bindings[string(v)]; ok {
+			return bound
+		}
+	}
+
+	return last.Value
 }
 
 // coverageReport runs the two supplementary coverage passes (index-excluded, early-exit)
@@ -310,45 +387,47 @@ func (l *LanguageServer) coverageReport(
 }
 
 func (l *LanguageServer) debugArgsAssembler(query ast.Body) []func(*rego.Rego) {
-	return prepareRegoArgs(query, l.assembleBundles(), topdown.NewPrintHook(os.Stderr), l.getLoadedConfig())
+	return prepareRegoArgs(regoArgsOptions{
+		Body:      query,
+		Bundles:   l.assembleBundles(),
+		PrintHook: topdown.NewPrintHook(os.Stderr),
+		Config:    l.getLoadedConfig(),
+	})
 }
 
-func prepareRegoArgs(
-	query ast.Body,
-	bundles map[string]*bundle.Bundle,
-	printHook print.Hook,
-	cfg *config.Config,
-) []func(*rego.Rego) {
-	bundleArgs := make([]func(*rego.Rego), 0, len(bundles))
-	for key, b := range bundles {
-		bundleArgs = append(bundleArgs, rego.ParsedBundle(key, b))
+func prepareRegoArgs(opts regoArgsOptions) []func(*rego.Rego) {
+	args := []func(*rego.Rego){rego.ParsedQuery(opts.Body)}
+	if opts.Package != nil {
+		args = append(args, rego.ParsedPackage(opts.Package))
 	}
 
-	schemaResolvers := rquery.SchemaResolvers()
-	args := append(
-		make([]func(*rego.Rego), 0, 3+len(bundleArgs)+len(schemaResolvers)),
-		rego.ParsedQuery(query),
-		rego.EnablePrintStatements(true),
-		rego.PrintHook(printHook),
-	)
-	args = append(args, bundleArgs...)
-	args = append(args, schemaResolvers...)
+	if len(opts.Imports) > 0 {
+		args = append(args, rego.ParsedImports(opts.Imports))
+	}
+
+	args = append(args, rego.EnablePrintStatements(true), rego.PrintHook(opts.PrintHook))
+
+	for key, b := range opts.Bundles {
+		args = append(args, rego.ParsedBundle(key, b))
+	}
+
+	args = append(args, rquery.SchemaResolvers()...)
 
 	var caps *config.Capabilities
-	if cfg != nil && cfg.Capabilities != nil {
-		caps = cfg.Capabilities
+	if opts.Config != nil && opts.Config.Capabilities != nil {
+		caps = opts.Config.Capabilities
 	} else {
 		caps = config.CapabilitiesForThisVersion()
 	}
 
 	var evalConfig config.Config
-	if cfg != nil {
-		evalConfig = *cfg
+	if opts.Config != nil {
+		evalConfig = *opts.Config
 	}
 
 	userConfigMap := map[string]any{}
-	if cfg != nil {
-		userConfigMap = config.ToMap(*cfg)
+	if opts.Config != nil {
+		userConfigMap = config.ToMap(*opts.Config)
 	}
 
 	internalBundle := &bundle.Bundle{
