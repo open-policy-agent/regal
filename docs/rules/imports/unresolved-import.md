@@ -16,7 +16,7 @@ OPA does no compile time checks to ensure that references in imports _resolve_ t
 runtime are simply **undefined**. This is not a bug in OPA, but a necessary feature to allow for dynamic loading of data
 and policy at runtime. The fact that it's not a bug does however not mean that it can't be
 [a problem](https://github.com/open-policy-agent/opa/issues/491)! A simple typo, a refactoring, or a mistake, could
-easily lead to an an import being unresolved, and as such undefined at runtime.
+easily lead to an import being unresolved, and as such undefined at runtime.
 
 This rule takes a stricter approach to imports, and will have Regal try to resolve them by scanning all the policies it
 is provided for **packages**, **rules** and **functions** that may resolve the import. Note that Regal does not scan any
