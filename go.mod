@@ -17,9 +17,9 @@ require (
 	github.com/olekukonko/tablewriter v1.1.5
 	github.com/open-policy-agent/opa v1.21.0
 	github.com/owenrumney/go-sarif/v2 v2.3.3
-	github.com/pdevine/go-asciisprite v0.1.6
+	github.com/pdevine/go-asciisprite v0.2.2
 	github.com/pkg/profile v1.7.0
-	github.com/sourcegraph/jsonrpc2 v0.2.2
+	github.com/sourcegraph/jsonrpc2 v0.2.3
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	golang.org/x/sync v0.23.0
@@ -47,7 +47,6 @@ require (
 	github.com/felixge/fgprof v0.9.5 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/gdamore/encoding v1.0.1 // indirect
-	github.com/gdamore/tcell v1.4.0 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/google/flatbuffers v25.12.19+incompatible // indirect
 	github.com/google/pprof v0.0.0-20260202012954-cb029daf43ef // indirect
