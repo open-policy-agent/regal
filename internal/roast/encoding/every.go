@@ -1,41 +1,23 @@
 package encoding
 
 import (
-	"unsafe"
-
-	jsoniter "github.com/json-iterator/go"
+	"encoding/json/jsontext"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
-type everyCodec struct{}
-
-func (*everyCodec) IsEmpty(_ unsafe.Pointer) bool {
-	return false
-}
-
-func (*everyCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	every := *(*ast.Every)(ptr)
-
-	write.ObjectStart(stream, every.Location)
+func EveryMarshalToFn(enc *jsontext.Encoder, every *ast.Every) error {
+	write.ObjectStart(enc, every.Location)
 
 	if every.Key != nil {
-		stream.WriteObjectField("key")
-		write.Term(stream, every.Key)
-		stream.WriteMore()
+		write.FieldFn(enc, "key", every.Key, TermMarshalToFn)
 	}
 
-	stream.WriteObjectField("value")
-	write.Term(stream, every.Value)
-	stream.WriteMore()
+	write.FieldFn(enc, "value", every.Value, TermMarshalToFn)
+	write.FieldFn(enc, "domain", every.Domain, TermMarshalToFn)
+	write.FieldFn(enc, "body", every.Body, BodyMarshalToFn)
 
-	stream.WriteObjectField("domain")
-	write.Term(stream, every.Domain)
-	stream.WriteMore()
-
-	stream.WriteObjectField("body")
-	write.ValsArray(stream, every.Body)
-	stream.WriteObjectEnd()
+	return enc.WriteToken(jsontext.EndObject)
 }

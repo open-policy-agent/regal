@@ -35,7 +35,7 @@ func (f *Fmt) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]FixResult, error) {
 		return nil, errors.New("filename is required when formatting")
 	}
 
-	popts := parse.ParserOptions()
+	popts := parse.Options()
 	if fc.RegoVersion != ast.RegoUndefined {
 		popts.RegoVersion = fc.RegoVersion
 	}

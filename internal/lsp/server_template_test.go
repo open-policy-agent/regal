@@ -2,7 +2,7 @@ package lsp
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -436,14 +436,9 @@ func createTemplateTestClientHandler(
 	t.Helper()
 
 	return func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
-		bs, err := json.MarshalIndent(req.Params, "", "  ")
-		if err != nil {
-			t.Fatalf("failed to marshal params: %s", err)
-		}
-
 		receivedMessages <- message{
 			method: req.Method,
-			bytes:  bs,
+			bytes:  must.Marshal(t, req.Params, jsontext.WithIndent("  ")),
 		}
 
 		return struct{}{}, nil

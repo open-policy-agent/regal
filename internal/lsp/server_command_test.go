@@ -2,7 +2,7 @@ package lsp
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,9 +15,9 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
+	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
 func TestExecuteCommandOpaFmt(t *testing.T) {
@@ -78,7 +78,7 @@ allow if {
 
 				return func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
 					if req.Method == "workspace/applyEdit" {
-						receivedMessages <- must.Return(encoding.JSONUnmarshalTo[types.ApplyWorkspaceEditParams](*req.Params))(t)
+						receivedMessages <- must.UnmarshalTo[types.ApplyWorkspaceEditParams](t, *req.Params)
 
 						return map[string]any{"applied": true}, nil
 					}
@@ -95,7 +95,7 @@ allow if {
 
 			// Create command arguments with proper JSON marshaling for Windows backslash escapes
 			commandArgs := types.CommandArgs{Target: ws.URI("main.rego")}
-			argsJSON := must.Return(encoding.JSON().Marshal(commandArgs))(t)
+			argsJSON := must.Marshal(t, commandArgs)
 
 			executeParams := types.ExecuteCommandParams{
 				Command:   "regal.fix.opa-fmt",
@@ -148,12 +148,7 @@ func TestExecuteCommandExplorer(t *testing.T) {
 					t.Fatal("expected notification params to be non-nil")
 				}
 
-				var notificationData map[string]any
-				if err := encoding.JSON().Unmarshal(*req.Params, &notificationData); err != nil {
-					t.Fatalf("failed to unmarshal notification params: %s", err)
-				}
-
-				receivedNotifications <- notificationData
+				receivedNotifications <- must.UnmarshalTo[map[string]any](t, *req.Params)
 
 				return nil, nil
 			}
@@ -222,32 +217,37 @@ allow if {
 func TestExecuteCommandEvalCreatesInputJSON(t *testing.T) {
 	t.Parallel()
 
+	type ShowMessageRequest struct {
+		Message string `json:"message"`
+	}
+
 	inputJSONCreated := make(chan struct{}, 1)
 	showDocumentReceived := make(chan struct{}, 1)
 
 	clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
 		switch req.Method {
 		case "window/showMessageRequest":
-			message := encoding.JSON().Get(*req.Params, "message").ToString()
+			message := must.UnmarshalTo[ShowMessageRequest](t, *req.Params).Message
+
 			if strings.Contains(message, "No input.json/yaml file was found.") {
 				t.Log("create input.json prompt received, replied to")
 
-				return new(json.RawMessage(`{"title":"Yes"}`)), nil
+				return new(jsontext.Value(`{"title":"Yes"}`)), nil
 			} else if strings.Contains(message, "created successfully") {
 				t.Log("input.json created successfully")
 
 				inputJSONCreated <- struct{}{}
 
 				// The success notification and prompt to open the file
-				return new(json.RawMessage(`{"title":"Open"}`)), nil
+				return new(jsontext.Value(`{"title":"Open"}`)), nil
 			}
 
 		case "window/showDocument":
-			showDocumentReceived <- struct{}{}
-
 			t.Log("window/showDocument received")
 
-			return new(json.RawMessage(`{"success":true}`)), nil
+			showDocumentReceived <- struct{}{}
+
+			return new(jsontext.Value(`{"success":true}`)), nil
 		}
 
 		return struct{}{}, nil
@@ -274,7 +274,7 @@ allow if {
 	defer timeout.Stop()
 
 	commandArgs := types.CommandArgs{Target: mainRegoURI, Query: "data.test.allow", Row: 3}
-	argsJSON := must.Return(encoding.JSON().Marshal(commandArgs))(t)
+	argsJSON := must.Marshal(t, commandArgs)
 
 	var executeResponse any
 
@@ -289,7 +289,7 @@ allow if {
 		for {
 			if _, err := os.Stat(filepath.Join(tempDir, "input.json")); err == nil {
 				contents := must.Return(os.ReadFile(filepath.Join(tempDir, "input.json")))(t)
-				must.Equal(t, `{
+				assert.JSONEqual(t, `{
   "foo": {
     "bar": "changeme",
     "wee": {
@@ -371,7 +371,7 @@ allow if {
 			clientHandler := func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
 				switch req.Method {
 				case "window/showDocument":
-					return new(json.RawMessage(`{"success":true}`)), nil
+					return new(jsontext.Value(`{"success":true}`)), nil
 				default:
 					return struct{}{}, nil
 				}

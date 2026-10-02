@@ -1,7 +1,7 @@
 package rast_test
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -30,11 +30,11 @@ func TestStructToValueWithRawJSONMessage(t *testing.T) {
 	t.Parallel()
 
 	got := rast.StructToValue(struct {
-		ID  string           `json:"id"`
-		Raw *json.RawMessage `json:"raw"`
+		ID  string          `json:"id"`
+		Raw *jsontext.Value `json:"raw"`
 	}{
 		ID:  "test",
-		Raw: new(json.RawMessage(`{"key": "value"}`)),
+		Raw: new(jsontext.Value(`{"key": "value"}`)),
 	})
 
 	exp := ast.NewObject(

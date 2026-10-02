@@ -2,7 +2,7 @@ package testgen
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"os"
@@ -128,16 +128,14 @@ func analyzeDependencies(ctx context.Context, opts TestCreationOptions) ([]strin
 		if ref[0].Equal(ast.InputRootDocument) {
 			path := buildRefPath("input", ref[1:])
 			if value := lookupValueFromData(inputData, ref[1:]); value != nil {
-				clause := fmt.Sprintf("%s as %s", path, formatValue(value))
-				withClauses = append(withClauses, clause)
+				withClauses = append(withClauses, path+" as "+formatValue(value))
 			}
 		}
 
 		if ref[0].Equal(ast.DefaultRootDocument) {
 			path := buildRefPath("data", ref[1:])
 			if value := lookupValueFromData(dataData, ref[1:]); value != nil {
-				clause := fmt.Sprintf("%s as %s", path, formatValue(value))
-				withClauses = append(withClauses, clause)
+				withClauses = append(withClauses, path+" as "+formatValue(value))
 			}
 		}
 	}
@@ -146,9 +144,7 @@ func analyzeDependencies(ctx context.Context, opts TestCreationOptions) ([]strin
 }
 
 func buildRefPath(root string, terms ast.Ref) string {
-	parts := make([]string, 0, 1+len(terms))
-
-	parts = append(parts, root)
+	parts := append(make([]string, 0, 1+len(terms)), root)
 
 	for _, term := range terms {
 		key := strings.Trim(term.Value.String(), `"`)

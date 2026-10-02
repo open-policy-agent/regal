@@ -3,7 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"io"
@@ -319,36 +319,30 @@ func formatError(format string, err error) error {
 	// currently, JSON and SARIF will get the same generic JSON error format
 	switch format {
 	case formatJSON, formatSarif:
-		bs, err := json.MarshalIndent(map[string]any{
-			"errors": []string{err.Error()},
-		}, "", "  ")
+		bs, err := jsontext.AppendQuote([]byte(`{"errors": [`), err.Error())
 		if err != nil {
 			return fmt.Errorf("failed to format errors for output: %w", err)
 		}
 
-		return fmt.Errorf("%s", string(bs))
+		val := jsontext.Value(append(bs, `]}`...))
+		_ = val.Format(jsontext.WithIndent("  "))
+
+		return errors.New(val.String())
 	case formatJunit:
-		testSuites := junit.Testsuites{
-			Name: "regal",
-		}
-		testsuite := junit.Testsuite{
-			Name: "lint",
-		}
+		testSuites := junit.Testsuites{Name: "regal"}
+		testsuite := junit.Testsuite{Name: "lint"}
 		testsuite.AddTestcase(junit.Testcase{
-			Name: "Command execution failed",
-			Error: &junit.Result{
-				Message: err.Error(),
-			},
+			Name:  "Command execution failed",
+			Error: &junit.Result{Message: err.Error()},
 		})
 		testSuites.AddSuite(testsuite)
 
 		buf := &bytes.Buffer{}
-
 		if err := testSuites.WriteXML(buf); err != nil {
 			return fmt.Errorf("failed to format errors for output: %w", err)
 		}
 
-		return fmt.Errorf("%s", buf.String())
+		return errors.New(buf.String())
 	}
 
 	return err

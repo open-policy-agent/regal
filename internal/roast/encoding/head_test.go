@@ -1,9 +1,8 @@
 package encoding
 
 import (
+	"encoding/json/jsontext"
 	"testing"
-
-	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
@@ -13,7 +12,7 @@ import (
 func TestRuleHeadEncoding(t *testing.T) {
 	t.Parallel()
 
-	head := ast.Head{
+	head := &ast.Head{
 		Name: "omitted",
 		Reference: ast.Ref{
 			{Value: ast.Var("foo"), Location: &ast.Location{Row: 1, Col: 1, Text: []byte("foo")}},
@@ -23,7 +22,7 @@ func TestRuleHeadEncoding(t *testing.T) {
 		Assign:   true,
 		Location: &ast.Location{Row: 1, Col: 1, Text: []byte("foo.bar := true")},
 	}
-	bs := must.Return(jsoniter.ConfigFastest.MarshalIndent(head, "", "  "))(t)
+	bs := must.Marshal(t, head, Options, jsontext.WithIndent("  "))
 
 	expect := `{
   "location": "1:1:1:16",
@@ -53,7 +52,7 @@ func TestRuleHeadEncodingStripsLocationOfGeneratedValue(t *testing.T) {
 	t.Parallel()
 
 	head := ast.MustParseRule(`p[x] if { x := 1 }`).Head
-	bs := must.Return(jsoniter.ConfigFastest.MarshalIndent(head, "", "  "))(t)
+	bs := must.Marshal(t, head, Options, jsontext.WithIndent("  "))
 
 	expected := `{
   "location": "1:1:1:5",

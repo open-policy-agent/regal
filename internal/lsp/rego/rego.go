@@ -1,9 +1,8 @@
 package rego
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 
@@ -104,24 +103,28 @@ func CachedQueryEval[T any](ctx context.Context, pq *query.Prepared, input ast.V
 	}
 
 	if val, ok := result.Expressions[0].Value.(ast.Value); ok {
-		buf := new(bytes.Buffer)
-		if err := encoding.OfValue().Encode(buf, val); err != nil {
+		bs, err := json.Marshal(val, encoding.NoASTOptions)
+		if err != nil {
 			return fmt.Errorf("failed to marshal value: %w", err)
 		}
 
-		return util.WrapErr(json.Unmarshal(buf.Bytes(), toValue), "failed to unmarshal value")
+		return util.WrapErr(json.Unmarshal(bs, toValue), "failed to unmarshal value")
 	}
 
 	return util.WrapErr(encoding.JSONRoundTrip(result.Expressions[0].Value, toValue), "failed to unmarshal value")
 }
 
-func CachedQueryEvalUndecoded(ctx context.Context, pq *query.Prepared, input ast.Value) (any, error) {
+func CachedQueryEvalUndecoded[T any](ctx context.Context, pq *query.Prepared, input ast.Value) (res T, err error) {
 	result, err := toValidResult(pq.EvalQuery().Eval(ctx, rego.EvalParsedInput(input)))
 	if err != nil {
-		return nil, err
+		return res, err
 	}
 
-	return result.Expressions[0].Value, nil
+	if res, ok := result.Expressions[0].Value.(T); ok {
+		return res, nil
+	}
+
+	return res, fmt.Errorf("unexpected query result format: %v", result.Expressions[0].Value)
 }
 
 func policyToValue[T any](ctx context.Context, pq *query.Prepared, policy policy, toValue *T) error {

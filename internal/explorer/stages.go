@@ -40,7 +40,7 @@ func CompilerStages(path, rego string, useStrict, useAnno, usePrint bool) []Comp
 
 	stages := ast.AllStages()
 	result := append(make([]CompileResult, 0, len(stages)+1), CompileResult{Stage: "ParseModule"})
-	opts := parse.ParserOptions()
+	opts := parse.Options()
 	opts.ProcessAnnotation = useAnno
 
 	mod, err := ast.ParseModuleWithOpts(path, rego, opts)
@@ -83,7 +83,7 @@ func getOne(mods map[string]*ast.Module) *ast.Module {
 }
 
 func Plan(ctx context.Context, path, rego string, usePrint bool) (string, error) {
-	mod, err := ast.ParseModuleWithOpts(path, rego, parse.ParserOptions())
+	mod, err := ast.ParseModuleWithOpts(path, rego, parse.Options())
 	if err != nil {
 		return "", err
 	}

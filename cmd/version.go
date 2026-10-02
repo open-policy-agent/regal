@@ -3,6 +3,8 @@ package cmd
 import (
 	"cmp"
 	"context"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"log"
 	"os"
@@ -12,7 +14,6 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/update"
 	"github.com/open-policy-agent/regal/pkg/config"
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/version"
 )
 
@@ -42,10 +43,7 @@ func init() {
 
 			switch params.format {
 			case formatJSON:
-				e := encoding.JSON().NewEncoder(os.Stdout)
-				e.SetIndent("", "  ")
-
-				if err := e.Encode(vi); err != nil {
+				if err := json.MarshalWrite(os.Stdout, vi, jsontext.WithIndent("  ")); err != nil {
 					log.SetOutput(os.Stderr)
 					log.Println(err)
 					os.Exit(1)

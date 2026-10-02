@@ -2,10 +2,13 @@ package lsp
 
 import (
 	"context"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -16,6 +19,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
+	outil "github.com/open-policy-agent/opa/v1/util"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
 	rio "github.com/open-policy-agent/regal/internal/io"
@@ -38,12 +42,16 @@ var (
 		Roots:    &[]string{"workspace"}, // no data in this bundle so no roots are used, however, roots must be set
 		Metadata: map[string]any{"name": "workspace"},
 	}
+	internalBundleManifest = bundle.Manifest{
+		Roots:    &[]string{"internal"},
+		Metadata: map[string]any{"name": "internal"},
+	}
 	regalEvalUseAsInputComment = regexp.MustCompile(`^\s*regal eval:\s*use-as-input`)
 )
 
 type (
 	EvalResult struct {
-		Value       any                         `json:"value"`
+		Value       ast.Value                   `json:"value"`
 		PrintOutput map[string]map[int][]string `json:"printOutput"`
 		IsUndefined bool                        `json:"isUndefined"`
 	}
@@ -65,11 +73,18 @@ type (
 		Coverage *cover.Cover
 		RegoOpts []rego.EvalOption
 	}
+	EvalResponseParams struct {
+		Result            EvalResult      `json:"result"`
+		Line              int             `json:"line"`
+		Target            string          `json:"target"`
+		Package           string          `json:"package,omitzero"`              // when target is 'package'
+		RuleHeadLocations []*ast.Location `json:"rule_head_locations,omitempty"` // when target is 'rule'
+		Coverage          *cover.Report   `json:"coverage,omitempty"`
+	}
 	regoArgsOptions struct {
-		Body    ast.Body
-		Package *ast.Package
-		Imports []*ast.Import
-
+		Body      ast.Body
+		Package   *ast.Package
+		Imports   []*ast.Import
 		Bundles   map[string]*bundle.Bundle
 		PrintHook print.Hook
 		Config    *config.Config
@@ -92,13 +107,15 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 	)
 
 	packagePath := module.Package.Path.String()
+	workspace := l.Workspace()
+	client := workspace.Client()
 
 	// When the first comment in the file is `regal eval: use-as-input`, the AST of that module is
 	// used as the input rather than the contents of input.json/yaml. This is a development feature for
 	// working on rules (built-in or custom), allowing querying the AST of the module directly.
 
 	if len(module.Comments) > 0 && regalEvalUseAsInputComment.Match(module.Comments[0].Text) {
-		inputValue, err = transform.ToAST(l.Workspace().RelativePath(args.Target), contents, module, false)
+		inputValue, err = transform.ToAST(workspace.RelativePath(args.Target), contents, module, false)
 		if err != nil {
 			return fmt.Errorf("failed to prepare module: %w", err)
 		}
@@ -111,12 +128,8 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 			ruleName := strings.TrimPrefix(args.Query, packagePath+".")
 			created, err := l.handleInputSkeletonPrompt(ctx, args.Target, ruleName, args.Row)
 			// Bubbling up an error here if input.json creation fails for any reason.
-			if err != nil {
+			if err != nil || created {
 				return err
-			}
-
-			if created {
-				return nil
 			}
 		} else if inputPath != "" {
 			inputValue = l.input.Get(ctx, inputPath)
@@ -130,23 +143,17 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 
 	// This eval sends coverage only if the server and the client both support it, and inline eval too.
 	evalWithCoverage := l.featureFlags.InlineEvaluationCoverageProvider &&
-		l.Workspace().Client().InitOptions.EnableEvalInlineCoverage &&
+		client.InitOptions.EnableEvalInlineCoverage &&
 		l.featureFlags.InlineEvaluationProvider &&
-		l.Workspace().Client().InitOptions.EvalCodelensDisplayInline
+		client.InitOptions.EvalCodelensDisplayInline
 
-	var inputOpts []rego.EvalOption
-	if inputValue != nil {
-		inputOpts = append(inputOpts, rego.EvalParsedInput(inputValue))
-	}
-
-	workspaceOpts := EvalWorkspaceOptions{
-		Query:    args.Query,
-		Package:  module.Package,
-		Imports:  module.Imports,
-		RegoOpts: inputOpts,
-	}
+	workspaceOpts := EvalWorkspaceOptions{Query: args.Query, Package: module.Package, Imports: module.Imports}
 	if evalWithCoverage {
 		workspaceOpts.Coverage = cover.New()
+	}
+
+	if inputValue != nil {
+		workspaceOpts.RegoOpts = append(workspaceOpts.RegoOpts, rego.EvalParsedInput(inputValue))
 	}
 
 	result, report, err = l.EvalInWorkspace(ctx, workspaceOpts)
@@ -164,43 +171,41 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		target = strings.TrimPrefix(args.Query, packagePath+".")
 	}
 
-	if l.featureFlags.InlineEvaluationProvider && l.Workspace().Client().InitOptions.EvalCodelensDisplayInline {
-		responseParams := map[string]any{
-			"result": result,
-			"line":   args.Row,
-			"target": target,
-			// only used when the target is 'package'
-			"package": strings.TrimPrefix(packagePath, "data."),
-			// only used when the target is a rule
-			"rule_head_locations": ruleHeadLocations,
+	if l.featureFlags.InlineEvaluationProvider && client.InitOptions.EvalCodelensDisplayInline {
+		responseParams := &EvalResponseParams{
+			Result:            result,
+			Line:              args.Row,
+			Target:            target,
+			Package:           strings.TrimPrefix(packagePath, "data."),
+			RuleHeadLocations: ruleHeadLocations,
+			Coverage:          report,
 		}
 
-		if report != nil {
-			responseParams["coverage"] = report
+		bs, err := json.Marshal(responseParams, encoding.NoASTOptions, jsontext.WithIndent("  "))
+		if err != nil {
+			return fmt.Errorf("failed to marshal eval response params: %w", err)
 		}
-
-		responseResult := map[string]any{}
 
 		// Use a timeout context for RPC to ensure it completes during graceful shutdown
 		rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
 
 		//nolint:contextcheck
-		if err = l.conn.Call(rpcCtx, "regal/showEvalResult", responseParams, &responseResult); err != nil {
+		if err = l.conn.Call(rpcCtx, "regal/showEvalResult", new(jsontext.Value(bs)), nil); err != nil {
 			l.log.Message("regal/showEvalResult failed: %v", err)
 		}
 
 		rpcCancel()
 	} else {
-		output := l.Workspace().Path("output.json")
+		output := workspace.Path("output.json")
 
 		var f *os.File
 		if f, err = os.OpenFile(output, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755); err == nil {
 			value := result.Value
 			if result.IsUndefined {
-				value = emptyStringAnyMap // undefined displays as an empty object
+				value = ast.InternedEmptyObjectValue // undefined displays as an empty object
 			}
 
-			err = encoding.NewIndentEncoder(f, "", "  ").Encode(value)
+			err = json.MarshalWrite(f, value, encoding.NoASTOptions, jsontext.WithIndent("  "))
 
 			rio.CloseIgnore(f)
 		}
@@ -273,19 +278,18 @@ func (l *LanguageServer) EvalInWorkspace(
 		ndCache   builtins.NDBCache
 	)
 
-	if opts.Coverage != nil {
-		ndCache = builtins.NDBCache{}
-		resultSet, err = pq.Eval(
-			ctx,
-			append(
-				[]rego.EvalOption{rego.EvalQueryTracer(opts.Coverage), rego.EvalNDBuiltinCache(ndCache)},
-				opts.RegoOpts...,
-			)...,
-		)
-	} else {
-		resultSet, err = pq.Eval(ctx, opts.RegoOpts...)
+	genJSON := func(term *ast.Term, _ *rego.EvalContext) (any, error) {
+		return term.Value, nil
 	}
 
+	evalOpts := append(slices.Clone(opts.RegoOpts), rego.EvalGenerateJSON(genJSON))
+
+	if opts.Coverage != nil {
+		ndCache = builtins.NDBCache{}
+		evalOpts = append(evalOpts, rego.EvalQueryTracer(opts.Coverage), rego.EvalNDBuiltinCache(ndCache))
+	}
+
+	resultSet, err = pq.Eval(ctx, evalOpts...)
 	if err != nil {
 		return emptyEvalResult, nil, fmt.Errorf("failed evaluating query: %w", err)
 	}
@@ -318,7 +322,7 @@ func (l *LanguageServer) EvalInWorkspace(
 //   - 1 = x -> 1, resolved from the right-hand side: "=" can bind either side.
 //   - [a, b] := [1, 2] -> true, the raw expression value: neither side is a plain
 //     variable, so there is no single bound value to return.
-func finalExpressionValue(body ast.Body, result rego.Result) any {
+func finalExpressionValue(body ast.Body, result rego.Result) ast.Value {
 	if len(result.Expressions) == 0 {
 		return nil
 	}
@@ -327,7 +331,7 @@ func finalExpressionValue(body ast.Body, result rego.Result) any {
 
 	lastExpr := body[len(body)-1]
 	if !lastExpr.IsAssignment() && !lastExpr.IsEquality() {
-		return last.Value
+		return expressionValueToAST(last.Value)
 	}
 
 	// ":=" always binds the left operand; "=" (unification) can bind either side.
@@ -343,11 +347,23 @@ func finalExpressionValue(body ast.Body, result rego.Result) any {
 		}
 
 		if bound, ok := result.Bindings[string(v)]; ok {
-			return bound
+			return expressionValueToAST(bound)
 		}
 	}
 
-	return last.Value
+	return expressionValueToAST(last.Value)
+}
+
+func expressionValueToAST(expVal any) ast.Value {
+	if astVal, ok := expVal.(ast.Value); ok {
+		return astVal
+	}
+
+	if val, err := ast.InterfaceToValue(expVal); err == nil {
+		return val
+	}
+
+	return nil
 }
 
 // coverageReport runs the two supplementary coverage passes (index-excluded, early-exit)
@@ -396,7 +412,11 @@ func (l *LanguageServer) debugArgsAssembler(query ast.Body) []func(*rego.Rego) {
 }
 
 func prepareRegoArgs(opts regoArgsOptions) []func(*rego.Rego) {
-	args := []func(*rego.Rego){rego.ParsedQuery(opts.Body)}
+	args := []func(*rego.Rego){
+		rego.ParsedQuery(opts.Body),
+		rego.EnablePrintStatements(true),
+		rego.PrintHook(opts.PrintHook),
+	}
 	if opts.Package != nil {
 		args = append(args, rego.ParsedPackage(opts.Package))
 	}
@@ -405,41 +425,21 @@ func prepareRegoArgs(opts regoArgsOptions) []func(*rego.Rego) {
 		args = append(args, rego.ParsedImports(opts.Imports))
 	}
 
-	args = append(args, rego.EnablePrintStatements(true), rego.PrintHook(opts.PrintHook))
-
 	for key, b := range opts.Bundles {
 		args = append(args, rego.ParsedBundle(key, b))
 	}
 
 	args = append(args, rquery.SchemaResolvers()...)
 
-	var caps *config.Capabilities
-	if opts.Config != nil && opts.Config.Capabilities != nil {
-		caps = opts.Config.Capabilities
-	} else {
-		caps = config.CapabilitiesForThisVersion()
-	}
-
-	var evalConfig config.Config
-	if opts.Config != nil {
-		evalConfig = *opts.Config
-	}
-
-	userConfigMap := map[string]any{}
-	if opts.Config != nil {
-		userConfigMap = config.ToMap(*opts.Config)
-	}
+	evalConfig := config.ToMap(opts.Config)
 
 	internalBundle := &bundle.Bundle{
-		Manifest: bundle.Manifest{
-			Roots:    &[]string{"internal"},
-			Metadata: map[string]any{"name": "internal"},
-		},
+		Manifest: internalBundleManifest,
 		Data: map[string]any{
 			"internal": map[string]any{
-				"combined_config": config.ToMap(evalConfig),
-				"user_config":     userConfigMap,
-				"capabilities":    caps,
+				"combined_config": evalConfig,
+				"user_config":     evalConfig, // TODO: Do we need this?
+				"capabilities":    opts.capabilities(),
 			},
 		},
 	}
@@ -467,8 +467,7 @@ func (l *LanguageServer) assembleBundles() map[string]*bundle.Bundle {
 	allBundles := make(map[string]*bundle.Bundle, len(dataBundles)+2)
 	for k := range dataBundles {
 		if dataBundles[k].Manifest.Roots != nil {
-			b := dataBundles[k]
-			allBundles[k] = &b
+			allBundles[k] = new(dataBundles[k])
 		} else {
 			l.log.Message("bundle %s has no roots and will be skipped", k)
 		}
@@ -545,4 +544,12 @@ func inputSkeletonFromRule(rule *ast.Rule, compiler *ast.Compiler) map[string]an
 	}
 
 	return root
+}
+
+func (o regoArgsOptions) capabilities() (caps *config.Capabilities) {
+	if o.Config != nil && o.Config.Capabilities != nil {
+		caps = o.Config.Capabilities
+	}
+
+	return outil.Or(caps, config.CapabilitiesForThisVersion)
 }

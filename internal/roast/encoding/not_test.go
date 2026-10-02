@@ -3,11 +3,9 @@ package encoding
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	jsoniter "github.com/json-iterator/go"
-
 	"github.com/open-policy-agent/opa/v1/ast"
 
+	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
@@ -23,7 +21,7 @@ func TestNotImport(t *testing.T) {
 			note: "implicit body",
 			expr: ast.MustParseModule(`package test
 				import future.keywords.not
-				
+
 				p if {
 					not input.x + 2 == 42
 				}
@@ -265,12 +263,7 @@ func TestNotImport(t *testing.T) {
 		t.Run(tc.note, func(t *testing.T) {
 			t.Parallel()
 
-			bs := must.Return(jsoniter.ConfigFastest.MarshalIndent(tc.expr, "", "  "))(t)
-			act := string(bs)
-
-			if diff := cmp.Diff(tc.exp, act); diff != "" {
-				t.Errorf("unexpected result (-want +got):\n%s", diff)
-			}
+			assert.JSONEqual(t, tc.exp, must.Marshal(t, tc.expr, Options))
 		})
 	}
 }

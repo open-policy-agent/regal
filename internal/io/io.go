@@ -20,7 +20,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
 	"github.com/open-policy-agent/regal/internal/io/paths"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 
 	_ "github.com/open-policy-agent/regal/pkg/builtins/regal"
 )
@@ -99,15 +98,6 @@ func MustLoadRegalBundleFS(fs fs.FS) *bundle.Bundle {
 	}
 
 	return regalBundle
-}
-
-// ToMap convert any value to map[string]any, or panics on failure.
-func ToMap(a any) map[string]any {
-	r := make(map[string]any)
-
-	encoding.MustJSONRoundTrip(a, &r)
-
-	return r
 }
 
 // CloseIgnore closes handle ignoring errors, mainly for deferred cleanup.

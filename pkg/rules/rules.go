@@ -58,7 +58,7 @@ func InputFromPaths(paths []string, prefix string, versionsMap map[string]ast.Re
 
 	for i, path := range paths {
 		wg.Go(func() {
-			opts := parse.ParserOptions()
+			opts := parse.Options()
 			opts.RegoVersion = RegoVersionFromMap(versionsMap, strings.TrimPrefix(path, prefix), ast.RegoUndefined)
 			parsed[i], errors[i] = regoWithOpts(path, opts)
 		})
@@ -87,7 +87,7 @@ func InputFromPaths(paths []string, prefix string, versionsMap map[string]ast.Re
 func InputFromMap(files map[string]string, versionsMap map[string]ast.RegoVersion) (Input, error) {
 	content := make(map[string]string, len(files))
 	modules := make(map[string]*ast.Module, len(files))
-	prsopts := parse.ParserOptions()
+	prsopts := parse.Options()
 
 	for path, fileContent := range files {
 		prsopts.RegoVersion = RegoVersionFromMap(versionsMap, path, ast.RegoUndefined)
@@ -163,7 +163,7 @@ func inputFromStdin() (Input, error) {
 
 	policy := util.ByteSliceToString(bs)
 
-	module, err := parse.ModuleUnknownVersionWithOpts("stdin", policy, parse.ParserOptions())
+	module, err := parse.ModuleUnknownVersionWithOpts("stdin", policy, parse.Options())
 	if err != nil {
 		return Input{}, fmt.Errorf("failed to parse module from stdin: %w", err)
 	}
@@ -177,7 +177,7 @@ func inputFromStdin() (Input, error) {
 
 // InputFromText creates a new Input from raw Rego text.
 func InputFromText(fileName, text string) (Input, error) {
-	return rutil.Wrap(InputFromTextWithOptions(fileName, text, parse.ParserOptions()))("can't create input from text")
+	return rutil.Wrap(InputFromTextWithOptions(fileName, text, parse.Options()))("can't create input from text")
 }
 
 // InputFromTextWithOptions creates a new Input from raw Rego text while respecting the provided options.

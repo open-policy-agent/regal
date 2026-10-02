@@ -3,6 +3,8 @@ package update
 
 import (
 	"context"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +16,6 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/ogre"
 	"github.com/open-policy-agent/regal/internal/semver"
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 
 	_ "embed"
@@ -107,7 +108,7 @@ func CheckAndWarn(ctx context.Context, opts Options, w io.Writer) {
 	// update cache if it was stale and we made a remote fetch
 	if cacheIsStale && opts.StateDir != "" && result.LatestVersion != "" {
 		content := latestVersionFileContents{LatestVersion: result.LatestVersion, CheckedAt: opts.CurrentTime}
-		if bs, err := encoding.JSON().MarshalIndent(content, "", "  "); err == nil {
+		if bs, err := json.Marshal(content, jsontext.WithIndent("  ")); err == nil {
 			os.WriteFile(opts.StateDir+"/latest_version.json", bs, 0o600)
 		}
 	}
@@ -133,7 +134,7 @@ func getLatestCachedVersionAndCheckStale(opts Options) (string, bool) {
 	defer file.Close()
 
 	var preExistingState latestVersionFileContents
-	if err := encoding.JSON().NewDecoder(file).Decode(&preExistingState); err != nil {
+	if err := json.UnmarshalRead(file, &preExistingState); err != nil {
 		return "", true // can't decode means stale
 	}
 

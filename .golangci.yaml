@@ -51,6 +51,16 @@ linters:
         - (*gopkg.in/yaml.v3.Encoder).Encode
         - (io.Writer).Write
         - (*os.File).WriteString
+        - (*encoding/json/jsontext.Encoder).WriteToken
+        - (*encoding/json/jsontext.Encoder).WriteValue
+        - github.com/open-policy-agent/regal/internal/roast/encoding/write.ArrayField
+        - github.com/open-policy-agent/regal/internal/roast/encoding/write.ArrayFieldFn
+        - github.com/open-policy-agent/regal/internal/roast/encoding/write.ArrayToFn
+        - github.com/open-policy-agent/regal/internal/roast/encoding/write.FieldFn
+        - github.com/open-policy-agent/regal/internal/roast/encoding/write.ObjectStart
+        - github.com/open-policy-agent/regal/internal/roast/encoding/write.WhenTrue
+        - github.com/open-policy-agent/regal/internal/roast/encoding/write.StringField
+        - github.com/open-policy-agent/regal/internal/roast/encoding/write.Tokens
     gocritic:
       enable-all: true
       disabled-checks:

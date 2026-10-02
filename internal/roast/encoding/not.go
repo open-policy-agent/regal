@@ -1,31 +1,20 @@
 package encoding
 
 import (
-	"unsafe"
-
-	jsoniter "github.com/json-iterator/go"
+	"encoding/json/jsontext"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
-type notCodec struct{}
+func NotMarshalToFn(enc *jsontext.Encoder, not *ast.Not) error {
+	write.ObjectStart(enc, not.Location)
+	write.StringField(enc, "type", "not")
+	write.WhenTrue(enc, not.ExplicitBody, "explicit_body")
 
-func (*notCodec) IsEmpty(_ unsafe.Pointer) bool { return false }
+	enc.WriteToken(jsontext.String("body"))
+	write.ArrayToFn(enc, not.Body, ExprMarshalToFn)
 
-func (*notCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	not := *(*ast.Not)(ptr)
-
-	write.ObjectStart(stream, not.Location)
-
-	write.String(stream, "type", "not")
-
-	if not.ExplicitBody {
-		write.Bool(stream, "explicit_body", not.ExplicitBody)
-	}
-
-	write.Val(stream, "body", not.Body)
-
-	write.ObjectEnd(stream)
+	return enc.WriteToken(jsontext.EndObject)
 }

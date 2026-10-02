@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"bytes"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"log"
 	"os"
@@ -55,7 +54,7 @@ func parse(args []string) (err error) {
 
 	content := util.ByteSliceToString(bs)
 
-	module, err := rp.ModuleUnknownVersionWithOpts(filename, content, rp.ParserOptions())
+	module, err := rp.ModuleUnknownVersionWithOpts(filename, content, rp.Options())
 	if err != nil {
 		return err
 	}
@@ -65,13 +64,5 @@ func parse(args []string) (err error) {
 		return err
 	}
 
-	var buf bytes.Buffer
-	if err = encoding.OfValue().Encode(&buf, value); err == nil {
-		dst := new(bytes.Buffer)
-		if err = json.Indent(dst, buf.Bytes(), "", "  "); err == nil {
-			_, err = dst.WriteTo(os.Stdout)
-		}
-	}
-
-	return err
+	return encoding.MarshalWriteLn(os.Stdout, value, encoding.NoASTOptions, jsontext.WithIndent("  "))
 }

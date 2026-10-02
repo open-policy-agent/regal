@@ -79,7 +79,7 @@ func TestModuleUnknownVersionWithOpts(t *testing.T) {
 		t.Run(tc.note, func(t *testing.T) {
 			t.Parallel()
 
-			parsed, err := ModuleUnknownVersionWithOpts("p.rego", tc.policy, ParserOptions())
+			parsed, err := ModuleUnknownVersionWithOpts("p.rego", tc.policy, Options())
 			if err != nil {
 				if tc.expErr == "" {
 					t.Fatalf("unexpected error: %v", err)

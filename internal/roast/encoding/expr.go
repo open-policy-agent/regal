@@ -1,65 +1,51 @@
 package encoding
 
 import (
-	"unsafe"
-
-	jsoniter "github.com/json-iterator/go"
+	"encoding/json/jsontext"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
-type exprCodec struct{}
-
-func (*exprCodec) IsEmpty(_ unsafe.Pointer) bool {
-	return false
+func ExprMarshalToFn(enc *jsontext.Encoder, expr *ast.Expr) error {
+	return writeExpr(enc, expr, false)
 }
 
-func (*exprCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	expr := *(*ast.Expr)(ptr)
-
-	write.ObjectStart(stream, expr.Location)
-
-	if expr.Negated {
-		write.Bool(stream, "negated", expr.Negated)
-	}
-
-	if expr.Generated {
-		write.Bool(stream, "generated", expr.Generated)
-	}
-
-	if stream.Attachment != nil {
-		if s, ok := stream.Attachment.(string); ok && s == "interpolated" {
-			write.Bool(stream, "interpolated", true)
-			stream.Attachment = nil
-		}
-	}
+func writeExpr(enc *jsontext.Encoder, expr *ast.Expr, interpolated bool) (err error) {
+	write.ObjectStart(enc, expr.Location)
+	write.WhenTrue(enc, expr.Negated, "negated")
+	write.WhenTrue(enc, expr.Generated, "generated")
+	write.WhenTrue(enc, interpolated, "interpolated")
 
 	if len(expr.With) > 0 {
-		write.ValsArrayAttr(stream, "with", expr.With)
+		write.ArrayFieldFn(enc, "with", expr.With, WithMarshalToFn)
 	}
 
 	if expr.Terms != nil {
-		stream.WriteObjectField("terms")
+		enc.WriteToken(jsontext.String("terms"))
 
 		switch t := expr.Terms.(type) {
 		case *ast.Term:
-			write.Term(stream, t)
+			err = TermMarshalToFn(enc, t)
 		case []*ast.Term:
-			write.ValsArray(stream, t)
+			err = write.ArrayToFn(enc, t, TermMarshalToFn)
 		case *ast.SomeDecl:
-			stream.WriteVal(t)
+			err = SomeDeclMarshalToFn(enc, t)
 		case *ast.Every:
-			stream.WriteVal(t)
+			err = EveryMarshalToFn(enc, t)
 		case *ast.Not:
-			stream.WriteVal(t)
+			err = NotMarshalToFn(enc, t)
 		case *ast.LogicalAnd:
-			stream.WriteVal(t)
+			err = LogicalAndMarshalToFn(enc, t)
 		case *ast.LogicalOr:
-			stream.WriteVal(t)
+			err = LogicalOrMarshalToFn(enc, t)
+		}
+
+		if err != nil {
+			return err
 		}
 	}
 
-	write.ObjectEnd(stream)
+	return enc.WriteToken(jsontext.EndObject)
 }

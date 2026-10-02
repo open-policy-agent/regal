@@ -2,6 +2,9 @@ package encoding
 
 import (
 	"bytes"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
+	"io"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -36,12 +39,12 @@ var (
 		{
 			name: "boolean true",
 			json: []byte(`true`),
-			want: ast.Boolean(true),
+			want: ast.InternedBooleanTrueValue,
 		},
 		{
 			name: "boolean false",
 			json: []byte(`false`),
-			want: ast.Boolean(false),
+			want: ast.InternedBooleanFalseValue,
 		},
 		{
 			name: "null",
@@ -99,7 +102,7 @@ var (
 func TestJsonLocationEncoding(t *testing.T) {
 	t.Parallel()
 
-	module, err := ast.ParseModuleWithOpts("p.rego", `
+	must.Marshal(t, ast.MustParseModuleWithOpts(`
 package p
 
 import rego.v1
@@ -135,14 +138,7 @@ oc := {k:v | some k, v in input}
 test_foo if {
 	allow with input as {"foo": "bar"}
 }
-	`, ast.ParserOptions{ProcessAnnotation: true})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err = JSON().Marshal(module); err != nil {
-		t.Fatal(err)
-	}
+	`, ast.ParserOptions{ProcessAnnotation: true}))
 }
 
 // https://github.com/open-policy-agent/regal/issues/1592
@@ -160,11 +156,15 @@ func TestJSONRoundTripBigNumber(t *testing.T) {
 func TestDecodeToValue(t *testing.T) {
 	t.Parallel()
 
+	regalDecodeToValue := func(bs []byte) (ast.Value, error) {
+		return JSONUnmarshalTo[ast.Value](bs, NoASTOptions)
+	}
+
 	decoders := []struct {
 		name string
 		fn   func([]byte) (ast.Value, error)
 	}{
-		{name: "regal", fn: OfValue().Decode},
+		{name: "regal", fn: regalDecodeToValue},
 		{name: "opa", fn: opaDecodeToValue},
 	}
 
@@ -187,42 +187,31 @@ func TestDecodeToValue(t *testing.T) {
 }
 
 func BenchmarkDecodeToValue(b *testing.B) {
-	decoder := OfValue()
-
 	for _, test := range valueTests {
 		b.Run(test.name, func(b *testing.B) {
 			for b.Loop() {
-				_, _ = decoder.Decode(test.json)
+				_, _ = JSONUnmarshalTo[ast.Value](test.json, NoASTOptions)
 			}
 		})
 
-		// uncomment below to compare with OPA's JSON decoder
-		// but skip this normally as it's very slow to run all the time
-
-		//nolint:gocritic
-		// b.Run(test.name+" OPA decode", func(b *testing.B) {
-		// 	for b.Loop() {
-		// 		opaDecodeToValue(test.json)
-		// 	}
-		// })
+		b.Run(test.name+" OPA decode", func(b *testing.B) {
+			for b.Loop() {
+				_, _ = opaDecodeToValue(test.json)
+			}
+		})
 	}
 }
 
-func TestEncodeValue(t *testing.T) {
+func TestValueNoASTRoundTrip(t *testing.T) {
 	t.Parallel()
-
-	decoder := OfValue()
 
 	for _, test := range valueTests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			buf := new(bytes.Buffer)
-			if err := decoder.Encode(buf, test.want); err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			exp := must.Marshal(t, test.want, NoASTOptions)
+			got := must.UnmarshalTo[ast.Value](t, exp, NoASTOptions)
 
-			got := must.Return(decoder.Decode(buf.Bytes()))(t)
 			if !ast.ValueEqual(test.want, got) {
 				t.Fatalf("expected:\n%v\n got:\n%v", test.want, got)
 			}
@@ -230,15 +219,59 @@ func TestEncodeValue(t *testing.T) {
 	}
 }
 
-func BenchmarkEncodeValue(b *testing.B) {
-	decoder := OfValue()
-	buf := new(bytes.Buffer)
-
+func BenchmarkValueNoASTEncode(b *testing.B) {
 	for _, test := range valueTests {
 		b.Run(test.name, func(b *testing.B) {
 			for b.Loop() {
-				buf.Reset()
-				_ = decoder.Encode(buf, test.want)
+				must.Equal(b, nil, json.MarshalWrite(io.Discard, test.want, NoASTOptions))
+			}
+		})
+	}
+}
+
+func TestGet(t *testing.T) {
+	t.Parallel()
+
+	// Example test cases for the Get function
+	tests := []struct {
+		name string
+		json string
+		path jsontext.Pointer
+		want jsontext.Value
+	}{
+		{
+			name: "object key",
+			json: `{"foo": "bar"}`,
+			path: "/foo",
+			want: jsontext.Value(`"bar"`),
+		},
+		{
+			name: "nested object key",
+			json: `{"foo": {"bar": "baz"}}`,
+			path: "/foo/bar",
+			want: jsontext.Value(`"baz"`),
+		},
+		{
+			name: "nested object second object",
+			json: `{"position":{"character":16,"line":5},"textDocument":{"uri":"file:///foo.txt"}}`,
+			path: "/textDocument/uri",
+			want: jsontext.Value(`"file:///foo.txt"`),
+		},
+		{
+			name: "non-existent key",
+			json: `{"foo": "bar"}`,
+			path: "/baz",
+			want: nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := Get(jsontext.Value(test.json), test.path)
+			if !bytes.Equal(got, test.want) {
+				t.Fatalf("expected:\n%v\n got:\n%v", test.want, got)
 			}
 		})
 	}

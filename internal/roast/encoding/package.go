@@ -1,40 +1,43 @@
 package encoding
 
 import (
-	"unsafe"
-
-	jsoniter "github.com/json-iterator/go"
+	"encoding/json/jsontext"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
-type packageCodec struct{}
-
-func (*packageCodec) IsEmpty(_ unsafe.Pointer) bool {
-	return false
+func PackageMarshalToFn(enc *jsontext.Encoder, p *ast.Package) (err error) {
+	return writePackage(enc, p, nil)
 }
 
-func (*packageCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	pkg := *(*ast.Package)(ptr)
+var pkgDataTerm = jsontext.Value(`{"type":"var","value":"data"}`)
 
-	write.ObjectStart(stream, pkg.Location)
+func writePackage(enc *jsontext.Encoder, p *ast.Package, annotations []*ast.Annotations) (err error) {
+	write.ObjectStart(enc, p.Location)
 
-	if pkg.Path != nil {
-		// Make a copy to avoid data race
-		// https://github.com/open-policy-agent/regal/issues/1167
-		pathCopy := pkg.Path.Copy()
+	if path := p.Path; len(path) > 0 {
+		write.Tokens(enc, jsontext.String("path"), jsontext.BeginArray)
 
-		// Omit location of "data" part of path, at it isn't present in code
-		pathCopy[0].Location = nil
+		if value, ok := path[0].Value.(ast.Var); ok && value == "data" {
+			enc.WriteValue(pkgDataTerm)
 
-		write.Val(stream, "path", pathCopy)
+			path = path[1:]
+		}
+
+		for _, term := range path {
+			if err := TermMarshalToFn(enc, term); err != nil {
+				return err
+			}
+		}
+
+		enc.WriteToken(jsontext.EndArray)
 	}
 
-	if stream.Attachment != nil {
-		write.Val(stream, "annotations", stream.Attachment)
+	if len(annotations) > 0 {
+		write.ArrayFieldFn(enc, "annotations", annotations, AnnotationsMarshalToFn)
 	}
 
-	write.ObjectEnd(stream)
+	return enc.WriteToken(jsontext.EndObject)
 }

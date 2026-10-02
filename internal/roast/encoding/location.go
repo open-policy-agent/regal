@@ -1,23 +1,20 @@
 package encoding
 
 import (
-	"unsafe"
-
-	jsoniter "github.com/json-iterator/go"
+	"encoding/json/jsontext"
 
 	"github.com/open-policy-agent/opa/v1/ast"
-
-	"github.com/open-policy-agent/regal/pkg/roast/rast"
+	"github.com/open-policy-agent/opa/v1/util"
 )
 
-type locationCodec struct{}
+func LocationMarshalToFn(enc *jsontext.Encoder, location *ast.Location) (err error) {
+	endRow, endCol := location.End()
 
-func (*locationCodec) IsEmpty(_ unsafe.Pointer) bool {
-	return false
-}
+	buf := append(enc.AvailableBuffer(), '"')
+	buf = append(util.AppendInt(buf, location.Row), ':')
+	buf = append(util.AppendInt(buf, location.Col), ':')
+	buf = append(util.AppendInt(buf, endRow), ':')
+	buf = append(util.AppendInt(buf, endCol), '"')
 
-func (*locationCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	location := (*ast.Location)(ptr)
-
-	stream.SetBuffer(append(rast.AppendLocation(append(stream.Buffer(), '"'), location), '"'))
+	return enc.WriteValue(buf)
 }

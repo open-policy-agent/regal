@@ -1,9 +1,8 @@
 package rego_test
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"io/fs"
 	"iter"
 	"os"
@@ -27,6 +26,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/roast/transforms/module"
+	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
@@ -67,16 +67,10 @@ func TestRegoHandlers(t *testing.T) {
 			mgr := rego.NewRouter(t.Context(), stg, query.NewCache(), providersForTest(t, test), logger)
 			mgr.RegisterResultHandler("textDocument/semanticTokens/full", semantictokens.ResultHandler)
 
-			req := request(test.method, new(json.RawMessage(test.input.content)))
+			req := request(test.method, new(jsontext.Value(test.input.content)))
 			rsp := must.Return(mgr.Handle(t.Context(), nil, req))(t)
 
-			// Round-trip needed to ensure difference isn't merely formatting and order
-			got := jsonRoundTrip(t, *must.Be[*json.RawMessage](t, rsp))
-			exp := jsonRoundTrip(t, test.output.content)
-
-			if !bytes.Equal(exp, got) {
-				t.Errorf("expected: %s\ngot: %s", toJSONPretty(t, exp), toJSONPretty(t, got))
-			}
+			assert.JSONEqual(t, test.output.content, *must.Be[*jsontext.Value](t, rsp))
 		})
 
 		testsExecuted++
@@ -132,24 +126,6 @@ func markdownToTest(tb testing.TB, method, src string) testCase {
 	return tc
 }
 
-func jsonRoundTrip(t *testing.T, data []byte) []byte {
-	t.Helper()
-
-	var m any
-	must.Equal(t, nil, json.Unmarshal(data, &m))
-
-	return must.Return(json.Marshal(m))(t)
-}
-
-func toJSONPretty(t *testing.T, data []byte) string {
-	t.Helper()
-
-	buf := new(bytes.Buffer)
-	must.Equal(t, nil, json.Indent(buf, data, "", "  "))
-
-	return buf.String()
-}
-
 func storeForDocument(tb testing.TB, doc document, jsonData []byte) storage.Store {
 	tb.Helper()
 
@@ -160,7 +136,7 @@ func storeForDocument(tb testing.TB, doc document, jsonData []byte) storage.Stor
 	}
 
 	if len(jsonData) > 0 {
-		value := must.Return(encoding.OfValue().Decode(jsonData))(tb)
+		value := must.UnmarshalTo[ast.Value](tb, jsonData, encoding.NoASTOptions)
 		if obj, ok := value.(ast.Object); !ok {
 			tb.Fatalf("expected JSON data to decode to an object, got %T", value)
 		} else if data, ok = data.Merge(obj); !ok {
@@ -264,7 +240,7 @@ func TestRouteInitialize(t *testing.T) {
 	must.Be[rego.InitializeResponse](t, rsp)
 }
 
-func docPositionParams(t *testing.T, uri string, position types.Position) *json.RawMessage {
+func docPositionParams(t *testing.T, uri string, position types.Position) *jsontext.Value {
 	t.Helper()
 
 	return testutil.ToJSONRawMessage(t, map[string]any{
@@ -273,6 +249,6 @@ func docPositionParams(t *testing.T, uri string, position types.Position) *json.
 	})
 }
 
-func request(method string, params *json.RawMessage) *jsonrpc2.Request {
+func request(method string, params *jsontext.Value) *jsonrpc2.Request {
 	return &jsonrpc2.Request{Method: method, Params: params}
 }

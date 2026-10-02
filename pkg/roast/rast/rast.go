@@ -3,7 +3,8 @@ package rast
 
 import (
 	"bytes"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"iter"
 	"os"
@@ -265,7 +266,7 @@ func toAstValue(v any) ast.Value {
 		rv = rv.Elem()
 	}
 
-	if rm, ok := v.(*json.RawMessage); ok {
+	if rm, ok := v.(*jsontext.Value); ok {
 		var decoded any
 		if err := json.Unmarshal(*rm, &decoded); err != nil {
 			return ast.NullValue

@@ -9,6 +9,7 @@ package input
 import (
 	"bytes"
 	"context"
+	"encoding/json/v2"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -139,7 +140,7 @@ func (m *Manager) Update(ctx context.Context, pathOrURI string, content []byte) 
 	suffix := path[strings.LastIndexByte(path, '.')+1:]
 	switch suffix {
 	case "json":
-		val, err = encoding.OfValue().Decode(content)
+		err = json.Unmarshal(content, &val, encoding.NoASTOptions)
 	case "yaml":
 		var res map[string]any
 		if err = yaml.Unmarshal(content, &res); err == nil {

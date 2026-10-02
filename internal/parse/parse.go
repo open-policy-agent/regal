@@ -10,10 +10,10 @@ import (
 	"github.com/open-policy-agent/regal/internal/util"
 )
 
-// ParserOptions provides parser options with annotation processing. JSONOptions are not included,
+// Options provides parser options with annotation processing. JSONOptions are not included,
 // as it is assumed that the caller will marshal the AST to JSON with the roast encoder rather than
 // encoding/json (and consequently, the OPA marshaller implementations).
-func ParserOptions() ast.ParserOptions {
+func Options() ast.ParserOptions {
 	return ast.ParserOptions{
 		ProcessAnnotation: true,
 		// If not provided, OPA's parser will call ast.CapabilitiesForCurrentVersion()
@@ -78,12 +78,12 @@ func hasRegoV1Import(imports []*ast.Import) bool {
 
 // MustParseModule works like ast.MustParseModule but with the Regal parser options applied.
 func MustParseModule(policy string) *ast.Module {
-	return ast.MustParseModuleWithOpts(policy, ParserOptions())
+	return ast.MustParseModuleWithOpts(policy, Options())
 }
 
 // Module works like ast.ParseModule but with the Regal parser options applied.
 // Note that this function will parse using the RegoV1 parser version. If the version of
 // the policy is unknown, use ModuleUnknownVersionWithOpts instead.
 func Module(filename, policy string) (*ast.Module, error) {
-	return util.Wrap(ast.ParseModuleWithOpts(filename, policy, ParserOptions()))("failed to parse module")
+	return util.Wrap(ast.ParseModuleWithOpts(filename, policy, Options()))("failed to parse module")
 }

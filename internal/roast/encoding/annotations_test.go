@@ -2,10 +2,9 @@ package encoding
 
 import (
 	"embed"
+	"encoding/json/jsontext"
 	"net/url"
 	"testing"
-
-	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
@@ -19,7 +18,7 @@ var testData embed.FS
 func TestAnnotationsEncoding(t *testing.T) {
 	t.Parallel()
 
-	annotations := ast.Annotations{
+	annotations := &ast.Annotations{
 		Scope:         "document",
 		Title:         "this is a title",
 		Entrypoint:    true,
@@ -57,13 +56,10 @@ func TestAnnotationsEncoding(t *testing.T) {
 		Location: &ast.Location{Row: 1, Col: 2, File: "file.rego"},
 	}
 
-	roast := must.Return(jsoniter.ConfigFastest.MarshalIndent(annotations, "", "  "))(t)
+	roast := must.Marshal(t, annotations, Options, jsontext.WithIndent("  "))
 	expected := mustReadTestFile(t, "testdata/annotations_all.json")
-	resultMap := must.Unmarshal[map[string]any](t, roast)
-	expectedMap := must.Unmarshal[map[string]any](t, expected)
 
-	// can't compare strings as roast (via jsoniter) does not guarantee order of keys
-	assert.DeepEqual(t, expectedMap, resultMap)
+	assert.JSONEqual(t, expected, roast)
 }
 
 func mustReadTestFile(tb testing.TB, path string) []byte {

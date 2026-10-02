@@ -151,16 +151,15 @@ func documentAnnotatedRef(selectedAnnotation *ast.Annotations) string {
 			}
 
 			if author.Email != "" {
-				sb.WriteString(" ")
-				sb.WriteString("<")
+				sb.WriteString(" <")
 				sb.WriteString(author.Email)
-				sb.WriteString(">")
+				sb.WriteByte('>')
 			}
 
-			sb.WriteString("\n")
+			sb.WriteByte('\n')
 		}
 
-		sb.WriteString("\n")
+		sb.WriteByte('\n')
 	}
 
 	if len(selectedAnnotation.Organizations) > 0 {
@@ -169,10 +168,10 @@ func documentAnnotatedRef(selectedAnnotation *ast.Annotations) string {
 		for _, org := range selectedAnnotation.Organizations {
 			sb.WriteString("* ")
 			sb.WriteString(org)
-			sb.WriteString("\n")
+			sb.WriteByte('\n')
 		}
 
-		sb.WriteString("\n")
+		sb.WriteByte('\n')
 	}
 
 	if len(selectedAnnotation.RelatedResources) > 0 {
@@ -192,7 +191,7 @@ func documentAnnotatedRef(selectedAnnotation *ast.Annotations) string {
 			sb.WriteString(")\n")
 		}
 
-		sb.WriteString("\n")
+		sb.WriteByte('\n')
 	}
 
 	if len(selectedAnnotation.Custom) > 0 {
