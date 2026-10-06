@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -9,15 +10,15 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/cover"
 	"github.com/open-policy-agent/opa/v1/rego"
-	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/lsp/client"
 	"github.com/open-policy-agent/regal/internal/lsp/test"
+	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/workspace"
 	rparse "github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
-	"github.com/open-policy-agent/regal/internal/util"
+	"github.com/open-policy-agent/regal/internal/testutil"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
 
@@ -55,7 +56,8 @@ func TestEvalWorkspace(t *testing.T) {
 		RegoOpts: []rego.EvalOption{rego.EvalParsedInput(input)},
 	})
 	res := must.Return(value, err)(t)
-	assert.True(t, must.Be[bool](t, res.Value))
+
+	assert.True(t, ast.Boolean(true).Equal(res.Value))
 
 	policy2URI := ls.Workspace().URI("policy2.rego")
 	expectedPrintOutput := map[string]map[int][]string{policy2URI: {4: {"1"}}}
@@ -68,23 +70,23 @@ func TestEvalWorkspaceValues(t *testing.T) {
 	cases := map[string]struct {
 		query         string
 		wantUndefined bool
-		wantValue     any
+		wantValue     ast.Value
 	}{
 		"false is a defined value, not undefined": {
 			query:     "false",
-			wantValue: false,
+			wantValue: ast.Boolean(false),
 		},
 		"equality comparison false is a defined value": {
 			query:     "1 == 2",
-			wantValue: false,
+			wantValue: ast.Boolean(false),
 		},
 		"ending in assignment": {
 			query:     "x := 1; y := x + 1",
-			wantValue: json.Number("2"),
+			wantValue: ast.Number("2"),
 		},
 		"equality, variable on right": {
 			query:     "1 = x",
-			wantValue: json.Number("1"),
+			wantValue: ast.Number("1"),
 		},
 		"unification failure has no results": {
 			query:         "1 = 2",
@@ -131,12 +133,8 @@ func TestEvalWorkspaceWithCoverage(t *testing.T) {
 	cases := map[string]struct {
 		query string
 	}{
-		"rule reference": {
-			query: "data.policy1.allow",
-		},
-		"multi-statement query": {
-			query: "x := data.policy1.allow; x",
-		},
+		"rule reference":        {query: "data.policy1.allow"},
+		"multi-statement query": {query: "x := data.policy1.allow; x"},
 	}
 
 	for name, tc := range cases {
@@ -155,19 +153,15 @@ func TestEvalWorkspaceWithCoverage(t *testing.T) {
 				RegoOpts: []rego.EvalOption{rego.EvalParsedInput(input)},
 			})
 			res := must.Return(value, err)(t)
-			assert.True(t, must.Be[bool](t, res.Value))
 
-			if report == nil {
-				t.Fatal("expected a coverage report, got nil")
-			}
+			assert.True(t, ast.Boolean(true).Equal(res.Value))
+			must.NotEqual(t, nil, report, "expected a coverage report, got nil")
 
-			policy1RelativeFileName := ls.Workspace().RelativePath(ls.Workspace().URI("policy1.rego"))
-
+			ws := ls.Workspace()
+			policy1RelativeFileName := ws.RelativePath(ws.URI("policy1.rego"))
 			fileReport := report.Files[policy1RelativeFileName]
-			if fileReport == nil {
-				t.Fatalf("expected a coverage report entry for %q", policy1RelativeFileName)
-			}
 
+			must.NotEqual(t, nil, fileReport, "expected a coverage report entry for %q", policy1RelativeFileName)
 			assert.True(t, fileReport.CoveredLines > 0)
 		})
 	}
@@ -183,10 +177,9 @@ func TestEvalWorkspaceInternalData(t *testing.T) {
 		RegoOpts: []rego.EvalOption{rego.EvalParsedInput(ast.InternedEmptyObjectValue)},
 	})
 	res := must.Return(value, err)(t)
-	val := must.Be[[]any](t, res.Value)
-	act := outil.Sorted(must.Return(util.AnySliceTo[string](val))(t))
+	arr := must.Be[ast.Set](t, res.Value).Sorted()
 
-	assert.SlicesEqual(t, []string{"capabilities", "combined_config", "user_config"}, act)
+	assert.Equal(t, `["capabilities", "combined_config", "user_config"]`, arr.String())
 }
 
 func TestEvalWorkspacePackageRelativeQuery(t *testing.T) {
@@ -204,7 +197,8 @@ func TestEvalWorkspacePackageRelativeQuery(t *testing.T) {
 	// module1.Package.
 	value, _, err := ls.EvalInWorkspace(t.Context(), EvalWorkspaceOptions{Query: "allow", Package: module1.Package})
 	res := must.Return(value, err)(t)
-	assert.True(t, must.Be[bool](t, res.Value))
+
+	assert.True(t, ast.Boolean(true).Equal(res.Value))
 }
 
 func TestEvalWorkspaceImportedAlias(t *testing.T) {
@@ -228,7 +222,8 @@ func TestEvalWorkspaceImportedAlias(t *testing.T) {
 
 	value, _, err := ls.EvalInWorkspace(t.Context(), EvalWorkspaceOptions{Query: "p.allow", Imports: imports})
 	res := must.Return(value, err)(t)
-	assert.True(t, must.Be[bool](t, res.Value))
+
+	assert.True(t, ast.Boolean(true).Equal(res.Value))
 }
 
 func TestFinalExpressionValue(t *testing.T) {
@@ -238,42 +233,47 @@ func TestFinalExpressionValue(t *testing.T) {
 		query     string
 		exprValue any
 		bindings  map[string]any
-		expected  any
+		expected  ast.Value
 	}{
-		"rule reference": {
+		"rule reference Go expression value": {
 			query:     "data.pkg.rule",
 			exprValue: true,
-			expected:  true,
+			expected:  ast.Boolean(true),
+		},
+		"rule reference AST expression value": {
+			query:     "data.pkg.rule",
+			exprValue: ast.Boolean(true),
+			expected:  ast.Boolean(true),
 		},
 		"bare variable reference": {
 			query:     "x := 1; y := x + 1; y",
-			exprValue: json.Number("2"),
+			exprValue: ast.Number("2"),
 			bindings:  map[string]any{"x": json.Number("1"), "y": json.Number("2")},
-			expected:  json.Number("2"),
+			expected:  ast.Number("2"),
 		},
 		"ending in assignment": {
 			query:     "x := 1; y := x + 1",
 			exprValue: true,
 			bindings:  map[string]any{"x": json.Number("1"), "y": json.Number("2")},
-			expected:  json.Number("2"),
+			expected:  ast.Number("2"),
 		},
 		"equality, variable on right": {
 			query:     "1 = x",
 			exprValue: true,
 			bindings:  map[string]any{"x": json.Number("1")},
-			expected:  json.Number("1"),
+			expected:  ast.Number("1"),
 		},
 		"destructuring assignment": {
 			query:     "[a, b] := [1, 2]",
 			exprValue: true,
 			bindings:  map[string]any{"a": json.Number("1"), "b": json.Number("2")},
-			expected:  true,
+			expected:  ast.Boolean(true),
 		},
 		"multi-line query with comments": {
 			query:     "# leading comment\nx := 1\ny := x + 1 # trailing comment\ny",
 			exprValue: json.Number("2"),
 			bindings:  map[string]any{"x": json.Number("1"), "y": json.Number("2")},
-			expected:  json.Number("2"),
+			expected:  ast.Number("2"),
 		},
 	}
 
@@ -287,8 +287,50 @@ func TestFinalExpressionValue(t *testing.T) {
 				Bindings:    tc.bindings,
 			}
 
-			assert.DeepEqual(t, tc.expected, finalExpressionValue(body, result))
+			assert.True(t, ast.ValueEqual(tc.expected, finalExpressionValue(body, result)))
 		})
+	}
+}
+
+func TestEvalInWorkspaceHandler(t *testing.T) {
+	t.Parallel()
+
+	ls := evalTestServerWithFS(t)
+
+	must.Equal(t, nil, ls.handleEvalCommand(t.Context(), types.CommandArgs{
+		Target: ls.workspace.URI("policy1.rego"),
+		Query:  "data.policy1.allow",
+		Row:    7,
+	}))
+
+	exp := `{
+		"a": 1,
+		"b": 3.1,
+		"c": "string",
+		"d": true,
+		"e": null,
+		"f": [1, 2, 3],
+		"g": {"nested": "object", "array": [1, false, 3], "set": [1, 2, 3]}
+	}`
+
+	assert.JSONEqual(t, exp, must.ReadFile(t, ls.workspace.Path("output.json")))
+}
+
+// Note: cost is almost entirely from compiling / building the bundle
+// 1331922 ns/op	 1436070 B/op	   19098 allocs/op
+func BenchmarkEvalInWorkspaceHandler(b *testing.B) {
+	ls := evalTestServerWithFS(b)
+	args := types.CommandArgs{
+		Target: ls.workspace.URI("policy1.rego"),
+		Query:  "data.policy1.allow",
+		Row:    7,
+	}
+
+	b.ResetTimer()
+
+	// result is verified by the test above.. no need to check it here.
+	for b.Loop() {
+		_ = ls.handleEvalCommand(b.Context(), args)
 	}
 }
 
@@ -305,7 +347,7 @@ func evalTestServer(t *testing.T, modules map[string]string) (*LanguageServer, m
 	for filename, source := range modules {
 		fileURI := workspace.URI(filename)
 		relativeFileName := workspace.RelativePath(fileURI)
-		module := must.Return(rparse.ModuleWithOpts(relativeFileName, source, rparse.ParserOptions()))(t)
+		module := must.Return(rparse.ModuleWithOpts(relativeFileName, source, rparse.Options()))(t)
 
 		ls.cache.SetFileContents(fileURI, source)
 		ls.cache.SetModule(fileURI, module)
@@ -314,4 +356,59 @@ func evalTestServer(t *testing.T, modules map[string]string) (*LanguageServer, m
 	}
 
 	return ls, parsed
+}
+
+func evalTestServerWithFS(tb testing.TB) *LanguageServer {
+	tb.Helper()
+
+	policy1 := `package policy1
+
+	import data.policy2
+
+	obj := {
+		"a": 1,
+		"b": 3.1,
+		"c": "string",
+		"d": true,
+		"e": null,
+		"f": [1, 2, 3],
+		"g": {"nested": "object", "array": [1, false, 3], "set": {1, 2, 3}},
+	}
+
+	allow := obj if policy2.allow
+	`
+
+	policy2 := `package policy2
+
+	allow if {
+		print(1)
+		input.exists
+	}
+	`
+
+	mods := map[string]string{
+		"policy1.rego": policy1,
+		"policy2.rego": policy2,
+		"input.json":   `{"exists": true}`,
+	}
+	root := testutil.TempDirectoryOf(tb, mods)
+
+	ls := NewLanguageServer(tb.Context(), &LanguageServerOptions{Logger: test.DebugLogger(tb)})
+	ls.workspace = workspace.New("file://" + root)
+
+	ls.input.LoadFromWorkspace(tb.Context(), ls.workspace)
+
+	for filename, source := range mods {
+		if !strings.HasSuffix(filename, ".rego") {
+			continue
+		}
+
+		fileURI := ls.workspace.URI(filename)
+		relPath := ls.workspace.RelativePath(fileURI)
+
+		ls.cache.SetFileContents(fileURI, source)
+		ls.cache.SetModule(fileURI, must.Return(rparse.ModuleWithOpts(relPath, source, rparse.Options()))(tb))
+	}
+
+	return ls
 }

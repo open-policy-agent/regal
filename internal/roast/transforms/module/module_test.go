@@ -1,7 +1,6 @@
 package module
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -45,9 +44,7 @@ objcomp := {x: y | some x, y in input}
 setcomp := {x | some x in input}
 `
 	module := ast.MustParseModuleWithOpts(policy, ast.ParserOptions{ProcessAnnotation: true})
-	value := must.Return(ToValue(module))(t)
-	buf := new(bytes.Buffer)
-	must.Equal(t, nil, encoding.OfValue().Encode(buf, value))
+	must.Marshal(t, must.Return(ToValue(module))(t))
 }
 
 func TestModuleToValueTemplateString(t *testing.T) {
@@ -75,20 +72,10 @@ func TestModuleToValueTemplateString(t *testing.T) {
 		t.Fatalf("failed to find 'rules' key in module object: %v", err)
 	}
 
-	tsv, ok := val.(ast.Object)
-	if !ok {
-		t.Fatalf("expected template string value to be object, got: %T", val)
-	}
+	tsv := must.Be[ast.Object](t, val)
 
 	if parts := tsv.Get(ast.InternedTerm("parts")); parts != nil {
-		partsArr, ok := parts.Value.(*ast.Array)
-		if !ok {
-			t.Fatalf("expected parts to be array, got: %T", parts)
-		}
-
-		if partsArr.Len() != 3 {
-			t.Fatalf("expected 3 parts in template string, got: %d", partsArr.Len())
-		}
+		must.Equal(t, 3, must.Be[*ast.Array](t, parts.Value).Len())
 	} else {
 		t.Fatal("expected parts key in template string value")
 	}
@@ -111,10 +98,7 @@ func TestModuleToValueNotImport(t *testing.T) {
 			}
 		}
 	`)
-
-	value := must.Return(ToValue(module))(t)
-	buf := new(bytes.Buffer)
-	must.Equal(t, nil, encoding.OfValue().Encode(buf, value))
+	must.Marshal(t, must.Return(ToValue(module))(t))
 }
 
 func TestModuleToValueLogicalKeywords(t *testing.T) {
@@ -140,8 +124,7 @@ q if {
 
 	value := must.Return(ToValue(module))(t)
 
-	buf := new(bytes.Buffer)
-	must.Equal(t, nil, encoding.OfValue().Encode(buf, value))
+	must.Marshal(t, value)
 
 	// `and` binds tighter than `or`, so the first rule is `a or (b and c)`
 	or := firstExprTerms(t, value, 0)
@@ -170,15 +153,13 @@ q if {
 func firstExprTerms(t *testing.T, value ast.Value, i int) ast.Value {
 	t.Helper()
 
-	terms := must.Return(value.Find(ast.Ref{
+	return must.Return(value.Find(ast.Ref{
 		ast.InternedTerm("rules"),
 		ast.InternedTerm(i),
 		ast.InternedTerm("body"),
 		ast.InternedTerm(0),
 		ast.InternedTerm("terms"),
 	}))(t)
-
-	return terms
 }
 
 func attr(t *testing.T, value ast.Value, key string) ast.Value {
@@ -199,7 +180,7 @@ func bodyAttr(t *testing.T, value ast.Value, key string) *ast.Array {
 	return must.Be[*ast.Array](t, attr(t, value, key))
 }
 
-// BenchmarkModuleToValue/ToValue-16         	  27673	         40987 ns/op	   64705 B/op	    1740 allocs/op
+// BenchmarkModuleToValue/ToValue-16         34318 ns/op	   64553 B/op	    1541 allocs/op
 func BenchmarkModuleToValue(b *testing.B) {
 	policy := `# METADATA
 # title: p p p
@@ -232,27 +213,18 @@ arrcomp := [x | some x in input]
 objcomp := {x: y | some x, y in input}
 setcomp := {x | some x in input}
 `
-	module := ast.MustParseModuleWithOpts(policy, ast.ParserOptions{
-		ProcessAnnotation: true,
-	})
+	module := ast.MustParseModuleWithOpts(policy, ast.ParserOptions{ProcessAnnotation: true})
 
-	var (
-		value1, value2 ast.Value
-		err            error
-	)
+	var v1, v2 ast.Value
 
 	b.Run("ToValue", func(b *testing.B) {
 		for b.Loop() {
-			value1, err = ToValue(module)
-			if err != nil {
-				b.Fatalf("failed to convert module to value: %v", err)
-			}
+			v1 = must.Return(ToValue(module))(b)
 		}
 	})
 
-	if value1.Compare(value2) != 0 {
-		b.Errorf("expected value to equal round-tripped value, got: %v\n\n, want: %v", value1, value2)
-	}
+	encoding.MustJSONRoundTrip(module, &v2, encoding.NoASTOptions)
+	must.Equal(b, 0, v1.Compare(v2), "expected value to equal round-tripped value, got: %v\n\n, want: %v", v1, v2)
 }
 
 // Tangentially related benchmark to find out the cost of repeatedly inserting items into an object

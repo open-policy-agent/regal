@@ -1,25 +1,16 @@
 package encoding
 
 import (
-	"unsafe"
-
-	jsoniter "github.com/json-iterator/go"
+	"encoding/json/jsontext"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
-type someDeclCodec struct{}
+func SomeDeclMarshalToFn(enc *jsontext.Encoder, some *ast.SomeDecl) error {
+	write.ObjectStart(enc, some.Location)
+	write.ArrayFieldFn(enc, "symbols", some.Symbols, TermMarshalToFn)
 
-func (*someDeclCodec) IsEmpty(_ unsafe.Pointer) bool {
-	return false
-}
-
-func (*someDeclCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	some := *(*ast.SomeDecl)(ptr)
-
-	write.ObjectStart(stream, some.Location)
-	write.ValsArrayAttr(stream, "symbols", some.Symbols)
-	write.ObjectEnd(stream)
+	return enc.WriteToken(jsontext.EndObject)
 }

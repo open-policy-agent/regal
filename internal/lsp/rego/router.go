@@ -1,16 +1,15 @@
 package rego
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"sync"
 
-	jsoniter "github.com/json-iterator/go"
 	"github.com/sourcegraph/jsonrpc2"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -27,7 +26,6 @@ import (
 )
 
 var (
-	valueDecoder    = encoding.OfValue()
 	inputValuesPool = &sync.Pool{New: func() any {
 		return &inputCacheItem{
 			input:  ast.NewObjectWithCapacity(3),
@@ -217,12 +215,11 @@ func (m *Router) handleError(msg string) error {
 // ignored, and ensures that any custom requirements the handler may have are met.
 func (m *Router) textDocumentPassthroughHandlerFor(route Route) regoHandler {
 	return func(ctx context.Context, query *query.Prepared, prvs Providers, req *jsonrpc2.Request) (any, error) {
-		maybeURI := jsoniter.Get(*req.Params, "textDocument", "uri")
-		if maybeURI.LastError() != nil {
-			return nil, fmt.Errorf("expected textDocument.uri parameter: %w", maybeURI.LastError())
+		docURI, ok := encoding.GetString(*req.Params, jsontext.Pointer("/textDocument/uri"))
+		if !ok {
+			return nil, fmt.Errorf("expected textDocument.uri in params, got: %v", string(*req.Params))
 		}
 
-		docURI := maybeURI.ToString()
 		if !strings.HasSuffix(docURI, ".rego") || prvs.IgnoredProvider != nil && prvs.IgnoredProvider(docURI) {
 			// This is not an error, but perhaps we should wire in some debug logging later
 			return nil, nil
@@ -301,7 +298,10 @@ func regalContextForRequirements(prvs Providers, uri string, reqs Requirements) 
 // and that's where future handlers validation should take place when needed.
 func passthrough(ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request) (any, error) {
 	if req.Params == nil {
-		bs, _ := req.MarshalJSON()
+		bs, err := json.Marshal(req)
+		if err != nil {
+			return nil, err
+		}
 
 		return nil, fmt.Errorf("expected request containing 'params', got %v", string(bs))
 	}
@@ -309,12 +309,10 @@ func passthrough(ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request)
 	cached := inputValuesPool.Get().(*inputCacheItem) //nolint:forcetypeassert
 	defer inputValuesPool.Put(cached)
 
-	params, err := valueDecoder.Decode(*req.Params)
-	if err != nil {
+	if err := json.Unmarshal(*req.Params, &cached.params.Value, encoding.NoASTOptions); err != nil {
 		return nil, fmt.Errorf("failed to decode params: %w\n%s", err, string(*req.Params))
 	}
 
-	cached.params.Value = params
 	cached.regctx.Value = rast.StructToValue(rctx)
 
 	inputObj := cached.input.(ast.Object) //nolint:forcetypeassert
@@ -322,24 +320,17 @@ func passthrough(ctx context.Context, rctx *RegalContext, req *jsonrpc2.Request)
 	rast.Insert(inputObj, "params", cached.params)
 	rast.Insert(inputObj, "regal", cached.regctx)
 
-	res, err := CachedQueryEvalUndecoded(ctx, rctx.Query, cached.input)
+	obj, err := CachedQueryEvalUndecoded[ast.Object](ctx, rctx.Query, cached.input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate prepared query: %w", err)
 	}
 
-	if obj, ok := res.(ast.Object); ok {
-		rsp := obj.Get(ast.InternedTerm("response")).Value
-
-		var buf bytes.Buffer
-
-		if err := encoding.OfValue().Encode(&buf, rsp); err != nil {
-			return nil, fmt.Errorf("failed to marshal response: %w", err)
-		}
-
-		return new(json.RawMessage(buf.Bytes())), nil
+	bs, err := json.Marshal(obj.Get(ast.InternedTerm("response")).Value, encoding.NoASTOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
-	return nil, fmt.Errorf("unexpected query result format: %v", res)
+	return new(jsontext.Value(bs)), nil
 }
 
 func initialize(ctx context.Context, pq *query.Prepared, req *jsonrpc2.Request) (any, error) {

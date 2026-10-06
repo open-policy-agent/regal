@@ -4,7 +4,8 @@ package lsp
 import (
 	"cmp"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -1448,7 +1449,7 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 func (l *LanguageServer) initializedResultHandler(ctx context.Context, result any) (any, error) {
 	// If the client supports dynamic registration, register for any the Rego
 	// handler returned. Currently this is workspace/didChangeWatchedFiles only.
-	if raw, ok := result.(*json.RawMessage); ok && len(*raw) > 4 { // = len("null")
+	if raw, ok := result.(*jsontext.Value); ok && len(*raw) > 4 { // = len("null")
 		if err := l.conn.Call(ctx, "client/registerCapability", &raw, nil); err != nil {
 			l.log.Message("failed to register workspace/didChangeWatchedFiles capability: %s", err)
 		}
@@ -1691,7 +1692,7 @@ func (l *LanguageServer) handleInputSkeletonPrompt(
 
 	switch action {
 	case "Yes":
-		data, err := json.MarshalIndent(skeleton, "", "  ")
+		data, err := json.Marshal(skeleton, jsontext.WithIndent("  "))
 		if err != nil {
 			return false, fmt.Errorf("failed to marshal input skeleton: %w", err)
 		}

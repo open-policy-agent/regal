@@ -1,58 +1,52 @@
 package encoding
 
 import (
-	"unsafe"
-
-	jsoniter "github.com/json-iterator/go"
+	"encoding/json/jsontext"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
 	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
-type annotationsCodec struct{}
-
-func (*annotationsCodec) IsEmpty(_ unsafe.Pointer) bool {
-	return false
-}
-
-func (*annotationsCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	a := *(*ast.Annotations)(ptr)
-
-	write.ObjectStart(stream, a.Location)
-	write.String(stream, "scope", a.Scope)
+func AnnotationsMarshalToFn(enc *jsontext.Encoder, a *ast.Annotations) error {
+	write.ObjectStart(enc, a.Location)
+	write.StringField(enc, "scope", a.Scope)
 
 	if a.Title != "" {
-		write.String(stream, "title", a.Title)
+		write.StringField(enc, "title", a.Title)
 	}
 
 	if a.Description != "" {
-		write.String(stream, "description", a.Description)
+		write.StringField(enc, "description", a.Description)
 	}
 
-	if a.Entrypoint {
-		write.Bool(stream, "entrypoint", a.Entrypoint)
-	}
+	write.WhenTrue(enc, a.Entrypoint, "entrypoint")
 
 	if len(a.Organizations) > 0 {
-		write.ValsArrayAttr(stream, "organizations", a.Organizations)
+		write.ArrayField(enc, "organizations", a.Organizations)
 	}
 
 	if len(a.RelatedResources) > 0 {
-		write.ValsArrayAttr(stream, "related_resources", a.RelatedResources)
+		write.ArrayField(enc, "related_resources", a.RelatedResources)
 	}
 
 	if len(a.Authors) > 0 {
-		write.ValsArrayAttr(stream, "authors", a.Authors)
+		write.ArrayField(enc, "authors", a.Authors)
 	}
 
 	if len(a.Schemas) > 0 {
-		write.ValsArrayAttr(stream, "schemas", a.Schemas)
+		write.ArrayField(enc, "schemas", a.Schemas)
 	}
 
 	if len(a.Custom) > 0 {
-		write.Object(stream, "custom", a.Custom)
+		write.Tokens(enc, jsontext.String("custom"), jsontext.BeginObject)
+
+		for k, v := range a.Custom {
+			_ = write.Field(enc, k, v)
+		}
+
+		enc.WriteToken(jsontext.EndObject)
 	}
 
-	write.ObjectEnd(stream)
+	return enc.WriteToken(jsontext.EndObject)
 }

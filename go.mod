@@ -12,7 +12,6 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-dap v0.12.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
-	github.com/json-iterator/go v1.1.12
 	github.com/jstemmer/go-junit-report/v2 v2.1.0
 	github.com/olekukonko/tablewriter v1.1.5
 	github.com/open-policy-agent/opa v1.21.0
@@ -56,6 +55,7 @@ require (
 	github.com/hjson/hjson-go v3.3.0+incompatible // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jaswdr/faker v1.19.1 // indirect
+	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/komkom/jsonc v0.0.0-20211024105009-cf68880f5077 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
 	github.com/lestrrat-go/dsig v1.4.0 // indirect

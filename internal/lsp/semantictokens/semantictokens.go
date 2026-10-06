@@ -2,7 +2,8 @@ package semantictokens
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"slices"
 
@@ -19,11 +20,11 @@ const (
 )
 
 type Token struct {
-	Line      uint32
-	Col       uint32
-	Length    uint32
-	Type      uint32
-	Modifiers uint32
+	Line      uint32 `json:"line"`
+	Col       uint32 `json:"col"`
+	Length    uint32 `json:"length"`
+	Type      uint32 `json:"type"`
+	Modifiers uint32 `json:"modifiers"`
 }
 
 // SemanticTokensResult represents the structured result from the Rego query.
@@ -31,7 +32,6 @@ type SemanticTokensResult struct {
 	PackageTokens []Token `json:"packages"`
 	ImportTokens  []Token `json:"imports"`
 	Vars          []Token `json:"vars"`
-	DebugInfo     any     `json:"debug_info"`
 }
 
 func Full(result SemanticTokensResult) (*types.SemanticTokens, error) {
@@ -54,24 +54,16 @@ func Full(result SemanticTokensResult) (*types.SemanticTokens, error) {
 	var prevLine, prevCol uint32
 
 	for _, tok := range tokens {
-		deltaLine := tok.Line - prevLine
-		deltaCol := tok.Col
+		deltaLine, deltaCol := tok.Line-prevLine, tok.Col
 
 		// If on the same line as previous token, column is relative
 		if deltaLine == 0 {
 			deltaCol = tok.Col - prevCol
 		}
 
-		data = append(data,
-			deltaLine,
-			deltaCol,
-			tok.Length,
-			tok.Type,
-			tok.Modifiers,
-		)
+		data = append(data, deltaLine, deltaCol, tok.Length, tok.Type, tok.Modifiers)
 
-		prevLine = tok.Line
-		prevCol = tok.Col
+		prevLine, prevCol = tok.Line, tok.Col
 	}
 
 	return &types.SemanticTokens{Data: data}, nil
@@ -82,11 +74,8 @@ func ResultHandler(_ context.Context, result any) (any, error) {
 		return nil, nil //nolint:nilnil
 	}
 
-	if raw, ok := result.(*json.RawMessage); ok {
+	if raw, ok := result.(*jsontext.Value); ok {
 		var semTokRes SemanticTokensResult
-		// this looks like a false positive as the struct fields are tagged
-		// "the given struct should be annotated with the `json` tag"
-		//nolint: musttag
 		if err := json.Unmarshal(*raw, &semTokRes); err != nil {
 			return nil, err
 		}
@@ -101,8 +90,8 @@ func ResultHandler(_ context.Context, result any) (any, error) {
 			return nil, err
 		}
 
-		return new(json.RawMessage(bs)), nil
+		return new(jsontext.Value(bs)), nil
 	}
 
-	return nil, fmt.Errorf("expected *json.RawMessage, got: %T", result)
+	return nil, fmt.Errorf("expected *jsontext.Value, got: %T", result)
 }

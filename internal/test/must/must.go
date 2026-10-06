@@ -1,12 +1,11 @@
 package must
 
 import (
+	"encoding/json/v2"
 	"io"
 	"os"
 	"path/filepath"
 	"testing"
-
-	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/regal/internal/test/assert"
 )
@@ -50,16 +49,6 @@ func Be[T any](tb testing.TB, v any) T {
 	return r
 }
 
-func Unmarshal[T any](tb testing.TB, data []byte) (v T) {
-	tb.Helper()
-
-	if err := jsoniter.ConfigFastest.Unmarshal(data, &v); err != nil {
-		tb.Fatalf("failed to unmarshal: %v", err)
-	}
-
-	return v
-}
-
 func Write(tb testing.TB, w io.Writer, contents string) {
 	tb.Helper()
 
@@ -99,4 +88,18 @@ func MkdirAll(tb testing.TB, path ...string) {
 	if err := os.MkdirAll(filepath.Join(path...), 0o755); err != nil {
 		tb.Fatalf("failed to create directory %s: %v", path, err)
 	}
+}
+
+func UnmarshalTo[T any, V ~string | ~[]byte](tb testing.TB, bs V, opts ...json.Options) (to T) {
+	tb.Helper()
+
+	Equal(tb, nil, json.Unmarshal([]byte(bs), &to, opts...))
+
+	return to
+}
+
+func Marshal(tb testing.TB, v any, opts ...json.Options) []byte {
+	tb.Helper()
+
+	return Return(json.Marshal(v, opts...))(tb)
 }

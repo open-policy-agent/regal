@@ -2,7 +2,7 @@ package window
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"strconv"
 
 	"github.com/sourcegraph/jsonrpc2"
@@ -56,7 +56,7 @@ func (w *Window) ShowDocument(ctx context.Context, uri string, takeFocus bool) b
 	return res.Success
 }
 
-func rawShowDocumentParams(uri string, takeFocus bool) *json.RawMessage {
+func rawShowDocumentParams(uri string, takeFocus bool) *jsontext.Value {
 	alloc := 10 + len(uri) // {"uri":""}
 	if takeFocus {
 		alloc += 17 // ,"takeFocus":true
@@ -67,10 +67,10 @@ func rawShowDocumentParams(uri string, takeFocus bool) *json.RawMessage {
 		buf = append(buf, `,"takeFocus":true`...)
 	}
 
-	return new(json.RawMessage(append(buf, '}')))
+	return new(jsontext.Value(append(buf, '}')))
 }
 
-func rawMessageParams(typ types.Message, msg string, actions ...string) *json.RawMessage {
+func rawMessageParams(typ types.Message, msg string, actions ...string) *jsontext.Value {
 	alloc := 23 + len(msg)
 	if len(actions) > 0 {
 		alloc += 12 // ,"actions":[], minus one comma
@@ -91,5 +91,5 @@ func rawMessageParams(typ types.Message, msg string, actions ...string) *json.Ra
 		buf = append(buf, ']')
 	}
 
-	return new(json.RawMessage(append(buf, '}')))
+	return new(jsontext.Value(append(buf, '}')))
 }

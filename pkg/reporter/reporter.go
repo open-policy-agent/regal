@@ -2,6 +2,8 @@ package reporter
 
 import (
 	"context"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"os"
@@ -22,7 +24,6 @@ import (
 	"github.com/open-policy-agent/regal/pkg/fixer"
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
 	"github.com/open-policy-agent/regal/pkg/report"
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
 // Reporter releases linter reports in a format decided by the implementation.
@@ -151,7 +152,7 @@ func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
 			sb.WriteString(notice.Title)
 			sb.WriteString(": ")
 			sb.WriteString(notice.Description)
-			sb.WriteString("\n")
+			sb.WriteByte('\n')
 		}
 
 		footer += sb.String()
@@ -314,10 +315,7 @@ func (tr CompactReporter) Publish(_ context.Context, r report.Report) error {
 func (tr JSONReporter) Publish(_ context.Context, r report.Report) error {
 	r.Violations = util.NilSliceToEmpty(r.Violations)
 
-	enc := encoding.JSON().NewEncoder(tr.out)
-	enc.SetIndent("", "  ")
-
-	return enc.Encode(r)
+	return json.MarshalWrite(tr.out, r, jsontext.WithIndent("  "))
 }
 
 // Publish first prints the pretty formatted report to console for easy access in the logs. It then goes on

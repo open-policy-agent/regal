@@ -2,6 +2,8 @@ package config
 
 import (
 	"context"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"os"
@@ -13,12 +15,15 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/types"
 	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/capabilities"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/read"
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
@@ -96,7 +101,7 @@ type (
 	Rule struct {
 		Ignore *Ignore `json:"ignore,omitempty" yaml:"ignore,omitempty"`
 		Extra  ExtraAttributes
-		Level  string
+		Level  string `json:"level"`
 	}
 
 	Capabilities struct {
@@ -186,6 +191,16 @@ func Find(path string) (*os.File, error) {
 
 	// regalConfigFileError is nil at this point, so we can return the file
 	return regalConfigFile, nil
+}
+
+func (e ExtraAttributes) MarshalJSONTo(enc *jsontext.Encoder) error {
+	for key, val := range e {
+		if err := write.Field(enc, key, val); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // findUpwards searches for a file or directory matching the given name,
@@ -471,7 +486,7 @@ func (c Config) MarshalYAML() (any, error) {
 	return unstructuredConfig, nil
 }
 
-// unmarshallingIntermediary is used to contain config data in a format that is used during unmarshalling.
+// marshallingIntermediary is used to contain config data in a format that is used during unmarshalling.
 // The internally loaded config data layout differs from the user-defined YAML.
 type marshallingIntermediary struct {
 	// rules are unmarshalled as any since the defaulting needs to be extracted from here
@@ -716,13 +731,7 @@ func CapabilitiesForThisVersion() *Capabilities {
 }
 
 func fromOPABuiltin(builtin ast.Builtin) *Builtin {
-	funcArgs := builtin.Decl.FuncArgs().Args
-	args := make([]string, len(funcArgs))
-
-	for i, arg := range funcArgs {
-		args[i] = arg.String()
-	}
-
+	args := outil.Map(builtin.Decl.FuncArgs().Args, types.Type.String)
 	rb := &Builtin{Decl: Decl{Args: args}}
 
 	if builtin.Decl != nil && builtin.Decl.Result() != nil {
@@ -759,8 +768,11 @@ func fromOPACapabilities(capabilities *ast.Capabilities) *Capabilities {
 	return &result
 }
 
-func ToMap(config Config) map[string]any {
+func ToMap(config *Config) map[string]any {
 	confMap := make(map[string]any)
+	if config == nil {
+		return confMap
+	}
 
 	encoding.MustJSONRoundTrip(config, &confMap)
 
@@ -779,22 +791,44 @@ func ToMap(config Config) map[string]any {
 	return confMap
 }
 
-func (rule Rule) MarshalJSON() ([]byte, error) {
-	result, err := rule.MarshalYAML()
-	if err != nil {
-		return nil, fmt.Errorf("marshalling rule failed %w", err)
+func (rule Rule) MarshalJSONTo(enc *jsontext.Encoder) error {
+	enc.WriteToken(jsontext.BeginObject)
+	write.StringField(enc, keyLevel, rule.Level)
+
+	if rule.Ignore != nil && len(rule.Ignore.Files) > 0 {
+		_ = write.Field(enc, keyIgnore, rule.Ignore)
 	}
 
-	return encoding.JSON().Marshal(&result)
+	for key, val := range rule.Extra {
+		if key != keyIgnore && key != keyLevel {
+			_ = write.Field(enc, key, val)
+		}
+	}
+
+	return enc.WriteToken(jsontext.EndObject)
 }
 
-func (rule *Rule) UnmarshalJSON(data []byte) error {
-	result, err := encoding.JSONUnmarshalTo[map[string]any](data)
-	if err != nil {
-		return fmt.Errorf("unmarshalling rule failed %w", err)
-	}
+func (rule *Rule) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	return read.Object(dec, func(dec *jsontext.Decoder, key string) (err error) {
+		switch key {
+		case keyLevel:
+			rule.Level, err = read.String(dec)
+		case keyIgnore:
+			rule.Ignore = &Ignore{}
+			err = json.UnmarshalDecode(dec, rule.Ignore)
+		default:
+			if rule.Extra == nil {
+				rule.Extra = make(map[string]any)
+			}
 
-	return rule.mapToConfig(result)
+			var val any
+
+			err = json.UnmarshalDecode(dec, &val)
+			rule.Extra[key] = val
+		}
+
+		return err
+	})
 }
 
 func (rule Rule) MarshalYAML() (any, error) {

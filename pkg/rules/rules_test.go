@@ -35,7 +35,7 @@ p { true }`,
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			opts := parse.ParserOptions()
+			opts := parse.Options()
 			opts.RegoVersion = tc.RegoVersion
 
 			if _, err := rules.InputFromTextWithOptions("p.rego", tc.Module, opts); err != nil {

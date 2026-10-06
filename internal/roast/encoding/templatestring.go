@@ -1,45 +1,30 @@
 package encoding
 
 import (
-	"unsafe"
-
-	jsoniter "github.com/json-iterator/go"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 
 	"github.com/open-policy-agent/opa/v1/ast"
+
+	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
-type templateStringCodec struct{}
+func TemplateStringMarshalToFn(enc *jsontext.Encoder, ts *ast.TemplateString) (err error) {
+	enc.WriteToken(jsontext.BeginObject)
+	write.WhenTrue(enc, ts.MultiLine, "multi_line")
+	write.Tokens(enc, jsontext.String("parts"), jsontext.BeginArray)
 
-func (*templateStringCodec) IsEmpty(_ unsafe.Pointer) bool {
-	return false
-}
-
-func (*templateStringCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	sc := *(*ast.TemplateString)(ptr)
-
-	stream.WriteObjectStart()
-
-	if sc.MultiLine {
-		stream.WriteObjectField("multi_line")
-		stream.WriteBool(sc.MultiLine)
-		stream.WriteMore()
-	}
-
-	stream.WriteObjectField("parts")
-	stream.WriteArrayStart()
-
-	for i, part := range sc.Parts {
-		if i > 0 {
-			stream.WriteMore()
+	for _, part := range ts.Parts {
+		if expr, ok := part.(*ast.Expr); ok {
+			err = writeExpr(enc, expr, true)
+		} else {
+			err = json.MarshalEncode(enc, part)
 		}
 
-		if _, ok := part.(*ast.Expr); ok {
-			stream.Attachment = "interpolated"
+		if err != nil {
+			return err
 		}
-
-		stream.WriteVal(part)
 	}
 
-	stream.WriteArrayEnd()
-	stream.WriteObjectEnd()
+	return write.Tokens(enc, jsontext.EndArray, jsontext.EndObject)
 }

@@ -2,12 +2,15 @@
 package transforms
 
 import (
-	"encoding/json"
+	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 	"strconv"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/util"
+
+	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 
 	_ "github.com/open-policy-agent/regal/pkg/roast/intern"
 )
@@ -34,7 +37,7 @@ func AnyToValue(x any) (ast.Value, error) {
 		}
 
 		return ast.Number(strconv.Itoa(x)), nil
-	case json.Number:
+	case jsonv1.Number:
 		if ix, err := x.Int64(); err == nil {
 			return ast.InternedValue(ix), nil
 		}
@@ -98,14 +101,8 @@ func AnyToValue(x any) (ast.Value, error) {
 		}
 
 		return ast.NewObject(tuples...), nil
-	case *json.RawMessage:
-		var v any
-
-		if err := json.Unmarshal(*x, &v); err != nil {
-			return nil, fmt.Errorf("unmarshal raw message: %w", err)
-		}
-
-		return AnyToValue(v)
+	case *jsontext.Value:
+		return encoding.JSONUnmarshalTo[ast.Value](*x, encoding.NoASTOptions)
 	default:
 		return nil, fmt.Errorf("unsupported type: %T", x)
 	}

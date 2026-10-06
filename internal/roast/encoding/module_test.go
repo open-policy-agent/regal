@@ -1,12 +1,13 @@
 package encoding
 
 import (
+	"encoding/json/v2"
+	"io"
 	"testing"
-
-	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
+	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 )
 
@@ -18,11 +19,10 @@ var pkg = &ast.Package{
 func TestAnnotationsOnPackage(t *testing.T) {
 	t.Parallel()
 
-	module := ast.Module{
+	module := &ast.Module{
 		Package:     pkg,
 		Annotations: []*ast.Annotations{{Location: &ast.Location{Row: 1, Col: 1}, Scope: "package", Title: "foo"}},
 	}
-	roast := must.Return(jsoniter.ConfigFastest.MarshalIndent(module, "", "  "))(t)
 
 	// package annotations should end up on the package object
 	// and *not* on the module object, contrary to how OPA
@@ -50,20 +50,19 @@ func TestAnnotationsOnPackage(t *testing.T) {
     ]
   }
 }`
-	must.Equal(t, expected, string(roast))
+	assert.JSONEqual(t, expected, must.Marshal(t, module, Options))
 }
 
 func TestAnnotationsOnPackageBothPackageAndSubpackagesScope(t *testing.T) {
 	t.Parallel()
 
-	module := ast.Module{
+	module := &ast.Module{
 		Package: pkg,
 		Annotations: []*ast.Annotations{
 			{Location: &ast.Location{Row: 1, Col: 1}, Scope: "package", Title: "foo"},
 			{Location: &ast.Location{Row: 3, Col: 1}, Scope: "subpackages", Title: "bar"},
 		},
 	}
-	roast := must.Return(jsoniter.ConfigFastest.MarshalIndent(module, "", "  "))(t)
 
 	expected := `{
   "package": {
@@ -92,13 +91,13 @@ func TestAnnotationsOnPackageBothPackageAndSubpackagesScope(t *testing.T) {
     ]
   }
 }`
-	must.Equal(t, expected, string(roast))
+	assert.JSONEqual(t, expected, must.Marshal(t, module, Options))
 }
 
 func TestRuleAndDocumentScopedAnnotationsOnPackageAreDropped(t *testing.T) {
 	t.Parallel()
 
-	module := ast.Module{
+	module := &ast.Module{
 		Package: pkg,
 		Annotations: []*ast.Annotations{
 			{Location: &ast.Location{Row: 1, Col: 1}, Scope: "package", Title: "foo"},
@@ -106,7 +105,6 @@ func TestRuleAndDocumentScopedAnnotationsOnPackageAreDropped(t *testing.T) {
 			{Location: &ast.Location{Row: 4, Col: 1}, Scope: "document", Title: "baz"},
 		},
 	}
-	roast := must.Return(jsoniter.ConfigFastest.MarshalIndent(module, "", "  "))(t)
 
 	expected := `{
   "package": {
@@ -130,7 +128,7 @@ func TestRuleAndDocumentScopedAnnotationsOnPackageAreDropped(t *testing.T) {
     ]
   }
 }`
-	must.Equal(t, expected, string(roast))
+	assert.JSONEqual(t, expected, must.Marshal(t, module, Options))
 }
 
 func TestSerializedModuleSize(t *testing.T) {
@@ -138,22 +136,29 @@ func TestSerializedModuleSize(t *testing.T) {
 
 	policy := mustReadTestFile(t, "testdata/policy.rego")
 	module := ast.MustParseModuleWithOpts(string(policy), ast.ParserOptions{ProcessAnnotation: true})
-	roast := must.Return(jsoniter.ConfigFastest.Marshal(module))(t)
 
 	// This test will fail whenever the size of the serialized module changes,
 	// which not often and when it happens it's good to know about it, update
 	// and move on.
-	must.Equal(t, 79213, len(roast), "serialized module size")
+	must.Equal(t, 79290, len(must.Marshal(t, module, Options)), "serialized module size")
 }
 
-// 233660 ns/op	  103183 B/op	    2630 allocs/op
+// 262180 ns/op      404445 B/op      2648 allocs/op // jsoniter
+// 177527 ns/op          50 B/op         1 allocs/op // json/v2
 func BenchmarkSerializeModule(b *testing.B) {
 	policy := mustReadTestFile(b, "testdata/policy.rego")
 	module := ast.MustParseModuleWithOpts(string(policy), ast.ParserOptions{ProcessAnnotation: true})
 
-	for b.Loop() {
-		if _, err := jsoniter.ConfigFastest.Marshal(module); err != nil {
-			b.Fatalf("failed to marshal module: %v", err)
+	var jsonResult []byte
+
+	b.Run("json/v2", func(b *testing.B) {
+		opts := json.JoinOptions(Options)
+		for b.Loop() {
+			if err := json.MarshalWrite(io.Discard, module, opts); err != nil {
+				b.Fatalf("failed to marshal module: %v", err)
+			}
 		}
-	}
+	})
+
+	_ = jsonResult
 }

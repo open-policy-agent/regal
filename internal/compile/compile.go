@@ -25,7 +25,8 @@ var RegalSchemaSet = sync.OnceValue(func() *ast.SchemaSet {
 	schemaSet, _ := files.DefaultWalkReducer("schemas", ast.NewSchemaSet()).
 		WithFilters(filter.Not(filter.Suffixes(".json"))).
 		ReduceFS(embeds.SchemasFS, func(path string, schemaSet *ast.SchemaSet) (*ast.SchemaSet, error) {
-			schemaAny := util.Must(encoding.JSONUnmarshalTo[any](util.Must(embeds.SchemasFS.ReadFile(path))))
+			bs := util.Must(embeds.SchemasFS.ReadFile(path))
+			schemaAny := util.Must(encoding.JSONUnmarshalTo[any](bs))
 
 			// > This is unlike io/fs.WalkDir, which always uses slash separated paths.
 			// https://pkg.go.dev/path/filepath#WalkDir

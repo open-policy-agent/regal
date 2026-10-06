@@ -1,10 +1,7 @@
 package encoding
 
 import (
-	"fmt"
 	"testing"
-
-	jsoniter "github.com/json-iterator/go"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
@@ -17,26 +14,23 @@ func TestLocation(t *testing.T) {
 
 	cases := []struct {
 		name     string
-		location ast.Location
+		location *ast.Location
 		expected string
 	}{{
 		name:     "multiple lines",
-		location: ast.Location{Row: 5, Col: 2, Text: []byte("allow if {\n	input.foo == true\n}")},
-		expected: "5:2:7:2",
+		location: &ast.Location{Row: 5, Col: 2, Text: []byte("allow if {\n	input.foo == true\n}")},
+		expected: `"5:2:7:2"`,
 	}, {
 		name:     "single line",
-		location: ast.Location{Row: 1, Col: 1, Text: []byte("package example")},
-		expected: "1:1:1:16",
+		location: &ast.Location{Row: 1, Col: 1, Text: []byte("package example")},
+		expected: `"1:1:1:16"`,
 	}}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			stream := jsoniter.ConfigFastest.BorrowStream(nil)
-			stream.WriteVal(tc.location)
-			assert.Equal(t, fmt.Sprintf("%q", tc.expected), string(stream.Buffer()), "location encoding")
-			jsoniter.ConfigFastest.ReturnStream(stream)
+			assert.JSONEqual(t, tc.expected, must.Marshal(t, tc.location, Options))
 		})
 	}
 }
@@ -47,7 +41,6 @@ func TestLocationHeadValue(t *testing.T) {
 	t.Parallel()
 
 	mod := ast.MustParseModule("package foo.bar\n\nrule := true")
-	out := must.Return(jsoniter.ConfigFastest.MarshalIndent(mod, "", "  "))(t)
 	expect := `{
   "package": {
     "location": "1:1:1:8",
@@ -90,5 +83,5 @@ func TestLocationHeadValue(t *testing.T) {
     }
   ]
 }`
-	assert.Equal(t, expect, string(out), "module encoding")
+	assert.JSONEqual(t, expect, must.Marshal(t, mod, Options))
 }

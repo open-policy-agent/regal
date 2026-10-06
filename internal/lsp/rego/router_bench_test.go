@@ -1,7 +1,7 @@
 package rego_test
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"strings"
 	"testing"
 
@@ -29,7 +29,7 @@ func BenchmarkRegoHandlers(b *testing.B) {
 			mgr := rego.NewRouter(b.Context(), stg, query.NewCache(), providersForTest(b, test), logger)
 			mgr.RegisterResultHandler("textDocument/semanticTokens/full", semantictokens.ResultHandler)
 
-			runBenchmark(b, mgr, request(test.method, new(json.RawMessage(test.input.content))))
+			runBenchmark(b, mgr, request(test.method, new(jsontext.Value(test.input.content))))
 		})
 	}
 }

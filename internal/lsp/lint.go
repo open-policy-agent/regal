@@ -69,7 +69,7 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 		return false, fmt.Errorf("updateParse: failed to get file contents for uri %q", opts.FileURI)
 	}
 
-	options := rparse.ParserOptions()
+	options := rparse.Options()
 	options.RegoVersion = opts.RegoVersion
 
 	numLines := util.NumLines(content)

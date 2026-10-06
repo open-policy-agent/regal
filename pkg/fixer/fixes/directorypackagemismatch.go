@@ -53,7 +53,7 @@ func (d *DirectoryPackageMismatch) Fix(fc *FixCandidate, opts *RuntimeOptions) (
 }
 
 func getPackagePathDirectory(fc *FixCandidate, config *config.Config) (string, error) {
-	popts := parse.ParserOptions()
+	popts := parse.Options()
 	if fc.RegoVersion != ast.RegoUndefined {
 		popts.RegoVersion = fc.RegoVersion
 	}

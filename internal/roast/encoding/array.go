@@ -1,33 +1,19 @@
 package encoding
 
 import (
-	"unsafe"
-
-	jsoniter "github.com/json-iterator/go"
+	"encoding/json/jsontext"
 
 	"github.com/open-policy-agent/opa/v1/ast"
-
-	"github.com/open-policy-agent/regal/internal/roast/encoding/write"
 )
 
-type arrayCodec struct{}
-
-func (*arrayCodec) IsEmpty(_ unsafe.Pointer) bool {
-	return false
-}
-
-func (*arrayCodec) Encode(ptr unsafe.Pointer, stream *jsoniter.Stream) {
-	arr := *(*ast.Array)(ptr)
-
-	stream.WriteArrayStart()
+func ArrayMarshalToFn(enc *jsontext.Encoder, arr *ast.Array) error {
+	enc.WriteToken(jsontext.BeginArray)
 
 	for i := range arr.Len() {
-		if i > 0 {
-			stream.WriteMore()
+		if err := TermMarshalToFn(enc, arr.Elem(i)); err != nil {
+			return err
 		}
-
-		write.Term(stream, arr.Elem(i))
 	}
 
-	stream.WriteArrayEnd()
+	return enc.WriteToken(jsontext.EndArray)
 }

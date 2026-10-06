@@ -1,7 +1,7 @@
 package store
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -25,7 +25,7 @@ func TestPutFileModStoresRoastRepresentation(t *testing.T) {
 	parsed := must.Return(storage.ReadOne(t.Context(), store, storage.Path{"workspace", "parsed", fileURI}))(t)
 	parsedVal := must.Be[ast.Value](t, parsed)
 	parsedMap := must.Return(ast.ValueToInterface(parsedVal, nil))(t)
-	pretty := must.Return(json.MarshalIndent(parsedMap, "", "  "))(t)
+	pretty := must.Marshal(t, parsedMap, jsontext.WithIndent("  "))
 
 	// This is certainly testing the implementation rather than the behavior, but we actually
 	// want some tests to fail if the implementation changes, so we don't have to chase this
@@ -67,7 +67,7 @@ func TestPutFileModStoresRoastRepresentation(t *testing.T) {
     }
   ]
 }`
-	assert.Equal(t, expect, string(pretty))
+	assert.JSONEqual(t, expect, pretty)
 }
 
 func TestPutFileRefs(t *testing.T) {

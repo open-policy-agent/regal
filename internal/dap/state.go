@@ -3,7 +3,7 @@ package dap
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 
@@ -14,6 +14,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/dap/evaluate"
 	"github.com/open-policy-agent/regal/internal/util"
+	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
 type (
@@ -122,8 +123,8 @@ func (s *state) initialize(r *godap.InitializeRequest) *godap.InitializeResponse
 }
 
 func (s *state) launch(ctx context.Context, r *godap.LaunchRequest) (*godap.LaunchResponse, error) {
-	var props launchProperties
-	if err := json.Unmarshal(r.Arguments, &props); err != nil {
+	props, err := encoding.JSONUnmarshalTo[launchProperties](r.Arguments)
+	if err != nil {
 		return nil, fmt.Errorf("invalid launch properties: %w", err)
 	}
 
@@ -135,12 +136,11 @@ func (s *state) launch(ctx context.Context, r *godap.LaunchRequest) (*godap.Laun
 
 	s.logger.Info("Launching: %s", props)
 
-	var err error
-
 	switch props.Command {
 	case "eval":
 		var evalProps debug.LaunchEvalProperties
-		if err := json.Unmarshal(r.Arguments, &evalProps); err != nil {
+
+		if err = json.Unmarshal(r.Arguments, &evalProps, encoding.NoASTOptions); err != nil {
 			return nil, fmt.Errorf("invalid launch eval properties: %w", err)
 		}
 

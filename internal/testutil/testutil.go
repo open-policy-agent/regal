@@ -1,7 +1,7 @@
 package testutil
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,10 +9,10 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/open-policy-agent/regal/internal/roast/encoding"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/report"
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
 func MustBeOK[T any](x T, ok bool) func(testing.TB) T {
@@ -135,13 +135,8 @@ func MustUnmarshalYAML[T any](tb testing.TB, data []byte) T {
 	return result
 }
 
-func ToJSONRawMessage(tb testing.TB, msg any) *json.RawMessage {
+func ToJSONRawMessage(tb testing.TB, msg any) *jsontext.Value {
 	tb.Helper()
 
-	data, err := encoding.JSON().Marshal(msg)
-	if err != nil {
-		tb.Fatalf("failed to marshal message: %v", err)
-	}
-
-	return new(json.RawMessage(data))
+	return new(jsontext.Value(must.Marshal(tb, msg, encoding.Options)))
 }

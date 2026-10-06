@@ -2,10 +2,9 @@ package handler
 
 import (
 	"context"
+	"encoding/json/v2"
 
 	"github.com/sourcegraph/jsonrpc2"
-
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
 type Func[T any] func(T) (any, error)
@@ -19,7 +18,7 @@ func Decode[T any](req *jsonrpc2.Request, params *T) error {
 		return ErrInvalidParams
 	}
 
-	if err := encoding.JSON().Unmarshal(*req.Params, &params); err != nil {
+	if err := json.Unmarshal(*req.Params, &params); err != nil {
 		return &jsonrpc2.Error{Code: jsonrpc2.CodeInvalidParams, Message: err.Error()}
 	}
 

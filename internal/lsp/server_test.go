@@ -2,7 +2,7 @@ package lsp
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 	"io"
 	"net"
@@ -162,7 +162,7 @@ func createAndInitServerWithClientName(
 		rootURI = uri.FromPath(clientIdentifier, tempDir)
 	}
 
-	request := new(json.RawMessage(fmt.Sprintf(`{
+	request := new(jsontext.Value(fmt.Sprintf(`{
 		"rootUri": %q,
 		"clientInfo": {
 			"name": %q

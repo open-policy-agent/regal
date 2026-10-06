@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"context"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"os"
@@ -26,7 +27,6 @@ import (
 	"github.com/open-policy-agent/regal/pkg/fixer/fileprovider"
 	"github.com/open-policy-agent/regal/pkg/fixer/fixes"
 	"github.com/open-policy-agent/regal/pkg/report"
-	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
 
 var (
@@ -77,7 +77,7 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 					err        error
 				)
 
-				if err = encoding.JSON().Unmarshal(outil.StringToByteSlice(jsonData), &args); err != nil {
+				if err = json.Unmarshal(outil.StringToByteSlice(jsonData), &args); err != nil {
 					l.log.Message("failed to unmarshal command arguments: %s", err)
 
 					continue

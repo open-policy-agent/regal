@@ -4,12 +4,16 @@
 package assert
 
 import (
+	"bytes"
+	"encoding/json/jsontext"
 	"fmt"
 	"maps"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func Equal[T comparable](tb testing.TB, exp, got T, s ...any) {
@@ -93,4 +97,34 @@ func FormatMsg[T any](exp, got T, s ...any) string {
 	}
 
 	return fmt.Sprintf("expected %v, got %v", exp, got)
+}
+
+// JSONEqual fails the test unless the canonical JSON encoding of exp
+// and got are equal, meaning that they are compared without regard to
+// things like whitespace, key order, etc. For more details, see
+// [jsontext.Value.Canonicalize].
+//
+//nolint:errcheck
+func JSONEqual[A, B ~string | ~[]byte](tb testing.TB, exp A, got B) {
+	tb.Helper()
+
+	expVal, gotVal := mustCanonicalize(tb, exp), mustCanonicalize(tb, got)
+
+	if !bytes.Equal(expVal, gotVal) {
+		expVal.Format(jsontext.WithIndent("  "))
+		gotVal.Format(jsontext.WithIndent("  "))
+
+		tb.Fatalf("expected JSON to be equal, got:\n%s", cmp.Diff(expVal.String(), gotVal.String()))
+	}
+}
+
+func mustCanonicalize[A ~string | ~[]byte](tb testing.TB, val A) jsontext.Value {
+	tb.Helper()
+
+	v := jsontext.Value(val)
+	if err := v.Canonicalize(); err != nil {
+		tb.Fatalf("failed to canonicalize JSON: %v", err)
+	}
+
+	return v
 }
