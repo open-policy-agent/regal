@@ -2,7 +2,6 @@ package encoding
 
 import (
 	"bytes"
-	"encoding"
 	"encoding/json/jsontext"
 	"encoding/json/v2"
 	"errors"
@@ -118,15 +117,6 @@ func ValueMarshalToFn(enc *jsontext.Encoder, value ast.Value) error {
 					enc.WriteToken(jsontext.String(string(key)))
 
 					if err := ValueMarshalToFn(enc, elem.Value().Value); err != nil {
-						return err
-					}
-				case encoding.TextAppender:
-					bs, err := key.AppendText(enc.AvailableBuffer())
-					if err == nil {
-						err = enc.WriteValue(bs)
-					}
-
-					if err != nil {
 						return err
 					}
 				default:

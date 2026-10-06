@@ -219,6 +219,32 @@ func TestValueNoASTRoundTrip(t *testing.T) {
 	}
 }
 
+func TestValueNoASTNonStringKeys(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		value ast.Value
+		want  string
+	}{
+		"number key": {ast.MustParseTerm(`{1: "a"}`).Value, `{"1":"a"}`},
+		"array key":  {ast.MustParseTerm(`{[1, 2]: "a"}`).Value, `{"[1, 2]":"a"}`},
+		"bool key":   {ast.MustParseTerm(`{true: "a"}`).Value, `{"true":"a"}`},
+		"null key":   {ast.MustParseTerm(`{null: "a"}`).Value, `{"null":"a"}`},
+		"set key":    {ast.MustParseTerm(`{{1, 2}: "a"}`).Value, `{"{1, 2}":"a"}`},
+		"object key": {ast.MustParseTerm(`{{"a": 1}: "a"}`).Value, `{"{\"a\": 1}":"a"}`},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := string(must.Marshal(t, test.value, NoASTOptions)); got != test.want {
+				t.Fatalf("expected %s, got %s", test.want, got)
+			}
+		})
+	}
+}
+
 func BenchmarkValueNoASTEncode(b *testing.B) {
 	for _, test := range valueTests {
 		b.Run(test.name, func(b *testing.B) {
