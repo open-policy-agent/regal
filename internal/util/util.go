@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	outil "github.com/open-policy-agent/opa/v1/util"
+	"github.com/open-policy-agent/opa/v1/util"
 )
 
 // NilSliceToEmpty returns empty slice if provided slice is nil.
@@ -57,7 +57,7 @@ func Must[T any](v T, err error) T {
 // Mapper returns a function that applies f to each element in a and returns a new slice with the results.
 func Mapper[T, U any](f func(T) U) func(...T) []U {
 	return func(a ...T) []U {
-		return outil.Map(a, f)
+		return util.Map(a, f)
 	}
 }
 
@@ -156,7 +156,7 @@ func FilepathJoiner(base string) func(string) string {
 }
 
 // UintToInt will convert a uint to an int, clamping the result to math.MaxInt.
-func UintToInt[U outil.UnsignedInteger](u U) int {
+func UintToInt[U util.UnsignedInteger](u U) int {
 	// Note: we can't easily return a generic int type here as we'd need interface
 	// conversion to be able to correctly clamp the value to the max value for the
 	// target integer type.
@@ -168,7 +168,7 @@ func UintToInt[U outil.UnsignedInteger](u U) int {
 }
 
 // IntTo will convert an int to a uint, clamping negative values to 0.
-func IntTo[T outil.UnsignedInteger, I outil.SignedInteger](i I) T {
+func IntTo[T util.UnsignedInteger, I util.SignedInteger](i I) T {
 	if i < 0 {
 		return 0 // Clamp negative values to 0
 	}
@@ -245,23 +245,13 @@ func FreePort(preferred ...int) (port int, err error) {
 	}
 
 	// If no preferred port is available, find a random free port using :0
-	if port, err = listen(0); err == nil {
-		return port, nil
-	}
-
-	return 0, fmt.Errorf("failed to find free port: %w", err)
+	return Wrap(listen(0))("failed to find free port")
 }
 
 // Wrap wraps a value and an error into a function that returns the value and error.
 func Wrap[T any](v T, err error) func(string) (T, error) {
-	if err != nil {
-		return func(msg string) (T, error) {
-			return v, fmt.Errorf("%s: %w", msg, err)
-		}
-	}
-
-	return func(string) (T, error) {
-		return v, nil
+	return func(msg string) (T, error) {
+		return v, WrapErr(err, msg)
 	}
 }
 
@@ -274,20 +264,18 @@ func WrapErr(err error, msg string) error {
 	return fmt.Errorf("%s: %w", msg, err)
 }
 
-// AnySliceTo converts a slice of any to a slice of T, returning an error if any element cannot be casted.
-func AnySliceTo[T any](in []any) ([]T, error) {
-	out := make([]T, 0, len(in))
-
-	for _, item := range in {
-		asserted, ok := item.(T)
-		if !ok {
-			return nil, fmt.Errorf("expected %T, got %T", asserted, item)
-		}
-
-		out = append(out, asserted)
+// AnyAs does type conversion returning a descriptive error rather than a boolean.
+func AnyAs[T any](val any) (t T, err error) {
+	if v, ok := val.(T); ok {
+		return v, nil
 	}
 
-	return out, nil
+	return t, fmt.Errorf("expected value of type %T, got %T", t, val)
+}
+
+// AnySliceTo converts a slice of any to a slice of T, returning an error if any element cannot be casted.
+func AnySliceTo[T any](in []any) ([]T, error) {
+	return util.TryMap(in, AnyAs[T])
 }
 
 // Reversed reverses s in place using slices.Reverse and returns it.

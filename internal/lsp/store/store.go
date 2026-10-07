@@ -12,6 +12,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/client"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/roast/transforms/module"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
@@ -37,6 +38,15 @@ func NewRegalStore() storage.Store {
 		rast.Item("client", ast.ObjectTerm()),
 		rast.Item("server", ast.ObjectTerm()),
 	))
+}
+
+func GetConfig(ctx context.Context, store storage.Store) (ast.Value, error) {
+	valAny, err := storage.ReadOne(ctx, store, pathWorkspaceConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return util.AnyAs[ast.Value](valAny)
 }
 
 func RemoveFileMod(ctx context.Context, store storage.Store, fileURI string) error {

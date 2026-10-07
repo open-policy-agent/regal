@@ -98,6 +98,17 @@ func Insert(obj ast.Object, key string, value *ast.Term) ast.Object {
 	return obj
 }
 
+// GetOr retrieves a term from an ast.Value by key, or returns the default value if not found.
+func GetOr(val ast.Value, key string, defaultSupplier func() *ast.Term) *ast.Term {
+	if obj, ok := val.(ast.Object); ok {
+		if term := obj.Get(ast.InternedTerm(key)); term != nil {
+			return term
+		}
+	}
+
+	return defaultSupplier()
+}
+
 // GetValue works like ast.Object.Get but with type assertion for the return value,
 // and a boolean return indicator.
 func GetValue[T ast.Value](obj ast.Object, key string) (T, bool) {
