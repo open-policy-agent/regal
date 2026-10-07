@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"regexp"
 	"sync"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -17,8 +16,8 @@ import (
 	rbundle "github.com/open-policy-agent/regal/bundle"
 	"github.com/open-policy-agent/regal/internal/compile"
 	"github.com/open-policy-agent/regal/internal/io"
+	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/util"
-	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
 
 	_ "github.com/open-policy-agent/regal/pkg/builtins"
@@ -30,7 +29,17 @@ const (
 	TestLocations     = "data.regal.lsp.testlocations.result"
 )
 
-var simpleRefPattern = regexp.MustCompile(`^[a-zA-Z.]$`)
+var (
+	RegoEnablePrint      = rego.EnablePrintStatements(true)
+	RegoGenJSONValue     = rego.GenerateJSON(genJSONValue)
+	RegoEvalGenJSONValue = rego.EvalGenerateJSON(genJSONValue)
+	RegoStderrPrintHook  = rego.PrintHook(StderrPrintHook)
+	RegoCapabilities     = rego.Capabilities(io.Capabilities())
+	RegoStoreReadAST     = rego.StoreReadAST(true)
+
+	genJSONValue    = func(term *ast.Term, _ *rego.EvalContext) (any, error) { return term.Value, nil }
+	StderrPrintHook = topdown.NewPrintHook(os.Stderr)
+)
 
 type (
 	Cache struct {
@@ -46,7 +55,6 @@ type (
 	schemaResolver struct {
 		value ast.Value
 	}
-
 	regoOptions = []func(*rego.Rego)
 )
 
@@ -67,7 +75,7 @@ func (q *Prepared) String() string {
 }
 
 func (c *Cache) Store(ctx context.Context, query string, store storage.Store) error {
-	parsedQuery := parseQuery(query)
+	parsedQuery := parse.Query(query)
 
 	pq, err := prepareQuery(ctx, parsedQuery, store)
 	if err != nil {
@@ -88,7 +96,7 @@ func (c *Cache) Get(query string) *Prepared {
 func (c *Cache) GetOrSet(ctx context.Context, store storage.Store, query string) (*Prepared, error) {
 	cq, ok := c.prepared.Get(query)
 	if !ok {
-		parsedQuery := parseQuery(query)
+		parsedQuery := parse.Query(query)
 
 		pq, err := prepareQuery(ctx, parsedQuery, store)
 		if err != nil {
@@ -166,34 +174,22 @@ func prepareQueryArgs(
 	store storage.Store,
 	rb *bundle.Bundle,
 ) (regoOptions, storage.Transaction) {
-	args := []func(*rego.Rego){
-		rego.Capabilities(io.Capabilities()),
+	resolvers := SchemaResolvers()
+	args := append(append(make([]func(*rego.Rego), 0, 8+len(resolvers)),
+		RegoCapabilities, RegoGenJSONValue,
+		RegoEnablePrint, RegoStderrPrintHook, // enabled for debugging, should probably be conditional
 		rego.ParsedQuery(query), rego.ParsedBundle("regal", rb),
-		// For debugging, but we should probably make this conditional
-		rego.EnablePrintStatements(true), rego.PrintHook(topdown.NewPrintHook(os.Stderr)),
-		rego.GenerateJSON(func(term *ast.Term, _ *rego.EvalContext) (any, error) {
-			return term.Value, nil
-		}),
-	}
-	args = append(args, SchemaResolvers()...)
+	), resolvers...)
 
 	var txn storage.Transaction
 	if store != nil {
 		txn, _ = store.NewTransaction(ctx, storage.WriteParams)
 		args = append(args, rego.Store(store), rego.Transaction(txn))
 	} else {
-		args = append(args, rego.StoreReadAST(true))
+		args = append(args, RegoStoreReadAST)
 	}
 
 	return args, txn
-}
-
-func parseQuery(query string) ast.Body {
-	if simpleRefPattern.MatchString(query) { // Try cheap parsing if possible
-		return rast.RefStringToBody(query)
-	}
-
-	return ast.MustParseBody(query)
 }
 
 var schemaResolvers = sync.OnceValue(func() (resolvers []func(*rego.Rego)) {
@@ -204,15 +200,13 @@ var schemaResolvers = sync.OnceValue(func() (resolvers []func(*rego.Rego)) {
 	for _, module := range rbundle.Loaded().Modules {
 		for _, annos := range module.Parsed.Annotations {
 			for _, s := range annos.Schemas {
-				if len(s.Schema) == 0 || added.Contains(s.Schema.String()) {
-					continue
+				if len(s.Schema) != 0 && !added.Contains(s.Schema.String()) {
+					resolvers = append(resolvers, rego.Resolver(
+						ast.DefaultRootRef.Extend(s.Schema),
+						schemaResolver{value: ast.MustInterfaceToValue(ss.Get(s.Schema))},
+					))
+					added.Add(s.Schema.String())
 				}
-
-				resolvers = append(resolvers, rego.Resolver(
-					ast.DefaultRootRef.Extend(s.Schema),
-					schemaResolver{value: ast.MustInterfaceToValue(ss.Get(s.Schema))},
-				))
-				added.Add(s.Schema.String())
 			}
 		}
 	}

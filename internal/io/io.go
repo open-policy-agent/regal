@@ -200,11 +200,8 @@ func ModulesFromCustomRuleFS(customRuleFS fs.FS, rootPath string) (map[string]*a
 
 			return modules, nil
 		})
-	if err != nil {
-		return nil, fmt.Errorf("failed to walk custom rule FS: %w", err)
-	}
 
-	return modules, nil
+	return modules, util.WrapErr(err, "failed to walk custom rule FS")
 }
 
 // DirCleanUpPaths will, for a given target file, list all the dirs that would
