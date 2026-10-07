@@ -80,7 +80,10 @@ needs_download()
         return 1
     fi
     INSTALLED_VERSION=$(REGAL_DISABLE_VERSION_CHECK=1 "${BIN_PATH}" version 2>/dev/null | sed -n 's/^Version:[[:space:]]*//p')
-    [ "${INSTALLED_VERSION}" != "${REGAL_VERSION}" ]
+    # Release binaries report the version without the "v" prefix (e.g. "0.25.0"
+    # for tag "v0.25.0"), so strip it before comparing, or every run would
+    # re-download instead of using the cached binary.
+    [ "${INSTALLED_VERSION}" != "${REGAL_VERSION#v}" ]
 }
 
 if needs_download; then download; fi
