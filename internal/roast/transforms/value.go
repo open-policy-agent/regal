@@ -21,6 +21,8 @@ import (
 // unmarshaled from RoAST JSON. Don't use it for anything else.
 func AnyToValue(x any) (ast.Value, error) {
 	switch x := x.(type) {
+	case ast.Value:
+		return x, nil
 	case nil:
 		return ast.NullValue, nil
 	case bool:

@@ -74,26 +74,18 @@ type (
 		SuccessfulParseLineCount bool `json:"successful_parse_line_count"`
 		ParseErrors              bool `json:"parse_errors"`
 	}
-
-	policy struct {
-		module   *ast.Module
-		fileName string
-		contents string
-	}
 )
 
 // AllRuleHeadLocations returns mapping of rules names to the head locations.
 func AllRuleHeadLocations(
-	ctx context.Context, pq *query.Prepared, fileName, contents string, module *ast.Module,
-) (RuleHeads, error) {
-	var locations RuleHeads
-
-	err := policyToValue(ctx, pq, policy{module, fileName, contents}, &locations)
-	if err != nil {
-		return nil, fmt.Errorf("failed querying for rule head locations: %w", err)
+	ctx context.Context, pq *query.Prepared, file, contents string, module *ast.Module,
+) (locations RuleHeads, err error) {
+	input, err := util.Wrap(transform.ToAST(file, contents, module, false))("failed to prepare input")
+	if err == nil {
+		err = util.WrapErr(CachedQueryEval(ctx, pq, input, &locations), "failed cached query evaluation")
 	}
 
-	return locations, nil
+	return locations, err
 }
 
 func CachedQueryEval[T any](ctx context.Context, pq *query.Prepared, input ast.Value, toValue *T) error {
@@ -125,15 +117,6 @@ func CachedQueryEvalUndecoded[T any](ctx context.Context, pq *query.Prepared, in
 	}
 
 	return res, fmt.Errorf("unexpected query result format: %v", result.Expressions[0].Value)
-}
-
-func policyToValue[T any](ctx context.Context, pq *query.Prepared, policy policy, toValue *T) error {
-	input, err := transform.ToAST(policy.fileName, policy.contents, policy.module, false)
-	if err != nil {
-		return fmt.Errorf("failed to prepare input: %w", err)
-	}
-
-	return CachedQueryEval(ctx, pq, input, toValue)
 }
 
 func toValidResult(rs rego.ResultSet, err error) (rego.Result, error) {

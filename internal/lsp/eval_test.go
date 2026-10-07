@@ -1,7 +1,6 @@
 package lsp
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 
@@ -60,7 +59,8 @@ func TestEvalWorkspace(t *testing.T) {
 	assert.True(t, ast.Boolean(true).Equal(res.Value))
 
 	policy2URI := ls.Workspace().URI("policy2.rego")
-	expectedPrintOutput := map[string]map[int][]string{policy2URI: {4: {"1"}}}
+	expectedPrintOutput := PrintOutput{policy2URI: {4: {"1"}}}
+
 	must.Equal(t, "", cmp.Diff(expectedPrintOutput, res.PrintOutput), "print output")
 }
 
@@ -248,31 +248,31 @@ func TestFinalExpressionValue(t *testing.T) {
 		"bare variable reference": {
 			query:     "x := 1; y := x + 1; y",
 			exprValue: ast.Number("2"),
-			bindings:  map[string]any{"x": json.Number("1"), "y": json.Number("2")},
+			bindings:  map[string]any{"x": 1, "y": 2},
 			expected:  ast.Number("2"),
 		},
 		"ending in assignment": {
 			query:     "x := 1; y := x + 1",
 			exprValue: true,
-			bindings:  map[string]any{"x": json.Number("1"), "y": json.Number("2")},
+			bindings:  map[string]any{"x": 1, "y": 2},
 			expected:  ast.Number("2"),
 		},
 		"equality, variable on right": {
 			query:     "1 = x",
 			exprValue: true,
-			bindings:  map[string]any{"x": json.Number("1")},
+			bindings:  map[string]any{"x": 1},
 			expected:  ast.Number("1"),
 		},
 		"destructuring assignment": {
 			query:     "[a, b] := [1, 2]",
 			exprValue: true,
-			bindings:  map[string]any{"a": json.Number("1"), "b": json.Number("2")},
+			bindings:  map[string]any{"a": 1, "b": 2},
 			expected:  ast.Boolean(true),
 		},
 		"multi-line query with comments": {
 			query:     "# leading comment\nx := 1\ny := x + 1 # trailing comment\ny",
-			exprValue: json.Number("2"),
-			bindings:  map[string]any{"x": json.Number("1"), "y": json.Number("2")},
+			exprValue: 2,
+			bindings:  map[string]any{"x": 1, "y": 2},
 			expected:  ast.Number("2"),
 		},
 	}
@@ -318,6 +318,7 @@ func TestEvalInWorkspaceHandler(t *testing.T) {
 
 // Note: cost is almost entirely from compiling / building the bundle
 // 1331922 ns/op	 1436070 B/op	   19098 allocs/op
+// _342727 ns/op	  281612 B/op	    5656 allocs/op // use store instead of building bundle
 func BenchmarkEvalInWorkspaceHandler(b *testing.B) {
 	ls := evalTestServerWithFS(b)
 	args := types.CommandArgs{
@@ -325,8 +326,6 @@ func BenchmarkEvalInWorkspaceHandler(b *testing.B) {
 		Query:  "data.policy1.allow",
 		Row:    7,
 	}
-
-	b.ResetTimer()
 
 	// result is verified by the test above.. no need to check it here.
 	for b.Loop() {

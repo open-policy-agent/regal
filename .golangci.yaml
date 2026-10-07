@@ -21,6 +21,7 @@ linters:
     - ireturn
     - mnd
     - nestif
+    - nlreturn # covered by wsl_v5
     - noinlineerr
     - nonamedreturns
     - promlinter # we don't use Prometheus

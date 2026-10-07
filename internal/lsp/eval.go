@@ -10,26 +10,29 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/cover"
 	"github.com/open-policy-agent/opa/v1/dependencies"
 	"github.com/open-policy-agent/opa/v1/rego"
-	"github.com/open-policy-agent/opa/v1/topdown"
+	"github.com/open-policy-agent/opa/v1/storage"
+	"github.com/open-policy-agent/opa/v1/storage/inmem"
 	"github.com/open-policy-agent/opa/v1/topdown/builtins"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
-	outil "github.com/open-policy-agent/opa/v1/util"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
 	rio "github.com/open-policy-agent/regal/internal/io"
-	rrego "github.com/open-policy-agent/regal/internal/lsp/rego"
-	rquery "github.com/open-policy-agent/regal/internal/lsp/rego/query"
+	rquery "github.com/open-policy-agent/regal/internal/lsp/rego"
+	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
+	"github.com/open-policy-agent/regal/internal/lsp/store"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
+	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 
 	_ "github.com/open-policy-agent/regal/pkg/builtins"
@@ -37,26 +40,27 @@ import (
 
 var (
 	emptyStringAnyMap       = make(map[string]any, 0)
+	emptyPrintOutput        = PrintOutput{}
 	emptyEvalResult         = EvalResult{}
 	workspaceBundleManifest = bundle.Manifest{
 		Roots:    &[]string{"workspace"}, // no data in this bundle so no roots are used, however, roots must be set
 		Metadata: map[string]any{"name": "workspace"},
 	}
-	internalBundleManifest = bundle.Manifest{
-		Roots:    &[]string{"internal"},
-		Metadata: map[string]any{"name": "internal"},
-	}
 	regalEvalUseAsInputComment = regexp.MustCompile(`^\s*regal eval:\s*use-as-input`)
+	defaultCaps                = sync.OnceValue(func() *ast.Term {
+		return ast.NewTerm(rast.StructToValue(config.CapabilitiesForThisVersion()))
+	})
 )
 
 type (
 	EvalResult struct {
-		Value       ast.Value                   `json:"value"`
-		PrintOutput map[string]map[int][]string `json:"printOutput"`
-		IsUndefined bool                        `json:"isUndefined"`
+		Value       ast.Value   `json:"value"`
+		PrintOutput PrintOutput `json:"printOutput"`
+		IsUndefined bool        `json:"isUndefined"`
 	}
-	PrintHook struct {
-		Output map[string]map[int][]string
+	PrintOutput map[string]map[int][]string
+	PrintHook   struct {
+		Output PrintOutput
 		// FileNameBase if set, is prepended to filenames in print output. Needed
 		// because rego files are evaluated with relative paths (so errors match
 		// OPA CLI format) but print hook output consumers need full URIs.
@@ -81,13 +85,18 @@ type (
 		RuleHeadLocations []*ast.Location `json:"rule_head_locations,omitempty"` // when target is 'rule'
 		Coverage          *cover.Report   `json:"coverage,omitempty"`
 	}
-	regoArgsOptions struct {
+	prepareOpts struct {
 		Body      ast.Body
 		Package   *ast.Package
 		Imports   []*ast.Import
 		Bundles   map[string]*bundle.Bundle
 		PrintHook print.Hook
-		Config    *config.Config
+		Store     storage.Store
+	}
+	prepared struct {
+		Query *rego.PreparedEvalQuery
+		Opts  prepareOpts
+		Args  []func(*rego.Rego)
 	}
 )
 
@@ -220,14 +229,14 @@ func (l *LanguageServer) getRuleHeadLocations(
 	contents string,
 	module *ast.Module,
 ) ([]*ast.Location, error) {
-	pq, err := l.queryCache.GetOrSet(ctx, l.regoStore, rquery.RuleHeadLocations)
+	pq, err := l.queryCache.GetOrSet(ctx, l.regoStore, query.RuleHeadLocations)
 	if err != nil {
-		return nil, fmt.Errorf("failed to prepare query %s: %w", rquery.RuleHeadLocations, err)
+		return nil, fmt.Errorf("failed to prepare query %s: %w", query.RuleHeadLocations, err)
 	}
 
 	file := filepath.Base(uri.ToPath(args.Target))
 
-	allRuleHeadLocations, err := rrego.AllRuleHeadLocations(ctx, pq, file, contents, module)
+	allRuleHeadLocations, err := rquery.AllRuleHeadLocations(ctx, pq, file, contents, module)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get rule head locations: %w", err)
 	}
@@ -238,39 +247,68 @@ func (l *LanguageServer) getRuleHeadLocations(
 	return ruleHeadLocations, nil
 }
 
-func (l *LanguageServer) EvalInWorkspace(
-	ctx context.Context,
-	opts EvalWorkspaceOptions,
-) (EvalResult, *cover.Report, error) {
+func (l *LanguageServer) prepareEval(ctx context.Context, opts EvalWorkspaceOptions) (*prepared, error) {
 	body, err := ast.ParseBody(opts.Query)
 	if err != nil {
-		return emptyEvalResult, nil, fmt.Errorf("failed parsing query %q: %w", opts.Query, err)
+		return nil, fmt.Errorf("failed parsing query %q: %w", opts.Query, err)
 	}
 
-	// A whitespace-only or comment-only selection parses to an empty body.
 	if len(body) == 0 {
-		return EvalResult{IsUndefined: true, PrintOutput: map[string]map[int][]string{}}, nil, nil
+		// whitespace-only or comment-only selection parses to an empty body.
+		return nil, nil //nolint:nilnil
 	}
 
-	hook := PrintHook{
-		Output:       make(map[string]map[int][]string),
-		FileNameBase: l.Workspace().URI(),
-	}
-
-	regoArgs := prepareRegoArgs(regoArgsOptions{
+	pops := prepareOpts{
 		Body:      body,
 		Package:   opts.Package,
 		Imports:   opts.Imports,
 		Bundles:   l.assembleBundles(),
-		PrintHook: hook,
-		Config:    l.getLoadedConfig(),
-	})
+		PrintHook: PrintHook{Output: PrintOutput{}, FileNameBase: l.Workspace().URI()},
+	}
+
+	// We don't want to share the whole store between the server and the
+	// eval feature as the latter may expose potentially confusing internals.
+	// The config is the same for both though, so avoiding an additional conversion
+	// to [ast.Value] is quite desirable.
+	confValue, err := store.GetConfig(ctx, l.regoStore)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get config from store: %w", err)
+	}
+
+	conf := ast.NewTerm(confValue)
+
+	pops.Store = inmem.NewFromASTObject(ast.NewObject(
+		rast.Item("internal", ast.ObjectTerm(
+			rast.Item("combined_config", conf),
+			rast.Item("user_config", conf),
+			rast.Item("capabilities", rast.GetOr(confValue, "capabilities", defaultCaps)),
+		)),
+	))
+
+	regoArgs, txn := prepareRegoArgs(ctx, pops)
+	defer pops.Store.Abort(ctx, txn)
 
 	// TODO: Let's try to avoid preparing on each eval, but only when the contents
 	// of the workspace modules change, and before the user requests an eval.
 	pq, err := rego.New(regoArgs...).PrepareForEval(ctx)
 	if err != nil {
-		return emptyEvalResult, nil, fmt.Errorf("failed preparing query %q: %w", opts.Query, err)
+		return nil, fmt.Errorf("failed preparing query %q: %w", opts.Query, err)
+	}
+
+	return &prepared{Query: &pq, Opts: pops, Args: regoArgs}, nil
+}
+
+func (l *LanguageServer) EvalInWorkspace(
+	ctx context.Context,
+	opts EvalWorkspaceOptions,
+) (EvalResult, *cover.Report, error) {
+	prepared, err := l.prepareEval(ctx, opts)
+	if err != nil {
+		return emptyEvalResult, nil, err
+	}
+
+	if prepared == nil {
+		return EvalResult{IsUndefined: true, PrintOutput: emptyPrintOutput}, nil, nil
 	}
 
 	var (
@@ -278,35 +316,36 @@ func (l *LanguageServer) EvalInWorkspace(
 		ndCache   builtins.NDBCache
 	)
 
-	genJSON := func(term *ast.Term, _ *rego.EvalContext) (any, error) {
-		return term.Value, nil
-	}
-
-	evalOpts := append(slices.Clone(opts.RegoOpts), rego.EvalGenerateJSON(genJSON))
+	evalOpts := append(slices.Clone(opts.RegoOpts), query.RegoEvalGenJSONValue)
 
 	if opts.Coverage != nil {
 		ndCache = builtins.NDBCache{}
 		evalOpts = append(evalOpts, rego.EvalQueryTracer(opts.Coverage), rego.EvalNDBuiltinCache(ndCache))
 	}
 
-	resultSet, err = pq.Eval(ctx, evalOpts...)
+	resultSet, err = prepared.Query.Eval(ctx, evalOpts...)
 	if err != nil {
 		return emptyEvalResult, nil, fmt.Errorf("failed evaluating query: %w", err)
+	}
+
+	hook, ok := prepared.Opts.PrintHook.(PrintHook)
+	if !ok {
+		hook = PrintHook{Output: PrintOutput{}}
 	}
 
 	result := EvalResult{IsUndefined: len(resultSet) == 0, PrintOutput: hook.Output}
 
 	if len(resultSet) > 0 {
-		result.Value = finalExpressionValue(body, resultSet[0])
+		result.Value = finalExpressionValue(prepared.Opts.Body, resultSet[0])
 	}
 
 	if opts.Coverage == nil {
 		return result, nil, nil
 	}
 
-	report, err := l.coverageReport(ctx, pq, opts.Coverage, ndCache, opts.RegoOpts)
+	report, err := l.coverageReport(ctx, prepared.Query, opts.Coverage, ndCache, opts.RegoOpts)
 	if err != nil {
-		l.log.Message("failed to evaluate coverage for %q, continuing without it: %v", opts.Query, err.Error())
+		l.log.Message("failed to evaluate coverage for %q, continuing without it: %v", opts.Query, err)
 
 		return result, nil, nil
 	}
@@ -340,12 +379,7 @@ func finalExpressionValue(body ast.Body, result rego.Result) ast.Value {
 		operands = append(operands, lastExpr.Operand(1))
 	}
 
-	for _, operand := range operands {
-		v, ok := operand.Value.(ast.Var)
-		if !ok {
-			continue
-		}
-
+	for v := range rast.ValuesOfType[ast.Var](operands) {
 		if bound, ok := result.Bindings[string(v)]; ok {
 			return expressionValueToAST(bound)
 		}
@@ -354,16 +388,13 @@ func finalExpressionValue(body ast.Body, result rego.Result) ast.Value {
 	return expressionValueToAST(last.Value)
 }
 
-func expressionValueToAST(expVal any) ast.Value {
-	if astVal, ok := expVal.(ast.Value); ok {
-		return astVal
+func expressionValueToAST(expVal any) (val ast.Value) {
+	var ok bool
+	if val, ok = expVal.(ast.Value); !ok {
+		val, _ = ast.InterfaceToValue(expVal)
 	}
 
-	if val, err := ast.InterfaceToValue(expVal); err == nil {
-		return val
-	}
-
-	return nil
+	return val
 }
 
 // coverageReport runs the two supplementary coverage passes (index-excluded, early-exit)
@@ -373,7 +404,7 @@ func expressionValueToAST(expVal any) ast.Value {
 // does the same (opa/v1/tester/runner.go). If OPA adds a new kind, add its
 // supplementary pass here too.
 func (l *LanguageServer) coverageReport(
-	ctx context.Context, pq rego.PreparedEvalQuery, cov *cover.Cover, ndCache builtins.NDBCache, opts []rego.EvalOption,
+	ctx context.Context, pq *rego.PreparedEvalQuery, cov *cover.Cover, ndCache builtins.NDBCache, opts []rego.EvalOption,
 ) (*cover.Report, error) {
 	indexExcluded := cover.New()
 
@@ -402,21 +433,37 @@ func (l *LanguageServer) coverageReport(
 	return &report, nil
 }
 
-func (l *LanguageServer) debugArgsAssembler(query ast.Body) []func(*rego.Rego) {
-	return prepareRegoArgs(regoArgsOptions{
-		Body:      query,
+func (l *LanguageServer) debugArgsAssembler(q ast.Body) []func(*rego.Rego) {
+	args, _ := prepareRegoArgs(context.TODO(), prepareOpts{
+		Body:      q,
 		Bundles:   l.assembleBundles(),
-		PrintHook: topdown.NewPrintHook(os.Stderr),
-		Config:    l.getLoadedConfig(),
+		PrintHook: query.StderrPrintHook,
 	})
+
+	return args
 }
 
-func prepareRegoArgs(opts regoArgsOptions) []func(*rego.Rego) {
-	args := []func(*rego.Rego){
-		rego.ParsedQuery(opts.Body),
-		rego.EnablePrintStatements(true),
-		rego.PrintHook(opts.PrintHook),
+func prepareRegoArgs(ctx context.Context, opts prepareOpts) ([]func(*rego.Rego), storage.Transaction) {
+	res := query.SchemaResolvers()
+	num := 3 + len(opts.Bundles) + len(res) +
+		util.BoolToInt(opts.Package != nil) +
+		util.BoolToInt(len(opts.Imports) > 0)
+
+	if opts.Store == nil {
+		num += 2
 	}
+
+	args := append(make([]func(*rego.Rego), 0, num),
+		query.RegoEnablePrint, rego.PrintHook(opts.PrintHook),
+		rego.ParsedQuery(opts.Body),
+	)
+
+	var txn storage.Transaction
+	if opts.Store != nil {
+		txn = storage.NewTransactionOrDie(ctx, opts.Store, storage.WriteParams)
+		args = append(args, rego.Store(opts.Store), rego.Transaction(txn))
+	}
+
 	if opts.Package != nil {
 		args = append(args, rego.ParsedPackage(opts.Package))
 	}
@@ -429,22 +476,7 @@ func prepareRegoArgs(opts regoArgsOptions) []func(*rego.Rego) {
 		args = append(args, rego.ParsedBundle(key, b))
 	}
 
-	args = append(args, rquery.SchemaResolvers()...)
-
-	evalConfig := config.ToMap(opts.Config)
-
-	internalBundle := &bundle.Bundle{
-		Manifest: internalBundleManifest,
-		Data: map[string]any{
-			"internal": map[string]any{
-				"combined_config": evalConfig,
-				"user_config":     evalConfig, // TODO: Do we need this?
-				"capabilities":    opts.capabilities(),
-			},
-		},
-	}
-
-	return append(args, rego.ParsedBundle("internal", internalBundle))
+	return append(args, query.SchemaResolvers()...), txn
 }
 
 func (l *LanguageServer) assembleBundles() map[string]*bundle.Bundle {
@@ -544,12 +576,4 @@ func inputSkeletonFromRule(rule *ast.Rule, compiler *ast.Compiler) map[string]an
 	}
 
 	return root
-}
-
-func (o regoArgsOptions) capabilities() (caps *config.Capabilities) {
-	if o.Config != nil && o.Config.Capabilities != nil {
-		caps = o.Config.Capabilities
-	}
-
-	return outil.Or(caps, config.CapabilitiesForThisVersion)
 }

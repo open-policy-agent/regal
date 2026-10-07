@@ -17,21 +17,14 @@ type Store struct {
 }
 
 func NewStore() *Store {
-	return &Store{
-		store:     inmem.NewWithOpts(inmem.OptReturnASTValuesOnRead(true)),
-		baseCache: cache.NewBaseCache(),
-	}
+	return NewStoreFromObject(ast.NewObject())
 }
 
-func NewStoreFromObject(ctx context.Context, data ast.Object) *Store {
-	s := NewStore()
-	if err := storage.WriteOne(ctx, s.store, storage.AddOp, storage.RootPath, data); err != nil {
-		panic(err)
-	}
+func NewStoreFromObject(data ast.Object) *Store {
+	baseCache := cache.NewBaseCache()
+	baseCache.Put(ast.InternedEmptyRefValue.(ast.Ref), data) //nolint:forcetypeassert
 
-	s.baseCache.Put(ast.InternedEmptyRefValue.(ast.Ref), data) //nolint:forcetypeassert
-
-	return s
+	return &Store{store: inmem.NewFromASTObject(data), baseCache: baseCache}
 }
 
 func (s *Store) Storage() storage.Store {

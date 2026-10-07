@@ -35,7 +35,7 @@ func TestEval(t *testing.T) {
 
 	q := must.Return(ogre.New(lintQuery).
 		WithPrintHook(topdown.NewPrintHook(t.Output())).
-		WithStore(ogre.NewStoreFromObject(t.Context(), mockData(t))).
+		WithStore(ogre.NewStoreFromObject(mockData(t))).
 		Prepare(t.Context()))(t)
 
 	policy := "package foo\n\nx = 1"

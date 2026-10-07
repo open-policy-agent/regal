@@ -344,7 +344,7 @@ func (l Linter) Prepare(ctx context.Context) (Linter, error) {
 		l.printHook = topdown.NewPrintHook(os.Stderr)
 	}
 
-	ogreStore := ogre.NewStoreFromObject(ctx, l.prepareData(conf))
+	ogreStore := ogre.NewStoreFromObject(l.prepareData(conf))
 
 	l.preparedQuery, err = ogre.New(lintQuery).
 		WithModules(l.customModulesMap()).
@@ -534,7 +534,7 @@ func (l Linter) DetermineEnabledRules(ctx context.Context) ([]string, error) {
 	}
 
 	pq, err := ogre.New(enabledRulesQuery).
-		WithStore(ogre.NewStoreFromObject(ctx, l.prepareData(conf))).
+		WithStore(ogre.NewStoreFromObject(l.prepareData(conf))).
 		Prepare(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed preparing query: %w", err)
