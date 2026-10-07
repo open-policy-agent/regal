@@ -20,6 +20,8 @@ rules:
       level: error
     import-shadows-rule:
       level: error
+    impossible-default:
+      level: error
     impossible-not:
       level: error
     inconsistent-args:
