@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"regexp"
 	"slices"
 	"strings"
 
@@ -8,6 +9,11 @@ import (
 
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/util"
+)
+
+var (
+	simpleRefPattern    = regexp.MustCompile(`^[a-zA-Z.]$`)
+	attemptVersionOrder = [2]ast.RegoVersion{ast.RegoV1, ast.RegoV0}
 )
 
 // Options provides parser options with annotation processing. JSONOptions are not included,
@@ -23,8 +29,6 @@ func Options() ast.ParserOptions {
 		Capabilities: rio.Capabilities(),
 	}
 }
-
-var attemptVersionOrder = [2]ast.RegoVersion{ast.RegoV1, ast.RegoV0}
 
 // ModuleWithOpts parses a module with the given options. If the Rego version is unknown, the function
 // may attempt to run several parser versions to determine the correct version. Setting the Rego version
@@ -86,4 +90,58 @@ func MustParseModule(policy string) *ast.Module {
 // the policy is unknown, use ModuleUnknownVersionWithOpts instead.
 func Module(filename, policy string) (*ast.Module, error) {
 	return util.Wrap(ast.ParseModuleWithOpts(filename, policy, Options()))("failed to parse module")
+}
+
+// Query parses a query string into an ast.Body, using a custom and very efficient
+// method for simple dot-delimited paths ("refs") when possible and otherwise falls
+// back on the standard parser. This function panics on invalid queries.
+func Query(query string) ast.Body {
+	if simpleRefPattern.MatchString(query) { // Try cheap parsing if possible
+		return RefStringToBody(query)
+	}
+
+	return ast.MustParseBody(query)
+}
+
+// RefStringToBody converts a simple dot-delimited string path to an ast.Body.
+// This is a lightweight alternative to ast.ParseBody that avoids the overhead of parsing,
+// and benefits from using interned terms when possible. It is also nowhere near as competent,
+// and can only handle simple string paths without vars, numbers, etc. Suitable for use with
+// e.g. rego.ParsedQuery and other places where a simple ref is needed. Do *NOT* use the returned
+// ast.Body anywhere it might be mutated (like having location data added), as that modifies the
+// globally interned terms.
+//
+// Implementations tested:
+// -----------------------
+// 333.6 ns/op	     472 B/op	      19 allocs/op - SplitSeq
+// 330.7 ns/op	     496 B/op	      16 allocs/op - Split
+// 269.1 ns/op	     400 B/op	      15 allocs/op - IndexOf for loop (current).
+func RefStringToBody(path string) ast.Body {
+	return ast.NewBody(ast.NewExpr(ast.NewTerm(RefStringToRef(path))))
+}
+
+// RefStringToRef converts a simple dot-delimited string path to an ast.Ref in the most
+// efficient way possible, using interned terms where possible. See RefStringToBody for
+// more details on the limitations of this function.
+func RefStringToRef(path string) ast.Ref {
+	before, after, found := strings.Cut(path, ".")
+	terms := append(make([]*ast.Term, 0, strings.Count(path, ".")+1), refHeadTerm(before))
+
+	for found {
+		before, after, found = strings.Cut(after, ".")
+		terms = append(terms, ast.InternedTerm(before))
+	}
+
+	return ast.Ref(terms)
+}
+
+func refHeadTerm(name string) *ast.Term {
+	switch name {
+	case "data":
+		return ast.DefaultRootDocument
+	case "input":
+		return ast.InputRootDocument
+	default:
+		return ast.VarTerm(name)
+	}
 }

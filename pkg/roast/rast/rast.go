@@ -40,38 +40,6 @@ func IsBodyGenerated(rule *ast.Rule) bool {
 	return false
 }
 
-// RefStringToBody converts a simple dot-delimited string path to an ast.Body.
-// This is a lightweight alternative to ast.ParseBody that avoids the overhead of parsing,
-// and benefits from using interned terms when possible. It is also nowhere near as competent,
-// and can only handle simple string paths without vars, numbers, etc. Suitable for use with
-// e.g. rego.ParsedQuery and other places where a simple ref is needed. Do *NOT* use the returned
-// ast.Body anywhere it might be mutated (like having location data added), as that modifies the
-// globally interned terms.
-//
-// Implementations tested:
-// -----------------------
-// 333.6 ns/op	     472 B/op	      19 allocs/op - SplitSeq
-// 330.7 ns/op	     496 B/op	      16 allocs/op - Split
-// 269.1 ns/op	     400 B/op	      15 allocs/op - IndexOf for loop (current).
-func RefStringToBody(path string) ast.Body {
-	return ast.NewBody(ast.NewExpr(ast.NewTerm(RefStringToRef(path))))
-}
-
-// RefStringToRef converts a simple dot-delimited string path to an ast.Ref in the most
-// efficient way possible, using interned terms where possible. See RefStringToBody for
-// more details on the limitations of this function.
-func RefStringToRef(path string) ast.Ref {
-	before, after, found := strings.Cut(path, ".")
-	terms := append(make([]*ast.Term, 0, strings.Count(path, ".")+1), refHeadTerm(before))
-
-	for found {
-		before, after, found = strings.Cut(after, ".")
-		terms = append(terms, ast.InternedTerm(before))
-	}
-
-	return ast.Ref(terms)
-}
-
 // LinesArrayTerm converts a string with newlines into an ast.Term array holding each line.
 func LinesArrayTerm(content string) *ast.Term {
 	return ArrayTerm(strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")...)
@@ -112,17 +80,6 @@ func LocationData(location *ast.Location) (length, endRow, endCol int) {
 		outil.NumDigitsInt(endRow) + outil.NumDigitsInt(endCol)
 
 	return length, endRow, endCol
-}
-
-func refHeadTerm(name string) *ast.Term {
-	switch name {
-	case "data":
-		return ast.DefaultRootDocument
-	case "input":
-		return ast.InputRootDocument
-	default:
-		return ast.VarTerm(name)
-	}
 }
 
 // Item is a helper function to create an ast.Item with an interned key.
