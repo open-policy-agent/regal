@@ -140,7 +140,11 @@ func (s *state) launch(ctx context.Context, r *godap.LaunchRequest) (*godap.Laun
 	case "eval":
 		var evalProps debug.LaunchEvalProperties
 
-		if err = json.Unmarshal(r.Arguments, &evalProps, encoding.NoASTOptions); err != nil {
+		err = json.Unmarshal(
+			r.Arguments, &evalProps, encoding.NoASTOptions,
+			json.MatchCaseInsensitiveNames(true),
+		)
+		if err != nil {
 			return nil, fmt.Errorf("invalid launch eval properties: %w", err)
 		}
 
