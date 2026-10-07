@@ -4,8 +4,6 @@
 
 **Category**: Bugs
 
-**Automatically fixable**: No
-
 **Avoid**
 ```rego
 package policy
@@ -33,9 +31,8 @@ When a rule has both a `default` definition and an unconditional definition
 written without conditions, that unconditional definition answers for every input.
 As a result, the default definition can never be reached:
 
-- if the unconditional definition assigns a different value, evaluation either
-  produces the unconditional value or fails with an evaluation conflict error
-  if multiple definitions collide;
+- if the unconditional definition assigns a different value, evaluation
+  produces the unconditional value;
 - if the unconditional definition assigns the same value, the default definition
   is completely redundant.
 
@@ -43,11 +40,11 @@ In both cases, the `default` definition is dead code. This often happens when an
 author forgets to attach conditions (`if ...`) to a rule definition, or leaves
 behind an obsolete `default` after converting a rule to an unconditional constant.
 
-## Known limitations
+## Exceptions
 
 - Only definitions **within one file** are compared. Rules split across
-  multiple files in the same package are not detected, as each file is linted
-  independently.
+  multiple files in the same package are not detected, as this rule analyzes
+  each file individually rather than aggregating across the project.
 - The unconditional definition must assign a **constant** value. An assignment
   like `username := input.user` can itself be undefined, in which case the
   `default` definition genuinely serves as the fallback when `input.user` is

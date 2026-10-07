@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/impossible-default
 package regal.rules.bugs["impossible-default"]
 
+import future.keywords.or
+
 import data.regal.ast
 import data.regal.result
 
@@ -38,15 +40,12 @@ _dynamic_ref(ref) if array.slice(ref, 1, 100)[_].type in {"call", "var", "ref", 
 _unconditional(rule) if {
 	not rule["else"]
 	ast.is_constant(rule.head.value)
-	_matches_any_arguments(rule)
-}
 
-_matches_any_arguments(rule) if not rule.head.args
+	not rule.head.args or {
+		every arg in rule.head.args {
+			arg.type == "var"
+		}
 
-_matches_any_arguments(rule) if {
-	every arg in rule.head.args {
-		arg.type == "var"
+		count({arg.value | some arg in rule.head.args}) == count(rule.head.args)
 	}
-
-	count({arg.value | some arg in rule.head.args}) == count(rule.head.args)
 }
