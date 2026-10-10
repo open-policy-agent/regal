@@ -114,6 +114,9 @@ func (q *Query) EndReadTransaction(ctx context.Context) *Query {
 }
 
 func (q *Query) Prepare(_ context.Context) (*Query, error) {
+	unlock := rbundle.CompileLock()
+	defer unlock()
+
 	if q.metrics == nil {
 		q.metrics = metrics.NoOp()
 	}
@@ -154,7 +157,7 @@ func (q *Query) newCompiler() *ast.Compiler {
 func modulesFromBundle(files []bundle.ModuleFile) map[string]*ast.Module {
 	m := make(map[string]*ast.Module, len(files))
 	for i := range files {
-		m[files[i].Path] = files[i].Parsed
+		m[files[i].Path] = files[i].Parsed.Copy()
 	}
 
 	return m

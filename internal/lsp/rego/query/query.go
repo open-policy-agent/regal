@@ -125,6 +125,9 @@ func (c *Cache) GetOrSet(ctx context.Context, store storage.Store, query string)
 }
 
 func prepareQuery(ctx context.Context, query ast.Body, store storage.Store) (*rego.PreparedEvalQuery, error) {
+	unlock := rbundle.CompileLock()
+	defer unlock()
+
 	args, txn := prepareQueryArgs(ctx, query, store, rbundle.Loaded())
 
 	// Note that we currently don't provide metrics or profiling here, and
@@ -175,10 +178,11 @@ func prepareQueryArgs(
 	rb *bundle.Bundle,
 ) (regoOptions, storage.Transaction) {
 	resolvers := SchemaResolvers()
+	bCopy := rbundle.SafeCopy(rb)
 	args := append(append(make([]func(*rego.Rego), 0, 8+len(resolvers)),
 		RegoCapabilities, RegoGenJSONValue,
 		RegoEnablePrint, RegoStderrPrintHook, // enabled for debugging, should probably be conditional
-		rego.ParsedQuery(query), rego.ParsedBundle("regal", rb),
+		rego.ParsedQuery(query), rego.ParsedBundle("regal", bCopy),
 	), resolvers...)
 
 	var txn storage.Transaction
