@@ -345,3 +345,8 @@ repeated_computation if {
 unconditional_with_conditions := true if input.conditional
 
 unconditional_with_conditions := false
+
+default impossible_default := "guest"
+
+impossible_default := "regal"
+
