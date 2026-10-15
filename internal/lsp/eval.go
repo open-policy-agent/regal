@@ -199,8 +199,10 @@ func (l *LanguageServer) handleEvalCommand(ctx context.Context, args types.Comma
 		rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
 
 		//nolint:contextcheck
-		if err = l.conn.Call(rpcCtx, "regal/showEvalResult", new(jsontext.Value(bs)), nil); err != nil {
-			l.log.Message("regal/showEvalResult failed: %v", err)
+		if conn := l.Conn(); conn != nil {
+			if err = conn.Call(rpcCtx, "regal/showEvalResult", new(jsontext.Value(bs)), nil); err != nil {
+				l.log.Message("regal/showEvalResult failed: %v", err)
+			}
 		}
 
 		rpcCancel()
@@ -514,7 +516,7 @@ func (l *LanguageServer) assembleBundles() map[string]*bundle.Bundle {
 	if hasCustomRules {
 		// If someone evaluates a custom Regal rule, provide them the Regal bundle
 		// in order to make all Regal functions available
-		allBundles["regal"] = rbundle.Loaded()
+		allBundles["regal"] = rbundle.SafeCopy(rbundle.Loaded())
 	}
 
 	return allBundles

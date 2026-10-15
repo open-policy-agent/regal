@@ -122,7 +122,8 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 }
 
 func (l *LanguageServer) sendTestLocations(ctx context.Context, fileURI string, locations any) error {
-	if l.conn == nil {
+	conn := l.Conn()
+	if conn == nil {
 		l.log.Debug("sendTestLocations called with no connection: %s", fileURI)
 
 		return nil
@@ -133,7 +134,7 @@ func (l *LanguageServer) sendTestLocations(ctx context.Context, fileURI string, 
 		"locations": locations,
 	}
 
-	if err := l.conn.Notify(ctx, "regal/testLocations", params); err != nil {
+	if err := conn.Notify(ctx, "regal/testLocations", params); err != nil {
 		return fmt.Errorf("failed to send test locations notification: %w", err)
 	}
 

@@ -141,7 +141,9 @@ func (l *LanguageServer) StartCommandWorker(ctx context.Context) {
 
 				if err != nil {
 					l.log.Message("command failed: %s", err)
-					l.window.ShowMessage(ctx, types.ErrorMessage, err.Error())
+					if w := l.Window(); w != nil {
+						w.ShowMessage(ctx, types.ErrorMessage, err.Error())
+					}
 				} else if len(editParams.Edit.DocumentChanges) > 0 {
 					if err := l.Workspace().ApplyEdit(ctx, editParams); err != nil {
 						l.log.Message("failed workspace/applyEdit request: %v", err)
@@ -409,8 +411,10 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 			}
 		}
 
-		if err := l.conn.Notify(ctx, "regal/showExplorerResult", responseParams); err != nil {
-			return fmt.Errorf("regal/showExplorerResult notification failed: %w", err)
+		if conn := l.Conn(); conn != nil {
+			if err := conn.Notify(ctx, "regal/showExplorerResult", responseParams); err != nil {
+				return fmt.Errorf("regal/showExplorerResult notification failed: %w", err)
+			}
 		}
 
 		return nil
@@ -469,7 +473,9 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 		rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
 
 		//nolint:contextcheck
-		l.window.ShowDocument(rpcCtx, workspace.URI(filename), false)
+		if w := l.Window(); w != nil {
+			w.ShowDocument(rpcCtx, workspace.URI(filename), false)
+		}
 		rpcCancel()
 	}
 
@@ -483,7 +489,9 @@ func (l *LanguageServer) handleExplorerCommand(ctx context.Context, params types
 				rpcCtx, rpcCancel := context.WithTimeout(context.Background(), rpcTimeout)
 
 				//nolint:contextcheck
-				l.window.ShowDocument(rpcCtx, workspace.URI(planFile), false)
+				if w := l.Window(); w != nil {
+					w.ShowDocument(rpcCtx, workspace.URI(planFile), false)
+				}
 				rpcCancel()
 			}
 		}
@@ -537,11 +545,13 @@ func (l *LanguageServer) handleCreateTestCommand(ctx context.Context, params typ
 	}
 
 	if inputPath == "" || inputEmpty {
-		l.window.ShowMessage(
-			ctx,
-			types.InfoMessage,
-			"No input.json or input.yaml file found. Create one to provide test input data.",
-		)
+		if w := l.Window(); w != nil {
+			w.ShowMessage(
+				ctx,
+				types.InfoMessage,
+				"No input.json or input.yaml file found. Create one to provide test input data.",
+			)
+		}
 
 		return nil
 	}
@@ -586,7 +596,9 @@ func (l *LanguageServer) displayTestResult(ctx context.Context, testCode, source
 	rpcCtx, rpcCancel := context.WithTimeout(ctx, rpcTimeout)
 	defer rpcCancel()
 
-	l.window.ShowDocument(rpcCtx, l.Workspace().URI(testFileName), true)
+	if w := l.Window(); w != nil {
+		w.ShowDocument(rpcCtx, l.Workspace().URI(testFileName), true)
+	}
 
 	return nil
 }

@@ -4,10 +4,12 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"slices"
 	"sync"
 	"sync/atomic"
 
 	"github.com/open-policy-agent/opa/v1/bundle"
+	"github.com/open-policy-agent/opa/v1/util"
 
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/mode"
@@ -121,3 +123,52 @@ func Loaded() *bundle.Bundle {
 
 	return Embedded()
 }
+
+var compileMu sync.Mutex
+
+// CompileLock synchronizes compilation of embedded modules across goroutines.
+func CompileLock() func() {
+	compileMu.Lock()
+
+	return compileMu.Unlock
+}
+
+// SafeCopy returns an isolated deep copy of the bundle, allocating a fresh
+// slice for Modules and copying each ModuleFile and ast.Module. This prevents
+// in-place AST transformations performed during OPA compilation from mutating
+// or racing with the shared bundle instance.
+func SafeCopy(b *bundle.Bundle) *bundle.Bundle {
+	if b == nil {
+		return nil
+	}
+
+	var dataCopy map[string]any
+	if b.Data != nil {
+		var x any = b.Data
+		if err := util.RoundTripFast(&x); err == nil && x != nil {
+			dataCopy = x.(map[string]any)
+		}
+	}
+
+	modulesCopy := make([]bundle.ModuleFile, len(b.Modules))
+	for i := range b.Modules {
+		modulesCopy[i] = bundle.ModuleFile{
+			URL:  b.Modules[i].URL,
+			Path: b.Modules[i].Path,
+			Raw:  slices.Clone(b.Modules[i].Raw),
+		}
+		if b.Modules[i].Parsed != nil {
+			modulesCopy[i].Parsed = b.Modules[i].Parsed.Copy()
+		}
+	}
+
+	return &bundle.Bundle{
+		Signatures:  b.Signatures,
+		Manifest:    b.Manifest.Copy(),
+		Data:        dataCopy,
+		Modules:     modulesCopy,
+		Wasm:        slices.Clone(b.Wasm),
+		WasmModules: slices.Clone(b.WasmModules),
+	}
+}
+

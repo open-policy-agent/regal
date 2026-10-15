@@ -148,6 +148,7 @@ type LanguageServer struct {
 	featureFlags types.ServerFeatureFlags
 
 	regoStore storage.Store
+	connMu    sync.RWMutex
 	conn      *jsonrpc2.Conn
 	window    *window.Window
 
@@ -266,8 +267,17 @@ func (l *LanguageServer) Workspace() workspace.Workspace {
 	return l.workspace
 }
 
-func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
+func (l *LanguageServer) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *jsonrpc2.Request) (any, error) {
 	l.log.Debug("received request: %s", req.Method)
+
+	if conn != nil {
+		l.connMu.Lock()
+		if l.conn == nil {
+			l.conn = conn
+			l.window = window.New(conn, l.log)
+		}
+		l.connMu.Unlock()
+	}
 
 	// null params are allowed, but only for certain methods
 	if req.Params == nil && req.Method != "shutdown" && req.Method != "exit" {
@@ -309,8 +319,14 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return handler.WithContextAndParams(ctx, req, l.handleRunTests)
 	case "exit":
 		// close the channel, cancel the context for all workers, and exit
-		if err := l.conn.Close(); err != nil {
-			return nil, fmt.Errorf("failed to close connection: %w", err)
+		c := conn
+		if c == nil {
+			c = l.Conn()
+		}
+		if c != nil {
+			if err := c.Close(); err != nil {
+				return nil, fmt.Errorf("failed to close connection: %w", err)
+			}
 		}
 
 		return emptyStruct, nil
@@ -334,13 +350,35 @@ func (l *LanguageServer) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *json
 		return emptyStruct, nil
 	}
 
+	c := conn
+	if c == nil {
+		c = l.Conn()
+	}
+
 	// returns jsonrpc2.Error with code jsonrpc2.CodeMethodNotFound if provided unknown method.
-	return l.regoRouter.Handle(ctx, l.conn, req)
+	return l.regoRouter.Handle(ctx, c, req)
 }
 
 func (l *LanguageServer) SetConn(conn *jsonrpc2.Conn) {
+	l.connMu.Lock()
+	defer l.connMu.Unlock()
+
 	l.conn = conn
 	l.window = window.New(conn, l.log)
+}
+
+func (l *LanguageServer) Conn() *jsonrpc2.Conn {
+	l.connMu.RLock()
+	defer l.connMu.RUnlock()
+
+	return l.conn
+}
+
+func (l *LanguageServer) Window() *window.Window {
+	l.connMu.RLock()
+	defer l.connMu.RUnlock()
+
+	return l.window
 }
 
 // Shutdown waits for all worker goroutines to complete. The context can be
@@ -1021,7 +1059,9 @@ func (l *LanguageServer) handleTextDocumentDidSave(
 	}
 
 	if slices.ContainsFunc(enabled, util.EqualsAny(ruleNameOPAFmt, ruleNameUseRegoV1)) {
-		l.window.ShowMessage(ctx, types.WarningMessage, crlfWarnMsg)
+		if w := l.Window(); w != nil {
+			w.ShowMessage(ctx, types.WarningMessage, crlfWarnMsg)
+		}
 	}
 
 	return emptyStruct, nil
@@ -1323,7 +1363,7 @@ func (l *LanguageServer) loadWorkspace(ctx context.Context, rootURI string, clie
 		)
 	}
 
-	workspace := workspace.New(workspaceRootURI).WithClient(client.WithConnection(l.conn))
+	workspace := workspace.New(workspaceRootURI).WithClient(client.WithConnection(l.Conn()))
 
 	var configFilePath string
 	if configFile, err := config.Find(workspace.Path()); err == nil {
@@ -1450,8 +1490,10 @@ func (l *LanguageServer) initializedResultHandler(ctx context.Context, result an
 	// If the client supports dynamic registration, register for any the Rego
 	// handler returned. Currently this is workspace/didChangeWatchedFiles only.
 	if raw, ok := result.(*jsontext.Value); ok && len(*raw) > 4 { // = len("null")
-		if err := l.conn.Call(ctx, "client/registerCapability", &raw, nil); err != nil {
-			l.log.Message("failed to register workspace/didChangeWatchedFiles capability: %s", err)
+		if conn := l.Conn(); conn != nil {
+			if err := conn.Call(ctx, "client/registerCapability", &raw, nil); err != nil {
+				l.log.Message("failed to register workspace/didChangeWatchedFiles capability: %s", err)
+			}
 		}
 	}
 
@@ -1547,7 +1589,8 @@ func (l *LanguageServer) handleWorkspaceDidChangeWatchedFiles(
 }
 
 func (l *LanguageServer) sendFileDiagnostics(ctx context.Context, fileURI string) {
-	if l.conn == nil {
+	conn := l.Conn()
+	if conn == nil {
 		l.log.Debug("sendFileDiagnostics called with no connection: %s", fileURI)
 
 		return
@@ -1565,7 +1608,7 @@ func (l *LanguageServer) sendFileDiagnostics(ctx context.Context, fileURI string
 		fileDiags = noDiagnostics
 	}
 
-	err := l.conn.Notify(ctx, methodTdPublishDiagnostics, types.FileDiagnostics{URI: fileURI, Items: fileDiags})
+	err := conn.Notify(ctx, methodTdPublishDiagnostics, types.FileDiagnostics{URI: fileURI, Items: fileDiags})
 	if err != nil {
 		l.log.Message("failed to send file diagnostic %w", err)
 	}
@@ -1688,7 +1731,12 @@ func (l *LanguageServer) handleInputSkeletonPrompt(
 	msgCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	action := l.window.ShowMessageRequest(msgCtx, types.InfoMessage, noInputFoundMsg, "Yes", "No", "Ignore")
+	w := l.Window()
+	if w == nil {
+		return false, nil
+	}
+
+	action := w.ShowMessageRequest(msgCtx, types.InfoMessage, noInputFoundMsg, "Yes", "No", "Ignore")
 
 	switch action {
 	case "Yes":
@@ -1704,9 +1752,9 @@ func (l *LanguageServer) handleInputSkeletonPrompt(
 			return false, fmt.Errorf("failed to create input.json: %w", err)
 		}
 
-		openAction := l.window.ShowMessageRequest(ctx, types.InfoMessage, inputCreateSuccessMsg, "Open")
+		openAction := w.ShowMessageRequest(ctx, types.InfoMessage, inputCreateSuccessMsg, "Open")
 		if openAction == "Open" {
-			l.window.ShowDocument(ctx, workspace.URI(inputFile), false)
+			w.ShowDocument(ctx, workspace.URI(inputFile), false)
 		}
 
 		return true, nil
