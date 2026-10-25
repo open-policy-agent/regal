@@ -25,11 +25,11 @@ report contains violation if {
 
 # METADATA
 # description: |
-#  check for redundant existence checks of function args in function bodies
-#  note: this only scans "top level" expressions in the function body, and not
-#  e.g. those nested inside of comprehensions, every bodies, etc.. while this
-#  would certainly be possible, the cost does not justify the benefit, as it's
-#  quite unlikely that existence checks are found there
+#   check for redundant existence checks of function args in function bodies
+#   note: this only scans "top level" expressions in the function body, and not
+#   e.g. those nested inside of comprehensions, every bodies, etc.. while this
+#   would certainly be possible, the cost does not justify the benefit, as it's
+#   quite unlikely that existence checks are found there
 report contains violation if {
 	some rule in ast.functions
 

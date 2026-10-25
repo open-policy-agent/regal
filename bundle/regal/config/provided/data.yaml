@@ -199,6 +199,9 @@ rules:
       except-functions:
         - walk
       level: error
+    inconsistent-metadata-indentation:
+      indent-num-spaces: 2
+      level: error
     line-length:
       level: error
       max-line-length: 120
