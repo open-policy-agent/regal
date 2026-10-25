@@ -71,9 +71,9 @@ actions contains action if {
 
 # METADATA
 # description: |
-#  Code actions to show documentation for a linter rule. Note that this currently
-#  only works for VSCode clients, via their `vscode.open` command. If we learn about
-#  other clients that support this, we'll add them here.
+#   Code actions to show documentation for a linter rule. Note that this currently
+#   only works for VSCode clients, via their `vscode.open` command. If we learn about
+#   other clients that support this, we'll add them here.
 actions contains action if {
 	client.identifier == client.identifiers.vscode
 	"quickfix" in only

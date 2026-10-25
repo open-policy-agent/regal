@@ -11,23 +11,23 @@ import data.regal.util
 
 # METADATA
 # description: |
-#  The result.aggregate function works similarly to `result.fail`, but instead of producing
-#  a violation returns an entry to be aggregated for later evaluation. This is useful in
-#  aggregate rules (and only in aggregate rules) as it provides a uniform format for
-#  aggregate data entries. Example return value:
+#   The result.aggregate function works similarly to `result.fail`, but instead of producing
+#   a violation returns an entry to be aggregated for later evaluation. This is useful in
+#   aggregate rules (and only in aggregate rules) as it provides a uniform format for
+#   aggregate data entries. Example return value:
 #
-#  {
-#      "aggregate_source": {
-#          "package_path": ["a", "b", "c"],
-#      },
-#      "aggregate_data": {
-#          "foo": "bar",
-#          "baz": [1, 2, 3],
-#      },
-#  }
+#   {
+#       "aggregate_source": {
+#           "package_path": ["a", "b", "c"],
+#       },
+#       "aggregate_data": {
+#           "foo": "bar",
+#           "baz": [1, 2, 3],
+#       },
+#   }
 #
-#  Note that the first argument, which was the metadata chain from the package, is
-#  no longer used, but kept for compatibility reasons.
+#   Note that the first argument, which was the metadata chain from the package, is
+#   no longer used, but kept for compatibility reasons.
 ## regal ignore:argument-always-wildcard
 aggregate(_, aggregate_data) := {
 	"aggregate_source": {"package_path": [term.value |

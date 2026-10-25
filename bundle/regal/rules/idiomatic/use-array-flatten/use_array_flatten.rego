@@ -70,10 +70,10 @@ nested_concat_calls contains call if {
 
 # METADATA
 # description: |
-#  optionally (when 'flag-wrapped-concat' is enabled in configuration), instead of:
-#  - `array.concat([a], b)`
-#  recommend:
-#  - `array.flatten([a, b])`
+#   optionally (when 'flag-wrapped-concat' is enabled in configuration), instead of:
+#   - `array.concat([a], b)`
+#   recommend:
+#   - `array.flatten([a, b])`
 wrapped_concat_calls contains call if {
 	some call in all_concat_calls
 	some pos in [1, 2]
@@ -83,8 +83,8 @@ wrapped_concat_calls contains call if {
 
 # METADATA
 # description: |
-#  optionally (when 'flag-all-concat' is enabled in configuration),
-#  recommend replacing all calls to `array.concat` with `array.flatten`
+#   optionally (when 'flag-all-concat' is enabled in configuration),
+#   recommend replacing all calls to `array.concat` with `array.flatten`
 all_concat_calls contains call if {
 	"array.concat" in ast.builtin_functions_called
 
