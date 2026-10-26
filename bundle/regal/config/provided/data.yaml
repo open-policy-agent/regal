@@ -150,6 +150,8 @@ rules:
       level: error
     redundant-data-import:
       level: error
+    redundant-future-keywords:
+      level: error
     unresolved-import:
       level: error
     unresolved-reference:
