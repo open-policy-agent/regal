@@ -21,11 +21,11 @@ full_name := concat(" ", [first_name, last_name])
 ```rego
 package policy
 
-request_formatted := $"{method}: ${path}" if {
+request_formatted := $"{method}: {path}" if {
     # extract method and path from the request
 }
 
-full_name := $"{first_name} ${last_name}"
+full_name := $"{first_name} {last_name}"
 ```
 
 ## Rationale
@@ -76,7 +76,7 @@ deny contains message if {
     # [ any number of conditions ]
     #
     # rendering message string never fails — no impact on decision
-    message := $"user ${input.user.name} missing required attributes"
+    message := $"user {input.user.name} missing required attributes"
 }
 ```
 
