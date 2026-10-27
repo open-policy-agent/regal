@@ -6,6 +6,7 @@
 package all_violations
 
 import rego.v1
+import future.keywords.every
 
 # creates a circular import
 import data.circular_import
