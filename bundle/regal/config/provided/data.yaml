@@ -24,6 +24,8 @@ rules:
       level: error
     inconsistent-args:
       level: error
+    inconsistent-rule-type:
+      level: error
     internal-entrypoint:
       level: error
     invalid-metadata-attribute:
