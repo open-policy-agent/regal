@@ -23,9 +23,7 @@ report contains violation if {
 	count(terms) == 3
 	terms[0].value == "future"
 	terms[1].value == "keywords"
-	terms[2].value != "not"
-	terms[2].value != "or"
-	terms[2].value != "and"
+	not terms[2].value in {"and", "or", "not"}
 
 	violation := result.fail(rego.metadata.chain(), result.location(imported.path))
 }
