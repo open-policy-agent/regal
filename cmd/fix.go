@@ -161,7 +161,7 @@ func fix(args []string, params *fixParams) (err error) {
 		l = l.WithPathPrefix(filepath.Dir(regalDir.Name()))
 	}
 
-	var userConfig config.Config
+	userConfig := &config.Config{}
 
 	userConfigFile, err := readUserConfig(params.lintAndFixParams, configSearchPath)
 	switch {
@@ -172,7 +172,7 @@ func fix(args []string, params *fixParams) (err error) {
 			log.Printf("found user config file: %s", userConfigFile.Name())
 		}
 
-		if err := yaml.NewDecoder(userConfigFile).Decode(&userConfig); errors.Is(err, io.EOF) {
+		if err := yaml.NewDecoder(userConfigFile).Decode(userConfig); errors.Is(err, io.EOF) {
 			log.Printf("user config file %q is empty, will use the default config", userConfigFile.Name())
 		} else if err != nil {
 			if regalDir != nil {
@@ -197,7 +197,7 @@ func fix(args []string, params *fixParams) (err error) {
 	f := fixer.NewFixer().RegisterRoots(roots...).RegisterFixes(fixes.NewDefaultFixes()...)
 
 	if userConfigFile != nil {
-		versionsMap, err := config.AllRegoVersions(filepath.Dir(userConfigFile.Name()), &userConfig)
+		versionsMap, err := config.AllRegoVersions(filepath.Dir(userConfigFile.Name()), userConfig)
 		if err != nil {
 			return fmt.Errorf("failed to get all Rego versions: %w", err)
 		}

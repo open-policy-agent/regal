@@ -52,6 +52,15 @@ type marshallingIntermediary struct {
 	} `yaml:"features"`
 }
 
+func (c *Config) String() string {
+	yamlBytes, err := yaml.Marshal(c)
+	if err != nil {
+		return fmt.Sprintf("error marshaling config: %v", err)
+	}
+
+	return outil.ByteSliceToString(yamlBytes)
+}
+
 func (c Config) MarshalYAML() (any, error) {
 	a := struct {
 		Rules        *yaml.Node    `yaml:"rules"`
@@ -246,18 +255,18 @@ func (c Capabilities) MarshalYAML() (any, error) {
 	), nil
 }
 
-func (rule Rule) MarshalJSONTo(enc *jsontext.Encoder) error {
+func (r Rule) MarshalJSONTo(enc *jsontext.Encoder) error {
 	enc.WriteToken(jsontext.BeginObject)
-	write.StringField(enc, keyLevel, rule.Level)
+	write.StringField(enc, keyLevel, r.Level)
 
-	if rule.Ignore != nil && len(rule.Ignore.Files) > 0 {
+	if r.Ignore != nil && len(r.Ignore.Files) > 0 {
 		write.String(enc, "ignore")
 		enc.WriteToken(jsontext.BeginObject)
-		write.ArrayOfStringField(enc, "files", rule.Ignore.Files)
+		write.ArrayOfStringField(enc, "files", r.Ignore.Files)
 		enc.WriteToken(jsontext.EndObject)
 	}
 
-	for key, val := range rule.Extra {
+	for key, val := range r.Extra {
 		if key != keyIgnore && key != keyLevel {
 			_ = write.Field(enc, key, val)
 		}
@@ -266,7 +275,7 @@ func (rule Rule) MarshalJSONTo(enc *jsontext.Encoder) error {
 	return enc.WriteToken(jsontext.EndObject)
 }
 
-func (rule *Rule) UnmarshalYAML(value *yaml.Node) (err error) {
+func (r *Rule) UnmarshalYAML(value *yaml.Node) (err error) {
 	if value.Kind != yaml.MappingNode {
 		return fmt.Errorf("expected rule as map, got %v", value.Kind)
 	}
@@ -279,11 +288,11 @@ func (rule *Rule) UnmarshalYAML(value *yaml.Node) (err error) {
 		} else {
 			switch currKey {
 			case keyLevel:
-				rule.Level = node.Value
+				r.Level = node.Value
 			case keyIgnore:
 				if node.Kind == yaml.MappingNode {
-					if rule.Ignore == nil {
-						rule.Ignore = &Ignore{}
+					if r.Ignore == nil {
+						r.Ignore = &Ignore{}
 					}
 
 					for j := 0; j < len(node.Content); j += 2 {
@@ -291,16 +300,16 @@ func (rule *Rule) UnmarshalYAML(value *yaml.Node) (err error) {
 						valNode := node.Content[j+1]
 
 						if keyNode.Value == "files" && valNode.Kind == yaml.SequenceNode {
-							rule.Ignore.Files = make([]string, len(valNode.Content))
+							r.Ignore.Files = make([]string, len(valNode.Content))
 							for k, fileNode := range valNode.Content {
-								rule.Ignore.Files[k] = fileNode.Value
+								r.Ignore.Files[k] = fileNode.Value
 							}
 						}
 					}
 				}
 			default:
-				if rule.Extra == nil {
-					rule.Extra = make(map[string]any)
+				if r.Extra == nil {
+					r.Extra = make(map[string]any)
 				}
 
 				if currKey != keyIgnore && currKey != keyLevel {
@@ -310,7 +319,7 @@ func (rule *Rule) UnmarshalYAML(value *yaml.Node) (err error) {
 						return err
 					}
 
-					rule.Extra[currKey] = extra
+					r.Extra[currKey] = extra
 				}
 			}
 		}
@@ -319,26 +328,26 @@ func (rule *Rule) UnmarshalYAML(value *yaml.Node) (err error) {
 	return nil
 }
 
-func (rule *Rule) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+func (r *Rule) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	return read.Object(dec, func(dec *jsontext.Decoder, key string) (err error) {
 		switch key {
 		case keyLevel:
-			rule.Level, err = read.String(dec)
+			r.Level, err = read.String(dec)
 		case keyIgnore:
-			if rule.Ignore == nil {
-				rule.Ignore = &Ignore{}
+			if r.Ignore == nil {
+				r.Ignore = &Ignore{}
 			}
 
-			err = json.UnmarshalDecode(dec, rule.Ignore)
+			err = json.UnmarshalDecode(dec, r.Ignore)
 		default:
-			if rule.Extra == nil {
-				rule.Extra = make(map[string]any)
+			if r.Extra == nil {
+				r.Extra = make(map[string]any)
 			}
 
 			var val any
 
 			err = json.UnmarshalDecode(dec, &val)
-			rule.Extra[key] = val
+			r.Extra[key] = val
 		}
 
 		return err

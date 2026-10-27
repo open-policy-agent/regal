@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	outil "github.com/open-policy-agent/opa/v1/util"
+
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 // Version represents a parsed SemVer.
@@ -61,12 +63,7 @@ func Parse(version string) (v Version, err error) {
 
 // MustParse is like Parse but panics if the version string is invalid instead of returning an error.
 func MustParse(version string) Version {
-	v, err := Parse(version)
-	if err != nil {
-		panic(err)
-	}
-
-	return v
+	return util.Must(Parse(version))
 }
 
 // AppendText appends the textual representation of the version to b and returns the extended buffer.

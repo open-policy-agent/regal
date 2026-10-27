@@ -247,12 +247,10 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 	ls.regoRouter.RegisterResultHandler("initialized", ls.initializedResultHandler)
 	ls.regoRouter.RegisterResultHandler("textDocument/semanticTokens/full", semantictokens.ResultHandler)
 
-	merged, _ := config.WithDefaultsFromBundle(bundle.Embedded(), cfg)
-
 	// Even though user configuration (if provided) will overwrite some of the default configuration,
 	// loading the default conf in the "constructor" ensures we can assume there's *some* configuration
 	// set everywhere in the language server code.
-	ls.loadConfig(ctx, merged)
+	ls.loadConfig(ctx, cfg.WithRegalDefaults())
 
 	return ls
 }
@@ -522,14 +520,7 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 					continue
 				}
 
-				mergedConfig, err := config.WithDefaultsFromBundle(bundle.Loaded(), &userConfig)
-				if err != nil {
-					l.log.Message("failed to load config: %s", err)
-
-					continue
-				}
-
-				l.loadConfig(ctx, mergedConfig)
+				l.loadConfig(ctx, userConfig.WithRegalDefaults())
 
 				l.workersWg.Go(func() {
 					if l.getLoadedConfig().Features.Remote.CheckVersion &&
@@ -545,9 +536,7 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 				l.lintJobs <- lintJob{Reason: "config file changed"}
 			case <-l.configWatcher.Drop:
 				l.loadedConfigLock.Lock()
-
-				defaultConfig, _ := config.WithDefaultsFromBundle(bundle.Loaded(), nil)
-				l.loadedConfig = &defaultConfig
+				l.loadedConfig = config.Embedded()
 				l.loadedConfigLock.Unlock()
 
 				l.lintJobs <- lintJob{Reason: "config file dropped"}
@@ -654,12 +643,12 @@ func (l *LanguageServer) getCustomRulesPath() string {
 	return ""
 }
 
-func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
+func (l *LanguageServer) loadConfig(ctx context.Context, conf *config.Config) {
 	l.loadedConfigLock.Lock()
-	l.loadedConfig = &conf
+	l.loadedConfig = conf
 	l.loadedConfigLock.Unlock()
 
-	if err := store.PutConfig(ctx, l.regoStore, &conf); err != nil {
+	if err := store.PutConfig(ctx, l.regoStore, conf); err != nil {
 		l.log.Message("failed to update config in storage: %v", err)
 	}
 
@@ -667,7 +656,7 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf config.Config) {
 
 	// Rego versions may have changed, so reload them.
 	if workspace.Path() != "" {
-		allRegoVersions, err := config.AllRegoVersions(workspace.Path(), &conf)
+		allRegoVersions, err := config.AllRegoVersions(workspace.Path(), conf)
 		if err != nil {
 			l.log.Debug("failed to reload rego versions: %s", err)
 		} else {
@@ -1048,7 +1037,7 @@ func (l *LanguageServer) handleTextDocumentDidSave(
 		return emptyStruct, nil
 	}
 
-	enabled, err := linter.NewLinter().WithUserConfig(*l.getLoadedConfig()).DetermineEnabledRules(ctx)
+	enabled, err := linter.NewLinter().WithUserConfig(l.getLoadedConfig()).DetermineEnabledRules(ctx)
 	if err != nil {
 		l.log.Message("failed to determine enabled rules: %s", err)
 
@@ -1157,7 +1146,7 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 		}
 
 		fi := fixer.NewFixer().RegisterFixes(fixes.NewDefaultFormatterFixes()...).RegisterRoots(roots...)
-		li := linter.NewLinter().WithInputModules(&input).WithUserConfig(*l.getLoadedConfig())
+		li := linter.NewLinter().WithInputModules(&input).WithUserConfig(l.getLoadedConfig())
 
 		fixReport, err := fi.Fix(ctx, &li, memfp)
 		if err != nil {

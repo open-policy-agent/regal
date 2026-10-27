@@ -3,16 +3,18 @@ package bundle
 import (
 	"embed"
 	"fmt"
+	"io/fs"
 	"os"
 	"slices"
 	"sync"
 	"sync/atomic"
 
 	"github.com/open-policy-agent/opa/v1/bundle"
-	"github.com/open-policy-agent/opa/v1/util"
+	outil "github.com/open-policy-agent/opa/v1/util"
 
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/mode"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 type devMode struct {
@@ -26,16 +28,20 @@ type devMode struct {
 // it's preferable to filter them out from the bundle than to e.g. create a separate directory for tests.
 var (
 	Embedded = sync.OnceValue(func() *bundle.Bundle {
-		return rio.MustLoadRegalBundleFS(regalBundle)
+		return rio.MustLoadRegalBundleFS(regalBundleFS)
 	})
 	Dev = &devMode{}
 
 	//go:embed *
-	regalBundle embed.FS
-	compileMu   sync.Mutex
-
-	lastErrMsg = atomic.Pointer[string]{}
+	regalBundleFS embed.FS
+	compileMu     sync.Mutex
+	lastErrMsg    = atomic.Pointer[string]{}
 )
+
+// Open opens a file from the embedded Regal bundle filesystem, panics on error.
+func Open(path string) fs.File {
+	return util.Must(regalBundleFS.Open(path))
+}
 
 // SetPath sets the path of a Regal development bundle, and attempts to load it immediately.
 func (dm *devMode) SetPath(path string) {
@@ -145,7 +151,7 @@ func SafeCopy(b *bundle.Bundle) *bundle.Bundle {
 
 	if b.Data != nil {
 		var x any = b.Data
-		if err := util.RoundTripFast(&x); err == nil && x != nil {
+		if err := outil.RoundTripFast(&x); err == nil && x != nil {
 			if m, ok := x.(map[string]any); ok {
 				dataCopy = m
 			}

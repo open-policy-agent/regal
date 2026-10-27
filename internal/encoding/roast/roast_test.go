@@ -14,6 +14,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/roast/transforms/module"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 var (
@@ -636,10 +637,5 @@ func mustReadTestFile(tb testing.TB, path string) []byte {
 }
 
 func mustParseURL(raw string) url.URL {
-	u, err := url.Parse(raw)
-	if err != nil {
-		panic(err)
-	}
-
-	return *u
+	return *util.Must(url.Parse(raw))
 }

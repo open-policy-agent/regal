@@ -165,21 +165,14 @@ func opaTest(args []string) int {
 	regalBundle := rbundle.Loaded()
 	path := storage.MustParsePath("/regal")
 
-	if err := store.Write(ctx, txn, storage.AddOp, path, regalBundle.Data["regal"]); err != nil {
-		panic(err)
-	}
-
-	if err := store.Write(ctx, txn, storage.AddOp, []string{"internal"}, map[string]any{}); err != nil {
-		panic(err)
-	}
+	util.PanicOnErr(store.Write(ctx, txn, storage.AddOp, path, regalBundle.Data["regal"]))
+	util.PanicOnErr(store.Write(ctx, txn, storage.AddOp, []string{"internal"}, map[string]any{}))
 
 	r := make(map[string]any)
 
 	encoding.MustJSONRoundTrip(config.CapabilitiesForThisVersion(), &r)
 
-	if err := store.Write(ctx, txn, storage.AddOp, []string{"internal", "capabilities"}, r); err != nil {
-		panic(err)
-	}
+	util.PanicOnErr(store.Write(ctx, txn, storage.AddOp, []string{"internal", "capabilities"}, r))
 
 	defer store.Abort(ctx, txn)
 

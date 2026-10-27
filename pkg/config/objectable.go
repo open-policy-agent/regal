@@ -21,11 +21,11 @@ func mapToObject[T objectable](items map[string]T) ast.Object {
 	return obj
 }
 
-func (c Config) ToValue() ast.Value {
+func (c *Config) ToValue() ast.Value {
 	return c.toObject()
 }
 
-func (c Config) toObject() ast.Object {
+func (c *Config) toObject() ast.Object {
 	obj := ast.NewObjectWithCapacity(min(1, len(c.Rules)) +
 		util.BoolToInt(c.Capabilities != nil) +
 		util.BoolToInt(!c.Features.IsZero()) +
@@ -61,14 +61,14 @@ func (c Config) toObject() ast.Object {
 	return obj
 }
 
-func (rule Rule) toObject() ast.Object {
-	obj := ast.NewObject(rast.Item(keyLevel, ast.InternedTerm(rule.Level)))
+func (r Rule) toObject() ast.Object {
+	obj := ast.NewObject(rast.Item(keyLevel, ast.InternedTerm(r.Level)))
 
-	if rule.Ignore != nil && len(rule.Ignore.Files) != 0 {
-		rast.Insert(obj, keyIgnore, ast.ObjectTerm(rast.Item("files", rast.ArrayTerm(rule.Ignore.Files...))))
+	if r.Ignore != nil && len(r.Ignore.Files) != 0 {
+		rast.Insert(obj, keyIgnore, ast.ObjectTerm(rast.Item("files", rast.ArrayTerm(r.Ignore.Files...))))
 	}
 
-	for key, val := range rule.Extra {
+	for key, val := range r.Extra {
 		if value, err := transform.AnyToValue(val); err == nil {
 			rast.Insert(obj, key, ast.NewTerm(value))
 		}

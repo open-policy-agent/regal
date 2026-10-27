@@ -3,8 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io"
+	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -16,6 +19,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/types"
 	outil "github.com/open-policy-agent/opa/v1/util"
 
+	rbundle "github.com/open-policy-agent/regal/bundle"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
@@ -25,21 +29,20 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
 )
 
-// The receiver types is a bit of a mess, but we can probably not change
-// these without breaking some integration. So this should be a 1.0 change.
 type (
-	Config struct {
+	Config struct { //nolint:recvcheck // conflicting with other linter on YAML marshalling methods
 		// Defaults state is loaded from configuration under rules and so is not (un)marshalled
 		// in the same way.
-		Defaults        Defaults            `json:"-"                          yaml:"-"`
-		Rules           map[string]Category `json:"rules"                      yaml:"rules"`
-		Capabilities    *Capabilities       `json:"capabilities,omitempty"     yaml:"capabilities,omitempty"`
-		Features        *Features           `json:"features,omitempty"         yaml:"features,omitempty"`
-		Project         *Project            `json:"project,omitempty"          yaml:"project,omitempty"`
-		CapabilitiesURL string              `json:"capabilities_url,omitempty" yaml:"capabilities_url,omitempty"`
-		Ignore          Ignore              `json:"ignore,omitzero"            yaml:"ignore,omitempty"`
+		Defaults        Defaults      `json:"-"                          yaml:"-"`
+		Rules           Rules         `json:"rules"                      yaml:"rules"`
+		Capabilities    *Capabilities `json:"capabilities,omitempty"     yaml:"capabilities,omitempty"`
+		Features        *Features     `json:"features,omitempty"         yaml:"features,omitempty"`
+		Project         *Project      `json:"project,omitempty"          yaml:"project,omitempty"`
+		CapabilitiesURL string        `json:"capabilities_url,omitempty" yaml:"capabilities_url,omitempty"`
+		Ignore          Ignore        `json:"ignore,omitzero"            yaml:"ignore,omitempty"`
 	}
-	Root struct {
+	Rules map[string]Category
+	Root  struct {
 		Path string
 		// Note that contrary to ast.RegoVersion, we'll only accept 0 or 1 here currently.
 		// This aligns with the Rego versioning scheme used in .manifest files, which is
@@ -103,6 +106,12 @@ const (
 )
 
 var (
+	Embedded = sync.OnceValue(func() *Config {
+		file := rbundle.Open("regal/config/provided/data.yaml")
+		defer file.Close()
+
+		return util.Must(FromReader(file))
+	})
 	OpaCapsForThisVersionTerm = sync.OnceValue(func() *ast.Term {
 		return ast.NewTerm(rast.StructToValue(OpaCapsForThisVersionInterned()))
 	})
@@ -110,19 +119,64 @@ var (
 	opabuiltinCache               = concurrent.MapOf(make(map[string]*Builtin))
 )
 
+func (d Defaults) IsZero() bool {
+	return d.Global.Level == "" && len(d.Categories) == 0
+}
+
+func (d Defaults) Level(category string) string {
+	if cat, ok := d.Categories[category]; ok {
+		return cat.Level
+	}
+
+	return d.Global.Level
+}
+
+func (r Rules) Copy() map[string]Category {
+	return util.WithMappedValues(r, Category.Copy)
+}
+
+func (c Category) Copy() Category {
+	return util.WithMappedValues(c, Rule.Copy)
+}
+
+func (c Category) Equal(other Category) bool {
+	return maps.EqualFunc(c, other, Rule.Equal)
+}
+
+func (r Rule) Equal(other Rule) bool {
+	return r.Level == other.Level &&
+		((r.Ignore == nil && other.Ignore == nil) ||
+			(r.Ignore != nil && other.Ignore != nil && slices.Equal(r.Ignore.Files, other.Ignore.Files))) &&
+		((r.Extra == nil && other.Extra == nil) ||
+			(r.Extra != nil && other.Extra != nil && reflect.DeepEqual(r.Extra, other.Extra)))
+}
+
+func (r Rule) Copy() Rule {
+	c := Rule{Level: r.Level}
+	if r.Ignore != nil {
+		c.Ignore = &Ignore{Files: slices.Clone(r.Ignore.Files)}
+	}
+
+	if r.Extra != nil {
+		c.Extra = maps.Clone(r.Extra)
+	}
+
+	return c
+}
+
 func HasConfigSuffix(path string) bool {
 	return util.HasAnySuffix(path, standaloneConfigFileName, ".regal/config.yaml", ".regal\\config.yaml")
 }
 
-func FromPath(path string) (Config, error) {
-	return util.Wrap(rio.WithOpen(path, FromFile))("failed to open config file")
+func FromPath(path string) (*Config, error) {
+	return util.Wrap(rio.WithOpen(path, FromReader))("failed to open config file")
 }
 
-func FromFile(file *os.File) (Config, error) {
-	conf := Config{}
-	err := yaml.NewDecoder(file).Decode(&conf)
+func FromReader[R io.Reader](r R) (*Config, error) {
+	cfg := &Config{}
+	err := yaml.NewDecoder(r).Decode(cfg)
 
-	return conf, err
+	return cfg, err
 }
 
 // Find attempts to find either the .regal directory or .regal.yaml

@@ -16,11 +16,9 @@ import (
 	"github.com/jstemmer/go-junit-report/v2/junit"
 	"github.com/spf13/cobra"
 
-	"github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/metrics"
 	"github.com/open-policy-agent/opa/v1/topdown"
 
-	rbundle "github.com/open-policy-agent/regal/bundle"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	regalmetrics "github.com/open-policy-agent/regal/internal/metrics"
 	"github.com/open-policy-agent/regal/internal/update"
@@ -249,13 +247,17 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 		m.Timer(regalmetrics.RegalConfigParse).Stop()
 	}
 
-	regal = regal.WithUserConfig(userConfig)
-
-	go updateCheckAndWarn(params, rbundle.Loaded(), &userConfig)
+	if userConfig != nil {
+		regal = regal.WithUserConfig(userConfig)
+	}
 
 	regal, err = regal.Prepare(ctx)
 	if err != nil {
 		return report.Report{}, fmt.Errorf("failed to prepare for linting: %w", err)
+	}
+
+	if conf, err := regal.GetConfig(); err == nil {
+		go updateCheckAndWarn(params, conf)
 	}
 
 	result, err = regal.Lint(ctx)
@@ -271,16 +273,7 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 	return result, rep.Publish(ctx, result)
 }
 
-func updateCheckAndWarn(params *lintParams, regalRules *bundle.Bundle, userConfig *config.Config) {
-	mergedConfig, err := config.WithDefaultsFromBundle(regalRules, userConfig)
-	if err != nil {
-		if params.debug {
-			log.Printf("failed to merge user config with default config when checking version: %v", err)
-		}
-
-		return
-	}
-
+func updateCheckAndWarn(params *lintParams, mergedConfig *config.Config) {
 	if mergedConfig.Features.Remote.CheckVersion &&
 		os.Getenv(update.CheckVersionDisableEnvVar) == "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)

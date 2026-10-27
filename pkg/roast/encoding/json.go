@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/open-policy-agent/opa/v1/util"
+	outil "github.com/open-policy-agent/opa/v1/util"
+
+	"github.com/open-policy-agent/regal/internal/util"
 
 	_ "github.com/open-policy-agent/regal/pkg/roast/intern"
 )
@@ -43,9 +45,7 @@ func JSONRoundTripTo[T any](from any, opts ...json.Options) (to T, err error) {
 
 // MustJSONRoundTrip convert any value to JSON and back again, exit on failure.
 func MustJSONRoundTrip(from, to any, opts ...json.Options) {
-	if err := JSONRoundTrip(from, to, opts...); err != nil {
-		panic(err)
-	}
+	util.PanicOnErr(JSONRoundTrip(from, to, opts...))
 }
 
 func Get(value jsontext.Value, ptr jsontext.Pointer) jsontext.Value {
@@ -75,7 +75,7 @@ func GetString(value jsontext.Value, ptr jsontext.Pointer) (string, bool) {
 // MarshalWriteLn is a convenience function json.MarshalWrite followed by a newline.
 func MarshalWriteLn(w io.Writer, v any, opts ...json.Options) (err error) {
 	if err = json.MarshalWrite(w, v, opts...); err == nil {
-		_, err = w.Write(util.StringToByteSlice("\n"))
+		_, err = w.Write(outil.StringToByteSlice("\n"))
 	}
 
 	return err

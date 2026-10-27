@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"strings"
 	"testing/fstest"
 
-	"go.yaml.in/yaml/v3"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -31,6 +31,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/ogre"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
+	"github.com/open-policy-agent/regal/pkg/linter/params"
 	"github.com/open-policy-agent/regal/pkg/report"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
@@ -47,21 +48,15 @@ type (
 		inputModules      *rules.Input
 		userConfig        *config.Config
 		combinedCfg       *config.Config
+		params            *params.Params
 		pathPrefix        string
 		customRuleError   error
 		inputPaths        []string
 		ruleBundles       []*bundle.Bundle
-		disable           []string
-		disableCategory   []string
-		enable            []string
-		enableCategory    []string
-		ignoreFiles       []string
 		customRuleModules []*ast.Module
 		useCollectQuery   bool
 		debugMode         bool
 		exportAggregates  bool
-		disableAll        bool
-		enableAll         bool
 		profiling         bool
 		instrumentation   bool
 		isPrepared        bool
@@ -139,20 +134,17 @@ var (
 )
 
 func init() {
-	ast.InternStringTerm(
-		"eval", "disable_all", "disable_category", "disable", "enable_all", "enable_category", "enable", "ignore_files",
-		"aggregates_internal", "__aggregate_report__",
-	)
+	ast.InternStringTerm("eval", "aggregates_internal", "__aggregate_report__")
 }
 
 // NewLinter creates a new Regal linter.
 func NewLinter() Linter {
-	return Linter{ruleBundles: []*bundle.Bundle{rbundle.Loaded()}}
+	return Linter{ruleBundles: []*bundle.Bundle{rbundle.Loaded()}, params: params.New()}
 }
 
 // NewEmptyLinter creates a linter with no rule bundles.
 func NewEmptyLinter() Linter {
-	return Linter{}
+	return Linter{params: params.New()}
 }
 
 // WithInputPaths sets the inputPaths to lint. Note that these will be
@@ -236,57 +228,63 @@ func (l Linter) WithDebugMode(debugMode bool) Linter {
 }
 
 // WithUserConfig provides config overrides set by the user.
-func (l Linter) WithUserConfig(cfg config.Config) Linter {
-	l.userConfig = &cfg
+// Passing nil can be used to clear any previously set user config
+// and revert to using only the embedded configuration.
+func (l Linter) WithUserConfig(cfg *config.Config) Linter {
+	l.userConfig = cfg
 
 	return l.notPrepared()
 }
 
 // WithDisabledRules disables provided rules. This overrides configuration provided in file.
 func (l Linter) WithDisabledRules(disable ...string) Linter {
-	l.disable = disable
+	l.params = l.params.WithDisable(disable...)
 
 	return l.notPrepared()
 }
 
 // WithDisableAll disables all rules when set to true. This overrides configuration provided in file.
 func (l Linter) WithDisableAll(disableAll bool) Linter {
-	l.disableAll = disableAll
+	l.params = l.params.WithDisableAll(disableAll)
 
 	return l.notPrepared()
 }
 
 // WithDisabledCategories disables provided categories of rules. This overrides configuration provided in file.
 func (l Linter) WithDisabledCategories(disableCategory ...string) Linter {
-	l.disableCategory = disableCategory
+	l.params = l.params.WithDisableCategory(disableCategory...)
 
 	return l.notPrepared()
 }
 
 // WithEnabledRules enables provided rules. This overrides configuration provided in file.
 func (l Linter) WithEnabledRules(enable ...string) Linter {
-	l.enable = enable
+	l.params = l.params.WithEnable(enable...)
 
 	return l.notPrepared()
 }
 
 // WithEnableAll enables all rules when set to true. This overrides configuration provided in file.
 func (l Linter) WithEnableAll(enableAll bool) Linter {
-	l.enableAll = enableAll
+	l.params = l.params.WithEnableAll(enableAll)
 
 	return l.notPrepared()
 }
 
 // WithEnabledCategories enables provided categories of rules. This overrides configuration provided in file.
 func (l Linter) WithEnabledCategories(enableCategory ...string) Linter {
-	l.enableCategory = enableCategory
+	l.params = l.params.WithEnableCategory(enableCategory...)
 
 	return l.notPrepared()
 }
 
 // WithIgnore excludes files matching patterns. This overrides configuration provided in file.
 func (l Linter) WithIgnore(ignore []string) Linter {
-	l.ignoreFiles = ignore
+	if l.params == nil {
+		l.params = params.New()
+	}
+
+	l.params = l.params.WithIgnoreFiles(ignore...)
 
 	return l.notPrepared()
 }
@@ -353,6 +351,8 @@ func (l Linter) Prepare(ctx context.Context) (Linter, error) {
 	l.startTimer(regalmetrics.RegalPrepare)
 	defer l.stopTimer(regalmetrics.RegalPrepare)
 
+	l.params = cmp.Or(l.params, params.None)
+
 	conf, err := l.GetConfig()
 	if err != nil {
 		return l, fmt.Errorf("failed to merge config: %w", err)
@@ -407,6 +407,9 @@ func (l Linter) MustPrepare(ctx context.Context) Linter {
 func (l Linter) Lint(ctx context.Context) (r report.Report, err error) {
 	l.startTimer(regalmetrics.RegalLint)
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	if !l.isPrepared {
 		if l, err = l.Prepare(ctx); err != nil {
 			return r, fmt.Errorf("failed to prepare linter: %w", err)
@@ -414,8 +417,8 @@ func (l Linter) Lint(ctx context.Context) (r report.Report, err error) {
 	}
 
 	ignore := l.combinedCfg.Ignore.Files
-	if len(l.ignoreFiles) > 0 {
-		ignore = l.ignoreFiles
+	if len(l.params.IgnoreFiles) > 0 {
+		ignore = l.params.IgnoreFiles
 	}
 
 	l.startTimer(regalmetrics.RegalFilterIgnoredFiles)
@@ -576,20 +579,12 @@ func (l Linter) GetConfig() (*config.Config, error) {
 		return l.combinedCfg, nil
 	}
 
-	mergedConf, err := config.WithDefaultsFromBundle(rbundle.Loaded(), l.userConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read provided config: %w", err)
-	}
-
-	mcPtr := &mergedConf
-
+	merged := l.userConfig.WithRegalDefaults()
 	if l.debugMode {
-		w := log.Writer()
-		w.Write(outil.StringToByteSlice("merged provided and user config:\n"))
-		_ = yaml.NewEncoder(w).Encode(mcPtr)
+		_, _ = io.WriteString(log.Writer(), "merged provided and user config:\n"+merged.String())
 	}
 
-	return mcPtr, err
+	return merged, nil
 }
 
 func (l Linter) countSkippedFromNotices(ctx context.Context, r *report.Report) int {
@@ -670,9 +665,6 @@ func (h *prepareResultHandler) Handle(result ogre.Result) error {
 }
 
 func (l Linter) regoPrepare(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	stg := l.preparedQuery.Store().Storage()
 	txn := storage.NewTransactionOrDie(ctx, stg, storage.WriteParams)
 	hnd := &prepareResultHandler{stg: stg, txn: txn}
@@ -725,17 +717,7 @@ func (l Linter) prepareData(conf *config.Config) ast.Object {
 	}
 
 	return ast.NewObject(
-		rast.Item("eval", ast.ObjectTerm(
-			rast.Item("params", ast.ObjectTerm(
-				rast.Item("disable_all", ast.InternedTerm(l.disableAll)),
-				rast.Item("disable_category", rast.ArrayTerm(l.disableCategory...)),
-				rast.Item("disable", rast.ArrayTerm(l.disable...)),
-				rast.Item("enable_all", ast.InternedTerm(l.enableAll)),
-				rast.Item("enable_category", rast.ArrayTerm(l.enableCategory...)),
-				rast.Item("enable", rast.ArrayTerm(l.enable...)),
-				rast.Item("ignore_files", rast.ArrayTerm(l.ignoreFiles...)),
-			)),
-		)),
+		rast.Item("eval", ast.ObjectTerm(rast.Item("params", l.params.ToTerm()))),
 		rast.Item("internal", ast.ObjectTerm(
 			rast.Item("combined_config", ast.NewTerm(conf.ToValue())),
 			rast.Item("user_config", ast.NewTerm(userConf)),
@@ -782,17 +764,19 @@ func (l Linter) validate(conf *config.Config) error {
 		validRules.Add(parts[4])
 	}
 
-	configuredCategories := util.NewSet(outil.Keys(conf.Rules)...)
+	configuredCategories := util.NewSetFromKeys(conf.Rules)
 	configuredRules := util.NewSet[string]()
 
 	for _, cat := range conf.Rules {
 		configuredRules.Add(outil.Keys(cat)...)
 	}
 
-	configuredRules.Add(l.enable...)
-	configuredRules.Add(l.disable...)
-	configuredCategories.Add(l.enableCategory...)
-	configuredCategories.Add(l.disableCategory...)
+	if !l.params.IsNone() {
+		configuredRules.Add(l.params.Enable...)
+		configuredRules.Add(l.params.Disable...)
+		configuredCategories.Add(l.params.EnableCategory...)
+		configuredCategories.Add(l.params.DisableCategory...)
+	}
 
 	invalidCategories := configuredCategories.Diff(validCategories)
 	invalidRules := configuredRules.Diff(validRules)
@@ -835,9 +819,6 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (*report.Report, er
 	l.startTimer(regalmetrics.RegalLintRego)
 	defer l.stopTimer(regalmetrics.RegalLintRego)
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	numFiles := len(input.FileNames)
 	operationCollect := numFiles > 1 || l.useCollectQuery
 
@@ -854,20 +835,19 @@ func (l Linter) lint(ctx context.Context, input rules.Input) (*report.Report, er
 	handler := &lintResultHandler{results: results}
 
 	for i, name := range input.FileNames {
+		ctxNoEscape := ctx
+
 		wg.Go(func() error {
 			inputValue, err := transform.ToAST(name, input.FileContent[name], input.Modules[name], operationCollect)
 			if err != nil {
 				return fmt.Errorf("failed to transform input value: %w", err)
 			} else {
 				ex := prepQuery.Evaluator().WithInput(inputValue)
-
 				if profiling {
 					ex = ex.WithProfiler(profiler.New())
 				}
 
-				ex = ex.WithID(int64(i)).WithResultHandler(handler)
-
-				if err := ex.Eval(ctx); err != nil {
+				if err := ex.WithID(int64(i)).WithResultHandler(handler).Eval(ctxNoEscape); err != nil {
 					return fmt.Errorf("error evaluating file %s: %w", name, err)
 				}
 			}
@@ -938,9 +918,6 @@ func (l Linter) lintWithAggregateRules(
 ) (*report.Report, error) {
 	l.startTimer(regalmetrics.RegalLintRegoAggregate)
 	defer l.stopTimer(regalmetrics.RegalLintRegoAggregate)
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 
 	inputValue := ast.NewObject( //nolint:forcetypeassert
 		rast.Item("ignore_directives", ast.NewTerm(cmp.Or(ignoreDirectives, ast.InternedEmptyObjectValue.(ast.Object)))),

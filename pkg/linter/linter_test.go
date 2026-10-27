@@ -57,7 +57,7 @@ func TestLintWithUserConfig(t *testing.T) {
 	rules := map[string]config.Category{"bugs": {"rule-shadows-builtin": config.Rule{Level: "ignore"}}}
 
 	result := must.Return(regal.NewLinter().
-		WithUserConfig(config.Config{Rules: rules}).
+		WithUserConfig(&config.Config{Rules: rules}).
 		WithInputModules(input).
 		Lint(t.Context()))(t)
 
@@ -182,7 +182,7 @@ or := 1
 				WithInputModules(test.InputPolicy(tc.filename, policy))
 
 			if tc.userConfig != nil {
-				linter = linter.WithUserConfig(*tc.userConfig)
+				linter = linter.WithUserConfig(tc.userConfig)
 			}
 
 			result := must.Return(linter.Lint(t.Context()))(t)
@@ -244,7 +244,7 @@ func TestLintWithCustomRuleAndCustomConfig(t *testing.T) {
 	t.Parallel()
 
 	linter := regal.NewLinter().
-		WithUserConfig(config.Config{Rules: map[string]config.Category{
+		WithUserConfig(&config.Config{Rules: map[string]config.Category{
 			"naming": {"acme-corp-package": config.Rule{Level: "ignore"}},
 		}}).
 		WithCustomRulesPaths(filepath.Join("testdata", "custom.rego")).
@@ -258,7 +258,7 @@ func TestLintMergedConfigInheritsLevelFromProvided(t *testing.T) {
 
 	// Note that the user configuration does not provide a level
 	linter := regal.NewLinter().
-		WithUserConfig(config.Config{Rules: map[string]config.Category{
+		WithUserConfig(&config.Config{Rules: map[string]config.Category{
 			"style": {"file-length": config.Rule{Extra: config.ExtraAttributes{"max-file-length": 1}}},
 		}}).
 		WithInputModules(test.InputPolicy("p.rego", "package p\n\nx := 1\n"))
@@ -275,7 +275,7 @@ func TestLintMergedConfigInheritsLevelFromProvided(t *testing.T) {
 func TestLintMergedConfigUsesProvidedDefaults(t *testing.T) {
 	t.Parallel()
 
-	userConfig := config.Config{
+	userConfig := &config.Config{
 		Defaults: config.Defaults{
 			Global: config.Default{Level: "ignore"},
 			Categories: map[string]config.Default{
@@ -347,7 +347,7 @@ rules:
     directory-package-mismatch: # non agg rule
       level: ignore
 `))
-	enabledRules, err := regal.NewLinter().WithUserConfig(config).DetermineEnabledRules(t.Context())
+	enabledRules, err := regal.NewLinter().WithUserConfig(&config).DetermineEnabledRules(t.Context())
 
 	must.Equal(t, nil, err, "unexpected error")
 	must.NotEqual(t, 0, len(enabledRules), "enabled aggregate rules")

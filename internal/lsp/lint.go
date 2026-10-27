@@ -152,28 +152,19 @@ func updateParse(ctx context.Context, opts updateParseOpts) (bool, error) {
 	return false, nil
 }
 
-func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) (err error) {
+func updateWorkspaceDiagnostics(ctx context.Context, opts diagnosticsRunOpts) error {
 	if opts.FileURI != "" {
 		return errors.New("FileURI should not be set for updateAllDiagnostics")
 	}
 
-	regalInstance := linter.NewLinter().
+	input := new(rules.NewInput(opts.Cache.GetAllFiles(), opts.Cache.GetAllModules()))
+
+	rpt, err := linter.NewLinter().
 		WithPathPrefix(opts.WorkspaceRootURI).
-		WithCustomRulesPaths(opts.CustomRulesPath)
-
-	if opts.RegalConfig != nil {
-		regalInstance = regalInstance.WithUserConfig(*opts.RegalConfig)
-	}
-
-	input := rules.NewInput(opts.Cache.GetAllFiles(), opts.Cache.GetAllModules())
-	regalInstance = regalInstance.WithInputModules(&input)
-
-	preparedInstance, err := regalInstance.Prepare(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to prepare linter: %w", err)
-	}
-
-	rpt, err := preparedInstance.Lint(ctx)
+		WithCustomRulesPaths(opts.CustomRulesPath).
+		WithUserConfig(opts.RegalConfig).
+		WithInputModules(input).
+		Lint(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to lint: %w", err)
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/ogre"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
@@ -20,12 +21,7 @@ var (
 	testLocationsQuery     = sync.OnceValue(func() *ogre.Query {
 		query := ast.MustParseBody("result = data.regal.lsp.testlocations.result")
 
-		pq, err := ogre.New(query).Prepare(context.Background())
-		if err != nil {
-			panic("failed to prepare test locations query: " + err.Error())
-		}
-
-		return pq
+		return util.Must(ogre.New(query).Prepare(context.Background()))
 	})
 )
 

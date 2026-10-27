@@ -3,7 +3,6 @@ module github.com/open-policy-agent/regal
 go 1.27.0
 
 require (
-	dario.cat/mergo v1.0.2
 	github.com/arl/statsviz v0.8.2
 	github.com/fatih/color v1.19.0
 	github.com/fsnotify/fsnotify v1.10.1

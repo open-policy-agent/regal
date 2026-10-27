@@ -649,7 +649,7 @@ func cwd(rel string) string {
 	return join(_cwd, rel)
 }
 
-func readProvidedConfig(t *testing.T) config.Config {
+func readProvidedConfig(t *testing.T) *config.Config {
 	t.Helper()
 	return must.Return(config.FromPath(cwd("../bundle/regal/config/provided/data.yaml")))(t)
 }

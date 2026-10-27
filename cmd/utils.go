@@ -85,27 +85,27 @@ func readUserConfig(params lintAndFixParams, searchPath string) (userConfig *os.
 	return userConfig, err
 }
 
-func loadUserConfig(params lintAndFixParams, root string) (cfg config.Config, path string, err error) {
+func loadUserConfig(params lintAndFixParams, root string) (cfg *config.Config, path string, err error) {
 	file, err := readUserConfig(params, root)
 	if err != nil && params.configFile != "" {
 		return cfg, "", fmt.Errorf("user-provided config file %s not found: %w", params.configFile, err)
 	}
 
 	if file == nil {
-		return config.Config{}, "", nil // No user config provided, use default
+		return nil, "", nil // No user config provided, use default
 	}
 
 	defer rio.CloseIgnore(file)
 
-	cfg, err = config.FromFile(file)
+	cfg, err = config.FromReader(file)
 	if err != nil {
 		switch {
 		case errors.Is(err, io.EOF):
 			log.Printf("user config file %q is empty, will use the default config", file.Name())
 		case params.configFile != "":
-			return cfg, "", fmt.Errorf("failed to decode user config from %s: %w", params.configFile, err)
+			return nil, "", fmt.Errorf("failed to decode user config from %s: %w", params.configFile, err)
 		default:
-			return cfg, "", fmt.Errorf("failed to decode user config: %w", err)
+			return nil, "", fmt.Errorf("failed to decode user config: %w", err)
 		}
 	}
 

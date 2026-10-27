@@ -67,3 +67,26 @@ project:
 		_ = testutil.MustUnmarshalYAML[config.Config](b, bs)
 	}
 }
+
+func BenchmarkWithDefaultsFromBundle(b *testing.B) {
+	b.Run("MergedWithDefaults", func(b *testing.B) {
+		var userConfig *config.Config
+		for b.Loop() {
+			_ = userConfig.WithRegalDefaults()
+		}
+	})
+
+	b.Run("MergedWithDefaults empty user config", func(b *testing.B) {
+		userConfig := &config.Config{}
+		for b.Loop() {
+			_ = userConfig.WithRegalDefaults()
+		}
+	})
+
+	b.Run("MergedWithDefaults with global defaults", func(b *testing.B) {
+		userConfig := &config.Config{Defaults: config.Defaults{Global: config.Default{Level: "ignore"}}}
+		for b.Loop() {
+			_ = userConfig.WithRegalDefaults()
+		}
+	})
+}

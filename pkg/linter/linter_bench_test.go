@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/open-policy-agent/regal/bundle"
 	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/config"
@@ -80,10 +79,9 @@ func BenchmarkRegalNoEnabledRulesPrepareOnce(b *testing.B) {
 // meaning you do NOT want to do this more than occasionally. You may however find it helpful to use this with
 // a single, or handful of rules to get a better idea of how long they take to run, and relative to each other.
 func BenchmarkEachRule(b *testing.B) {
-	config := must.Return(config.WithDefaultsFromBundle(bundle.Loaded(), nil))(b)
 	linter := bundleLinter(b, true).WithDisableAll(true).MustPrepare(b.Context())
 
-	for _, category := range config.Rules {
+	for _, category := range config.Embedded().Rules {
 		for ruleName := range category {
 			// Uncomment / modify this to benchmark specific rule(s) only
 			//

@@ -12,6 +12,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/parse"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/pkg/config"
+	"github.com/open-policy-agent/regal/pkg/linter/params"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 )
@@ -68,17 +69,7 @@ func mockData(t *testing.T) ast.Object {
 	conf := must.Return(config.FromPath("../../bundle/regal/config/provided/data.yaml"))(t)
 
 	return ast.NewObject(
-		rast.Item("eval", ast.ObjectTerm(
-			rast.Item("params", ast.ObjectTerm(
-				rast.Item("disable_all", ast.InternedTerm(false)),
-				rast.Item("disable_category", ast.ArrayTerm()),
-				rast.Item("disable", ast.ArrayTerm()),
-				rast.Item("enable_all", ast.InternedTerm(true)),
-				rast.Item("enable_category", ast.ArrayTerm()),
-				rast.Item("enable", ast.ArrayTerm()),
-				rast.Item("ignore_files", ast.ArrayTerm()),
-			)),
-		)),
+		rast.Item("eval", ast.ObjectTerm(rast.Item("params", params.NoneTerm))),
 		rast.Item("internal", ast.ObjectTerm(
 			rast.Item("combined_config", ast.NewTerm(conf.ToValue())),
 			rast.Item("user_config", ast.ObjectTerm(

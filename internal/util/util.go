@@ -23,26 +23,14 @@ func NilSliceToEmpty[T any](a []T) []T {
 	return a
 }
 
-// SearchMap searches map for value at provided path.
-func SearchMap(object map[string]any, path ...string) (any, error) {
-	current := object
-
-	for i, p := range path {
-		var ok bool
-		if i == len(path)-1 {
-			if value, ok := current[p]; ok {
-				return value, nil
-			}
-
-			return nil, fmt.Errorf("no '%v' attribute at path '%v'", p, strings.Join(path[:i], "."))
-		}
-
-		if current, ok = current[p].(map[string]any); !ok {
-			return nil, fmt.Errorf("no '%v' attribute at path '%v'", p, strings.Join(path[:i], "."))
-		}
+// WithMappedValues applies f to each value in a map and returns a new map with the results.
+func WithMappedValues[K comparable, V, R any, M ~map[K]V](m M, f func(V) R) map[K]R {
+	cpy := make(map[K]R, len(m))
+	for k, v := range m {
+		cpy[k] = f(v)
 	}
 
-	return current, nil
+	return cpy
 }
 
 // Must takes a value and an error (as commonly returned by Go functions) and panics if the error is not nil.
@@ -262,6 +250,13 @@ func WrapErr(err error, msg string) error {
 	}
 
 	return fmt.Errorf("%s: %w", msg, err)
+}
+
+// PanicOnErr panics if the provided error is not nil.
+func PanicOnErr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
 // AnyAs does type conversion returning a descriptive error rather than a boolean.
