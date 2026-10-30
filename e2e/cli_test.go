@@ -294,6 +294,21 @@ func TestTestRegalTestWithExtendedASTTypeChecking(t *testing.T) {
 		verify(t)
 }
 
+func TestTestRegalTestWithVarValues(t *testing.T) {
+	policy := "package p_test\n\ntest_fail if {\n\tx := 1\n\ty := 2\n\tx == y\n}\n"
+	tmpDir := testutil.TempDirectoryOf(t, map[string]string{"p_test.rego": policy})
+
+	regal("test", "--var-values", tmpDir).
+		expectExitCode(2).
+		expectStdout(
+			contains("FAILURES"),
+			contains("p_test.rego:6:"),
+			contains("x == y"),
+			contains("|    2"),
+		).
+		verify(t)
+}
+
 // Both of the template creating tests are skipped on Windows for the time being,
 // as the "regal test" command fails with a "no such file or directory" error, even
 // though the files are seemingly created. Will need to look into this, but these
