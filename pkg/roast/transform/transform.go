@@ -38,7 +38,7 @@ func ToAST(name, content string, mod *ast.Module, collect bool) (ast.Value, erro
 		return nil, fmt.Errorf("failed to convert module to value: %w", err)
 	}
 
-	rctx := RegalContextWithOperations(name, content, mod.RegoVersion().String(), collect)
+	rctx := RegalContextWithOperations(name, content, mod.RegoVersionSpan().String(), collect)
 
 	return insert(value, "regal", ast.NewTerm(rctx))
 }

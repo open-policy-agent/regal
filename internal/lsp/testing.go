@@ -94,7 +94,7 @@ func (l *LanguageServer) processTestLocationsUpdate(ctx context.Context, fileURI
 	})
 
 	relativePath := l.Workspace().RelativePath(fileURI)
-	regalContext, _ := transform.RegalContext(relativePath, contents, module.RegoVersion().String()).Merge(
+	regalContext, _ := transform.RegalContext(relativePath, contents, module.RegoVersionSpan().String()).Merge(
 		ast.NewObject(rast.Item("file", ast.ObjectTerm(rast.Item("root", ast.StringTerm(root))))))
 
 	astValue, err := transform.ToASTWithRegalContext(module, regalContext)

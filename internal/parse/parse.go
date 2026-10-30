@@ -59,9 +59,9 @@ func ModuleUnknownVersionWithOpts(filename, policy string, opts ast.ParserOption
 
 		if mod, err = ast.ParseModuleWithOpts(filename, policy, opts); err == nil {
 			if hasRegoV1Import(mod.Imports) {
-				mod.SetRegoVersion(ast.RegoV0CompatV1)
+				mod.SetRegoVersionSpan(ast.RegoVersionSpanOf(ast.RegoV0CompatV1))
 			} else {
-				mod.SetRegoVersion(opts.RegoVersion)
+				mod.SetRegoVersionSpan(ast.RegoVersionSpanOf(opts.RegoVersion))
 			}
 
 			return mod, nil
