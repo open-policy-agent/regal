@@ -48,9 +48,9 @@ func (f *Fmt) Fix(fc *FixCandidate, opts *RuntimeOptions) ([]FixResult, error) {
 	// Create a local copy to avoid mutating shared state
 	fmtOpts := f.OPAFmtOpts
 
-	fmtOpts.RegoVersion = module.RegoVersion()
-	if fmtOpts.RegoVersion == ast.RegoV0 {
-		fmtOpts.RegoVersion = ast.RegoV0CompatV1
+	fmtOpts.RegoVersionSpan = module.RegoVersionSpan()
+	if fmtOpts.RegoVersionSpan == ast.RegoVersionSpanOf(ast.RegoV0) {
+		fmtOpts.RegoVersionSpan = ast.RegoVersionSpanOf(ast.RegoV0CompatV1)
 	}
 
 	formatted, err := format.AstWithOpts(module, fmtOpts)

@@ -6542,6 +6542,8 @@
   "features": [
     "keywords_in_refs",
     "rego_v1",
+    "rego_v2",
+    "rego_v2_import",
     "template_strings"
   ]
 }

@@ -92,8 +92,8 @@ func TestModuleUnknownVersionWithOpts(t *testing.T) {
 				t.Fatal("expected parsed module")
 			}
 
-			if tc.expErr == "" && parsed.RegoVersion() != tc.exp {
-				t.Errorf("expected version %d, got %d", tc.exp, parsed.RegoVersion())
+			if tc.expErr == "" && parsed.RegoVersionSpan() != ast.RegoVersionSpanOf(tc.exp) {
+				t.Errorf("expected version %d, got %d", tc.exp, parsed.RegoVersionSpan().Int())
 			}
 		})
 	}
