@@ -1,5 +1,5 @@
 # METADATA
-# description: Multi-line metadata should be indented consistently across the metadata blocks of a file.
+# description: Inconsistent indentation of multi-line metadata
 # related_resources:
 #   - description: documentation
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/style/inconsistent-metadata-indentation
@@ -37,14 +37,16 @@ scalar_lines(block) := [[row, step] |
 	some i, comment in block
 	i > 0
 
+	# only a line ending in a "|" or ">" block scalar (optionally with a "-" or "+" chomping
+	# indicator) opens a multi-line string, and only those have indented content to compare
 	regex.match(`:\s*[|>][-+]?\s*$`, block[i - 1].text)
 
-	step := leading_spaces(comment.text) - leading_spaces(block[i - 1].text)
+	# the leading "#" is counted on both sides and cancels out below
+	comment_indent := count(comment.text) - count(trim_left(comment.text, "# "))
+	key_indent := count(block[i - 1].text) - count(trim_left(block[i - 1].text, "# "))
+
+	step := comment_indent - key_indent
 	step > 0
 
 	row := comment.row
 ]
-
-# METADATA
-# description: the number of spaces between the leading "#" and the text of a comment
-leading_spaces(text) := count(regex.find_n(`^#\s*`, text, 1)[0]) - 1

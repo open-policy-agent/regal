@@ -42,8 +42,8 @@ its string content with two spaces and the next one with three looks like a mist
 
 Two spaces is the depth the rule expects, and one file uses it per project, so the default is the same everywhere.
 Projects that indent metadata content differently can say so with `indent-num-spaces`. Nested structures, like the
-items of `related_resources`, are indented one level deeper than the string content by definition and are not what this
-rule looks at.
+items of `related_resources`, are indented a level deeper by definition, so the step of a nested string is measured
+from the key it belongs to, and not from the strings at the top of the block.
 
 ## Configuration Options
 

@@ -162,3 +162,36 @@ b := 2
 
 	count(r) == 0
 }
+
+test_fail_nested_string_indented_differently if {
+	# A nested string — the description of a related_resources item — is compared like any
+	# other, from the leading spaces of its own key line: its content is measured against the
+	# configured step, not against the content of the block's top-level strings. So a nested
+	# string indented deeper than the step is reported even when the file agrees on it.
+	violations := rule.report with input as ast.policy(`
+# METADATA
+# description: |
+#   first block
+# related_resources:
+#   - description: |
+#       docs
+#     ref: https://example.com
+a := 1
+
+# METADATA
+# description: |
+#   second block
+# related_resources:
+#   - description: |
+#           also docs but indented differently in nested attribute
+#     ref: https://example.com
+b := 2
+`)
+
+	count(violations) == 2
+
+	sort([violation.location.text | some violation in violations]) == [
+		"#           also docs but indented differently in nested attribute",
+		"#       docs",
+	]
+}
