@@ -6,7 +6,7 @@ require (
 	github.com/arl/statsviz v0.8.2
 	github.com/fatih/color v1.19.0
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/gobwas/glob v1.0.0
+	github.com/gobwas/glob v1.1.0
 	github.com/gomarkdown/markdown v0.0.0-20260417124207-7d523f7318df
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-dap v0.12.0
@@ -20,8 +20,8 @@ require (
 	github.com/sourcegraph/jsonrpc2 v0.2.3
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
-	go.yaml.in/yaml/v3 v3.0.5
-	golang.org/x/sync v0.23.0
+	go.yaml.in/yaml/v3 v3.0.6
+	golang.org/x/sync v0.24.0
 )
 
 require (
