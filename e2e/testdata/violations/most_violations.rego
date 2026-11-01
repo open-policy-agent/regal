@@ -343,6 +343,9 @@ repeated_computation if {
 	count(input.items) > 1
 }
 
+# METADATA
+# description: |
+#  this annotation indents its content with one space, unlike the one at the top of the file
 unconditional_with_conditions := true if input.conditional
 
 unconditional_with_conditions := false
