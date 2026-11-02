@@ -1,6 +1,7 @@
 package reporter
 
 import (
+	"bytes"
 	"context"
 	"encoding/json/jsontext"
 	"encoding/json/v2"
@@ -99,8 +100,8 @@ func NewJUnitReporter(out io.Writer) JUnitReporter {
 }
 
 // Publish prints a pretty report to the configured output.
-func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
-	table := buildPrettyViolationsTable(r.Violations)
+func (tr PrettyReporter) Publish(_ context.Context, r report.Report) (err error) {
+	buf := buildPrettyViolationsTable(r.Violations)
 	numsWarning, numsError := 0, 0
 
 	for i := range r.Violations {
@@ -112,60 +113,47 @@ func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
 		}
 	}
 
-	footer := fmt.Sprintf("%d %s linted.", r.Summary.FilesScanned, pluralize("file", r.Summary.FilesScanned))
+	buf = append(pluralizeAppend(buf, "file", r.Summary.FilesScanned), " linted. "...)
 
 	if r.Summary.NumViolations == 0 {
-		footer += " No violations found."
+		buf = append(buf, "No violations found."...)
 	} else {
-		footer += fmt.Sprintf(" %d %s ", r.Summary.NumViolations, pluralize("violation", r.Summary.NumViolations))
-
+		buf = pluralizeAppend(buf, "violation", r.Summary.NumViolations)
 		if numsWarning > 0 {
-			footer += fmt.Sprintf("(%d %s, %d %s) found",
-				numsError, pluralize("error", numsError), numsWarning, pluralize("warning", numsWarning),
-			)
-		} else {
-			footer += "found"
+			buf = pluralizeAppend(append(buf, ' ', '('), "error", numsError)
+			buf = pluralizeAppend(append(buf, ',', ' '), "warning", numsWarning)
+			buf = append(buf, ')')
 		}
 
+		buf = append(buf, " found"...)
 		if r.Summary.FilesScanned > 1 && r.Summary.FilesFailed > 0 {
-			footer += fmt.Sprintf(" in %d %s.", r.Summary.FilesFailed, pluralize("file", r.Summary.FilesFailed))
-		} else {
-			footer += "."
+			buf = pluralizeAppend(append(buf, ' ', 'i', 'n', ' '), "file", r.Summary.FilesFailed)
 		}
+
+		buf = append(buf, '.')
 	}
 
 	if r.Summary.RulesSkipped > 0 {
-		footer += fmt.Sprintf(" %d %s skipped:\n", r.Summary.RulesSkipped, pluralize("rule", r.Summary.RulesSkipped))
-		sb := &strings.Builder{}
-
+		buf = append(pluralizeAppend(append(buf, ' '), "rule", r.Summary.RulesSkipped), " skipped:\n"...)
 		for _, notice := range r.Notices {
-			if notice.Severity == "none" {
-				continue
+			if notice.Severity != "none" {
+				buf = append(append(buf, '-', ' '), notice.Title...)
+				buf = append(append(buf, ':', ' '), notice.Description...)
+				buf = append(buf, '\n')
 			}
-
-			sb.WriteString("- ")
-			sb.WriteString(notice.Title)
-			sb.WriteString(": ")
-			sb.WriteString(notice.Description)
-			sb.WriteByte('\n')
 		}
-
-		footer += sb.String()
 	}
 
-	_, err := fmt.Fprintln(tr.out, table+footer)
-	if err != nil {
+	if _, err := tr.out.Write(append(buf, '\n')); err != nil {
 		return fmt.Errorf("failed to write report: %w", err)
 	}
 
-	if !mode.Standalone { // don't bother advertising `regal fix` when not in standalone mode
-		return nil
+	if !mode.Standalone || r.Summary.NumViolations == 0 {
+		return nil // don't bother advertising `regal fix` when not in standalone mode
 	}
 
 	f := fixer.NewFixer().RegisterFixes(fixes.NewDefaultFixes()...)
-
-	fixableViolations := util.NewSet[string]()
-	fixableCount := 0
+	fixableViolations, fixableCount := util.NewSet[string](), 0
 
 	for i := range r.Violations {
 		if fix, ok := f.GetFixForName(r.Violations[i].Title); ok {
@@ -175,17 +163,13 @@ func (tr PrettyReporter) Publish(_ context.Context, r report.Report) error {
 		}
 	}
 
-	if fixableViolations.Size() > 0 {
-		violationKeys := outil.Sorted(fixableViolations.Items())
-		_, err = fmt.Fprintf(
-			tr.out,
-			`
+	if fixableCount > 0 {
+		_, err = fmt.Fprintf(tr.out, `
 Hint: %d/%d violations can be automatically fixed (%s)
       Run regal fix --help for more details.
 `,
-			fixableCount,
-			r.Summary.NumViolations,
-			strings.Join(violationKeys, ", "),
+			fixableCount, r.Summary.NumViolations,
+			strings.Join(outil.Sorted(fixableViolations.Items()), ", "),
 		)
 	}
 
@@ -203,20 +187,21 @@ func (tr FestiveReporter) Publish(ctx context.Context, r report.Report) error {
 	return NewPrettyReporter(tr.out).Publish(ctx, r)
 }
 
-func buildPrettyViolationsTable(violations []report.Violation) string {
-	sb := &strings.Builder{}
-	table := tablewriter.NewTable(sb, tablewriter.WithConfig(tablewriter.Config{
+func buildPrettyViolationsTable(violations []report.Violation) []byte {
+	numViolations := len(violations)
+	if numViolations == 0 {
+		return nil
+	}
+
+	bb := new(bytes.Buffer)
+	table := tablewriter.NewTable(bb, tablewriter.WithConfig(tablewriter.Config{
 		Row: tw.CellConfig{
 			Padding: tw.CellPadding{PerColumn: []tw.Padding{{Right: " "}, tw.PaddingDefault}},
 		},
 	}), tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
-		Borders: tw.BorderNone,
-		Settings: tw.Settings{
-			Separators: tw.Separators{BetweenRows: tw.Off, BetweenColumns: tw.Off},
-		},
+		Borders:  tw.BorderNone,
+		Settings: tw.Settings{Separators: tw.Separators{BetweenRows: tw.Off, BetweenColumns: tw.Off}},
 	})))
-
-	numViolations := len(violations)
 
 	// Note: it's tempting to use table.SetColumnColor here, but for whatever reason, that requires using
 	// table.SetHeader as well, and we don't want a header for this format.
@@ -233,55 +218,53 @@ func buildPrettyViolationsTable(violations []report.Violation) string {
 			description = yellow(violation.Description)
 		}
 
-		table.Append([]string{yellow("Rule:"), violation.Title})
+		table.Append("Rule:", violation.Title)
 
 		// if there is no support for color, then we show the level in addition
 		// so that the level of the violation is still clear
 		if color.NoColor {
-			table.Append([]string{"Level:", violation.Level})
+			table.Append("Level:", violation.Level)
 		}
 
-		table.Append([]string{yellow("Description:"), description})
-		table.Append([]string{yellow("Category:"), violation.Category})
+		table.Append("Description:", description)
+		table.Append("Category:", violation.Category)
 		// End location ignored here as it's not too interesting in this format and line:column
 		// allows click-to-open.
-		table.Append([]string{yellow("Location:"), cyan(violation.Location.String())})
+		table.Append("Location:", cyan(violation.Location))
 
 		if violation.Location.Text != nil {
-			if len(*violation.Location.Text) > 117 {
-				table.Append([]string{yellow("Text:"), (*violation.Location.Text)[:117] + "..."})
-			} else {
-				table.Append([]string{yellow("Text:"), strings.TrimSpace(*violation.Location.Text)})
+			text := strings.TrimSpace(*violation.Location.Text)
+			if len(text) > 117 {
+				text = text[:117] + "..."
 			}
+
+			table.Append("Text:", text)
 		}
 
-		table.Append([]string{yellow("Documentation:"), cyan(getDocumentationURL(violation))})
+		table.Append("Documentation:", cyan(getDocumentationURL(violation)))
 
 		if i+1 < numViolations {
-			table.Append([]string{""})
+			table.Append("")
 		}
-	}
-
-	end := ""
-	if numViolations > 0 {
-		end = "\n"
 	}
 
 	table.Render()
 
-	return sb.String() + end
+	if numViolations > 0 {
+		bb.WriteByte('\n')
+	}
+
+	return bb.Bytes()
 }
 
 // Publish prints a compact report to the configured output.
 func (tr CompactReporter) Publish(_ context.Context, r report.Report) error {
 	if len(r.Violations) == 0 {
-		_, err := fmt.Fprintln(tr.out)
-
-		return err
+		return util.OnlyError(tr.out.Write(util.NewLine))
 	}
 
-	sb := &strings.Builder{}
-	table := tablewriter.NewTable(sb, tablewriter.WithConfig(tablewriter.Config{
+	bb := new(bytes.Buffer)
+	table := tablewriter.NewTable(bb, tablewriter.WithConfig(tablewriter.Config{
 		Row: tw.CellConfig{
 			Formatting:   tw.CellFormatting{AutoWrap: tw.WrapNormal},
 			Alignment:    tw.CellAlignment{Global: tw.AlignLeft},
@@ -289,27 +272,23 @@ func (tr CompactReporter) Publish(_ context.Context, r report.Report) error {
 		},
 	}))
 
-	table.Header([]string{"Location", "Description"})
+	table.Header("Location", "Description")
 
 	for i := range r.Violations {
-		table.Append([]string{r.Violations[i].Location.String(), r.Violations[i].Description})
+		table.Append(r.Violations[i].Location, r.Violations[i].Description)
 	}
-
-	summary := fmt.Sprintf("%d %s linted , %d %s found.",
-		r.Summary.FilesScanned, pluralize("file", r.Summary.FilesScanned),
-		r.Summary.NumViolations, pluralize("violation", r.Summary.NumViolations))
 
 	table.Render()
 
-	_, err := fmt.Fprintln(tr.out, strings.TrimSuffix(sb.String(), ""), summary)
+	buf := append(bb.Bytes(), ' ')
+	buf = append(pluralizeAppend(buf, "file", r.Summary.FilesScanned), " linted, "...)
+	buf = append(pluralizeAppend(buf, "violation", r.Summary.NumViolations), " found.\n"...)
 
-	return err
+	return util.OnlyError(tr.out.Write(buf))
 }
 
 // Publish prints a JSON report to the configured output.
 func (tr JSONReporter) Publish(_ context.Context, r report.Report) error {
-	r.Violations = util.NilSliceToEmpty(r.Violations)
-
 	return json.MarshalWrite(tr.out, r, jsontext.WithIndent("  "))
 }
 
@@ -320,8 +299,6 @@ func (tr GitHubReporter) Publish(ctx context.Context, r report.Report) error {
 	if err := NewPrettyReporter(tr.out).Publish(ctx, r); err != nil {
 		return err
 	}
-
-	r.Violations = util.NilSliceToEmpty(r.Violations)
 
 	for _, violation := range r.Violations { //nolint:gocritic
 		_, _ = fmt.Fprintf(tr.out,
@@ -504,4 +481,13 @@ func pluralize(singular string, count int) string {
 	}
 
 	return singular + "s"
+}
+
+func pluralizeAppend(buf []byte, singular string, count int) []byte {
+	buf = append(append(outil.AppendInt(buf, count), ' '), singular...)
+	if count != 1 {
+		buf = append(buf, 's')
+	}
+
+	return buf
 }

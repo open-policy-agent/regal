@@ -45,8 +45,7 @@ func init() {
 			case formatJSON:
 				if err := json.MarshalWrite(os.Stdout, vi, jsontext.WithIndent("  ")); err != nil {
 					log.SetOutput(os.Stderr)
-					log.Println(err)
-					os.Exit(1)
+					log.Fatalln(err)
 				}
 			case formatPretty:
 				os.Stdout.WriteString(vi.String())

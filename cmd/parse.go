@@ -37,8 +37,7 @@ func init() {
 		Run: func(_ *cobra.Command, args []string) {
 			if err := parse(args); err != nil {
 				log.SetOutput(os.Stderr)
-				log.Println(err)
-				os.Exit(1)
+				log.Fatalln(err)
 			}
 		},
 	}

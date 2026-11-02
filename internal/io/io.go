@@ -137,9 +137,7 @@ func IsFile(path string) bool {
 }
 
 func Exists(path string) bool {
-	_, err := os.Stat(path)
-
-	return err == nil
+	return util.OnlyError(os.Stat(path)) == nil
 }
 
 // WithOpen opens the file at path, defers close, and invokes f with the *os.File.

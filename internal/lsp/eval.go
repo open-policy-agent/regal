@@ -435,7 +435,7 @@ func (l *LanguageServer) debugArgsAssembler(q ast.Body) []func(*rego.Rego) {
 	args, _ := prepareRegoArgs(context.TODO(), prepareOpts{
 		Body:      q,
 		Bundles:   l.assembleBundles(),
-		PrintHook: query.StderrPrintHook,
+		PrintHook: util.StderrPrintHook,
 	})
 
 	return args

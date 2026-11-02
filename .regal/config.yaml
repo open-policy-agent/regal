@@ -1,3 +1,7 @@
+features:
+  remote:
+    check-version: false
+
 ignore:
   files:
     - e2e/*
@@ -6,16 +10,10 @@ ignore:
 
 rules:
   custom:
-    disallow-rego-v1:
+    default:
       level: error
     missing-metadata:
-      level: error
       except-rule-path-pattern: \.report$
-      # TODO: this should be in the default config, but it seems
-      #       like the ignore attribute isn't read from there
-      ignore:
-        files:
-          - "*_test.rego"
     naming-convention:
       # Regal naming conventions configuration. Note that this is disabled by default, and
       # is meant only to be run every once in a while to ensure we stick to our conventions.
@@ -112,15 +110,11 @@ rules:
         files:
           - "*_test.rego"
     narrow-argument:
-      level: error
       exclude-args:
         - cfg
         - metadata
         - rule
-    one-liner-rule:
-      level: error
     prefer-value-in-head:
-      level: error
       only-scalars: true
       include-interpolated: true
   idiomatic:
@@ -138,10 +132,8 @@ rules:
           - "*_test.rego"
   style:
     line-length:
-      level: error
       non-breakable-word-threshold: 100
     prefer-snake-case:
-      level: error
       ignore:
         files:
           # This package is used to build the LSP initialize
@@ -149,7 +141,6 @@ rules:
           - "**/bundle/regal/lsp/initialize/initialize.rego"
   imports:
     unresolved-reference:
-      level: error
       except-paths:
         - data.eval.**
         - data.internal**

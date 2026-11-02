@@ -7,21 +7,19 @@ import (
 	"iter"
 	"math"
 	"net"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
+	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/util"
 )
 
-// NilSliceToEmpty returns empty slice if provided slice is nil.
-func NilSliceToEmpty[T any](a []T) []T {
-	if a == nil {
-		return []T{}
-	}
-
-	return a
-}
+var (
+	StderrPrintHook = topdown.NewPrintHook(os.Stderr)
+	NewLine         = []byte{'\n'}
+)
 
 // WithMappedValues applies f to each value in a map and returns a new map with the results.
 func WithMappedValues[K comparable, V, R any, M ~map[K]V](m M, f func(V) R) map[K]R {
@@ -69,7 +67,7 @@ func MapGetOr[K comparable, V any](m map[K]V, key K, defaultVal V) V {
 	return defaultVal
 }
 
-// MapGet returns the value for key in m if found, else the zero value for V.
+// MapGet returns the value for key in m if found, else the zero value for T.
 func MapGet[T any](m map[string]any, key string) (typed T) {
 	if val, ok := m[key]; ok {
 		if found, ok := val.(T); ok {
@@ -86,14 +84,7 @@ func MapGet[T any](m map[string]any, key string) (typed T) {
 // *much* more efficient than appending blindly, but do not use this if
 // the predicate function is expensive to compute.
 func Filter[T any](s []T, f func(T) bool) []T {
-	n := 0
-
-	for i := range s {
-		if f(s[i]) {
-			n++
-		}
-	}
-
+	n := util.Count(f, s...)
 	if n == 0 {
 		return nil
 	}
@@ -280,7 +271,7 @@ func Reversed[T any](s []T) []T {
 func LineContents(document []byte, lineNum uint) []byte {
 	for i, line := range Lines(document) {
 		if i == lineNum {
-			return bytes.TrimSuffix(line, []byte{'\n'})
+			return bytes.TrimSuffix(line, NewLine)
 		}
 	}
 
@@ -308,7 +299,7 @@ func NumLines(s string) uint {
 
 // BytesNumLines returns the number of lines in s, as uint for convenience with LSP spec types and more.
 func BytesNumLines(s []byte) uint {
-	return IntTo[uint](bytes.Count(s, []byte{'\n'})) + 1
+	return IntTo[uint](bytes.Count(s, NewLine)) + 1
 }
 
 // IndexByteNth returns the index of the nth occurrence of b in s, or -1 if not found / out of range.
@@ -349,4 +340,8 @@ func Line(s string, lineNum uint) (line string, ok bool) {
 	}
 
 	return s[idx+1 : idx+1+endIdx], true
+}
+
+func OnlyError[T any](_ T, err error) error {
+	return err
 }

@@ -21,9 +21,9 @@ import (
 	"github.com/open-policy-agent/regal/internal/encoding/util/write"
 )
 
-// marshallingIntermediary is used to contain config data in a format that is used during unmarshalling.
+// unmarshalIntermediary is used to contain config data in a format used during unmarshalling.
 // The internally loaded config data layout differs from the user-defined YAML.
-type marshallingIntermediary struct {
+type unmarshalIntermediary struct {
 	// rules are unmarshalled as any since the defaulting needs to be extracted from here
 	// and configured elsewhere in the struct.
 	Rules        yaml.Node `yaml:"rules"`
@@ -44,12 +44,8 @@ type marshallingIntermediary struct {
 			} `yaml:"builtins"`
 		} `yaml:"minus"`
 	} `yaml:"capabilities"`
-	Ignore   Ignore `yaml:"ignore"`
-	Features struct {
-		RemoteFeatures struct {
-			CheckVersion bool `yaml:"check-version"`
-		} `yaml:"remote"`
-	} `yaml:"features"`
+	Ignore   Ignore    `yaml:"ignore"`
+	Features *Features `yaml:"features,omitempty"`
 }
 
 func (c *Config) String() string {
@@ -136,7 +132,7 @@ func (c Config) MarshalYAML() (any, error) {
 }
 
 func (c *Config) UnmarshalYAML(value *yaml.Node) (err error) {
-	var result marshallingIntermediary
+	var result unmarshalIntermediary
 
 	if err := value.Decode(&result); err != nil {
 		return fmt.Errorf("unmarshalling config failed %w", err)
@@ -229,9 +225,8 @@ func (c *Config) UnmarshalYAML(value *yaml.Node) (err error) {
 		c.Capabilities.Builtins[plusBuiltin.Name] = fromOPABuiltin(plusBuiltin)
 	}
 
-	// feature defaults
-	if result.Features.RemoteFeatures.CheckVersion {
-		c.Features = &Features{Remote: &RemoteFeatures{CheckVersion: true}}
+	if result.Features != nil {
+		c.Features = &Features{Remote: &RemoteFeatures{CheckVersion: result.Features.Remote.CheckVersion}}
 	}
 
 	return nil
@@ -373,7 +368,7 @@ func (e ExtraAttributes) MarshalJSONTo(enc *jsontext.Encoder) error {
 }
 
 // extractRulesAndDefaults is a helper to load rules and defaults from the raw config data.
-func extractRulesAndDefaults(config *Config, result *marshallingIntermediary) error {
+func extractRulesAndDefaults(config *Config, result *unmarshalIntermediary) error {
 	// in order to support wildcard 'default' configs, we
 	// have some hooks in this unmarshalling process to load these.
 	config.Rules = make(map[string]Category)

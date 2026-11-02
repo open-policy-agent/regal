@@ -1,7 +1,7 @@
 # METADATA
 # description: |
-#  transforms OPA's JSON test coverage format to equivalent
-#  simplecov JSON, to be used for Codecov reports, et. al.
+#   transforms OPA's JSON test coverage format to equivalent
+#   simplecov JSON, to be used for Codecov reports, et. al.
 package build.simplecov
 
 # METADATA
