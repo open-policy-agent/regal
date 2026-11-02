@@ -128,7 +128,7 @@ func TestCompactReporterPublish(t *testing.T) {
 │ a.rego:1:1   │ Rego must not break the law! │
 │ b.rego:22:18 │ Questionable decision found  │
 └──────────────┴──────────────────────────────┘
- 3 files linted , 2 violations found.
+ 3 files linted, 2 violations found.
 `
 	assert.Equal(t, expect, buf.String(), "compact output")
 }

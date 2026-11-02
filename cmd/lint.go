@@ -17,11 +17,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/open-policy-agent/opa/v1/metrics"
-	"github.com/open-policy-agent/opa/v1/topdown"
 
 	rio "github.com/open-policy-agent/regal/internal/io"
 	regalmetrics "github.com/open-policy-agent/regal/internal/metrics"
 	"github.com/open-policy-agent/regal/internal/update"
+	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
 	"github.com/open-policy-agent/regal/pkg/linter"
 	"github.com/open-policy-agent/regal/pkg/report"
@@ -115,43 +115,26 @@ func init() {
 		RunE: wrapProfiling(func(args []string) error {
 			relaxGC()
 
-			rep, err := lint(args, params)
+			violations, err := lint(args, params)
 			if err != nil {
 				log.SetOutput(os.Stderr)
-				log.Println(err)
-
-				return exit(1)
+				log.Fatalln(err)
 			}
 
-			errorsFound, warningsFound := 0, 0
+			var exitCode int
 
-			for i := range rep.Violations {
-				switch rep.Violations[i].Level {
+			for i := range violations {
+				switch violations[i].Level {
 				case "error":
-					errorsFound++
+					return exit(3)
 				case "warning":
-					warningsFound++
+					if exitCode == 0 && params.failLevel == "warning" {
+						exitCode = 2
+					}
 				}
 			}
 
-			exitCode := 0
-			if params.failLevel == "error" && errorsFound > 0 {
-				exitCode = 3
-			}
-
-			if params.failLevel == "warning" {
-				if errorsFound > 0 {
-					exitCode = 3
-				} else if warningsFound > 0 {
-					exitCode = 2
-				}
-			}
-
-			if exitCode != 0 {
-				return exit(exitCode)
-			}
-
-			return nil
+			return exit(exitCode)
 		}),
 	}
 
@@ -172,9 +155,9 @@ func init() {
 	RootCommand.AddCommand(lintCommand)
 }
 
-func lint(args []string, params *lintParams) (result report.Report, err error) {
+func lint(args []string, params *lintParams) (violations []report.Violation, err error) {
 	if params.profile && params.format != formatJSON {
-		return report.Report{}, errors.New("--profile requires --format json to display profiling data")
+		return nil, errors.New("--profile requires --format json to display profiling data")
 	}
 
 	ctx, cancel := getLinterContext(params.lintAndFixParams)
@@ -182,7 +165,7 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 
 	outputWriter, err := params.outputWriter()
 	if err != nil {
-		return report.Report{}, err
+		return nil, err
 	}
 
 	regal := linter.NewLinter().
@@ -199,7 +182,7 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 		WithInputPaths(args)
 
 	if params.enablePrint {
-		regal = regal.WithPrintHook(topdown.NewPrintHook(os.Stderr))
+		regal = regal.WithPrintHook(util.StderrPrintHook)
 	}
 
 	if params.ignoreFiles.isSet {
@@ -240,7 +223,7 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 
 	userConfig, path, err := loadUserConfig(params.lintAndFixParams, searchPath)
 	if err != nil {
-		return report.Report{}, fmt.Errorf("failed to read user-provided config in %s: %w", path, err)
+		return nil, fmt.Errorf("failed to read user-provided config in %s: %w", path, err)
 	}
 
 	if params.metrics {
@@ -253,29 +236,28 @@ func lint(args []string, params *lintParams) (result report.Report, err error) {
 
 	regal, err = regal.Prepare(ctx)
 	if err != nil {
-		return report.Report{}, fmt.Errorf("failed to prepare for linting: %w", err)
+		return nil, fmt.Errorf("failed to prepare for linting: %w", err)
 	}
 
 	if conf, err := regal.GetConfig(); err == nil {
 		go updateCheckAndWarn(params, conf)
 	}
 
-	result, err = regal.Lint(ctx)
+	result, err := regal.Lint(ctx)
 	if err != nil {
-		return report.Report{}, formatError(params.format, fmt.Errorf("error(s) encountered while linting: %w", err))
+		return nil, formatError(params.format, fmt.Errorf("error(s) encountered while linting: %w", err))
 	}
 
 	rep, err := getReporter(params.format, outputWriter)
 	if err != nil {
-		return report.Report{}, fmt.Errorf("failed to get reporter: %w", err)
+		return nil, fmt.Errorf("failed to get reporter: %w", err)
 	}
 
-	return result, rep.Publish(ctx, result)
+	return result.Violations, rep.Publish(ctx, result)
 }
 
 func updateCheckAndWarn(params *lintParams, mergedConfig *config.Config) {
-	if mergedConfig.Features.Remote.CheckVersion &&
-		os.Getenv(update.CheckVersionDisableEnvVar) == "" {
+	if mergedConfig.Features.Remote.CheckVersion && os.Getenv(update.CheckVersionDisableEnvVar) == "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
 

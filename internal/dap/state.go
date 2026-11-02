@@ -230,7 +230,7 @@ func pos(loc *location.Location) (source *godap.Source, line, col, endLine, endC
 		source = &godap.Source{Path: loc.File}
 	}
 
-	lines := bytes.Split(loc.Text, []byte("\n"))
+	lines := bytes.Split(loc.Text, util.NewLine)
 
 	// vs-code will select text if multiple lines are present; avoid this
 	// endLine = loc.Row + len(lines) - 1

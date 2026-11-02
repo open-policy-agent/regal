@@ -100,8 +100,7 @@ regal new rule --type custom --category naming --name camel-case`,
 		Run: func(*cobra.Command, []string) {
 			if err := scaffoldRule(params); err != nil {
 				log.SetOutput(os.Stderr)
-				log.Println(err)
-				os.Exit(1)
+				log.Fatalln(err)
 			}
 		},
 	}

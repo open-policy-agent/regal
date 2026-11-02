@@ -3,7 +3,6 @@ package query
 import (
 	"context"
 	"fmt"
-	"os"
 	"sync"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -11,7 +10,6 @@ import (
 	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/open-policy-agent/opa/v1/resolver"
 	"github.com/open-policy-agent/opa/v1/storage"
-	"github.com/open-policy-agent/opa/v1/topdown"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
 	"github.com/open-policy-agent/regal/internal/compile"
@@ -48,12 +46,11 @@ var (
 	RegoEnablePrint      = rego.EnablePrintStatements(true)
 	RegoGenJSONValue     = rego.GenerateJSON(genJSONValue)
 	RegoEvalGenJSONValue = rego.EvalGenerateJSON(genJSONValue)
-	RegoStderrPrintHook  = rego.PrintHook(StderrPrintHook)
+	RegoStderrPrintHook  = rego.PrintHook(util.StderrPrintHook)
 	RegoCapabilities     = rego.Capabilities(io.Capabilities())
 	RegoStoreReadAST     = rego.StoreReadAST(true)
 
-	genJSONValue    = func(term *ast.Term, _ *rego.EvalContext) (any, error) { return term.Value, nil }
-	StderrPrintHook = topdown.NewPrintHook(os.Stderr)
+	genJSONValue = func(term *ast.Term, _ *rego.EvalContext) (any, error) { return term.Value, nil }
 
 	schemaResolvers = sync.OnceValue(func() (resolvers []func(*rego.Rego)) {
 		ss := compile.RegalSchemaSet()

@@ -72,6 +72,9 @@ rules:
       level: ignore
     missing-metadata:
       level: ignore
+      ignore:
+        files:
+          - "*_test.rego"
     naming-convention:
       level: ignore
     narrow-argument:
