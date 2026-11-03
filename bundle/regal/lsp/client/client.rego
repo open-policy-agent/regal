@@ -45,7 +45,7 @@ identifiers["gotest"] := 2
 # description: The Zed Editor, via zed-rego
 # related_resources:
 #   - https://zed.dev/docs/languages/rego
-#   - https://github.com/styraoss/zed-rego
+#   - https://github.com/open-policy-agent/zed-rego
 identifiers["zed"] := 3
 
 # METADATA
