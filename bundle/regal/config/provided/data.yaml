@@ -200,6 +200,7 @@ rules:
         - walk
       level: error
     inconsistent-metadata-indentation:
+      array-indent-num-spaces: 2
       indent-num-spaces: 2
       level: error
     line-length:
