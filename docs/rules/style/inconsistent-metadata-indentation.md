@@ -1,6 +1,6 @@
 # inconsistent-metadata-indentation
 
-**Summary**: Inconsistent indentation of multi-line metadata
+**Summary**: Inconsistent indentation of multi-line metadata and array items
 
 **Category**: Style
 
@@ -19,6 +19,20 @@ read if input.admin
 write if input.admin
 ```
 
+```rego
+package authz
+
+# METADATA
+# authors:
+# - anders
+read if input.admin
+
+# METADATA
+# related_resources:
+#   - https://example.org
+write if input.admin
+```
+
 **Prefer**
 ```rego
 package authz
@@ -34,6 +48,20 @@ read if input.admin
 write if input.admin
 ```
 
+```rego
+package authz
+
+# METADATA
+# authors:
+#   - anders
+read if input.admin
+
+# METADATA
+# related_resources:
+#   - https://example.org
+write if input.admin
+```
+
 ## Rationale
 
 The content of a multi-line metadata string — the lines below a `description: |` entry — is indented to a depth of your
@@ -44,6 +72,11 @@ Two spaces is the depth the rule expects, and one file uses it per project, so t
 Projects that indent metadata content differently can say so with `indent-num-spaces`. Nested structures, like the
 items of `related_resources`, are indented a level deeper by definition, so the step of a nested string is measured
 from the key it belongs to, and not from the strings at the top of the block.
+
+The same applies to the items of an array: an item written directly under its key and one indented by two spaces are
+both valid YAML, and the only thing that matters is that a project picks one. The step is what the rule compares, so an
+item at the indentation of its key is a step of zero and is reported when the project indents its arrays by two
+(`array-indent-num-spaces`). A dash inside a multi-line string is text and is left alone.
 
 ## Configuration Options
 
@@ -57,6 +90,8 @@ rules:
       level: error
       # spaces a multi-line metadata string is indented by, relative to its key
       indent-num-spaces: 2
+      # spaces the items of a metadata array are indented by, relative to the key
+      array-indent-num-spaces: 2
 ```
 
 ## Related Resources
