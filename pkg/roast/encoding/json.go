@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	outil "github.com/open-policy-agent/opa/v1/util"
-
 	"github.com/open-policy-agent/regal/internal/util"
 
 	_ "github.com/open-policy-agent/regal/pkg/roast/intern"
@@ -75,7 +73,7 @@ func GetString(value jsontext.Value, ptr jsontext.Pointer) (string, bool) {
 // MarshalWriteLn is a convenience function json.MarshalWrite followed by a newline.
 func MarshalWriteLn(w io.Writer, v any, opts ...json.Options) (err error) {
 	if err = json.MarshalWrite(w, v, opts...); err == nil {
-		_, err = w.Write(outil.StringToByteSlice("\n"))
+		_, err = w.Write(util.NewLine)
 	}
 
 	return err

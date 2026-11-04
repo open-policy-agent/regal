@@ -72,6 +72,9 @@ rules:
       level: ignore
     missing-metadata:
       level: ignore
+      ignore:
+        files:
+          - "*_test.rego"
     naming-convention:
       level: ignore
     narrow-argument:
@@ -198,6 +201,9 @@ rules:
     function-arg-return:
       except-functions:
         - walk
+      level: error
+    inconsistent-metadata-indentation:
+      indent-num-spaces: 2
       level: error
     line-length:
       level: error

@@ -70,7 +70,7 @@ type (
 		Remote *RemoteFeatures `json:"remote,omitempty" yaml:"remote,omitempty"`
 	}
 	RemoteFeatures struct {
-		CheckVersion bool `json:"check-version,omitempty" yaml:"check-version,omitempty"`
+		CheckVersion bool `json:"check-version" yaml:"check-version"`
 	}
 	Ignore struct {
 		Files []string `json:"files,omitempty" yaml:"files,omitempty"`
