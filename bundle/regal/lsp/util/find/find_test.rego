@@ -114,6 +114,53 @@ test_import_alias_at_position_not_on_alias[name] if {
 		with data.workspace.parsed["file:///p.rego"] as module
 }
 
+test_assign_var_at_position[name] if {
+	some name, snippet in {
+		"declaration": `allow if {
+	foo| := 1
+	foo == 1
+}`,
+		"use": `allow if {
+	foo := 1
+	foo| == 1
+}`,
+		"destructured declaration": `allow if {
+	[foo|, bar] := [1, 2]
+	foo == bar
+}`,
+	}
+
+	[tdp, module] := _at_cursor(snippet)
+
+	[var, rule_index] := find.assign_var_at_position
+		with input as tdp
+		with data.workspace.parsed["file:///p.rego"] as module
+
+	var.value == "foo"
+	rule_index == 0
+}
+
+test_assign_var_at_position_not_an_assign_var[name] if {
+	some name, snippet in {
+		"input": `allow if input|.user == 1`,
+		"some variable": `allow if {
+	some x| in input.xs
+	x == 1
+}`,
+		"argument": `fn(x|) := x`,
+		"variable that is never assigned": `allow if {
+	foo := 1
+	input.foo| == 1
+}`,
+	}
+
+	[tdp, module] := _at_cursor(snippet)
+
+	not find.assign_var_at_position
+		with input as tdp
+		with data.workspace.parsed["file:///p.rego"] as module
+}
+
 # input and module for a snippet, where the cursor is on the character before the "|" in the snippet
 _at_cursor(snippet) := [tdp, module] if {
 	text := $"package p\n\n{snippet}"
