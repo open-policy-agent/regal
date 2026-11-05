@@ -124,6 +124,43 @@ test_package_locations if {
 	}
 }
 
+test_package_locations_multiple_files_in_same_package if {
+	r := rule._package_locations with input.aggregates_internal as {
+		"a1.rego": {
+			"common": {{"package_name_full": "data.policy.a"}},
+			"imports/circular-import": {{"refs": {"data.policy.b": {"3:12:3:12"}}}},
+		},
+		"a2.rego": {
+			"common": {{"package_name_full": "data.policy.a"}},
+			"imports/circular-import": {{"refs": {"data.policy.b": {"5:1:5:1"}}}},
+		},
+	}
+
+	r == {"data.policy.b": {"data.policy.a": ["a1.rego", "3:12:3:12"]}}
+}
+
+test_aggregate_report_fails_when_cycle_present_with_multiple_files_in_same_package if {
+	r := rule.aggregate_report with input.aggregates_internal as {
+		"a1.rego": {
+			"common": {{"package_name_full": "data.policy.a"}},
+			"imports/circular-import": {{"refs": {"data.policy.b": {"3:12:3:12"}}}},
+		},
+		"a2.rego": {
+			"common": {{"package_name_full": "data.policy.a"}},
+			"imports/circular-import": {{"refs": {"data.policy.b": {"4:12:4:12"}}}},
+		},
+		"b.rego": {
+			"common": {{"package_name_full": "data.policy.b"}},
+			"imports/circular-import": {{"refs": {"data.policy.a": {"2:0:2:0"}}}},
+		},
+	}
+
+	[violation] := [v | some v in r]
+
+	violation.description == "Circular import detected in: data.policy.a, data.policy.b"
+	violation.location.file == "b.rego"
+}
+
 test_aggregate_report_fails_when_cycle_present if {
 	r := rule.aggregate_report with input.aggregates_internal as {
 		"a.rego": {
