@@ -136,3 +136,42 @@ allow if wow.b == 1`
 
 	resp == null
 }
+
+test_preparerename_assign_var[name] if {
+	policy := `package p
+
+allow if {
+	foo := 1
+	foo == 1
+}`
+
+	some name, position in {
+		"declaration": {"line": 3, "character": 2},
+		"use": {"line": 4, "character": 2},
+	}
+
+	resp := preparerename.result.response
+		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as position
+		with input.regal.file.lines as split(policy, "\n")
+
+	resp == {
+		"placeholder": "foo",
+		"range": {"start": {"line": position.line, "character": 1}, "end": {"line": position.line, "character": 4}},
+	}
+}
+
+test_preparerename_not_assigned_variable_not_supported if {
+	policy := `package p
+
+allow if input.user == "alice"`
+
+	resp := preparerename.result.response
+		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as {"line": 2, "character": 9}
+		with input.regal.file.lines as split(policy, "\n")
+
+	resp == null
+}

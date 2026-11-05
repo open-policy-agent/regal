@@ -39,6 +39,18 @@ var_at_position := [var, rule_index] if {
 }
 
 # METADATA
+# description: find the variable declared by assignment at input.params.position, if any
+# schemas:
+#   - input.params: schema.regal.lsp.textdocumentposition
+assign_var_at_position := [var, rule_index] if {
+	[var, rule_index] := var_at_position
+
+	not startswith(var.value, "$")
+
+	ast.found.vars[rule_index].assign[_].value == var.value
+}
+
+# METADATA
 # description: find the rule at input.params.position if any
 # schemas:
 #   - input.params: schema.regal.lsp.textdocumentposition
