@@ -206,7 +206,7 @@ func handlerTests(tb testing.TB) iter.Seq2[string, testCase] {
 		for _, pattern := range []string{"**/**/*.md", "**/**/**/*.md"} {
 			gfs := must.Return(fs.Glob(os.DirFS(dir), pattern))(tb)
 			for _, path := range gfs {
-				test := markdownToTest(tb, filepath.Dir(path), filepath.Join(dir, path))
+				test := markdownToTest(tb, filepath.ToSlash(filepath.Dir(path)), filepath.Join(dir, path))
 				if !yield(path, test) {
 					return
 				}
