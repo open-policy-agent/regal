@@ -13,7 +13,7 @@ require (
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/jstemmer/go-junit-report/v2 v2.1.0
 	github.com/olekukonko/tablewriter v1.1.5
-	github.com/open-policy-agent/opa v1.22.0
+	github.com/open-policy-agent/opa v1.22.2
 	github.com/owenrumney/go-sarif/v2 v2.3.3
 	github.com/pdevine/go-asciisprite v0.2.2
 	github.com/pkg/profile v1.7.0
