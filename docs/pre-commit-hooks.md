@@ -43,7 +43,9 @@ Runs Regal against all staged `.rego` files, aborting the commit if any fail.
   `rev` you pin in your `.pre-commit-config.yaml` when it points at a Regal
   release (e.g. `rev: v0.26.0` downloads the `v0.26.0` binary), so pinning the
   hook pins the Regal version too. If `rev` points at a branch or commit rather
-  than a release, the latest release is downloaded instead.
+  than a release, the latest release is downloaded instead, unless a previously
+  downloaded versioned binary already exists — in that case the cached binary is
+  reused, so the hook keeps working offline.
 - Set the `REGAL_VERSION` environment variable (e.g. `v0.26.0`) to override the
   version regardless of the pinned `rev`.
 
@@ -76,5 +78,7 @@ Same as `regal-fix`, but downloads the `regal` binary from GitHub instead of bui
 
 - The downloaded version follows the `rev` you pin in your
   `.pre-commit-config.yaml` when it points at a Regal release, so pinning the
-  hook pins the Regal version too. Falls back to the latest release otherwise.
+  hook pins the Regal version too. Falls back to the latest release otherwise,
+  unless a previously downloaded versioned binary already exists, which is
+  reused instead.
 - Set the `REGAL_VERSION` environment variable to override the version.
