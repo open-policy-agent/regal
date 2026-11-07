@@ -24,6 +24,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/storage/inmem"
 	"github.com/open-policy-agent/opa/v1/tester"
 	"github.com/open-policy-agent/opa/v1/topdown"
+	"github.com/open-policy-agent/opa/v1/topdown/lineage"
 	outil "github.com/open-policy-agent/opa/v1/util"
 	"github.com/open-policy-agent/opa/v1/version"
 
@@ -329,7 +330,7 @@ func runTests(ctx context.Context, txn storage.Transaction, runner *tester.Runne
 				exitCode = 2
 			}
 
-			tr.Trace = nil
+			tr.Trace = filterTrace(tr.Trace, testParams.verbose)
 
 			if tr.Skip && exitCode == 0 && testParams.skipExitZero {
 				// there is a skipped test, adding the flag -z exits 0 if there are no failures
@@ -353,6 +354,24 @@ func runTests(ctx context.Context, txn storage.Transaction, runner *tester.Runne
 	}
 
 	return exitCode
+}
+
+// filterTrace mirrors the default trace filtering done by `opa test`, keeping
+// only the events required by the reporter to print failure details, such as
+// the failing line and local variable values (--var-values) or notes and
+// failures (--verbose). The trace is empty unless tracing is enabled.
+func filterTrace(trace []*topdown.Event, verbose bool) []*topdown.Event {
+	if len(trace) == 0 {
+		return nil
+	}
+
+	if verbose {
+		return lineage.Filter(trace, func(event *topdown.Event) bool {
+			return event.Op == topdown.NoteOp || event.Op == topdown.FailOp
+		})
+	}
+
+	return lineage.Fails(trace)
 }
 
 func isThresholdValid(t float64) bool {
