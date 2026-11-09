@@ -304,3 +304,9 @@ test_builtin_functions_called_in_templatestring if {
 
 	names == {"upper", "lower"}
 }
+
+test_static_prefix_stops_at_first_non_static_term if {
+	ref := ast.policy(`p[x].allow := true if x := 1`).rules[0].head.ref
+
+	[term.value | some term in ast.static_prefix(ref)] == ["p"]
+}

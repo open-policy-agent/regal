@@ -267,7 +267,7 @@ static_prefix(terms) := terms if {
 	static := array.slice(terms, 0, [i |
 		some i, term in terms
 		i > 0
-		term.type == {"call", "var", "ref", "templatestring"}
+		term.type in {"call", "var", "ref", "templatestring"}
 	][0])
 } else := terms
 
