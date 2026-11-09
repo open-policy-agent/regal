@@ -26,6 +26,8 @@ result.response contains ref if some ref in _assign_var_refs
 
 result.response contains ref if some ref in _import_refs
 
+result.response contains ref if some ref in _rule_refs
+
 _arg_refs contains ref if {
 	[arg, rule_index] := find.arg_at_position
 	sref := ast.static_prefix(_module.rules[rule_index].head.ref)

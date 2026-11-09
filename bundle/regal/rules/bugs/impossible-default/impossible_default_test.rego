@@ -18,7 +18,7 @@ test_fail_default_with_unconditional_definition if {
 		"location": {
 			"col": 2,
 			"end": {
-				"col": 9,
+				"col": 29,
 				"row": 4,
 			},
 			"file": "policy.rego",
