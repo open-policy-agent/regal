@@ -28,14 +28,18 @@ report contains violation if {
 	# Var assignment in rule head
 	rule.head.value.type == "var"
 
+	expr := rule.body[0]
+
 	# `with` statements can't be moved to the rule head
 	not rule.body[0].with
 
-	_assignment_expr(rule.body[0].terms)
+	head := expr.terms[0]
+	head.type == "ref"
+	head.value[0].value in {"eq", "assign"}
 
 	# Of var declared in rule head
-	rule.body[0].terms[1].type == "var"
-	rule.body[0].terms[1].value == rule.head.value.value
+	expr.terms[1].type == "var"
+	expr.terms[1].value == rule.head.value.value
 
 	violation := result.fail(rego.metadata.chain(), result.infix_expr_location(rule.body[0].terms))
 }
@@ -54,18 +58,13 @@ report contains violation if {
 
 	not expr.with
 
-	_assignment_expr(expr.terms)
+	# Assignment using either = or :=
+	head := expr.terms[0]
+	head.type == "ref"
+	head.value[0].value in {"eq", "assign"}
 
 	expr.terms[1].type == "var"
 	expr.terms[1].value == rule.head.key.value
 
 	violation := result.fail(rego.metadata.chain(), result.infix_expr_location(expr.terms))
-}
-
-# Assignment using either = or :=
-# regal ignore:narrow-argument
-_assignment_expr(terms) if {
-	terms[0].type == "ref"
-	terms[0].value[0].type == "var"
-	terms[0].value[0].value in {"eq", "assign"}
 }

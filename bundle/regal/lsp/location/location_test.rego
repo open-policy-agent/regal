@@ -1,7 +1,5 @@
 package regal.lsp.location_test
 
-import data.regal.ast
-
 import data.regal.lsp.location
 
 test_find_rule_from_location if {
@@ -28,14 +26,13 @@ rule3 if {
 	not location.find_rule(module.rules, 2) with input.regal.file.lines as lines
 
 	r1 := location.find_rule(module.rules, 5) with input.regal.file.lines as lines
-
-	ast.ref_to_string(r1.head.ref) == "rule1"
+	r1 == 0
 
 	r2 := location.find_rule(module.rules, 9) with input.regal.file.lines as lines
-	ast.ref_to_string(r2.head.ref) == "rule2"
+	r2 == 1
 
 	r3 := location.find_rule(module.rules, 15) with input.regal.file.lines as lines
-	ast.ref_to_string(r3.head.ref) == "rule3"
+	r3 == 2
 }
 
 test_find_locals_at_location[loc] if {

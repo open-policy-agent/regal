@@ -5,6 +5,7 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/unused-output-variable
 package regal.rules.bugs["unused-output-variable"]
 
+import future.keywords.and
 import future.keywords.not
 
 import data.regal.ast
@@ -38,24 +39,20 @@ report contains violation if {
 	}
 	not ast.var_in_head(input.rules[rule_index].head, term.value)
 	not ast.var_in_call(ast.function_calls, rule_index, term.value)
-	not _ref_base_vars[rule_index][term.value]
-	not _comprehension_term_vars[rule_index][term.value]
+	not {
+		ast.found.refs[rule_index][_].value[0].value == term.value # "a" in "a[foo]", and not foo
+	}
+	not {
+		some comprehension in ast.found.comprehensions[rule_index]
+		some declared in ["term", "key", "value"]
+		some var in ast.find_term_vars(comprehension.value[declared])
+
+		var.value == term.value
+	}
 
 	# this is by far the most expensive condition to check, so only do
 	# so when all other conditions apply
-	ast.is_output_var(input.rules[rule_index], term)
+	ast.is_output_var(rule_index, term)
 
 	violation := result.fail(rego.metadata.chain(), result.location(term))
-}
-
-# "a" in "a[foo]", and not foo
-_ref_base_vars[rule_index][term.value] contains term if {
-	some rule_index
-	term := ast.found.refs[rule_index][_].value[0]
-}
-
-_comprehension_term_vars[rule_index] contains var.value if {
-	some rule_index, comprehensions in ast.found.comprehensions
-	some comprehension in comprehensions
-	some var in ast.find_term_vars(object.remove(comprehension.value, ["body"]))
 }

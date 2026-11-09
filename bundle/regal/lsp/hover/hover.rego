@@ -166,7 +166,7 @@ default _arguments(_) := ""
 _arguments(func) := text if {
 	func.decl.args != []
 
-	args := [$"- `{arg.name}` {arg.type} — {arg.description}" | some arg in func.decl.args]
+	args := [$"- `{arg.name}` {arg.type} - {arg.description}" | some arg in func.decl.args]
 	text := concat("\n", array.flatten(["#### Arguments\n", args]))
 }
 

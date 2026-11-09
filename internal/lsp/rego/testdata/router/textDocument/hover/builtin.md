@@ -40,7 +40,7 @@ The server provides hover information for the `endswith` built-in function.
 {
   "contents": {
     "kind": "markdown",
-    "value": "### [endswith](https://www.openpolicyagent.org/docs/policy-reference/#builtin-strings-endswith)\n\n```rego\nresult := endswith(search, base)\n```\n\nReturns true if the search string ends with the base string.\n\n#### Arguments\n\n- `search` string — search string\n- `base` string — base string\n\n#### Returns `result` of type `boolean`: result of the suffix check"
+    "value": "### [endswith](https://www.openpolicyagent.org/docs/policy-reference/#builtin-strings-endswith)\n\n```rego\nresult := endswith(search, base)\n```\n\nReturns true if the search string ends with the base string.\n\n#### Arguments\n\n- `search` string - search string\n- `base` string - base string\n\n#### Returns `result` of type `boolean`: result of the suffix check"
   },
   "range": {
     "end": {

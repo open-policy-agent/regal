@@ -17,8 +17,9 @@ report contains violation if {
 
 	symbol.value[0].value[0].value == "internal"
 	symbol.value[0].value[1].value == "member_3"
-	symbol.value[1].type == "var"
+
 	startswith(symbol.value[1].value, "$")
+	symbol.value[1].type == "var"
 
 	violation := result.fail(rego.metadata.chain(), result.location(symbol.value[1]))
 }

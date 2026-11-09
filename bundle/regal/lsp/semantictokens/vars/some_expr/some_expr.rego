@@ -70,9 +70,7 @@ _some_var_refs contains var if {
 	some rule_index, startpoint in _some_start_points
 	some context in {"somein", "some"}
 
-	# regal ignore:prefer-some-in-iteration
 	declared_vars := ast.found.vars[rule_index][context]
-
 	first_some_row := min(object.keys(startpoint))
 
 	some row, expr

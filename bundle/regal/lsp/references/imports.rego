@@ -34,8 +34,7 @@ _import_refs contains ref if {
 _named_vars(rule, name) := [var |
 	walk(rule, [_, var])
 
-	var.type == "var"
-	var.value == name
+	[var.type, var.value] == ["var", name]
 ]
 
 _declares_variable(rule_index, name) if {
