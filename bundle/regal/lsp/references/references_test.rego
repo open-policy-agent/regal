@@ -210,3 +210,94 @@ fn(x) := x.y`
 		{"uri": "file:///p.rego", "range": {"start": {"line": 2, "character": 9}, "end": {"line": 2, "character": 10}}},
 	}
 }
+
+test_references_assign_var_from_declaration if {
+	policy := `package p
+
+allow if {
+	foo := 1
+	bar := 2
+	bar == foo
+	foo != bar
+}
+
+other if {
+	foo := 3
+	foo == 3
+}`
+
+	refs := references.result.response
+		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as {"line": 3, "character": 1}
+		with input.regal.file.lines as split(policy, "\n")
+
+	refs == {
+		{"uri": "file:///p.rego", "range": {"start": {"line": 5, "character": 8}, "end": {"line": 5, "character": 11}}},
+		{"uri": "file:///p.rego", "range": {"start": {"line": 6, "character": 1}, "end": {"line": 6, "character": 4}}},
+	}
+}
+
+test_references_assign_var_from_use if {
+	policy := `package p
+
+allow if {
+	foo := 1
+	bar := 2
+	bar == foo
+	foo != bar
+}`
+
+	refs := references.result.response
+		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as {"line": 5, "character": 1}
+		with input.regal.file.lines as split(policy, "\n")
+
+	refs == {
+		{"uri": "file:///p.rego", "range": {"start": {"line": 5, "character": 1}, "end": {"line": 5, "character": 4}}},
+		{"uri": "file:///p.rego", "range": {"start": {"line": 6, "character": 8}, "end": {"line": 6, "character": 11}}},
+	}
+}
+
+test_references_assign_var_with_declaration if {
+	policy := `package p
+
+allow if {
+	foo := 1
+	foo == 1
+}`
+
+	refs := references.result.response
+		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as {"line": 4, "character": 1}
+		with input.regal.file.lines as split(policy, "\n")
+		with input.params.context as {"includeDeclaration": true}
+
+	refs == {
+		{"uri": "file:///p.rego", "range": {"start": {"line": 3, "character": 1}, "end": {"line": 3, "character": 4}}},
+		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 1}, "end": {"line": 4, "character": 4}}},
+	}
+}
+
+test_references_assign_var_shadowing_import if {
+	policy := `package p
+
+import data.pkgb
+
+allow if {
+	pkgb := {"b": 2}
+	pkgb.b == 2
+}`
+
+	refs := references.result.response
+		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as {"line": 5, "character": 1}
+		with input.regal.file.lines as split(policy, "\n")
+
+	refs == {
+		{"uri": "file:///p.rego", "range": {"start": {"line": 6, "character": 1}, "end": {"line": 6, "character": 5}}},
+	}
+}
