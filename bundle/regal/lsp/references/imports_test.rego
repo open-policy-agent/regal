@@ -1,6 +1,7 @@
 package regal.lsp.references_test
 
 import data.regal.lsp.references
+import data.regal.lsp.testing
 
 test_references_import_uses_in_file if {
 	policy := `package p
@@ -108,4 +109,60 @@ allow if wow.b == 2`
 		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 9}, "end": {"line": 4, "character": 12}}},
 		{"uri": "file:///p.rego", "range": {"start": {"line": 6, "character": 9}, "end": {"line": 6, "character": 12}}},
 	}
+}
+
+test_references_import_from_use if {
+	snippet := `import data.pkgb
+
+wow := pkgb|.b
+
+local if {
+	pkgb := 1
+	pkgb == 1
+}`
+
+	[tdp, module] := testing.at_cursor(snippet)
+
+	refs := references.result.response
+		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
+		with data.workspace.parsed["file:///p.rego"] as module
+
+	refs == {
+		{"uri": "file:///p.rego", "range": {"start": {"line": 2, "character": 7}, "end": {"line": 2, "character": 16}}},
+		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 7}, "end": {"line": 4, "character": 11}}},
+	}
+}
+
+test_references_import_shadowed_by_local_variable_not_included if {
+	snippet := `import data.pkgb
+
+local if {
+	pkgb := 1
+	pkgb| == 1
+}`
+
+	[tdp, module] := testing.at_cursor(snippet)
+
+	refs := references.result.response
+		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
+		with data.workspace.parsed["file:///p.rego"] as module
+
+	refs == {
+		{"uri": "file:///p.rego", "range": {"start": {"line": 5, "character": 1}, "end": {"line": 5, "character": 5}}},
+		{"uri": "file:///p.rego", "range": {"start": {"line": 6, "character": 1}, "end": {"line": 6, "character": 5}}},
+	}
+}
+
+test_references_import_unrelated_variable_not_included if {
+	snippet := `import data.pkgb
+
+allow if input|.user == "admin"`
+
+	[tdp, module] := testing.at_cursor(snippet)
+
+	refs := references.result.response
+		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
+		with data.workspace.parsed["file:///p.rego"] as module
+
+	refs == set()
 }
