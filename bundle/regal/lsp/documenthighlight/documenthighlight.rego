@@ -39,10 +39,10 @@ items contains item if {
 
 	some expr in ast.found.expressions[i]
 
-	walk(expr, [_, value])
+	walk(expr.terms, [_, value])
 
-	value.type == "var"
 	value.value == arg.value
+	value.type == "var"
 
 	item := {
 		"range": range.parse(value.location),
@@ -57,8 +57,8 @@ items contains item if {
 
 	walk(data.workspace.parsed[input.params.textDocument.uri].rules[i].head.value, [_, value])
 
-	value.type == "var"
 	value.value == arg.value
+	value.type == "var"
 
 	item := {
 		"range": range.parse(value.location),

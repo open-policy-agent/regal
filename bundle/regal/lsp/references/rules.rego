@@ -24,8 +24,8 @@ _rule_refs contains ref if {
 	some node in ["head", "body", "else"]
 	walk(rule[node], [_, var])
 
-	var.type == "var"
 	var.value == name
+	var.type == "var"
 	_include_declaration or var != rule.head.ref[0]
 
 	ref := {

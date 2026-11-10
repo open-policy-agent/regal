@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/testing/metasyntactic-variable
 package regal.rules.testing["metasyntactic-variable"]
 
+import rego.v2
+
 import data.regal.ast
 import data.regal.result
 
@@ -26,9 +28,10 @@ _metasyntactic := {
 }
 
 report contains violation if {
-	some rule in input.rules
-	some term in ast.named_refs(rule.head.ref)
+	some rule_index, i
+	term := input.rules[rule_index].head.ref[i]
 
+	i == 0 and term.type == "var" or term.type == "string"
 	lower(term.value) in _metasyntactic
 
 	# In case we have chained rule bodies — only flag the location where we have an actual name:
@@ -37,18 +40,17 @@ report contains violation if {
 	# } {
 	#    input.y
 	# }
-	not ast.is_chained_rule_body(rule, input.regal.file.lines)
+	not ast.is_chained_rule_body(input.rules[rule_index], input.regal.file.lines)
 
 	violation := result.fail(rego.metadata.chain(), result.location(term))
 }
 
 report contains violation if {
-	some i
-	var := ast.found.vars[i][_][_]
+	some rule_index
+	var := ast.found.vars[rule_index][_][_]
 
 	lower(var.value) in _metasyntactic
-
-	ast.is_output_var(input.rules[i], var)
+	ast.is_output_var(rule_index, var)
 
 	violation := result.fail(rego.metadata.chain(), result.location(var))
 }

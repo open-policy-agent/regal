@@ -16,7 +16,6 @@ report contains violation if {
 
 	terms := regal.last(rule.body).terms
 
-	terms[0].value[0].type == "var"
 	terms[0].value[0].value in {"eq", "assign"}
 	terms[1].type == "var"
 	terms[1].value == [rule.head[attribute].value |

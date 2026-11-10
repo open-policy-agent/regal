@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/top-level-iteration
 package regal.rules.bugs["top-level-iteration"]
 
+import future.keywords.not
+
 import data.regal.ast
 import data.regal.result
 
@@ -24,18 +26,12 @@ report contains violation if {
 
 	not term.value in ast.identifiers
 	not _is_arg_or_input(term.value, rule)
-
-	# this is expensive, but the preconditions should ensure that
-	# very few rules evaluate this far
-	not _var_in_body(rule, term.value)
-
+	not {
+		walk(rule.body, [_, node])
+		node.type == "var"
+		node.value == term.value
+	}
 	violation := result.fail(rego.metadata.chain(), result.location(rule.head))
-}
-
-_var_in_body(rule, value) if {
-	walk(rule.body, [_, node])
-	node.type == "var"
-	node.value == value
 }
 
 _is_arg_or_input(value, rule) if value in ast.function_arg_names(rule)

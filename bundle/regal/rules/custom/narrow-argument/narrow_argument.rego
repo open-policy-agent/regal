@@ -56,8 +56,8 @@ _first_named_arg_location(indices, name) := [arg.location |
 	some rule_index in indices
 	some arg in input.rules[rule_index].head.args
 
-	arg.type == "var"
 	arg.value == name
+	arg.type == "var"
 ][0]
 
 _arg_used_in_call(indices, name) if {
@@ -66,8 +66,8 @@ _arg_used_in_call(indices, name) if {
 	some arg in call.args
 
 	# only check for vars here, as refs are already dealt with
-	arg.type == "var"
 	arg.value == name
+	arg.type == "var"
 }
 
 _args_refs[name][arg] contains ref if {

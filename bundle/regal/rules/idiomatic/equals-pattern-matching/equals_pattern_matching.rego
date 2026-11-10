@@ -29,8 +29,8 @@ report contains violation if {
 
 	some arg in fun.head.args
 
+	arg.value == term.value
 	arg.type == "var"
-	term.value == arg.value
 
 	violation := result.fail(rego.metadata.chain(), result.location(fun))
 }
@@ -54,15 +54,14 @@ report contains violation if {
 	expr := fun.body[0]
 
 	expr.terms[0].type == "ref"
-	expr.terms[0].value[0].type == "var"
 	expr.terms[0].value[0].value == "equal"
 
 	term := _normalize_eq_terms(expr.terms, ast.scalar_types)
 
 	some arg in fun.head.args
 
+	arg.value == term.value
 	arg.type == "var"
-	term.value == arg.value
 
 	violation := result.fail(rego.metadata.chain(), result.location(fun))
 }

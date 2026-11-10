@@ -39,7 +39,6 @@ result["response"] := ranges if {
 package_ranges := [item |
 	some position in input.params.positions
 
-	# regal ignore:with-outside-test-context
 	pkg := data.workspace.parsed[input.params.textDocument.uri].package
 	ranges := _find_ranges(pkg.path, position)
 

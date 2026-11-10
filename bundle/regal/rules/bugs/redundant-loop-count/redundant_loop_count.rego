@@ -14,7 +14,6 @@ report contains violation if {
 
 	# 1st expression, count of $ref compared either to > 0 or != 0
 	expr.terms[0].type == "ref"
-	expr.terms[0].value[0].type == "var"
 	expr.terms[0].value[0].value in {"gt", "neq"}
 	expr.terms[1].type == "call"
 	expr.terms[1].value[0].type == "ref"

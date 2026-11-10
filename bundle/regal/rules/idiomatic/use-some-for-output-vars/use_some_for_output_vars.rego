@@ -21,9 +21,9 @@ report contains violation if {
 		var.value == term.value
 	}
 
-	rule := input.rules[rule_index]
+	not ast.is_in_local_scope(rule_index, term.location, term.value)
 
-	not ast.is_in_local_scope(rule, term.location, term.value)
+	rule := input.rules[rule_index]
 
 	walk(rule, [path, term.location])
 

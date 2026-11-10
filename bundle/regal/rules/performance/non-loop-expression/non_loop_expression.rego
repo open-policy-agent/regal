@@ -163,7 +163,7 @@ _loop_refs[rule_index][ref.location] contains term if {
 
 	term := ast.found.refs[rule_index][ref].value[i]
 
-	ast.is_output_var(input.rules[rule_index], term)
+	ast.is_output_var(rule_index, term)
 }
 
 _assignment_index[rule_index][var_value] contains row if {

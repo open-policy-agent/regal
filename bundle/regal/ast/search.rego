@@ -1,23 +1,25 @@
 package regal.ast
 
+import future.keywords.and
 import future.keywords.or
 
 import data.regal.util
 
-_find_nested_vars(obj) := [value |
-	walk(obj, [_, value])
-	value.type == "var"
-	indexof(value.value, "$") == -1
+_find_nested_vars(node) := [term |
+	walk(node, [_, term])
+
+	term.type == "var"
+	not startswith(term.value, "$")
 ]
 
 # simple assignment, i.e. `x := 100` returns `x`
 # always returns a single var, but wrapped in an
 # array for consistency or
-# 'destructuring' array assignment, i.e.
-# [a, b, c] := [1, 2, 3] or {a: b} := {"foo": "bar"}
+# 'destructuring' array/object assignment, i.e.
+# [a, b, c] := [1, 2, 3] or {"a": b} := {"a": "value"}
 _find_assign_vars(value) := [value] if {
 	value.type == "var"
-} else := _find_nested_vars(value) if {
+} else := _find_nested_vars(value.value) if {
 	value.type in {"array", "object"}
 }
 
@@ -25,15 +27,15 @@ _find_assign_vars(value) := [value] if {
 # description: |
 #   true if a var of 'name' can be found in the provided AST node
 has_named_var(node, name) if {
-	node.type == "var"
 	node.value == name
+	node.type == "var"
 } or {
 	node.type in {"array", "object", "set", "ref", "templatestring"}
 
 	walk(node.value, [_, nested])
 
-	nested.type == "var"
 	nested.value == name
+	nested.type == "var"
 }
 
 # METADATA
@@ -45,22 +47,6 @@ find_term_vars(terms) := [term |
 
 	term.type == "var"
 ]
-
-# METADATA
-# description: |
-#   traverses all nodes in provided terms (using `walk`), and returns true if any variable
-#   is found in terms, with early exit (as opposed to find_term_vars)
-has_term_var(terms) if {
-	walk(terms, [_, term])
-
-	term.type == "var"
-}
-
-_rule_index(rule) := i if {
-	some i, other in _rules
-
-	rule == other
-}
 
 # hack to work around the different input models of linting vs. the lsp package.. we
 # should probably consider something more robust
@@ -86,14 +72,14 @@ _rules := data.workspace.parsed[object.get(input, ["params", "textDocument", "ur
 #   - ref
 # scope: document
 found.vars[rule_index].every contains term if {
-	some rule_index, i
-	found.expressions[rule_index][i].terms.domain
+	some rule_index
+	evry := found.every[rule_index][_]
 
 	some kind in ["key", "value"]
-	term := found.expressions[rule_index][i].terms[kind]
+	term := evry[kind]
 
 	term.type == "var"
-	indexof(term.value, "$") == -1
+	not startswith(term.value, "$")
 }
 
 found.vars[rule_index].args contains term if {
@@ -101,20 +87,38 @@ found.vars[rule_index].args contains term if {
 	term := _rules[rule_index].head.args[_]
 
 	term.type == "var"
+	not startswith(term.value, "$")
 }
 
-found.vars[rule_index].args contains node if {
-	some rule_index
-	term := _rules[rule_index].head.args[_]
+# find vars in array destructuring arguments, e.g. f([a, [c]])
+found.vars[rule_index].args contains term if {
+	some rule_index, i
 
-	term.type == "array" # only composite type that can contain vars in args position (right?)
+	_rules[rule_index].head.args[i].type == "array"
 
-	some item in term.value
-	not item.type in {"string", "number", "boolean", "null"}
+	some item in _rules[rule_index].head.args[i].value
+	not item.type in {"string", "number", "boolean", "null", "set"}
 
-	walk(item, [_, node])
+	walk(item, [_, term])
 
-	node.type == "var"
+	term.type == "var"
+	not startswith(term.value, "$")
+}
+
+# find vars in object destructuring arguments, e.g. b in f({"a": b, "baz": _})
+found.vars[rule_index].args contains term if {
+	some rule_index, i
+
+	_rules[rule_index].head.args[i].type == "object"
+
+	some item in _rules[rule_index].head.args[i].value
+	some node in item
+	not node.type in {"string", "number", "boolean", "null", "set"}
+
+	walk(node, [_, term])
+
+	term.type == "var"
+	not startswith(term.value, "$")
 }
 
 found.vars[rule_index].ref contains term if {
@@ -133,7 +137,6 @@ found.vars[rule_index].term contains var if {
 	some rule_index, calls in found.calls
 	some call in calls
 
-	call[0].value[0].type == "var"
 	call[0].value[0].value != "assign"
 
 	fn_name := ref_static_to_string(call[0].value)
@@ -153,7 +156,6 @@ found.vars[rule_index].assign contains var if {
 	some rule_index, calls in found.calls
 	some call in calls
 
-	call[0].value[0].type == "var"
 	call[0].value[0].value in {"assign", "eq"}
 
 	some var in _find_assign_vars(call[1])
@@ -175,11 +177,11 @@ found.vars[rule_index].somein contains var if {
 
 found.vars[rule_index].some contains term if {
 	some rule_index, symbols in found.symbols
-	some value in symbols
+	some decl in symbols
 
-	value[0].type != "call"
+	decl[0].type != "call"
 
-	some term in value
+	some term in decl
 	term.type == "var"
 }
 
@@ -223,9 +225,10 @@ found.every[rule_index] contains terms if {
 # METADATA
 # description: all comprehensions found in module
 found.comprehensions[rule_index] contains value if {
-	some rule_index
+	some rule_index, rule in _rules
+	some node in ["head", "body", "else"]
 
-	walk(_rules[rule_index], [_, value])
+	walk(rule[node], [_, value])
 
 	value.type in {"arraycomprehension", "objectcomprehension", "setcomprehension"}
 }
@@ -263,12 +266,12 @@ logical_operand_locations[rule_index] contains expr.location if {
 # description: |
 #   answers whether a variable of the given name (value) is declared in the
 #   local scope of the provided rule at the provided location
-is_in_local_scope(rule, location, value) if {
+is_in_local_scope(rule_index, location, value) if {
 	some var
-	found.vars[_rule_index(rule)][_][var].value == value
+	found.vars[rule_index][_][var].value == value
 	var.location != location
 
-	_before_location(rule.head, var, util.to_location_object(location))
+	_before_location(_rules[rule_index].head, var, util.to_location_object(location))
 }
 
 # METADATA
@@ -277,11 +280,11 @@ is_in_local_scope(rule, location, value) if {
 #   note: this isn't 100% accurate, as it doesn't take into account `=`
 #   assignments / unification, but it's likely good enough since other rules
 #   recommend against those
-find_vars_in_local_scope(rule, location) := [var |
-	var := found.vars[_rule_index(rule)][_][_]
+find_vars_in_local_scope(rule_index, location) := [var |
+	var := found.vars[rule_index][_][_]
 
 	not startswith(var.value, "$")
-	_before_location(rule.head, var, util.to_location_object(location))
+	_before_location(_rules[rule_index].head, var, util.to_location_object(location))
 ]
 
 # special case — the value location of the rule head "sees"
@@ -308,16 +311,16 @@ _before_location(_, var, loc) if {
 
 # METADATA
 # description: find *only* names in the local scope, and not e.g. rule names
-find_names_in_local_scope(rule, location) := {var.value |
-	some var in find_vars_in_local_scope(rule, util.to_location_object(location))
+find_names_in_local_scope(rule_index, location) := {var.value |
+	some var in find_vars_in_local_scope(rule_index, util.to_location_object(location))
 }
 
 # METADATA
 # description: |
 #   similar to `find_vars_in_local_scope`, but returns all variable names in scope
 #   of the given location *and* the rule names present in the scope (i.e. module)
-find_names_in_scope(rule, location) := (rule_names | imported_identifiers) | find_names_in_local_scope(
-	rule,
+find_names_in_scope(rule_index, location) := (rule_names | imported_identifiers) | find_names_in_local_scope(
+	rule_index,
 	util.to_location_object(location),
 )
 
@@ -325,8 +328,8 @@ find_names_in_scope(rule, location) := (rule_names | imported_identifiers) | fin
 # description: |
 #   find all variables declared via `some` declarations (and *not* `some .. in`)
 #   in the scope of the given location
-find_some_decl_names_in_scope(rule, location) := {some_var.value |
+find_some_decl_names_in_scope(rule_index, location) := {some_var.value |
 	loc := util.to_location_object(location)
-	some some_var in found.vars[_rule_index(rule)].some
-	_before_location(rule.head, some_var, loc)
+	some some_var in found.vars[rule_index].some
+	_before_location(_rules[rule_index].head, some_var, loc)
 }

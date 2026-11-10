@@ -71,8 +71,8 @@ _first_arg_value(rule_index, term) := found if {
 		to_number(util.substring_to(expr.location, 0, ":")) < row
 
 		[lhs, rhs] := ast.assignment_terms(expr.terms)
-		lhs.type == "var"
 		lhs.value == term.value
+		lhs.type == "var"
 		rhs.type == "string"
 	][0]
 }

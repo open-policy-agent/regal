@@ -21,8 +21,8 @@ arg_at_position := [arg, rule_index] if {
 
 	some arg in data.workspace.parsed[input.params.textDocument.uri].rules[rule_index].head.args
 
-	arg.type == "var"
 	arg.value == var.value
+	arg.type == "var"
 }
 
 # METADATA

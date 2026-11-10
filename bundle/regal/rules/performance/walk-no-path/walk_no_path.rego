@@ -40,7 +40,7 @@ _var_in_arg(arg, var) if {
 _var_in_arg(arg, var) if {
 	arg.type in {"array", "object", "set"}
 
-	some term_var in ast.find_term_vars(arg)
+	some term_var in ast.find_term_vars(arg.value)
 
 	term_var.value == var.value
 	term_var.location != var.location

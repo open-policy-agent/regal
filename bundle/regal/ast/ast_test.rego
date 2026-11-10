@@ -72,9 +72,8 @@ test_find_names_in_scope if {
 	}`
 
 	module := regal.parse_module("p.rego", policy)
-	allow_rule := module.rules[3]
 
-	in_scope := ast.find_names_in_scope(allow_rule, {"col": 1, "row": 30})
+	in_scope := ast.find_names_in_scope(3, {"col": 1, "row": 30})
 		with input as module
 		with config.capabilities as capabilities.provided
 
