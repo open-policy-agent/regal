@@ -8,7 +8,8 @@ import data.regal.lsp.util.range
 # description: |
 #   References to the import at the cursor within the same file, i.e. every use of its identifier.
 _import_refs contains ref if {
-	not _package_target
+	not _renaming
+	not _rule_target
 
 	_import.path.value[0].value in {"input", "data"}
 	identifier := ast.imported_identifier(_import)
@@ -26,7 +27,8 @@ _import_refs contains ref if {
 }
 
 _import_refs contains ref if {
-	not _package_target
+	not _renaming
+	not _rule_target
 
 	_include_declaration
 

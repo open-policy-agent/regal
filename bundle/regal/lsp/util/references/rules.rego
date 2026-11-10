@@ -26,6 +26,8 @@ rule_refs contains ref if {
 	some var in _named_vars(rule, name)
 	_include_declaration or var != rule.head.ref[0]
 
+	var == rule.head.ref[0] or not _imports_name(object.get(module, "imports", []), name)
+
 	ref := {
 		"uri": file,
 		"range": range.parse(var.location),
@@ -77,11 +79,51 @@ rule_refs contains ref if {
 	}
 }
 
+# a rule can be imported directly, the name is the last term of the import path
+rule_refs contains ref if {
+	_rule_target
+
+	some file, module in _scope
+	some imp in module.imports
+	_term_values(imp.path.value) == _rule_target
+
+	ref := {
+		"uri": file,
+		"range": range.parse(regal.last(imp.path.value).location),
+		"kind": kind_read,
+	}
+}
+
+rule_refs contains ref if {
+	_rule_target
+
+	some file, module in _scope
+	some imp in module.imports
+	_term_values(imp.path.value) == _rule_target
+	not _renaming_alias(imp)
+
+	id := ast.imported_identifier(imp)
+
+	some rule in module.rules
+	not _declares_local(rule, id)
+
+	some var in _named_vars(rule, id)
+	var != rule.head.ref[0]
+
+	ref := {
+		"uri": file,
+		"range": range.parse(var.location),
+		"kind": kind_read,
+	}
+}
+
 # on a var
 _rule_target := path if {
 	[var, rule_index] := find.var_at_position
 
 	not _declares_local(_module.rules[rule_index], var.value)
+
+	var == _module.rules[rule_index].head.ref[0] or not _imports_name(object.get(_module, "imports", []), var.value)
 
 	path := _rule_path(_module.package.path, var.value)
 	_is_known_path(path)
@@ -106,6 +148,25 @@ _rule_target := path if {
 	imp_path := _term_values(imp.path.value)
 	path := array.slice(_through_import(imp_path, terms), 0, count(imp_path) + i)
 	_is_known_path(path)
+}
+
+# on a use of a rule that is imported directly, like allow after import data.pkg.allow
+_rule_target := path if {
+	[var, rule_index] := find.var_at_position
+
+	not _declares_local(_module.rules[rule_index], var.value)
+	var != _module.rules[rule_index].head.ref[0]
+
+	some imp in _module.imports
+	ast.imported_identifier(imp) == var.value
+
+	path := _term_values(imp.path.value)
+	_is_known_path(path)
+}
+
+_imports_name(imports, name) if {
+	some imp in imports
+	ast.imported_identifier(imp) == name
 }
 
 # refs with a name under the cursor, as [rule, ref terms, index of the name]

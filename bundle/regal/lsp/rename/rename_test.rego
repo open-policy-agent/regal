@@ -144,11 +144,20 @@ z if data.rules.allow`
 	policy_c := `package other
 
 allow if true`
+	policy_d := `package imports
+
+import data.rules.allow
+import data.rules.allow as a
+
+r if allow
+
+s if a`
 
 	resp := rename.result.response with data.workspace.parsed as {
 		"file:///a.rego": regal.parse_module("a.rego", policy_a),
 		"file:///b.rego": regal.parse_module("b.rego", policy_b),
 		"file:///c.rego": regal.parse_module("c.rego", policy_c),
+		"file:///d.rego": regal.parse_module("d.rego", policy_d),
 	}
 		with input.params.textDocument.uri as "file:///a.rego"
 		with input.params.position as {"line": 2, "character": 1}
@@ -165,6 +174,12 @@ allow if true`
 			{"newText": "permit", "range": {"start": {"line": 5, "character": 11}, "end": {"line": 5, "character": 16}}},
 			{"newText": "permit", "range": {"start": {"line": 7, "character": 7}, "end": {"line": 7, "character": 12}}},
 			{"newText": "permit", "range": {"start": {"line": 9, "character": 16}, "end": {"line": 9, "character": 21}}},
+		},
+		# a direct import is renamed, but the alias of one, and its uses, are not
+		"file:///d.rego": {
+			{"newText": "permit", "range": {"start": {"line": 2, "character": 18}, "end": {"line": 2, "character": 23}}},
+			{"newText": "permit", "range": {"start": {"line": 3, "character": 18}, "end": {"line": 3, "character": 23}}},
+			{"newText": "permit", "range": {"start": {"line": 5, "character": 5}, "end": {"line": 5, "character": 10}}},
 		},
 	}}
 }
@@ -229,4 +244,23 @@ z if data.foo.bar.allow`
 			{"newText": "qux", "range": {"start": {"line": 9, "character": 14}, "end": {"line": 9, "character": 17}}},
 		},
 	}}
+}
+
+test_rename_import_not_supported[name] if {
+	policy := `package p
+
+import data.ext
+
+x := ext.y`
+
+	some name, position in {"path": [2, 14], "use": [4, 7]}
+
+	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as {"line": position[0], "character": position[1]}
+		with input.params.newName as "zap"
+		with input.regal.file.lines as split(policy, "\n")
+		with input.method as "textDocument/rename"
+
+	resp == null
 }

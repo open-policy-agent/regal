@@ -352,3 +352,107 @@ via_path if data.p.allow`,
 		"kind": references.kind_read,
 	}}
 }
+
+test_rule_imported_directly[from] if {
+	some from, policies in {
+		"declaration": {
+			"file:///a.rego": `package p
+
+allow| if input.a`,
+			"file:///b.rego": `package q
+
+import data.p.allow
+
+r if allow`,
+		},
+		"use": {
+			"file:///a.rego": `package p
+
+allow if input.a`,
+			"file:///b.rego": `package q
+
+import data.p.allow
+
+r if allow|`,
+		},
+	}
+
+	[tdp, modules] := testing.at_cursor_in(policies)
+
+	refs := references.refs
+		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
+		with data.workspace.parsed as modules
+
+	refs == {
+		{
+			"uri": "file:///a.rego",
+			"range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 5}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///b.rego",
+			"range": {"start": {"line": 2, "character": 14}, "end": {"line": 2, "character": 19}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///b.rego",
+			"range": {"start": {"line": 4, "character": 5}, "end": {"line": 4, "character": 10}},
+			"kind": references.kind_read,
+		},
+	}
+}
+
+test_rule_with_same_name_as_import[cursor] if {
+	some cursor, policy in {
+		"head": `package p
+
+import data.other.foo
+
+foo| if input.a
+
+use if foo`,
+		"use": `package p
+
+import data.other.foo
+
+foo if input.a
+
+use if foo|`,
+	}
+
+	[tdp, modules] := testing.at_cursor_in({
+		"file:///a.rego": policy,
+		"file:///b.rego": `package other
+
+foo if input.b`,
+	})
+
+	refs := references.refs
+		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
+		with data.workspace.parsed as modules
+
+	refs == {
+		"head": {{
+			"uri": "file:///a.rego",
+			"range": {"start": {"line": 4, "character": 0}, "end": {"line": 4, "character": 3}},
+			"kind": references.kind_write,
+		}},
+		"use": {
+			{
+				"uri": "file:///b.rego",
+				"range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 3}},
+				"kind": references.kind_write,
+			},
+			{
+				"uri": "file:///a.rego",
+				"range": {"start": {"line": 2, "character": 18}, "end": {"line": 2, "character": 21}},
+				"kind": references.kind_read,
+			},
+			{
+				"uri": "file:///a.rego",
+				"range": {"start": {"line": 6, "character": 7}, "end": {"line": 6, "character": 10}},
+				"kind": references.kind_read,
+			},
+		},
+	}[cursor]
+}
