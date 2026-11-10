@@ -103,11 +103,11 @@ fun(user, action, resource) := user if {
 				"range": {"end": {"character": 8, "line": 2}, "start": {"character": 4, "line": 2}},
 			},
 			{
-				"kind": 3,
+				"kind": 2,
 				"range": {"end": {"character": 5, "line": 3}, "start": {"character": 1, "line": 3}},
 			},
 			{
-				"kind": 3,
+				"kind": 2,
 				"range": {"end": {"character": 35, "line": 2}, "start": {"character": 31, "line": 2}},
 			},
 		}],
@@ -117,7 +117,7 @@ fun(user, action, resource) := user if {
 				"range": {"end": {"character": 16, "line": 2}, "start": {"character": 10, "line": 2}},
 			},
 			{
-				"kind": 3,
+				"kind": 2,
 				"range": {"end": {"character": 7, "line": 4}, "start": {"character": 1, "line": 4}},
 			},
 		}],
@@ -127,11 +127,11 @@ fun(user, action, resource) := user if {
 				"range": {"end": {"character": 26, "line": 2}, "start": {"character": 18, "line": 2}},
 			},
 			{
-				"kind": 3,
+				"kind": 2,
 				"range": {"end": {"character": 9, "line": 5}, "start": {"character": 1, "line": 5}},
 			},
 			{
-				"kind": 3,
+				"kind": 2,
 				"range": {"end": {"character": 39, "line": 5}, "start": {"character": 31, "line": 5}},
 			},
 		}],
@@ -139,6 +139,7 @@ fun(user, action, resource) := user if {
 
 	items := documenthighlight.items
 		with input as {
+			"method": "textDocument/documentHighlight",
 			"params": {"textDocument": {"uri": "file://p.rego"}, "position": inp},
 			"regal": {"file": {"lines": split(file_content, "\n")}},
 		}
