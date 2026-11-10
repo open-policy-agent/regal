@@ -61,6 +61,16 @@ rule_at_position := [rule, rule_index] if {
 }
 
 # METADATA
+# description: find the package whose name is at input.params.position, if any
+# schemas:
+#   - input.params: schema.regal.lsp.textdocumentposition
+package_at_position := pkg if {
+	pkg := data.workspace.parsed[input.params.textDocument.uri].package
+
+	range.contains_position(range.spanning(pkg.path), input.params.position)
+}
+
+# METADATA
 # description: find the import statement at input.params.position, if any
 # schemas:
 #   - input.params: schema.regal.lsp.textdocumentposition

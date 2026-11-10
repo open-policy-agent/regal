@@ -165,6 +165,24 @@ test_assign_var_at_position_not_an_assign_var[name] if {
 		with data.workspace.parsed["file:///p.rego"] as module
 }
 
+test_package_at_position if {
+	[tdp, modules] := testing.at_cursor_in({"file:///p.rego": "package foo.ba|r"})
+
+	pkg := find.package_at_position
+		with input as tdp
+		with data.workspace.parsed as modules
+
+	[term.value | some term in pkg.path] == ["data", "foo", "bar"]
+}
+
+test_package_at_position_not_on_name if {
+	[tdp, modules] := testing.at_cursor_in({"file:///p.rego": "packag|e foo.bar"})
+
+	not find.package_at_position
+		with input as tdp
+		with data.workspace.parsed as modules
+}
+
 text_document_position(line, character) := {"params": {
 	"textDocument": {"uri": "file:///p.rego"},
 	"position": {

@@ -26,16 +26,16 @@ call if data.p.is_root(input.user)`,
 	}
 }
 
-test_function_call_through_import_alias if {
+test_function_from_import_alias_call if {
 	[tdp, modules] := testing.at_cursor_in({
 		"file:///a.rego": `package p
 
-is_root|(u) if u == "root"`,
+is_root(u) if u == "root"`,
 		"file:///b.rego": `package q
 
 import data.p as pkg
 
-call if pkg.is_root(input.user)`,
+call := pkg.is_root|(input.user)`,
 	})
 
 	refs := references.result.response

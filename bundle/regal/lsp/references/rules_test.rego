@@ -134,7 +134,7 @@ fn(allow) := allow`,
 	refs == set()
 }
 
-test_rule_from_use_through_import if {
+test_rule_from_import_use if {
 	[tdp, modules] := testing.at_cursor_in({
 		"file:///a.rego": `package p
 
@@ -183,7 +183,7 @@ aliased if pkg.allow`,
 	}
 }
 
-test_rule_import_alias_shadowed_by_local_name_not_included if {
+test_rule_import_use_shadowed_by_local_name_not_included if {
 	[tdp, modules] := testing.at_cursor_in({
 		"file:///a.rego": `package p
 
@@ -242,6 +242,25 @@ allow if input.a`,
 import data.p
 
 shadowed(p) := p.allow|`,
+	})
+
+	refs := references.result.response
+		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
+		with data.workspace.parsed as modules
+
+	refs == set()
+}
+
+test_rule_from_import_use_unknown_name_not_found if {
+	[tdp, modules] := testing.at_cursor_in({
+		"file:///a.rego": `package p
+
+allow if input.a`,
+		"file:///b.rego": `package q
+
+import data.p
+
+missing if p.nope|`,
 	})
 
 	refs := references.result.response
