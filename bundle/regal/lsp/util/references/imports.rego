@@ -1,4 +1,4 @@
-package regal.lsp.references
+package regal.lsp.util.references
 
 import data.regal.ast
 import data.regal.lsp.util.find

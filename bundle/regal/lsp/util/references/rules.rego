@@ -1,10 +1,11 @@
-package regal.lsp.references
+package regal.lsp.util.references
 
 import future.keywords.or
 
 import data.regal.ast
 import data.regal.lsp.util.find
 import data.regal.lsp.util.range
+import data.regal.util
 
 # METADATA
 # description: |
@@ -145,7 +146,7 @@ _term_values(terms) := [term.value | some term in terms]
 
 # the full path of a ref starting with an import name, as far as the ref is static
 _through_import(imp_path, ref_terms) := array.concat(imp_path, [term.value |
-	some term in array.slice(ast.static_prefix(ref_terms), 1, count(ref_terms))
+	some term in util.rest(ast.static_prefix(ref_terms))
 ])
 
 # true if an argument or a := variable in the rule has this name, which hides a rule or import of that name

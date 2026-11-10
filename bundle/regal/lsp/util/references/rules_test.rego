@@ -1,7 +1,7 @@
-package regal.lsp.references_test
+package regal.lsp.util.references_test
 
-import data.regal.lsp.references
 import data.regal.lsp.testing
+import data.regal.lsp.util.references
 
 # the other heads of a rule are part of its declaration, so they are returned as references
 test_rule_declarations_across_files if {
@@ -16,7 +16,7 @@ allow| if input.a`,
 allow if input.b`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
 		with data.workspace.parsed as modules
 
@@ -39,7 +39,7 @@ full if data.p.allow
 nested if data.p.sub.allow`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as tdp
 		with data.workspace.parsed as modules
 
@@ -58,7 +58,7 @@ allow if input.a`,
 other if allow|`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
 		with data.workspace.parsed as modules
 
@@ -78,7 +78,7 @@ allow if input.a`,
 full if data.p.allow|`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as tdp
 		with data.workspace.parsed as modules
 
@@ -102,7 +102,7 @@ allow| := true`,
 nested if data.p.sub.allow`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
 		with data.workspace.parsed as modules
 
@@ -127,7 +127,7 @@ shadowed if {
 fn(allow) := allow`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as tdp
 		with data.workspace.parsed as modules
 
@@ -146,7 +146,7 @@ import data.p
 plain if p.allow|`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
 		with data.workspace.parsed as modules
 
@@ -173,7 +173,7 @@ import data.p as pkg
 aliased if pkg.allow`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as tdp
 		with data.workspace.parsed as modules
 
@@ -200,7 +200,7 @@ assigned if {
 }`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as tdp
 		with data.workspace.parsed as modules
 
@@ -225,7 +225,7 @@ other if q.allow
 missing if p.nope`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as tdp
 		with data.workspace.parsed as modules
 
@@ -244,7 +244,7 @@ import data.p
 shadowed(p) := p.allow|`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
 		with data.workspace.parsed as modules
 
@@ -263,7 +263,7 @@ import data.p
 missing if p.nope|`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
 		with data.workspace.parsed as modules
 

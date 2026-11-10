@@ -1,10 +1,12 @@
 # METADATA
-# description: implementation of the LSP references feature
+# description: |
+#   finds the references to the symbol at the cursor, for the features that need them,
+#   like references, rename and document highlight
 # schemas:
 #   - input:                schema.regal.lsp.common
 #   - input.params:         schema.regal.lsp.textdocumentposition
 #   - input.params.context: {type: "object", properties: {includeDeclaration: {type: "boolean"}}}
-package regal.lsp.references
+package regal.lsp.util.references
 
 import future.keywords.or
 
@@ -13,22 +15,23 @@ import data.regal.lsp.util.find
 import data.regal.lsp.util.range
 
 # METADATA
-# entrypoint: true
-result.response contains ref if some ref in _arg_refs
+# description: every reference to the symbol at input.params.position
+# scope: document
+refs contains ref if some ref in _arg_refs
 
-result.response contains ref if some ref in _some_var_refs
+refs contains ref if some ref in _some_var_refs
 
-result.response contains ref if some ref in _every_var_refs
+refs contains ref if some ref in _every_var_refs
 
-result.response contains ref if some ref in _comprehension_var_refs
+refs contains ref if some ref in _comprehension_var_refs
 
-result.response contains ref if some ref in _assign_var_refs
+refs contains ref if some ref in _assign_var_refs
 
-result.response contains ref if some ref in _import_refs
+refs contains ref if some ref in _import_refs
 
-result.response contains ref if some ref in _rule_refs
+refs contains ref if some ref in _rule_refs
 
-result.response contains ref if some ref in _package_refs
+refs contains ref if some ref in _package_refs
 
 _arg_refs contains ref if {
 	[arg, rule_index] := find.arg_at_position
@@ -38,7 +41,7 @@ _arg_refs contains ref if {
 	ast.ref_value_equal(_module.package.path, parsed.package.path)
 
 	some rule in parsed.rules
-	_has_arg_named(rule.head.args, arg.value)
+	arg.value in ast.function_arg_names(rule)
 	ast.ref_value_equal(sref, ast.static_prefix(rule.head.ref))
 
 	some node in ["head", "body", "else"]
@@ -131,11 +134,6 @@ default _include_declaration := false
 
 _include_declaration if input.params.context.includeDeclaration
 
-_include_declaration if input.method == "textDocument/rename"
-
-_has_arg_named(args, name) if {
-	some arg in args
-	arg.value == name
-}
+_include_declaration if input.method in {"textDocument/rename", "textDocument/documentHighlight"}
 
 _module := data.workspace.parsed[input.params.textDocument.uri]

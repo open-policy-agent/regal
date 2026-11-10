@@ -1,7 +1,7 @@
-package regal.lsp.references_test
+package regal.lsp.util.references_test
 
-import data.regal.lsp.references
 import data.regal.lsp.testing
+import data.regal.lsp.util.references
 
 test_function_call_bare_name_and_full_path if {
 	[tdp, modules] := testing.at_cursor_in({
@@ -15,7 +15,7 @@ check if is_root(input.user)`,
 call if data.p.is_root(input.user)`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
 		with data.workspace.parsed as modules
 
@@ -38,7 +38,7 @@ import data.p as pkg
 call := pkg.is_root|(input.user)`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
 		with data.workspace.parsed as modules
 

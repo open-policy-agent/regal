@@ -1,6 +1,6 @@
-package regal.lsp.references_test
+package regal.lsp.util.references_test
 
-import data.regal.lsp.references
+import data.regal.lsp.util.references
 
 test_references_arg_cross_file if {
 	policy_a := `package shared
@@ -15,7 +15,7 @@ greet(name) := msg if {
 	msg := sprintf("hi %s", [name])
 }`
 
-	refs := references.result.response with data.workspace.parsed as {
+	refs := references.refs with data.workspace.parsed as {
 		"file:///a.rego": regal.parse_module("a.rego", policy_a),
 		"file:///b.rego": regal.parse_module("b.rego", policy_b),
 	}
@@ -47,7 +47,7 @@ other_rule contains x if {
 	x := user.label
 }`
 
-	refs := references.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 6}
 		with input.regal.file.lines as split(policy, "\n")
@@ -65,7 +65,7 @@ test_references_no_match if {
 
 foo := 42`
 
-	refs := references.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 2, "character": 11}
 		with input.regal.file.lines as split(policy, "\n")
@@ -83,7 +83,7 @@ r if {
 	}
 }`
 
-	refs := references.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 7}
 		with input.regal.file.lines as split(policy, "\n")
@@ -105,7 +105,7 @@ r := result if {
 	]
 }`
 
-	refs := references.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 4, "character": 7}
 		with input.regal.file.lines as split(policy, "\n")
@@ -125,7 +125,7 @@ greet(name) := msg if {
 	msg := sprintf("hello, %s", [name])
 }`
 
-	refs := references.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 2, "character": 6}
 		with input.regal.file.lines as split(policy, "\n")
@@ -143,7 +143,7 @@ list_admins contains user.name if {
 	user.role == "admin"
 }`
 
-	refs := references.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 6}
 		with input.regal.file.lines as split(policy, "\n")
@@ -165,7 +165,7 @@ r if {
 	}
 }`
 
-	refs := references.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 7}
 		with input.regal.file.lines as split(policy, "\n")
@@ -185,7 +185,7 @@ r := result if {
 	]
 }`
 
-	refs := references.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 4, "character": 7}
 		with input.regal.file.lines as split(policy, "\n")
@@ -201,7 +201,7 @@ test_references_arg_from_use_in_rule_head if {
 
 fn(x) := x.y`
 
-	refs := references.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 2, "character": 9}
 		with input.regal.file.lines as split(policy, "\n")
@@ -226,7 +226,7 @@ other if {
 	foo == 3
 }`
 
-	refs := references.result.response
+	refs := references.refs
 		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 1}
@@ -248,7 +248,7 @@ allow if {
 	foo != bar
 }`
 
-	refs := references.result.response
+	refs := references.refs
 		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 5, "character": 1}
@@ -268,7 +268,7 @@ allow if {
 	foo == 1
 }`
 
-	refs := references.result.response
+	refs := references.refs
 		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 4, "character": 1}
@@ -291,7 +291,7 @@ allow if {
 	pkgb.b == 2
 }`
 
-	refs := references.result.response
+	refs := references.refs
 		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 5, "character": 1}

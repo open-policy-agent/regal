@@ -1,7 +1,7 @@
-package regal.lsp.references_test
+package regal.lsp.util.references_test
 
-import data.regal.lsp.references
 import data.regal.lsp.testing
+import data.regal.lsp.util.references
 
 test_package_imports_plain_and_alias if {
 	[tdp, modules] := testing.at_cursor_in({
@@ -20,7 +20,7 @@ import data.p as pkg
 aliased if pkg.allow`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as tdp
 		with data.workspace.parsed as modules
 
@@ -45,7 +45,7 @@ deny if input.b`,
 import data.p`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
 		with data.workspace.parsed as modules
 
@@ -77,7 +77,7 @@ other if foobar.allow`,
 allow if input.c`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as object.union(tdp, {"params": {"context": {"includeDeclaration": true}}})
 		with data.workspace.parsed as modules
 
@@ -105,7 +105,7 @@ assigned if {
 }`,
 	})
 
-	refs := references.result.response
+	refs := references.refs
 		with input as tdp
 		with data.workspace.parsed as modules
 
