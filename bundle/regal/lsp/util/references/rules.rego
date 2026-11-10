@@ -16,7 +16,7 @@ _rule_refs contains ref if {
 
 	name := regal.last(_rule_target)
 
-	some file, module in data.workspace.parsed
+	some file, module in _scope
 	_rule_path(module.package.path, name) == _rule_target
 
 	some rule in module.rules
@@ -36,7 +36,7 @@ _rule_refs contains ref if {
 _rule_refs contains ref if {
 	_rule_target
 
-	some file, module in data.workspace.parsed
+	some file, module in _scope
 	some rule in module.rules
 	some node in ["head", "body", "else"]
 
@@ -58,7 +58,7 @@ _rule_refs contains ref if {
 _rule_refs contains ref if {
 	_rule_target
 
-	some file, module in data.workspace.parsed
+	some file, module in _scope
 	some imp in module.imports
 
 	# skips the rules of modules that cannot use the target through this import

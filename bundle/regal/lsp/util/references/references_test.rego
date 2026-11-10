@@ -410,3 +410,27 @@ allow if {
 		},
 	}
 }
+
+test_references_arg_document_highlight_skips_other_files if {
+	[tdp, modules] := testing.at_cursor_in({
+		"file:///a.rego": "package p\n\ngreet(name|) := name",
+		"file:///b.rego": "package p\n\ngreet(name) := name",
+	})
+
+	refs := references.refs
+		with input as object.union(tdp, {"method": "textDocument/documentHighlight"})
+		with data.workspace.parsed as modules
+
+	refs == {
+		{
+			"uri": "file:///a.rego",
+			"range": {"start": {"line": 2, "character": 6}, "end": {"line": 2, "character": 10}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///a.rego",
+			"range": {"start": {"line": 2, "character": 15}, "end": {"line": 2, "character": 19}},
+			"kind": references.kind_read,
+		},
+	}
+}

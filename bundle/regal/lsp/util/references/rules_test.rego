@@ -321,3 +321,34 @@ missing if p.nope|`,
 
 	refs == set()
 }
+
+# only the references in the current file are highlighted, even though the rule is declared and used in other files
+test_rule_document_highlight_only_current_file if {
+	[tdp, modules] := testing.at_cursor_in({
+		"file:///a.rego": `package p
+
+other if allow|`,
+		"file:///b.rego": `package p
+
+allow if input.b
+
+third if allow`,
+		"file:///c.rego": `package q
+
+import data.p
+
+via_import if p.allow
+
+via_path if data.p.allow`,
+	})
+
+	refs := references.refs
+		with input as object.union(tdp, {"method": "textDocument/documentHighlight"})
+		with data.workspace.parsed as modules
+
+	refs == {{
+		"uri": "file:///a.rego",
+		"range": {"start": {"line": 2, "character": 9}, "end": {"line": 2, "character": 14}},
+		"kind": references.kind_read,
+	}}
+}

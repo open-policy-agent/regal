@@ -41,7 +41,7 @@ _package_refs contains ref if {
 	_package_target
 	_include_declaration
 
-	some file, module in data.workspace.parsed
+	some file, module in _scope
 	_term_values(module.package.path) == _package_target
 
 	ref := {
@@ -55,7 +55,7 @@ _package_refs contains ref if {
 _package_imports contains [file, module, imp] if {
 	_package_target
 
-	some file, module in data.workspace.parsed
+	some file, module in _scope
 	some imp in module.imports
 	_term_values(imp.path.value) == _package_target
 }

@@ -157,3 +157,29 @@ assigned if {
 		},
 	}
 }
+
+test_package_document_highlight_skips_other_files if {
+	[tdp, modules] := testing.at_cursor_in({
+		"file:///a.rego": `package p|
+
+allow if input.a`,
+		"file:///b.rego": `package p
+
+deny if input.b`,
+		"file:///c.rego": `package q
+
+import data.p
+
+via_import if p.allow`,
+	})
+
+	refs := references.refs
+		with input as object.union(tdp, {"method": "textDocument/documentHighlight"})
+		with data.workspace.parsed as modules
+
+	refs == {{
+		"uri": "file:///a.rego",
+		"range": {"start": {"line": 0, "character": 8}, "end": {"line": 0, "character": 9}},
+		"kind": references.kind_write,
+	}}
+}

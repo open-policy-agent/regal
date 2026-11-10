@@ -39,7 +39,7 @@ _arg_refs contains ref if {
 	[arg, rule_index] := find.arg_at_position
 	sref := ast.static_prefix(_module.rules[rule_index].head.ref)
 
-	some url, parsed in data.workspace.parsed
+	some url, parsed in _scope
 	ast.ref_value_equal(_module.package.path, parsed.package.path)
 
 	some rule in parsed.rules
@@ -156,3 +156,11 @@ _include_declaration if input.params.context.includeDeclaration
 _include_declaration if input.method in {"textDocument/rename", "textDocument/documentHighlight"}
 
 _module := data.workspace.parsed[input.params.textDocument.uri]
+
+# document highlight only needs the references in the current file, so there is no need to
+# scan the rest of the workspace for them
+_scope := {input.params.textDocument.uri: _module} if {
+	input.method == "textDocument/documentHighlight"
+
+	_module
+} else := data.workspace.parsed
