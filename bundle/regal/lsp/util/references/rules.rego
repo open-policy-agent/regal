@@ -11,7 +11,8 @@ import data.regal.util
 # description: |
 #   References to the rule or function at the cursor, by bare name, full path or through an import.
 #   When declarations are included, its heads in any file of the package are returned too.
-_rule_refs contains ref if {
+# scope: document
+rule_refs contains ref if {
 	_rule_target
 
 	name := regal.last(_rule_target)
@@ -33,29 +34,20 @@ _rule_refs contains ref if {
 }
 
 # the full path can be used from anywhere, the name is the term following the pkg
-_rule_refs contains ref if {
+rule_refs contains ref if {
 	_rule_target
 
-	some file, module in _scope
-	some rule in module.rules
-	some node in ["head", "body", "else"]
-
-	walk(rule[node], [_, value])
-
-	value.type == "ref"
-
-	static := _term_values(ast.static_prefix(value.value))
-	array.slice(static, 0, count(_rule_target)) == _rule_target
+	some [file, term, _] in _full_path_uses(_rule_target)
 
 	ref := {
 		"uri": file,
-		"range": range.parse(value.value[count(_rule_target) - 1].location),
+		"range": range.parse(term.location),
 		"kind": kind_read,
 	}
 }
 
 # a rule can be used through the import of its package, the name is the term following the import
-_rule_refs contains ref if {
+rule_refs contains ref if {
 	_rule_target
 
 	some file, module in _scope
@@ -140,6 +132,19 @@ _is_known_path(path) if {
 
 	some rule in module.rules
 	rule.head.ref[0].value == name
+}
+
+_full_path_uses(path) := {[file, value.value[count(path) - 1], static] |
+	some file, module in _scope
+	some rule in module.rules
+	some node in ["head", "body", "else"]
+
+	walk(rule[node], [_, value])
+
+	value.type == "ref"
+
+	static := _term_values(ast.static_prefix(value.value))
+	array.slice(static, 0, count(path)) == path
 }
 
 # the full path of a rule, as the values of its package path followed by its name

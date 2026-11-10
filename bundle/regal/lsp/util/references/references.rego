@@ -19,21 +19,18 @@ import data.regal.lsp.util.range
 #   every reference to the symbol at input.params.position, with its LSP document highlight kind:
 #   Write (3) where the symbol is declared, otherwise Read (2)
 # scope: document
-refs contains ref if some ref in _arg_refs
-
-refs contains ref if some ref in _some_var_refs
-
-refs contains ref if some ref in _every_var_refs
-
-refs contains ref if some ref in _comprehension_var_refs
-
-refs contains ref if some ref in _assign_var_refs
+refs contains ref if some ref in variable_refs
 
 refs contains ref if some ref in _import_refs
 
-refs contains ref if some ref in _rule_refs
+refs contains ref if some ref in rule_refs
 
-refs contains ref if some ref in _package_refs
+refs contains ref if some ref in package_refs
+
+# METADATA
+# description: the references to the variable or argument at the cursor
+# scope: document
+variable_refs := (((_arg_refs | _some_var_refs) | _every_var_refs) | _comprehension_var_refs) | _assign_var_refs
 
 _arg_refs contains ref if {
 	[arg, rule_index] := find.arg_at_position
@@ -153,7 +150,11 @@ default _include_declaration := false
 
 _include_declaration if input.params.context.includeDeclaration
 
-_include_declaration if input.method in {"textDocument/rename", "textDocument/documentHighlight"}
+_include_declaration if _renaming
+
+_include_declaration if input.method == "textDocument/documentHighlight"
+
+_renaming if input.method in {"textDocument/rename", "textDocument/prepareRename"}
 
 _module := data.workspace.parsed[input.params.textDocument.uri]
 

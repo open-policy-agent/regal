@@ -12,7 +12,11 @@ import data.regal.lsp.util.references
 # entrypoint: true
 default result.response := null
 
-result.response := {"changes": _changes} if _changes != {}
+result.response := {"changes": _changes} if {
+	regex.match(`^[a-zA-Z0-9]+$`, input.params.newName)
+
+	_changes != {}
+}
 
 _changes[ref.uri] contains change if {
 	some ref in references.refs

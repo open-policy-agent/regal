@@ -3,7 +3,7 @@ package regal.lsp.util.references_test
 import data.regal.lsp.testing
 import data.regal.lsp.util.references
 
-test_package_imports_plain_and_alias if {
+test_package_imports_aliases_and_full_path_uses if {
 	[tdp, modules] := testing.at_cursor_in({
 		"file:///a.rego": `package p|
 
@@ -18,6 +18,11 @@ plain if p.allow`,
 import data.p as pkg
 
 aliased if pkg.allow`,
+		"file:///d.rego": `package s
+
+full_path if data.p.allow
+
+sub_package if data.p.sub.allow`,
 	})
 
 	refs := references.refs
@@ -27,7 +32,7 @@ aliased if pkg.allow`,
 	refs == {
 		{
 			"uri": "file:///b.rego",
-			"range": {"start": {"line": 2, "character": 7}, "end": {"line": 2, "character": 13}},
+			"range": {"start": {"line": 2, "character": 12}, "end": {"line": 2, "character": 13}},
 			"kind": references.kind_read,
 		},
 		{
@@ -37,12 +42,17 @@ aliased if pkg.allow`,
 		},
 		{
 			"uri": "file:///c.rego",
-			"range": {"start": {"line": 2, "character": 7}, "end": {"line": 2, "character": 13}},
+			"range": {"start": {"line": 2, "character": 12}, "end": {"line": 2, "character": 13}},
 			"kind": references.kind_read,
 		},
 		{
 			"uri": "file:///c.rego",
 			"range": {"start": {"line": 4, "character": 11}, "end": {"line": 4, "character": 14}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///d.rego",
+			"range": {"start": {"line": 2, "character": 18}, "end": {"line": 2, "character": 19}},
 			"kind": references.kind_read,
 		},
 	}
@@ -78,7 +88,7 @@ import data.p`,
 		},
 		{
 			"uri": "file:///c.rego",
-			"range": {"start": {"line": 2, "character": 7}, "end": {"line": 2, "character": 13}},
+			"range": {"start": {"line": 2, "character": 12}, "end": {"line": 2, "character": 13}},
 			"kind": references.kind_read,
 		},
 	}
@@ -112,12 +122,12 @@ allow if input.c`,
 	refs == {
 		{
 			"uri": "file:///a.rego",
-			"range": {"start": {"line": 0, "character": 8}, "end": {"line": 0, "character": 13}},
+			"range": {"start": {"line": 0, "character": 10}, "end": {"line": 0, "character": 13}},
 			"kind": references.kind_write,
 		},
 		{
 			"uri": "file:///b.rego",
-			"range": {"start": {"line": 3, "character": 7}, "end": {"line": 3, "character": 17}},
+			"range": {"start": {"line": 3, "character": 14}, "end": {"line": 3, "character": 17}},
 			"kind": references.kind_read,
 		},
 		{
@@ -152,7 +162,7 @@ assigned if {
 	refs == {
 		{
 			"uri": "file:///b.rego",
-			"range": {"start": {"line": 2, "character": 7}, "end": {"line": 2, "character": 13}},
+			"range": {"start": {"line": 2, "character": 12}, "end": {"line": 2, "character": 13}},
 			"kind": references.kind_read,
 		},
 	}

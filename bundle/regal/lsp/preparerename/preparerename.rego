@@ -5,28 +5,17 @@
 #   - input.params:         schema.regal.lsp.textdocumentposition
 package regal.lsp.preparerename
 
-import data.regal.lsp.util.find
 import data.regal.lsp.util.range
+import data.regal.lsp.util.references
 
 # METADATA
 # entrypoint: true
 default result["response"] := null
 
-result["response"] := _response_for(var) if {
-	find.arg_at_position
+result["response"] := ref.range if {
+	some ref in ((references.variable_refs | references.rule_refs) | references.package_refs)
 
-	[var, _] := find.var_at_position
-}
+	ref.uri == input.params.textDocument.uri
 
-result["response"] := _response_for(var) if [var, _] := find.assign_var_at_position
-
-result["response"] := _response_for(var) if [var, _] := find.some_var_at_position
-
-result["response"] := _response_for(var) if [var, _] := find.every_var_at_position
-
-result["response"] := _response_for(var) if [var, _] := find.comprehension_var_at_position
-
-_response_for(term) := {
-	"placeholder": term.value,
-	"range": range.parse(term.location),
+	range.contains_position(ref.range, input.params.position)
 }

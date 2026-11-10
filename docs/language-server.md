@@ -58,7 +58,7 @@ or "Go to References" in your editor. Regal finds references for:
 - Variables declared with `:=`, `some`, `every` and in comprehensions
 - Imports, within the file
 - Rules and functions, by bare name, by full path like `data.pkg.rule`, or through an import like `pkg.rule`
-- Packages, where they are imported in any file
+- Packages, where they are imported in any file or used by full path like `data.pkg.rule`
 
 Regal finds references to rules, functions and packages in all files of the workspace. It finds references to
 variables and imports within the file only. It also matches arguments in the other heads of the same function, in any
@@ -72,6 +72,25 @@ The declaration of a package is the `package` line of each file in the package.
   src={require('./assets/lsp/references.gif').default}
   alt="Animation showing finding references for a rule"/>
 
+### Rename
+
+Rename changes the name of a symbol everywhere that it is used. Put the cursor on a symbol. Then run "Rename Symbol"
+in your editor. Regal can rename:
+
+- Function arguments
+- Variables declared with `:=`, `some`, `every` and in comprehensions
+- Rules and functions
+- Packages, from the `package` line or from an import of the package
+
+Regal renames variables within the file. It renames function arguments in all heads of the function, in any file of the
+package. It renames rules and functions in all files of the workspace. This includes uses by bare name, by full path
+like `data.pkg.rule`, and through an import like `pkg.rule`.
+
+Renaming a package changes the last name of its path. Regal changes the `package` line of each file, the import paths,
+and the uses of the import name. If an import has an alias, Regal changes the import path and leaves the alias and its uses
+as they are.
+
+The new name must contain only letters and numbers. If it contains other characters, Regal makes no change.
 
 ### Folding ranges
 
