@@ -184,12 +184,25 @@ s if a`
 	}}
 }
 
-test_rename_rejects_new_name_with_other_characters[new_name] if {
+test_rename_new_name[new_name] if {
 	policy := `package rules
 
 allow if input.admin`
 
-	some new_name in ["", "a b", "a.b", "a_b", "a-b", "a\n"]
+	some new_name, valid in {
+		"x1": true,
+		"allow_all": true,
+		"_private": true,
+		"Allow": true,
+		"": false,
+		"a b": false,
+		"a.b": false,
+		"1a": false,
+		"_": false,
+		"if": false,
+		"package": false,
+		"input": false,
+	}
 
 	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
 		with input.params.textDocument.uri as "file:///p.rego"
@@ -198,8 +211,15 @@ allow if input.admin`
 		with input.regal.file.lines as split(policy, "\n")
 		with input.method as "textDocument/rename"
 
-	resp == null
+	resp == _renamed(new_name, valid)
 }
+
+_renamed(new_name, true) := {"changes": {"file:///p.rego": {{
+	"newText": new_name,
+	"range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 5}},
+}}}}
+
+_renamed(_, false) := null
 
 test_rename_package[from] if {
 	policy_a := `package foo.bar

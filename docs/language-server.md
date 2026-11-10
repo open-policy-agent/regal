@@ -90,7 +90,8 @@ Renaming a package changes the last name of its path. Regal changes the `package
 and the uses of the import name. If an import has an alias, Regal changes the import path and leaves the alias and its uses
 as they are.
 
-The new name must contain only letters and numbers. If it contains other characters, Regal makes no change.
+The new name must be a valid Rego name. It starts with a letter or an underscore, and contains only letters, numbers
+and underscores. It must not be a Rego keyword like `if` or `package`. If the name is not valid, Regal makes no change.
 
 ### Folding ranges
 

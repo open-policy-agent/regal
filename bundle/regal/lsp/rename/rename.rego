@@ -13,7 +13,8 @@ import data.regal.lsp.util.references
 default result.response := null
 
 result.response := {"changes": _changes} if {
-	regex.match(`^[a-zA-Z0-9]+$`, input.params.newName)
+	regex.match(`^[a-zA-Z_][a-zA-Z0-9_]*$`, input.params.newName)
+	not input.params.newName in _reserved
 
 	_changes != {}
 }
@@ -25,4 +26,9 @@ _changes[ref.uri] contains change if {
 		"range": ref.range,
 		"newText": input.params.newName,
 	}
+}
+
+_reserved := {
+	"_", "as", "contains", "data", "default", "else", "every", "false", "if", "import", "in", "input", "not", "null",
+	"package", "some", "true", "with",
 }
