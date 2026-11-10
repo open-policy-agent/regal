@@ -47,6 +47,15 @@ parse(location_string) := {
 }
 
 # METADATA
+# description: |
+#   range from the start of the first to the end of the last of the AST terms. A leading data
+#   term, like the first term of a package path, has no location and is skipped.
+spanning(terms) := {
+	"start": parse(terms[to_number(terms[0].value == "data")].location).start,
+	"end": parse(regal.last(terms).location).end,
+}
+
+# METADATA
 # description: checks if a given position 'pos' is found within 'range'
 # scope: document
 contains_position(range, pos) if {

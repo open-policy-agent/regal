@@ -8,7 +8,7 @@ import data.regal.lsp.util.range
 
 # METADATA
 # description: |
-#   References to the rule or function at the cursor, by bare name or full path.
+#   References to the rule or function at the cursor, by bare name, full path or through an import.
 #   When declarations are included, its heads in any file of the package are returned too.
 _rule_refs contains ref if {
 	_rule_target
@@ -21,11 +21,7 @@ _rule_refs contains ref if {
 	some rule in module.rules
 	not _shadows_package_rule(rule, name)
 
-	some node in ["head", "body", "else"]
-	walk(rule[node], [_, var])
-
-	var.value == name
-	var.type == "var"
+	some var in _named_vars(rule, name)
 	_include_declaration or var != rule.head.ref[0]
 
 	ref := {
@@ -46,7 +42,7 @@ _rule_refs contains ref if {
 
 	value.type == "ref"
 
-	static := [term.value | some term in ast.static_prefix(value.value)]
+	static := _term_values(ast.static_prefix(value.value))
 	array.slice(static, 0, count(_rule_target)) == _rule_target
 
 	ref := {
@@ -55,17 +51,17 @@ _rule_refs contains ref if {
 	}
 }
 
-# a package can be used through its import, the name is the term following the import
+# a rule can be used through the import of its package, the name is the term following the import
 _rule_refs contains ref if {
 	_rule_target
 
 	some file, module in data.workspace.parsed
 	some imp in module.imports
 
-	imp_path := _import_path(imp.path.value)
+	# skips the rules of modules that cannot use the target through this import
+	imp_path := _term_values(imp.path.value)
 	count(imp_path) < count(_rule_target)
 	array.slice(_rule_target, 0, count(imp_path)) == imp_path
-	tail := array.slice(_rule_target, count(imp_path), count(_rule_target))
 
 	id := ast.imported_identifier(imp)
 
@@ -76,13 +72,12 @@ _rule_refs contains ref if {
 	walk(rule[node], [_, value])
 
 	value.type == "ref"
-	value.value[0].type == "var"
 	value.value[0].value == id
-	[term.value | some term in array.slice(value.value, 1, count(tail) + 1); term.type == "string"] == tail
+	array.slice(_through_import(imp_path, value.value), 0, count(_rule_target)) == _rule_target
 
 	ref := {
 		"uri": file,
-		"range": range.parse(value.value[count(tail)].location),
+		"range": range.parse(value.value[count(_rule_target) - count(imp_path)].location),
 	}
 }
 
@@ -98,25 +93,27 @@ _rule_target := path if {
 
 # on a full path
 _rule_target := prefix if {
-	not find.var_at_position
+	some [_, terms, i] in _refs_at_cursor
 
-	[rule, _] := find.rule_at_position
-
-	walk(rule, [_, ref])
-
-	ref.type == "ref"
-	ref.value[0].value == "data"
-
-	some i, term in ref.value
-	i > 0
-	range.contains_position(range.parse(term.location), input.params.position)
-
-	prefix := [t.value | some t in array.slice(ref.value, 0, i + 1)]
+	prefix := _term_values(array.slice(terms, 0, i + 1))
 	_is_known_path(prefix)
 }
 
 # on a use through an import
 _rule_target := path if {
+	some [rule, terms, i] in _refs_at_cursor
+
+	some imp in _module.imports
+	ast.imported_identifier(imp) == terms[0].value
+	not _shadows_package_rule(rule, terms[0].value)
+
+	imp_path := _term_values(imp.path.value)
+	path := array.slice(_through_import(imp_path, terms), 0, count(imp_path) + i)
+	_is_known_path(path)
+}
+
+# refs with a name under the cursor, as [rule, ref terms, index of the name]
+_refs_at_cursor contains [rule, ref.value, i] if {
 	not find.var_at_position
 
 	[rule, _] := find.rule_at_position
@@ -124,22 +121,10 @@ _rule_target := path if {
 	walk(rule, [_, ref])
 
 	ref.type == "ref"
-	ref.value[0].type == "var"
 
 	some i, term in ref.value
 	i > 0
 	range.contains_position(range.parse(term.location), input.params.position)
-
-	some imp in _module.imports
-	ast.imported_identifier(imp) == ref.value[0].value
-	not _shadows_package_rule(rule, ref.value[0].value)
-
-	terms := array.slice(ref.value, 1, i + 1)
-	tail := [t.value | some t in terms; t.type == "string"]
-	count(tail) == count(terms)
-
-	path := array.concat(_import_path(imp.path.value), tail)
-	_is_known_path(path)
 }
 
 # true if a rule with this full path is defined in the workspace
@@ -153,22 +138,25 @@ _is_known_path(path) if {
 	rule.head.ref[0].value == name
 }
 
-_rule_path(package_path, name) := array.flatten([
-	[term.value | some term in package_path],
-	name,
+# the full path of a rule, as the values of its package path followed by its name
+_rule_path(package_path, name) := array.flatten([_term_values(package_path), name])
+
+_term_values(terms) := [term.value | some term in terms]
+
+# the full path of a ref starting with an import name, as far as the ref is static
+_through_import(imp_path, ref_terms) := array.concat(imp_path, [term.value |
+	some term in array.slice(ast.static_prefix(ref_terms), 1, count(ref_terms))
 ])
 
-_import_path(terms) := [term.value | some term in terms]
-
-# true if an argument or a := variable in the rule has the name of a rule in the package
-_shadows_package_rule(rule, package_rule) if {
+# true if an argument or a := variable in the rule has this name, which hides a rule or import of that name
+_shadows_package_rule(rule, name) if {
 	some arg in rule.head.args
-	ast.has_named_var(arg, package_rule)
+	ast.has_named_var(arg, name)
 }
 
-_shadows_package_rule(rule, package_rule) if {
+_shadows_package_rule(rule, name) if {
 	some expr in rule.body
 
-	expr.terms[0].value[0].value == "assign"
-	ast.has_named_var(expr.terms[1], package_rule)
+	[lhs, _] := ast.assignment_terms(expr.terms)
+	ast.has_named_var(lhs, name)
 }
