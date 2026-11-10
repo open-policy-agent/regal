@@ -19,6 +19,7 @@ _import_refs contains ref if {
 	ref := {
 		"uri": input.params.textDocument.uri,
 		"range": range.parse(var.location),
+		"kind": kind_read,
 	}
 }
 
@@ -28,6 +29,7 @@ _import_refs contains ref if {
 	ref := {
 		"uri": input.params.textDocument.uri,
 		"range": range.parse(_import.path.location),
+		"kind": kind_write,
 	}
 }
 

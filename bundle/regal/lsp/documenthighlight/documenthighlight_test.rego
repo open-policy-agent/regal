@@ -99,7 +99,7 @@ fun(user, action, resource) := user if {
 	some [name, inp, exp] in [
 		["user", {"line": 2, "character": 6}, {
 			{
-				"kind": 2,
+				"kind": 3,
 				"range": {"end": {"character": 8, "line": 2}, "start": {"character": 4, "line": 2}},
 			},
 			{
@@ -113,7 +113,7 @@ fun(user, action, resource) := user if {
 		}],
 		["action", {"line": 2, "character": 12}, {
 			{
-				"kind": 2,
+				"kind": 3,
 				"range": {"end": {"character": 16, "line": 2}, "start": {"character": 10, "line": 2}},
 			},
 			{
@@ -123,7 +123,7 @@ fun(user, action, resource) := user if {
 		}],
 		["resource", {"line": 2, "character": 19}, {
 			{
-				"kind": 2,
+				"kind": 3,
 				"range": {"end": {"character": 26, "line": 2}, "start": {"character": 18, "line": 2}},
 			},
 			{

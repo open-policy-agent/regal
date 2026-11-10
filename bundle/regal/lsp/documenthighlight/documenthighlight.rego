@@ -28,7 +28,7 @@ items contains item if {
 
 	item := {
 		"range": ref.range,
-		"kind": 2, # Read
+		"kind": ref.kind,
 	}
 }
 

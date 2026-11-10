@@ -1,5 +1,6 @@
 package regal.lsp.util.references_test
 
+import data.regal.lsp.testing
 import data.regal.lsp.util.references
 
 test_references_arg_cross_file if {
@@ -25,11 +26,31 @@ greet(name) := msg if {
 		with input.params.context as {"includeDeclaration": true}
 
 	refs == {
-		{"uri": "file:///a.rego", "range": {"start": {"line": 2, "character": 6}, "end": {"line": 2, "character": 10}}},
-		{"uri": "file:///a.rego", "range": {"start": {"line": 3, "character": 30}, "end": {"line": 3, "character": 34}}},
-		{"uri": "file:///b.rego", "range": {"start": {"line": 2, "character": 6}, "end": {"line": 2, "character": 10}}},
-		{"uri": "file:///b.rego", "range": {"start": {"line": 3, "character": 7}, "end": {"line": 3, "character": 11}}},
-		{"uri": "file:///b.rego", "range": {"start": {"line": 4, "character": 26}, "end": {"line": 4, "character": 30}}},
+		{
+			"uri": "file:///a.rego",
+			"range": {"start": {"line": 2, "character": 6}, "end": {"line": 2, "character": 10}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///a.rego",
+			"range": {"start": {"line": 3, "character": 30}, "end": {"line": 3, "character": 34}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///b.rego",
+			"range": {"start": {"line": 2, "character": 6}, "end": {"line": 2, "character": 10}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///b.rego",
+			"range": {"start": {"line": 3, "character": 7}, "end": {"line": 3, "character": 11}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///b.rego",
+			"range": {"start": {"line": 4, "character": 26}, "end": {"line": 4, "character": 30}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -54,9 +75,21 @@ other_rule contains x if {
 		with input.params.context as {"includeDeclaration": true}
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 3, "character": 6}, "end": {"line": 3, "character": 10}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 1}, "end": {"line": 4, "character": 5}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 5, "character": 10}, "end": {"line": 5, "character": 14}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 3, "character": 6}, "end": {"line": 3, "character": 10}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 4, "character": 1}, "end": {"line": 4, "character": 5}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 5, "character": 10}, "end": {"line": 5, "character": 14}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -90,8 +123,16 @@ r if {
 		with input.params.context as {"includeDeclaration": true}
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 3, "character": 7}, "end": {"line": 3, "character": 8}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 2}, "end": {"line": 4, "character": 3}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 3, "character": 7}, "end": {"line": 3, "character": 8}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 4, "character": 2}, "end": {"line": 4, "character": 3}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -112,9 +153,21 @@ r := result if {
 		with input.params.context as {"includeDeclaration": true}
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 3, "character": 12}, "end": {"line": 3, "character": 13}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 7}, "end": {"line": 4, "character": 8}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 5, "character": 2}, "end": {"line": 5, "character": 3}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 3, "character": 12}, "end": {"line": 3, "character": 13}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 4, "character": 7}, "end": {"line": 4, "character": 8}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 5, "character": 2}, "end": {"line": 5, "character": 3}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -131,7 +184,11 @@ greet(name) := msg if {
 		with input.regal.file.lines as split(policy, "\n")
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 3, "character": 30}, "end": {"line": 3, "character": 34}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 3, "character": 30}, "end": {"line": 3, "character": 34}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -150,8 +207,16 @@ list_admins contains user.name if {
 		with input.params.context as {"includeDeclaration": false}
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 2, "character": 21}, "end": {"line": 2, "character": 25}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 1}, "end": {"line": 4, "character": 5}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 2, "character": 21}, "end": {"line": 2, "character": 25}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 4, "character": 1}, "end": {"line": 4, "character": 5}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -171,7 +236,11 @@ r if {
 		with input.regal.file.lines as split(policy, "\n")
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 2}, "end": {"line": 4, "character": 3}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 4, "character": 2}, "end": {"line": 4, "character": 3}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -191,8 +260,16 @@ r := result if {
 		with input.regal.file.lines as split(policy, "\n")
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 3, "character": 12}, "end": {"line": 3, "character": 13}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 5, "character": 2}, "end": {"line": 5, "character": 3}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 3, "character": 12}, "end": {"line": 3, "character": 13}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 5, "character": 2}, "end": {"line": 5, "character": 3}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -207,7 +284,11 @@ fn(x) := x.y`
 		with input.regal.file.lines as split(policy, "\n")
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 2, "character": 9}, "end": {"line": 2, "character": 10}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 2, "character": 9}, "end": {"line": 2, "character": 10}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -233,8 +314,16 @@ other if {
 		with input.regal.file.lines as split(policy, "\n")
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 5, "character": 8}, "end": {"line": 5, "character": 11}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 6, "character": 1}, "end": {"line": 6, "character": 4}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 5, "character": 8}, "end": {"line": 5, "character": 11}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 6, "character": 1}, "end": {"line": 6, "character": 4}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -255,8 +344,16 @@ allow if {
 		with input.regal.file.lines as split(policy, "\n")
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 5, "character": 1}, "end": {"line": 5, "character": 4}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 6, "character": 8}, "end": {"line": 6, "character": 11}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 5, "character": 1}, "end": {"line": 5, "character": 4}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 6, "character": 8}, "end": {"line": 6, "character": 11}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -276,8 +373,16 @@ allow if {
 		with input.params.context as {"includeDeclaration": true}
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 3, "character": 1}, "end": {"line": 3, "character": 4}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 1}, "end": {"line": 4, "character": 4}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 3, "character": 1}, "end": {"line": 3, "character": 4}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 4, "character": 1}, "end": {"line": 4, "character": 4}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -298,6 +403,10 @@ allow if {
 		with input.regal.file.lines as split(policy, "\n")
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 6, "character": 1}, "end": {"line": 6, "character": 5}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 6, "character": 1}, "end": {"line": 6, "character": 5}},
+			"kind": references.kind_read,
+		},
 	}
 }

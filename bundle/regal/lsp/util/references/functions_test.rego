@@ -20,9 +20,21 @@ call if data.p.is_root(input.user)`,
 		with data.workspace.parsed as modules
 
 	refs == {
-		{"uri": "file:///a.rego", "range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 7}}},
-		{"uri": "file:///a.rego", "range": {"start": {"line": 4, "character": 9}, "end": {"line": 4, "character": 16}}},
-		{"uri": "file:///b.rego", "range": {"start": {"line": 2, "character": 15}, "end": {"line": 2, "character": 22}}},
+		{
+			"uri": "file:///a.rego",
+			"range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 7}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///a.rego",
+			"range": {"start": {"line": 4, "character": 9}, "end": {"line": 4, "character": 16}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///b.rego",
+			"range": {"start": {"line": 2, "character": 15}, "end": {"line": 2, "character": 22}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -43,7 +55,15 @@ call := pkg.is_root|(input.user)`,
 		with data.workspace.parsed as modules
 
 	refs == {
-		{"uri": "file:///a.rego", "range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 7}}},
-		{"uri": "file:///b.rego", "range": {"start": {"line": 4, "character": 12}, "end": {"line": 4, "character": 19}}},
+		{
+			"uri": "file:///a.rego",
+			"range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 7}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///b.rego",
+			"range": {"start": {"line": 4, "character": 12}, "end": {"line": 4, "character": 19}},
+			"kind": references.kind_read,
+		},
 	}
 }

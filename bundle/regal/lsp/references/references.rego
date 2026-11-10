@@ -10,4 +10,4 @@ import data.regal.lsp.util.references
 
 # METADATA
 # entrypoint: true
-result["response"] := references.refs
+result.response contains object.remove(ref, ["kind"]) if some ref in references.refs

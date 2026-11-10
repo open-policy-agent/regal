@@ -14,6 +14,7 @@ _package_refs contains ref if {
 	ref := {
 		"uri": file,
 		"range": range.parse(imp.path.location),
+		"kind": kind_read,
 	}
 }
 
@@ -31,6 +32,7 @@ _package_refs contains ref if {
 	ref := {
 		"uri": file,
 		"range": range.parse(var.location),
+		"kind": kind_read,
 	}
 }
 
@@ -45,6 +47,7 @@ _package_refs contains ref if {
 	ref := {
 		"uri": file,
 		"range": range.spanning(module.package.path),
+		"kind": kind_write,
 	}
 }
 

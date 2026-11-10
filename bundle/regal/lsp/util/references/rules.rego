@@ -28,6 +28,7 @@ _rule_refs contains ref if {
 	ref := {
 		"uri": file,
 		"range": range.parse(var.location),
+		"kind": _kind_write_if(var == rule.head.ref[0]),
 	}
 }
 
@@ -49,6 +50,7 @@ _rule_refs contains ref if {
 	ref := {
 		"uri": file,
 		"range": range.parse(value.value[count(_rule_target) - 1].location),
+		"kind": kind_read,
 	}
 }
 
@@ -79,6 +81,7 @@ _rule_refs contains ref if {
 	ref := {
 		"uri": file,
 		"range": range.parse(value.value[count(_rule_target) - count(imp_path)].location),
+		"kind": kind_read,
 	}
 }
 

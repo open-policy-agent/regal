@@ -15,7 +15,9 @@ import data.regal.lsp.util.find
 import data.regal.lsp.util.range
 
 # METADATA
-# description: every reference to the symbol at input.params.position
+# description: |
+#   every reference to the symbol at input.params.position, with its LSP document highlight kind:
+#   Write (3) where the symbol is declared, otherwise Read (2)
 # scope: document
 refs contains ref if some ref in _arg_refs
 
@@ -54,6 +56,7 @@ _arg_refs contains ref if {
 	ref := {
 		"uri": url,
 		"range": range.parse(value.location),
+		"kind": _kind_write_if(value in rule.head.args),
 	}
 }
 
@@ -70,6 +73,7 @@ _some_var_refs contains ref if {
 	ref := {
 		"uri": input.params.textDocument.uri,
 		"range": range.parse(value.location),
+		"kind": _kind_write_if(value == var),
 	}
 }
 
@@ -86,6 +90,7 @@ _assign_var_refs contains ref if {
 	ref := {
 		"uri": input.params.textDocument.uri,
 		"range": range.parse(value.location),
+		"kind": _kind_write_if(value in ast.found.vars[rule_index].assign),
 	}
 }
 
@@ -106,6 +111,7 @@ _every_var_refs contains ref if {
 	ref := {
 		"uri": input.params.textDocument.uri,
 		"range": range.parse(value.location),
+		"kind": _kind_write_if(value == var),
 	}
 }
 
@@ -127,8 +133,21 @@ _comprehension_var_refs contains ref if {
 	ref := {
 		"uri": input.params.textDocument.uri,
 		"range": range.parse(value.location),
+		"kind": _kind_write_if(value == var),
 	}
 }
+
+# METADATA
+# description: LSP DocumentHighlightKind of a reference that reads the symbol
+kind_read := 2
+
+# METADATA
+# description: LSP DocumentHighlightKind of a reference that declares, i.e. writes, the symbol
+kind_write := 3
+
+_kind_write_if(true) := kind_write
+
+_kind_write_if(false) := kind_read
 
 default _include_declaration := false
 

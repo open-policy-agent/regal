@@ -28,8 +28,16 @@ fn(pkgb) := pkgb.b`
 		with input.regal.file.lines as split(policy, "\n")
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 5, "character": 7}, "end": {"line": 5, "character": 11}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 9, "character": 14}, "end": {"line": 9, "character": 18}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 5, "character": 7}, "end": {"line": 5, "character": 11}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 9, "character": 14}, "end": {"line": 9, "character": 18}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -47,8 +55,16 @@ wow := pkgb.b`
 		with input.params.context as {"includeDeclaration": true}
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 2, "character": 7}, "end": {"line": 2, "character": 16}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 7}, "end": {"line": 4, "character": 11}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 2, "character": 7}, "end": {"line": 2, "character": 16}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 4, "character": 7}, "end": {"line": 4, "character": 11}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -67,7 +83,11 @@ wow := pkgb.b`
 		with input.regal.file.lines as split(policy, "\n")
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 9}, "end": {"line": 4, "character": 10}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 4, "character": 9}, "end": {"line": 4, "character": 10}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -86,8 +106,16 @@ wow := pkgb.b`
 		with input.regal.file.lines as split(policy, "\n")
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 14}, "end": {"line": 4, "character": 18}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 6, "character": 7}, "end": {"line": 6, "character": 11}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 4, "character": 14}, "end": {"line": 4, "character": 18}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 6, "character": 7}, "end": {"line": 6, "character": 11}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -106,8 +134,16 @@ allow if wow.b == 2`
 		with input.regal.file.lines as split(policy, "\n")
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 9}, "end": {"line": 4, "character": 12}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 6, "character": 9}, "end": {"line": 6, "character": 12}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 4, "character": 9}, "end": {"line": 4, "character": 12}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 6, "character": 9}, "end": {"line": 6, "character": 12}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -128,8 +164,16 @@ local if {
 		with data.workspace.parsed["file:///p.rego"] as module
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 2, "character": 7}, "end": {"line": 2, "character": 16}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 4, "character": 7}, "end": {"line": 4, "character": 11}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 2, "character": 7}, "end": {"line": 2, "character": 16}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 4, "character": 7}, "end": {"line": 4, "character": 11}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
@@ -148,8 +192,16 @@ local if {
 		with data.workspace.parsed["file:///p.rego"] as module
 
 	refs == {
-		{"uri": "file:///p.rego", "range": {"start": {"line": 5, "character": 1}, "end": {"line": 5, "character": 5}}},
-		{"uri": "file:///p.rego", "range": {"start": {"line": 6, "character": 1}, "end": {"line": 6, "character": 5}}},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 5, "character": 1}, "end": {"line": 5, "character": 5}},
+			"kind": references.kind_write,
+		},
+		{
+			"uri": "file:///p.rego",
+			"range": {"start": {"line": 6, "character": 1}, "end": {"line": 6, "character": 5}},
+			"kind": references.kind_read,
+		},
 	}
 }
 
