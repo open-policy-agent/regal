@@ -160,7 +160,30 @@ shadowed if {
 	allow == 1
 }
 
-fn(allow) := allow`,
+fn(allow) := allow
+
+some_decl if {
+	some allow
+	allow = 1
+}
+
+some_in if {
+	some allow in input.xs
+	allow == 1
+}
+
+every_decl if {
+	every allow in input.xs {
+		allow > 0
+	}
+}
+
+with_else := 1 if {
+	false
+} else := 2 if {
+	allow := 3
+	allow > 0
+}`,
 	})
 
 	refs := references.refs

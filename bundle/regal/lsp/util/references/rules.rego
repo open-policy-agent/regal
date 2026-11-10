@@ -21,9 +21,9 @@ rule_refs contains ref if {
 	_rule_path(module.package.path, name) == _rule_target
 
 	some rule in module.rules
-	not _declares_local(rule, name)
 
 	some var in _named_vars(rule, name)
+	not _is_local(rule, var)
 	_include_declaration or var != rule.head.ref[0]
 
 	var == rule.head.ref[0] or not _imports_name(object.get(module, "imports", []), name)
@@ -63,13 +63,13 @@ rule_refs contains ref if {
 	id := ast.imported_identifier(imp)
 
 	some rule in module.rules
-	not _declares_local(rule, id)
 
 	some node in ["head", "body", "else"]
 	walk(rule[node], [_, value])
 
 	value.type == "ref"
 	value.value[0].value == id
+	not _is_local(rule, value.value[0])
 	array.slice(_through_import(imp_path, value.value), 0, count(_rule_target)) == _rule_target
 
 	ref := {
@@ -105,10 +105,9 @@ rule_refs contains ref if {
 	id := ast.imported_identifier(imp)
 
 	some rule in module.rules
-	not _declares_local(rule, id)
 
-	some var in _named_vars(rule, id)
-	var != rule.head.ref[0]
+	some var in _uses_of(rule, id)
+	not _is_local(rule, var)
 
 	ref := {
 		"uri": file,
@@ -121,7 +120,7 @@ rule_refs contains ref if {
 _rule_target := path if {
 	[var, rule_index] := find.var_at_position
 
-	not _declares_local(_module.rules[rule_index], var.value)
+	not _is_local(_module.rules[rule_index], var)
 
 	var == _module.rules[rule_index].head.ref[0] or not _imports_name(object.get(_module, "imports", []), var.value)
 
@@ -143,7 +142,7 @@ _rule_target := path if {
 
 	some imp in _module.imports
 	ast.imported_identifier(imp) == terms[0].value
-	not _declares_local(rule, terms[0].value)
+	not _is_local(rule, terms[0])
 
 	imp_path := _term_values(imp.path.value)
 	path := array.slice(_through_import(imp_path, terms), 0, count(imp_path) + i)
@@ -154,7 +153,7 @@ _rule_target := path if {
 _rule_target := path if {
 	[var, rule_index] := find.var_at_position
 
-	not _declares_local(_module.rules[rule_index], var.value)
+	not _is_local(_module.rules[rule_index], var)
 	var != _module.rules[rule_index].head.ref[0]
 
 	some imp in _module.imports
@@ -218,15 +217,48 @@ _through_import(imp_path, ref_terms) := array.concat(imp_path, [term.value |
 	some term in util.rest(ast.static_prefix(ref_terms))
 ])
 
-# true if an argument or a := variable in the rule has this name, which hides a rule or import of that name
-_declares_local(rule, name) if {
+# true if the var is bound by a local declaration in a scope that it is in. The declaration can be an argument,
+# or a variable declared by :=, some or every. A local var hides any rule, import or package of the same name.
+_is_local(rule, var) if {
+	var.type == "var"
 	some arg in rule.head.args
-	ast.has_named_var(arg, name)
+	ast.has_named_var(arg, var.value)
 }
 
-_declares_local(rule, name) if {
-	some expr in rule.body
+_is_local(rule, var) if {
+	walk(rule, [use_path, var])
+	walk(rule, [declaration_path, expr])
 
-	[lhs, _] := ast.assignment_terms(expr.terms)
-	ast.has_named_var(lhs, name)
+	not expr.terms.domain
+	some declared in _declared_vars(expr.terms)
+	ast.has_named_var(declared, var.value)
+
+	_in_scope(use_path, array.slice(declaration_path, 0, count(declaration_path) - 2))
 }
+
+_is_local(rule, var) if {
+	walk(rule, [use_path, var])
+	walk(rule, [declaration_path, expr])
+
+	expr.terms.domain
+	some declared in _declared_vars(expr.terms)
+	ast.has_named_var(declared, var.value)
+
+	_in_scope(use_path, array.flatten([declaration_path, "terms"]))
+}
+
+_in_scope(use_path, scope) if {
+	array.slice(use_path, 0, count(scope)) == scope
+	not use_path[count(scope)] in {"else", "domain"}
+}
+
+# the variables declared by :=, every and some, not including the domain they iterate
+_declared_vars(terms) := [lhs] if [lhs, _] := ast.assignment_terms(terms)
+
+_declared_vars(terms) := [var | some key in ["key", "value"]; var := terms[key]] if terms.domain
+
+_declared_vars(terms) := array.flatten([_declared_by(symbol) | some symbol in terms.symbols]) if terms.symbols
+
+_declared_by(symbol) := [symbol] if symbol.type != "call"
+
+_declared_by(symbol) := array.slice(symbol.value, 1, count(symbol.value) - 1) if symbol.type == "call"

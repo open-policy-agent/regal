@@ -28,9 +28,9 @@ package_refs contains ref if {
 	id := ast.imported_identifier(imp)
 
 	some rule in module.rules
-	not _declares_local(rule, id)
 
-	some var in _named_vars(rule, id)
+	some var in _uses_of(rule, id)
+	not _is_local(rule, var)
 
 	ref := {
 		"uri": file,
@@ -44,11 +44,59 @@ package_refs contains ref if {
 	_package_target
 
 	some [file, term, static] in _full_path_uses(_package_target)
-	_is_known_path(array.slice(static, 0, count(_package_target) + 1))
+	_in_package(static, _package_target)
 
 	ref := {
 		"uri": file,
 		"range": range.parse(term.location),
+		"kind": kind_read,
+	}
+}
+
+package_refs contains ref if {
+	_package_target
+
+	some file, module in _scope
+	some imp in module.imports
+
+	imp_path := _term_values(imp.path.value)
+	array.slice(imp_path, 0, count(_package_target)) == _package_target
+	_in_package(imp_path, _package_target)
+
+	ref := {
+		"uri": file,
+		"range": range.parse(imp.path.value[count(_package_target) - 1].location),
+		"kind": kind_read,
+	}
+}
+
+package_refs contains ref if {
+	_package_target
+
+	some file, module in _scope
+	some imp in module.imports
+
+	imp_path := _term_values(imp.path.value)
+	count(imp_path) < count(_package_target)
+	array.slice(_package_target, 0, count(imp_path)) == imp_path
+
+	id := ast.imported_identifier(imp)
+
+	some rule in module.rules
+	some node in ["head", "body", "else"]
+	walk(rule[node], [_, value])
+
+	value.type == "ref"
+	value.value[0].value == id
+	not _is_local(rule, value.value[0])
+
+	through := _through_import(imp_path, value.value)
+	array.slice(through, 0, count(_package_target)) == _package_target
+	_in_package(through, _package_target)
+
+	ref := {
+		"uri": file,
+		"range": range.parse(value.value[count(_package_target) - count(imp_path)].location),
 		"kind": kind_read,
 	}
 }
@@ -76,6 +124,10 @@ _package_imports contains [file, module, imp] if {
 	some imp in module.imports
 	_term_values(imp.path.value) == _package_target
 }
+
+_in_package(path, package_path) if count(path) == count(package_path)
+
+_in_package(path, package_path) if _is_known_path(array.slice(path, 0, count(package_path) + 1))
 
 # the path of the package at the cursor
 _package_target := _term_values(find.package_at_position.path)

@@ -17,7 +17,7 @@ _import_refs contains ref if {
 	some i, rule in _module.rules
 	not _declares_variable(i, identifier)
 
-	some var in _named_vars(rule, identifier)
+	some var in _uses_of(rule, identifier)
 
 	ref := {
 		"uri": input.params.textDocument.uri,
@@ -38,6 +38,11 @@ _import_refs contains ref if {
 		"kind": kind_write,
 	}
 }
+
+_uses_of(rule, name) := [var |
+	some var in _named_vars(rule, name)
+	var != rule.head.ref[0]
+]
 
 _named_vars(rule, name) := [var |
 	walk(rule, [_, var])

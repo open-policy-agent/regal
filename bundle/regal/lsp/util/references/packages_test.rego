@@ -193,3 +193,79 @@ via_import if p.allow`,
 		"kind": references.kind_write,
 	}}
 }
+
+test_package_rule_with_the_name_of_import_is_not_a_use if {
+	[tdp, modules] := testing.at_cursor_in({
+		"file:///a.rego": `package foo.bar|
+
+allow if input.a`,
+		"file:///b.rego": `package q
+
+import data.foo.bar
+
+bar := 1
+
+use := bar`,
+	})
+
+	refs := references.refs
+		with input as tdp
+		with data.workspace.parsed as modules
+
+	refs == {
+		{
+			"uri": "file:///b.rego",
+			"range": {"start": {"line": 2, "character": 16}, "end": {"line": 2, "character": 19}},
+			"kind": references.kind_read,
+		},
+		{
+			"uri": "file:///b.rego",
+			"range": {"start": {"line": 6, "character": 7}, "end": {"line": 6, "character": 10}},
+			"kind": references.kind_read,
+		},
+	}
+}
+
+test_package_uses_by_exact_path_deeper_imports_and_parent_imports if {
+	[tdp, modules] := testing.at_cursor_in({
+		"file:///a.rego": `package foo.bar|
+
+allow if input.a`,
+		"file:///b.rego": `package b
+
+import data.foo
+import data.foo as f
+
+x := foo.bar.allow
+
+y := f.bar.allow
+
+z := foo.bar`,
+		"file:///c.rego": `package c
+
+import data.foo.bar.allow
+
+x := data.foo.bar
+
+y := data.foo.bar[input.k]`,
+	})
+
+	refs := references.refs
+		with input as tdp
+		with data.workspace.parsed as modules
+
+	refs == {{
+		"uri": file,
+		"range": {"start": {"line": row, "character": col}, "end": {"line": row, "character": col + 3}},
+		"kind": references.kind_read,
+	} |
+		some [file, row, col] in [
+			["file:///b.rego", 5, 9],
+			["file:///b.rego", 7, 7],
+			["file:///b.rego", 9, 9],
+			["file:///c.rego", 2, 16],
+			["file:///c.rego", 4, 14],
+			["file:///c.rego", 6, 14],
+		]
+	}
+}

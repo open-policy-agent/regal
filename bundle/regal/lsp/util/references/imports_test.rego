@@ -218,3 +218,24 @@ allow if input|.user == "admin"`
 
 	refs == set()
 }
+
+test_references_import_rule_with_the_name_of_import_is_not_a_use if {
+	policy := `package p
+
+import data.pkgb
+
+pkgb if input.a
+
+use := pkgb.b`
+
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as {"line": 2, "character": 10}
+		with input.regal.file.lines as split(policy, "\n")
+
+	refs == {{
+		"uri": "file:///p.rego",
+		"range": {"start": {"line": 6, "character": 7}, "end": {"line": 6, "character": 11}},
+		"kind": references.kind_read,
+	}}
+}
