@@ -20,7 +20,7 @@ _rule_refs contains ref if {
 	_rule_path(module.package.path, name) == _rule_target
 
 	some rule in module.rules
-	not _shadows_package_rule(rule, name)
+	not _declares_local(rule, name)
 
 	some var in _named_vars(rule, name)
 	_include_declaration or var != rule.head.ref[0]
@@ -67,7 +67,7 @@ _rule_refs contains ref if {
 	id := ast.imported_identifier(imp)
 
 	some rule in module.rules
-	not _shadows_package_rule(rule, id)
+	not _declares_local(rule, id)
 
 	some node in ["head", "body", "else"]
 	walk(rule[node], [_, value])
@@ -86,7 +86,7 @@ _rule_refs contains ref if {
 _rule_target := path if {
 	[var, rule_index] := find.var_at_position
 
-	not _shadows_package_rule(_module.rules[rule_index], var.value)
+	not _declares_local(_module.rules[rule_index], var.value)
 
 	path := _rule_path(_module.package.path, var.value)
 	_is_known_path(path)
@@ -106,7 +106,7 @@ _rule_target := path if {
 
 	some imp in _module.imports
 	ast.imported_identifier(imp) == terms[0].value
-	not _shadows_package_rule(rule, terms[0].value)
+	not _declares_local(rule, terms[0].value)
 
 	imp_path := _term_values(imp.path.value)
 	path := array.slice(_through_import(imp_path, terms), 0, count(imp_path) + i)
@@ -150,12 +150,12 @@ _through_import(imp_path, ref_terms) := array.concat(imp_path, [term.value |
 ])
 
 # true if an argument or a := variable in the rule has this name, which hides a rule or import of that name
-_shadows_package_rule(rule, name) if {
+_declares_local(rule, name) if {
 	some arg in rule.head.args
 	ast.has_named_var(arg, name)
 }
 
-_shadows_package_rule(rule, name) if {
+_declares_local(rule, name) if {
 	some expr in rule.body
 
 	[lhs, _] := ast.assignment_terms(expr.terms)

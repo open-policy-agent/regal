@@ -24,7 +24,7 @@ _package_refs contains ref if {
 	id := ast.imported_identifier(imp)
 
 	some rule in module.rules
-	not _shadows_package_rule(rule, id)
+	not _declares_local(rule, id)
 
 	some var in _named_vars(rule, id)
 
