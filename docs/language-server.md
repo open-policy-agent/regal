@@ -331,14 +331,14 @@ _ranges_ in plural here — as this feature supports multiple cursors/selections
 
 ### Linked editing ranges
 
-Linked editing ranges allow renaming of local symbols in multiple places at once. The most well-known example of this is
-in HTML/XML editing, where renaming a tag will update both the opening and closing tag at the same time. This feature is
-however of limited value in most other languages, and therefore typically disabled by default in editors. While Regal's
-language server contains experimental code that links edits of function arguments to references of those variables in
-the function head or body, we'd rather implement the rename feature from the LSP specification for this purpose. For
-that reason, the linked editing ranges feature is currently disabled by default. Set the `REGAL_EXPERIMENTAL`
-environment variable to `true` if you want to try it out, but remember that you may also have to enable linked editing
-in your editor.
+Linked editing ranges let you rename a local symbol by typing. When you edit one use of the symbol, Regal updates all
+other uses in the file as you type. Many editors turn this feature off by default, so you may have to enable it in
+your editor. In VS Code, set `editor.linkedEditing` to `true`.
+
+Regal links function arguments, and variables declared with `:=`, `some`, `every` and in comprehensions. It also links
+rules and functions, but only when all of their heads and uses are in the current file. Linked editing cannot change
+other files. If another file uses the rule or function, or has another head for it, Regal links nothing. Use
+[rename](#rename) for those, as it changes all files.
 
 If you have any suggestions for how linked editing ranges could be useful in Rego, please
 [open an issue](https://github.com/open-policy-agent/regal/issues/new) to let us know!

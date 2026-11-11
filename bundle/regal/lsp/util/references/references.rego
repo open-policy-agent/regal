@@ -152,7 +152,7 @@ _include_declaration if input.params.context.includeDeclaration
 
 _include_declaration if _renaming
 
-_include_declaration if input.method == "textDocument/documentHighlight"
+_include_declaration if input.method in {"textDocument/documentHighlight", "textDocument/linkedEditingRange"}
 
 _renaming if input.method in {"textDocument/rename", "textDocument/prepareRename"}
 

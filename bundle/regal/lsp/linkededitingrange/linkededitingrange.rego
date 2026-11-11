@@ -1,10 +1,10 @@
 # METADATA
 # description: |
-#   Linked editing ranges allow having a local rename *on type* reflect in multiple places. This arguably a potentialy
-#   confusing feature, and seems to be off by default in at least VS Code, so unless we find strong use-cases for it, we
-#   should not invest much effort into polishing this. Currently we only provide experimental support of linked editing
-#   ranges for:
-#     - function arguments and references to them in the function head and body
+#   Linked editing ranges allow having a local rename *on type* reflect in multiple places. Provides the ranges
+#   of the following, and of their references in the file:
+#     - function arguments
+#     - variables declared with :=, some, every and in comprehensions
+#     - rules and functions that are only declared and used in the current file
 # related_resources:
 #   - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_linkedEditingRange
 # schemas:
@@ -12,45 +12,26 @@
 #   - input.params: schema.regal.lsp.textdocumentposition
 package regal.lsp.linkededitingrange
 
-import data.regal.ast
-import data.regal.util
-
-import data.regal.lsp.util.find
-import data.regal.lsp.util.range
+import data.regal.lsp.util.references
 
 # METADATA
 # entrypoint: true
-default result.response.ranges := set()
-
-# This is currently an experimental feature kept behind a flag to not accidedntally result in a poor
-# user experience for anyone who perhaps mistakenly enabled linked editing in their editor. Handler, and
-# the code kept here, to allow us to quickly test out the feature for different use-cases later.
-result.response.ranges := ranges if util.parse_bool(opa.runtime().env.REGAL_EXPERIMENTAL)
+result.response.ranges := ranges
 
 # METADATA
-# description: Link a function args in position
-ranges contains range.parse(arg.location) if [arg, _] := find.arg_at_position
+# description: Link the variable or function argument in position to its references in the file
+ranges contains ref.range if {
+	some ref in references.variable_refs
 
-# METADATA
-# description: Link function arg references in function body to arg
-ranges contains range.parse(value.location) if {
-	[arg, i] := find.arg_at_position
-
-	some expr in ast.found.expressions[i]
-
-	walk(expr, [_, value])
-
-	value.value == arg.value
-	value.type == "var"
+	ref.uri == input.params.textDocument.uri
 }
 
 # METADATA
-# description: Link function arg references in head value to arg
-ranges contains range.parse(value.location) if {
-	[arg, i] := find.arg_at_position
+# description: |
+#   Link the rule or function in position to its heads and references, but only when they are all in this file,
+#   as the other files can't be edited at the same time
+ranges contains ref.range if {
+	{ref.uri | some ref in references.rule_refs} == {input.params.textDocument.uri}
 
-	walk(data.workspace.parsed[input.params.textDocument.uri].rules[i].head.value, [_, value])
-
-	value.value == arg.value
-	value.type == "var"
+	some ref in references.rule_refs
 }
