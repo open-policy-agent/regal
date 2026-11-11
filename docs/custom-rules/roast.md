@@ -195,6 +195,12 @@ OPA already attaches `annotations` to rules. With the Roast format attaching `pa
 effectively just duplicating data. Having this removed can save a considerable amount of space in well-documented
 policies, as they should be!
 
+### Removed redundant `head` attribute from `else` nodes
+
+The original AST copies `else` head attributes like the `ref` or `args` from the head of the rule the `else` belongs to.
+This is duplicate data we don't want to spend time on traversing. The Roast format therfore only includes the
+`head.assign` (if `true`), `head.value` and the `body` attribute of an `else` node.
+
 ### Removed `index` attribute from body expressions
 
 In the original AST, each expression in a body carries a numeric `index` attribute. While this doesn't take much space,
