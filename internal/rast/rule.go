@@ -1,4 +1,4 @@
-package ast
+package rast
 
 import (
 	"strings"
@@ -48,11 +48,41 @@ func GetRuleDetail(rule *ast.Rule, builtins map[string]*ast.Builtin) string {
 		detail += " (set)"
 	case ast.Call:
 		if builtin, ok := builtins[v[0].String()]; ok && builtin.Decl != nil && builtin.Decl.NamedResult() != nil {
-			detail += " (" + simplifyType(builtin.Decl.NamedResult().String()) + ")"
+			detail += " (" + SimplifyType(builtin.Decl.NamedResult().String()) + ")"
 		}
 	}
 
 	return detail
+}
+
+// SimplifyType removes anything but the base type from the type name.
+func SimplifyType(name string) string {
+	result := name
+	if strings.Contains(result, ":") {
+		result = result[strings.Index(result, ":")+1:]
+	}
+
+	// silence gocritic linter here as strings.Index can in
+	// fact *not* return -1 in these cases
+	if strings.Contains(result, "[") {
+		result = result[:strings.Index(result, "[")] //nolint:gocritic
+	}
+
+	if strings.Contains(result, "<") {
+		result = result[:strings.Index(result, "<")] //nolint:gocritic
+	}
+
+	return strings.TrimSpace(result)
+}
+
+func SymbolsCallRef(sym *ast.SomeDecl) (ref ast.Ref, ok bool) {
+	if sym != nil && len(sym.Symbols) > 0 {
+		if call, isCall := sym.Symbols[0].Value.(ast.Call); isCall {
+			ref, ok = call[0].Value.(ast.Ref)
+		}
+	}
+
+	return ref, ok
 }
 
 // IsConstant returns true if the rule is a "constant" rule, i.e.
@@ -76,24 +106,4 @@ func isEmptyBody(rule *ast.Rule) bool {
 	default:
 		return false
 	}
-}
-
-// simplifyType removes anything but the base type from the type name.
-func simplifyType(name string) string {
-	result := name
-	if strings.Contains(result, ":") {
-		result = result[strings.Index(result, ":")+1:]
-	}
-
-	// silence gocritic linter here as strings.Index can in
-	// fact *not* return -1 in these cases
-	if strings.Contains(result, "[") {
-		result = result[:strings.Index(result, "[")] //nolint:gocritic
-	}
-
-	if strings.Contains(result, "<") {
-		result = result[:strings.Index(result, "<")] //nolint:gocritic
-	}
-
-	return strings.TrimSpace(result)
 }

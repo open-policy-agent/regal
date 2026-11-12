@@ -5,6 +5,7 @@ import (
 	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/funsafe"
+	irast "github.com/open-policy-agent/regal/internal/rast"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 
@@ -438,7 +439,11 @@ func elseHeadToObject(head *ast.Head) *ast.Term {
 			}
 		}
 
-		rast.Insert(obj, "value", termToObject(head.Value))
+		if head.Value.Location == nil {
+			rast.Insert(obj, "value", ast.InternedBooleanTrue)
+		} else {
+			rast.Insert(obj, "value", termToObject(head.Value))
+		}
 	}
 
 	return ast.NewTerm(obj)
@@ -477,7 +482,11 @@ func headToObject(head *ast.Head) *ast.Term {
 			}
 		}
 
-		rast.Insert(obj, "value", termToObject(head.Value))
+		if head.Value.Location == nil {
+			rast.Insert(obj, "value", ast.InternedBooleanTrue)
+		} else {
+			rast.Insert(obj, "value", termToObject(head.Value))
+		}
 	}
 
 	return ast.NewTerm(obj)
@@ -525,9 +534,21 @@ func bodyToArray(body ast.Body) *ast.Term {
 			case []*ast.Term:
 				rast.Insert(exprObj, "terms", ast.ArrayTerm(outil.Map(t, termToObject)...))
 			case *ast.SomeDecl:
-				terms := objectWithLocationAndCap(t.Location, 2)
-				rast.Insert(terms, "symbols", ast.ArrayTerm(outil.Map(t.Symbols, termToObject)...))
-				rast.Insert(exprObj, "terms", ast.NewTerm(terms))
+				terms := objectWithLocationAndCap(nil, 2)
+
+				if ref, ok := irast.SymbolsCallRef(t); ok {
+					save := [2]*ast.Location{ref[0].Location, ref[1].Location}
+					ref[0].Location, ref[1].Location = nil, nil
+
+					rast.Insert(terms, "symbols", ast.ArrayTerm(outil.Map(t.Symbols, termToObject)...))
+					rast.Insert(exprObj, "terms", ast.NewTerm(terms))
+
+					ref[0].Location, ref[1].Location = save[0], save[1]
+				} else {
+					rast.Insert(terms, "symbols", ast.ArrayTerm(outil.Map(t.Symbols, termToObject)...))
+					rast.Insert(exprObj, "terms", ast.NewTerm(terms))
+				}
+
 			case *ast.Every:
 				terms := objectWithLocationAndCap(t.Location, 4+util.BoolToInt(t.Key != nil))
 				if t.Key != nil {
