@@ -49,6 +49,50 @@ The Regal language server currently supports hover for all built-in functions OP
 Go to definition allows references to rules and functions to be clicked on (while holding `ctrl/cmd`), and the editor
 will navigate to the definition of the rule or function.
 
+### Find references
+
+Find references lists every place where code uses a symbol. Put the cursor on a symbol. Then run "Find All References"
+or "Go to References" in your editor. Regal finds references for:
+
+- Function arguments, including their uses in the rule head and body
+- Variables declared with `:=`, `some`, `every` and in comprehensions
+- Imports, within the file
+- Rules and functions, by bare name, by full path like `data.pkg.rule`, or through an import like `pkg.rule`
+- Packages, where they are imported in any file or used by full path like `data.pkg.rule`
+
+Regal finds references to rules, functions and packages in all files of the workspace. It finds references to
+variables and imports within the file only. It also matches arguments in the other heads of the same function, in any
+file of the package.
+
+If the editor asks for the declaration, Regal returns it too (VS Code always sends this).
+The declaration of a rule is each of its heads in any file of the package.
+The declaration of a package is the `package` line of each file in the package.
+
+<img
+  src={require('./assets/lsp/references.gif').default}
+  alt="Animation showing finding references for a rule"/>
+
+### Rename
+
+Rename changes the name of a symbol everywhere that it is used. Put the cursor on a symbol. Then run "Rename Symbol"
+in your editor. Regal can rename:
+
+- Function arguments
+- Variables declared with `:=`, `some`, `every` and in comprehensions
+- Rules and functions
+- Packages, from the `package` line or from an import of the package
+
+Regal renames variables within the file. It renames function arguments in all heads of the function, in any file of the
+package. It renames rules and functions in all files of the workspace. This includes uses by bare name, by full path
+like `data.pkg.rule`, and through an import like `pkg.rule`.
+
+Renaming a package changes the last name of its path. Regal changes the `package` line of each file, the import paths,
+and the uses of the import name. If an import has an alias, Regal changes the import path and leaves the alias and its uses
+as they are.
+
+The new name must be a valid Rego name. It starts with a letter or an underscore, and contains only letters, numbers
+and underscores. It must not be a Rego keyword like `if` or `package`. If the name is not valid, Regal makes no change.
+
 ### Folding ranges
 
 Regal provides folding ranges for any policy being edited. Folding ranges are areas of the code that can be collapsed
@@ -287,14 +331,14 @@ _ranges_ in plural here — as this feature supports multiple cursors/selections
 
 ### Linked editing ranges
 
-Linked editing ranges allow renaming of local symbols in multiple places at once. The most well-known example of this is
-in HTML/XML editing, where renaming a tag will update both the opening and closing tag at the same time. This feature is
-however of limited value in most other languages, and therefore typically disabled by default in editors. While Regal's
-language server contains experimental code that links edits of function arguments to references of those variables in
-the function head or body, we'd rather implement the rename feature from the LSP specification for this purpose. For
-that reason, the linked editing ranges feature is currently disabled by default. Set the `REGAL_EXPERIMENTAL`
-environment variable to `true` if you want to try it out, but remember that you may also have to enable linked editing
-in your editor.
+Linked editing ranges let you rename a local symbol by typing. When you edit one use of the symbol, Regal updates all
+other uses in the file as you type. Many editors turn this feature off by default, so you may have to enable it in
+your editor. In VS Code, set `editor.linkedEditing` to `true`.
+
+Regal links function arguments, and variables declared with `:=`, `some`, `every` and in comprehensions. It also links
+rules and functions, but only when all of their heads and uses are in the current file. Linked editing cannot change
+other files. If another file uses the rule or function, or has another head for it, Regal links nothing. Use
+[rename](#rename) for those, as it changes all files.
 
 If you have any suggestions for how linked editing ranges could be useful in Rego, please
 [open an issue](https://github.com/open-policy-agent/regal/issues/new) to let us know!
@@ -311,12 +355,13 @@ user types a call to a function.
 ### Document Highlights
 
 Document highlights are regions of the current file that deserve additional
-attention. We use document highlights in Regal to show usages of a variable
-within a function - more use cases coming soon!
+attention. We use document highlights in Regal to show every use of the symbol under the cursor in the current file.
+These are the same symbols as for find references: arguments, variables, imports, rules, functions and packages. A
+write sets a symbol and a read uses it. Regal highlights the declaration of a symbol as a write and each use as a read.
 
 <img
   src={require('./assets/lsp/documenthighlights.gif').default}
-  alt="Animation showing highlighting of values in a function"/>
+  alt="Animation showing the references to a symbol highlighted in the current file"/>
 
 ### Document Links
 

@@ -1,4 +1,4 @@
-package regal.lsp.references
+package regal.lsp.util.references
 
 import data.regal.ast
 import data.regal.lsp.util.find
@@ -8,28 +8,41 @@ import data.regal.lsp.util.range
 # description: |
 #   References to the import at the cursor within the same file, i.e. every use of its identifier.
 _import_refs contains ref if {
+	not _renaming
+	not _rule_target
+
 	_import.path.value[0].value in {"input", "data"}
 	identifier := ast.imported_identifier(_import)
 
 	some i, rule in _module.rules
 	not _declares_variable(i, identifier)
 
-	some var in _named_vars(rule, identifier)
+	some var in _uses_of(rule, identifier)
 
 	ref := {
 		"uri": input.params.textDocument.uri,
 		"range": range.parse(var.location),
+		"kind": kind_read,
 	}
 }
 
 _import_refs contains ref if {
+	not _renaming
+	not _rule_target
+
 	_include_declaration
 
 	ref := {
 		"uri": input.params.textDocument.uri,
 		"range": range.parse(_import.path.location),
+		"kind": kind_write,
 	}
 }
+
+_uses_of(rule, name) := [var |
+	some var in _named_vars(rule, name)
+	var != rule.head.ref[0]
+]
 
 _named_vars(rule, name) := [var |
 	walk(rule, [_, var])

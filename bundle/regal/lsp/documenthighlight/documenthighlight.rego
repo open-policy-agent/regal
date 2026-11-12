@@ -2,7 +2,7 @@
 # description: |
 #   Highlights text in document depending on cursor position. Currently highlights:
 #     - metadata attributes at cursor position
-#     - function arguments and references to them in the function head and body
+#     - the references in this file of the symbol at cursor position
 # related_resources:
 #   - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_documentHighlight
 # schemas:
@@ -10,9 +10,7 @@
 #   - input.params: schema.regal.lsp.textdocumentposition
 package regal.lsp.documenthighlight
 
-import data.regal.ast
-import data.regal.lsp.util.find
-import data.regal.lsp.util.range
+import data.regal.lsp.util.references
 import data.regal.util
 
 # METADATA
@@ -22,47 +20,15 @@ default result["response"] := null
 result["response"] := items if items != set()
 
 # METADATA
-# description: Highlights a function args in position
+# description: Highlights the references in this file of the symbol at the cursor
 items contains item if {
-	[arg, _] := find.arg_at_position
+	some ref in references.refs
+
+	ref.uri == input.params.textDocument.uri
 
 	item := {
-		"range": range.parse(arg.location),
-		"kind": 2, # Write
-	}
-}
-
-# METADATA
-# description: Highlights function arg references in function body when clicked
-items contains item if {
-	[arg, i] := find.arg_at_position
-
-	some expr in ast.found.expressions[i]
-
-	walk(expr.terms, [_, value])
-
-	value.value == arg.value
-	value.type == "var"
-
-	item := {
-		"range": range.parse(value.location),
-		"kind": 3, # Read
-	}
-}
-
-# METADATA
-# description: Highlights function arg references in head value body when clicked
-items contains item if {
-	[arg, i] := find.arg_at_position
-
-	walk(data.workspace.parsed[input.params.textDocument.uri].rules[i].head.value, [_, value])
-
-	value.value == arg.value
-	value.type == "var"
-
-	item := {
-		"range": range.parse(value.location),
-		"kind": 3, # Read
+		"range": ref.range,
+		"kind": ref.kind,
 	}
 }
 
