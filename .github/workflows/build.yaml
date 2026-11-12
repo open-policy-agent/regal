@@ -29,51 +29,53 @@ jobs:
           - runner: macos-26
             name: macos-arm64
             static: true
-          - runner: windows-latest
-            name: windows
-            static: true
     runs-on: ${{ matrix.os.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - run: go test ./...
-        if: matrix.os.name == 'windows'
       - uses: open-policy-agent/setup-opa@b2b258e089860efaadaaf71bf6e3aecb4a3eeff1 # v2.4.0
         with:
           version: edge
           static: ${{ matrix.os.static }}
-        if: matrix.os.name != 'windows'
       - run: npm ci
         working-directory: build
-        if: matrix.os.name != 'windows'
       - name: Restore rq cache
         id: cache-rq
-        if: matrix.os.name != 'windows'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/go/bin/rq
           key: ${{ runner.os }}-${{ runner.arch }}-go-rq-${{ env.RQ_VERSION }}
       - run: go install git.sr.ht/~charles/rq/cmd/rq@${{ env.RQ_VERSION }}
-        if: matrix.os.name != 'windows' && steps.cache-rq.outputs.cache-hit != 'true'
+        if: steps.cache-rq.outputs.cache-hit != 'true'
       - name: Cache rq binary
-        if: matrix.os.name != 'windows' && steps.cache-rq.outputs.cache-hit != 'true'
+        if: steps.cache-rq.outputs.cache-hit != 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/go/bin/rq
           key: ${{ runner.os }}-${{ runner.arch }}-go-rq-${{ env.RQ_VERSION }}
       - run: build/do.rq pull_request
-        if: matrix.os.name != 'windows'
       - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         if: matrix.os.name == 'linux'
         with:
           version: v2.14.0
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: matrix.os.name != 'windows'
         with:
           name: regal-${{ matrix.os.name }}
           path: regal
+
+  # Windows runs only the Go tests for now. The rq tool, used by the full build
+  # pipeline above, has issues on Windows. We can revisit this once those are fixed.
+  test-windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: go test ./...
 
   race_detector:
     runs-on: ubuntu-latest
