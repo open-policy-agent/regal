@@ -77,17 +77,27 @@ by_row[keyword.location.row] contains keyword if {
 	some keyword in _keywords_with_location(value)
 }
 
-_keywords_with_location(value) := keywords if {
-	value.terms.symbols
+_keywords_with_location(expr) := keywords if {
+	expr.terms.symbols
 
-	location := util.to_location_object(value.terms.location)
+	[rs, cs] := strings.split_n(expr.location, ":", 2)
+	location := {
+		"row": to_number(rs),
+		"col": to_number(cs),
+	}
+
 	keywords := array.flatten([{"name": "some", "location": location}, _in_on_row(location.row)])
 }
 
-_keywords_with_location(value) := keywords if {
-	value.domain
+_keywords_with_location(expr) := keywords if {
+	expr.domain
 
-	location := util.to_location_object(value.location)
+	[rs, cs] := strings.split_n(expr.location, ":", 2)
+	location := {
+		"row": to_number(rs),
+		"col": to_number(cs),
+	}
+
 	keywords := array.flatten([{"name": "every", "location": location}, _in_on_row(location.row)])
 }
 
@@ -98,11 +108,6 @@ _in_on_row(row) := [keyword |
 		"location": {
 			"row": row,
 			"col": in_col + 2,
-			"end": {
-				"row": row,
-				"col": in_col + 4,
-			},
-			"text": "in",
 		},
 	}
 ]

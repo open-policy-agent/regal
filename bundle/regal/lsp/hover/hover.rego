@@ -90,26 +90,11 @@ _contains_call(text, word, char) if {
 	substring(text, char + word.offset_after, 1) == "("
 }
 
-_keyword(name, row, col) := keyword if {
-	# REPORT THIS: looks like this is a bug in OPA, as without the is_number checks
-	# the type checker fails to identify the types passed here, and reports the
-	# following error at the callsite above:
-	#
-	# rego_type_error: data.regal.lsp.hover._keyword: invalid argument(s)
-	#     have: (string, number, number, ???)
-	#     want: (any, string, any, any)
-	#
-	is_number(row)
-	is_number(col)
-
-	# should always be exactly one, but some abundance of caution
-	# to avoid eval conflict errors however unlikely
-	keyword := [keyword |
-		some keyword in keywords.by_row[row]
-		keyword.location.col <= col
-		keyword.location.col + count(name) > col
-	][0]
-}
+_keyword(name, row, col) := [keyword |
+	some keyword in keywords.by_row[row]
+	keyword.location.col <= col
+	keyword.location.col + count(name) > col
+][0]
 
 # METADATA
 # description: Render built-in function documentation as a markdown tooltip
