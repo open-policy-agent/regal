@@ -213,6 +213,27 @@ The `name` attribute found in the OPA AST for `rules` is unreliable, as it's not
 attribute however always is. While this doesn't come with any real cost in terms of AST size or performance, consistency
 is key.
 
+### Changed to minimalistic representation of implicit `true` value in rule heads
+
+An implcit rule head value of `true`, like that in `allow if condition` would be represented by OPA as a full-blown
+term (`type`, `value` and `location`). Since this value doesn't actually exist in the policy itself, we represnt it
+simply as `value: true`. While we could go even further and leave out the `value` attribute entirely in that case, we
+found that causes more problems than it solves as linter rules then need special handling of this case.
+
+### Removed `location` attribute from `some .. in` call reference terms
+
+OPA's AST represents a `some .. in` "loop" expression like `some thing in collection` as a call:
+
+```rego
+internal.member_2(thing, collection)
+```
+
+Since this is a "virtual" call not represented in the visible Rego, and one that additionally may be rewritten away
+entirely in the compiled representation of the policy, we have no use for the `location` attribute on the
+two terms the call contains ("internal" and "member_2"). Those are therefore removed in Roast. We have also removed
+the location from the `terms` node on step above the `symbols` node, as this only carries the location of the actual
+`some` word, which is of course trivial to locate just from the location of the expression.
+
 ### Added `interpolated` boolean attribute to template string expression nodes
 
 Expressions found in template strings (like `$"{upper(input.name)}"`) are normal expressions as far as OPA is concerned.
