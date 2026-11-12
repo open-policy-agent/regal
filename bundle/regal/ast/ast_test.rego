@@ -72,9 +72,8 @@ test_find_names_in_scope if {
 	}`
 
 	module := regal.parse_module("p.rego", policy)
-	allow_rule := module.rules[3]
 
-	in_scope := ast.find_names_in_scope(allow_rule, {"col": 1, "row": 30})
+	in_scope := ast.find_names_in_scope(3, {"col": 1, "row": 30})
 		with input as module
 		with config.capabilities as capabilities.provided
 
@@ -303,4 +302,10 @@ test_builtin_functions_called_in_templatestring if {
 		with config.capabilities as capabilities.provided
 
 	names == {"upper", "lower"}
+}
+
+test_static_prefix_stops_at_first_non_static_term if {
+	ref := ast.policy(`p[x].allow := true if x := 1`).rules[0].head.ref
+
+	[term.value | some term in ast.static_prefix(ref)] == ["p"]
 }

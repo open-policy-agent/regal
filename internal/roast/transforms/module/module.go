@@ -367,6 +367,29 @@ func refToArray(ref ast.Ref) *ast.Array {
 	return ast.NewArray(terms...)
 }
 
+func elseToObject(rule *ast.Rule) *ast.Term {
+	generated := rast.IsBodyGenerated(rule)
+	preAlloc := util.BoolToInt(rule.Head != nil) +
+		util.BoolToInt(!generated) +
+		util.BoolToInt(rule.Else != nil)
+
+	obj := objectWithLocationAndCap(rule.Location, preAlloc)
+
+	if rule.Head != nil {
+		rast.Insert(obj, "head", elseHeadToObject(rule.Head))
+	}
+
+	if !generated {
+		rast.Insert(obj, "body", bodyToArray(rule.Body))
+	}
+
+	if rule.Else != nil {
+		rast.Insert(obj, "else", elseToObject(rule.Else))
+	}
+
+	return ast.NewTerm(obj)
+}
+
 func ruleToObject(rule *ast.Rule) *ast.Term {
 	generated := rast.IsBodyGenerated(rule)
 	preAlloc := util.BoolToInt(rule.Default) +
@@ -393,7 +416,29 @@ func ruleToObject(rule *ast.Rule) *ast.Term {
 	}
 
 	if rule.Else != nil {
-		rast.Insert(obj, "else", ruleToObject(rule.Else))
+		rast.Insert(obj, "else", elseToObject(rule.Else))
+	}
+
+	return ast.NewTerm(obj)
+}
+
+func elseHeadToObject(head *ast.Head) *ast.Term {
+	preAlloc := util.BoolToInt(head.Assign) + util.BoolToInt(head.Value != nil)
+	obj := objectWithLocationAndCap(head.Location, preAlloc)
+
+	if head.Assign {
+		rast.Insert(obj, "assign", ast.InternedBooleanTrue)
+	}
+
+	if head.Value != nil {
+		// Strip location from generated `true` values, as they don't have one
+		if head.Value.Location != nil && head.Location != nil {
+			if head.Value.Location.Row == head.Location.Row && head.Value.Location.Col == head.Location.Col {
+				head.Value.Location = nil
+			}
+		}
+
+		rast.Insert(obj, "value", termToObject(head.Value))
 	}
 
 	return ast.NewTerm(obj)

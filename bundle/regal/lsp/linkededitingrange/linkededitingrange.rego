@@ -40,8 +40,8 @@ ranges contains range.parse(value.location) if {
 
 	walk(expr, [_, value])
 
-	value.type == "var"
 	value.value == arg.value
+	value.type == "var"
 }
 
 # METADATA
@@ -51,6 +51,6 @@ ranges contains range.parse(value.location) if {
 
 	walk(data.workspace.parsed[input.params.textDocument.uri].rules[i].head.value, [_, value])
 
-	value.type == "var"
 	value.value == arg.value
+	value.type == "var"
 }

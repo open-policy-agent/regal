@@ -39,7 +39,6 @@ result["response"] := ranges if {
 package_ranges := [item |
 	some position in input.params.positions
 
-	# regal ignore:with-outside-test-context
 	pkg := data.workspace.parsed[input.params.textDocument.uri].package
 	ranges := _find_ranges(pkg.path, position)
 
@@ -47,10 +46,7 @@ package_ranges := [item |
 
 	# Note: pkg.path[0] is currently just {"type": "var", "value": "data"}
 	# which is useless, but an issue inherited from OPA we should get rid of in RoAST
-	path_range := {"range": {
-		"start": range.parse(pkg.path[1].location).start,
-		"end": range.parse(regal.last(pkg.path).location).end,
-	}}
+	path_range := {"range": range.spanning(pkg.path)}
 
 	line_range := {"range": {
 		"start": {"line": path_range.range.start.line, "character": 0},

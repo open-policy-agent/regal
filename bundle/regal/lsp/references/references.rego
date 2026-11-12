@@ -22,7 +22,13 @@ result.response contains ref if some ref in _every_var_refs
 
 result.response contains ref if some ref in _comprehension_var_refs
 
+result.response contains ref if some ref in _assign_var_refs
+
 result.response contains ref if some ref in _import_refs
+
+result.response contains ref if some ref in _rule_refs
+
+result.response contains ref if some ref in _package_refs
 
 _arg_refs contains ref if {
 	[arg, rule_index] := find.arg_at_position
@@ -57,6 +63,22 @@ _some_var_refs contains ref if {
 	value.type == "var"
 	value.value == var.value
 	_include_declaration or value != var
+
+	ref := {
+		"uri": input.params.textDocument.uri,
+		"range": range.parse(value.location),
+	}
+}
+
+_assign_var_refs contains ref if {
+	[var, rule_index] := find.assign_var_at_position
+
+	some node in ["head", "body", "else"]
+	walk(_module.rules[rule_index][node], [_, value])
+
+	value.type == "var"
+	value.value == var.value
+	_include_declaration or not value in ast.found.vars[rule_index].assign
 
 	ref := {
 		"uri": input.params.textDocument.uri,

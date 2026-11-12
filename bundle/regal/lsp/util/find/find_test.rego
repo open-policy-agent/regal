@@ -1,6 +1,7 @@
 package regal.lsp.util.find_test
 
 import data.regal.ast
+import data.regal.lsp.testing
 import data.regal.lsp.util.find
 
 test_rule_at_position[tdp.params.position] if {
@@ -12,7 +13,9 @@ rule1 if {
 
 rule2 if {
 	false
-}`
+}
+
+default rule3 := false`
 	module := regal.parse_module("p.rego", policy)
 
 	some [tdp, exp_name, exp_index] in [
@@ -21,6 +24,7 @@ rule2 if {
 		[text_document_position(6, 0), "rule2", 1],
 		[text_document_position(6, 10), "rule2", 1],
 		[text_document_position(7, 5), "rule2", 1],
+		[text_document_position(10, 9), "rule3", 2],
 	]
 
 	[rule, i] := find.rule_at_position
@@ -40,7 +44,7 @@ test_arg_at_position[name] if {
 		"use in the else branch": "fn(x) := 1 if false else := x|",
 	}
 
-	[tdp, module] := _at_cursor(snippet)
+	[tdp, module] := testing.at_cursor(snippet)
 
 	[arg, rule_index] := find.arg_at_position
 		with input as tdp
@@ -58,7 +62,7 @@ test_arg_at_position_not_an_arg[name] if {
 		"array argument, not supported": "fn([a|, b]) := a",
 	}
 
-	[tdp, module] := _at_cursor(snippet)
+	[tdp, module] := testing.at_cursor(snippet)
 
 	not find.arg_at_position
 		with input as tdp
@@ -92,7 +96,7 @@ test_import_alias_at_position[name] if {
 		"just after the alias": "import data.foo.bar as baz |",
 	}
 
-	[tdp, module] := _at_cursor(snippet)
+	[tdp, module] := testing.at_cursor(snippet)
 
 	imp := find.import_alias_at_position
 		with input as tdp
@@ -107,24 +111,76 @@ test_import_alias_at_position_not_on_alias[name] if {
 		"on the as keyword": "import data.foo.bar a|s baz",
 	}
 
-	[tdp, module] := _at_cursor(snippet)
+	[tdp, module] := testing.at_cursor(snippet)
 
 	not find.import_alias_at_position
 		with input as tdp
 		with data.workspace.parsed["file:///p.rego"] as module
 }
 
-# input and module for a snippet, where the cursor is on the character before the "|" in the snippet
-_at_cursor(snippet) := [tdp, module] if {
-	text := $"package p\n\n{snippet}"
-	lines_before := split(split(text, "|")[0], "\n")
-	lines := split(replace(text, "|", ""), "\n")
+test_assign_var_at_position[name] if {
+	some name, snippet in {
+		"declaration": `allow if {
+	foo| := 1
+	foo == 1
+}`,
+		"use": `allow if {
+	foo := 1
+	foo| == 1
+}`,
+		"destructured declaration": `allow if {
+	[foo|, bar] := [1, 2]
+	foo == bar
+}`,
+	}
 
-	tdp := object.union(
-		text_document_position(count(lines_before) - 1, count(regal.last(lines_before)) - 1),
-		{"regal": {"file": {"lines": lines}}},
-	)
-	module := regal.parse_module("p.rego", concat("\n", lines))
+	[tdp, module] := testing.at_cursor(snippet)
+
+	[var, rule_index] := find.assign_var_at_position
+		with input as tdp
+		with data.workspace.parsed["file:///p.rego"] as module
+
+	var.value == "foo"
+	rule_index == 0
+}
+
+test_assign_var_at_position_not_an_assign_var[name] if {
+	some name, snippet in {
+		"input": `allow if input|.user == 1`,
+		"some variable": `allow if {
+	some x| in input.xs
+	x == 1
+}`,
+		"argument": `fn(x|) := x`,
+		"variable that is never assigned": `allow if {
+	foo := 1
+	input.foo| == 1
+}`,
+	}
+
+	[tdp, module] := testing.at_cursor(snippet)
+
+	not find.assign_var_at_position
+		with input as tdp
+		with data.workspace.parsed["file:///p.rego"] as module
+}
+
+test_package_at_position if {
+	[tdp, modules] := testing.at_cursor_in({"file:///p.rego": "package foo.ba|r"})
+
+	pkg := find.package_at_position
+		with input as tdp
+		with data.workspace.parsed as modules
+
+	[term.value | some term in pkg.path] == ["data", "foo", "bar"]
+}
+
+test_package_at_position_not_on_name if {
+	[tdp, modules] := testing.at_cursor_in({"file:///p.rego": "packag|e foo.bar"})
+
+	not find.package_at_position
+		with input as tdp
+		with data.workspace.parsed as modules
 }
 
 text_document_position(line, character) := {"params": {

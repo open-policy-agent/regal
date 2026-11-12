@@ -44,8 +44,8 @@ test_builtin_indexof if {
 		"",
 		"#### Arguments",
 		"",
-		"- `haystack` string — string to search in",
-		"- `needle` string — substring to look for",
+		"- `haystack` string - string to search in",
+		"- `needle` string - substring to look for",
 		"",
 		"#### Returns `output` of type `number`: index of first occurrence, `-1` if not found",
 	])
@@ -100,8 +100,8 @@ test_builtin_graph_reachable if {
 		"",
 		"#### Arguments",
 		"",
-		"- `graph` object[any: any<array[any], set[any]>] — object containing a set or array of neighboring vertices",
-		"- `initial` any<array[any], set[any]> — set or array of root vertices",
+		"- `graph` object[any: any<array[any], set[any]>] - object containing a set or array of neighboring vertices",
+		"- `initial` any<array[any], set[any]> - set or array of root vertices",
 		"",
 		concat("", [
 			"#### Returns `output` of type `set[any]`: ",
@@ -165,8 +165,8 @@ test_builtin_json_filter if {
 		"",
 		"#### Arguments",
 		"",
-		"- `object` object[any: any] — object to filter",
-		"- `paths` any<array[any<string, array[any]>], set[any<string, array[any]>]> — JSON string paths",
+		"- `object` object[any: any] - object to filter",
+		"- `paths` any<array[any<string, array[any]>], set[any<string, array[any]>]> - JSON string paths",
 		"",
 		"#### Returns `filtered` of type `any`: remaining data from `object` with only keys specified in `paths`",
 	])
@@ -215,8 +215,8 @@ test_builtin_url_override if {
 		"",
 		"#### Arguments",
 		"",
-		"- `arg1` string — arg1 for foobar",
-		"- `arg2` string — arg2 for foobar",
+		"- `arg1` string - arg1 for foobar",
+		"- `arg2` string - arg2 for foobar",
 		"",
 		"#### Returns `output` of type `number`: the output for foobar",
 	])

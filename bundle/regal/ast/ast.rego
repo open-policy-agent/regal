@@ -42,7 +42,11 @@ operators := {
 #   returns true if provided term is either a scalar or a collection of ground values
 # scope: document
 is_constant(term) if {
-	term.type in scalar_types or term.type in {"array", "object", "set"} and not has_term_var(term.value)
+	term.type in scalar_types or term.type in {"array", "object", "set"} and not {
+		walk(term.value, [_, node])
+
+		node.type == "var"
+	}
 }
 
 # METADATA
@@ -82,13 +86,6 @@ package_name := concat(".", package_path)
 # METADATA
 # description: provides the full package name including the "data." prefix,
 package_name_full := $"data.{package_name}"
-
-# METADATA
-# description: provides all static string values from ref
-named_refs(ref) := [term |
-	some i, term in ref
-	i == 0 and term.type == "var" or i > 0 and term.type == "string"
-]
 
 # METADATA
 # description: all the rules (excluding functions) in the input AST
@@ -159,15 +156,15 @@ rule_names_ordered := [ref_static_to_string(rule.head.ref) | some rule in _rules
 #   input = variable value set elsewhere in the policy
 #   output =  variable value set in this location (unification)
 # scope: document
-is_output_var(rule, var) if is_wildcard(var) or {
+is_output_var(rule_index, var) if is_wildcard(var) or {
 	not var.value in (rule_names | imported_identifiers)
 
 	num_above := count([1 |
-		some above in find_vars_in_local_scope(rule, var.location)
+		some above in find_vars_in_local_scope(rule_index, var.location)
 		above.value == var.value
 	])
 	num_some := count([1 |
-		some name in find_some_decl_names_in_scope(rule, var.location)
+		some name in find_some_decl_names_in_scope(rule_index, var.location)
 		name == var.value
 	])
 
@@ -239,7 +236,9 @@ is_terms_subset(terms, other) if {
 
 # METADATA
 # description: returns the "path" string of any given ref value
-ref_to_string(ref) := concat("", array.flatten([ref[0].value, [_format_term(term) |
+ref_to_string(ref) := ref[0].value if {
+	count(ref) == 1
+} else := concat("", array.flatten([ref[0].value, [_format_term(term) |
 	some term in array.slice(ref, 1, 100)
 
 	not term.type in {"call", "ref", "templatestring"}
@@ -267,7 +266,7 @@ static_prefix(terms) := terms if {
 	static := array.slice(terms, 0, [i |
 		some i, term in terms
 		i > 0
-		term.type == {"call", "var", "ref", "templatestring"}
+		term.type in {"call", "var", "ref", "templatestring"}
 	][0])
 } else := terms
 

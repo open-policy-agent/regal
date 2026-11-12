@@ -14,8 +14,6 @@ report contains violation if {
 
 	terms := ast.found.expressions[rule_index][i].terms
 
-	terms[0].type == "ref"
-	terms[0].value[0].type == "var"
 	terms[0].value[0].value == "neq"
 
 	some neq_term in array.slice(terms, 1, 100)

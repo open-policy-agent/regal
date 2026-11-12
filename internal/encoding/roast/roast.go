@@ -113,6 +113,19 @@ func LocationMarshalToFn(enc *jsontext.Encoder, location *ast.Location) (err err
 	return enc.WriteValue(buf)
 }
 
+func ElseMarshalToFn(enc *jsontext.Encoder, rule *ast.Rule) error {
+	write.ObjectStart(enc, rule.Location)
+	write.FieldPtrFn(enc, "head", rule.Head, ElseHeadMarshalToFn)
+
+	if !rast.IsBodyGenerated(rule) {
+		write.FieldFn(enc, "body", rule.Body, BodyMarshalToFn)
+	}
+
+	write.FieldPtrFn(enc, "else", rule.Else, ElseMarshalToFn)
+
+	return enc.WriteToken(jsontext.EndObject)
+}
+
 func RuleMarshalToFn(enc *jsontext.Encoder, rule *ast.Rule) error {
 	write.ObjectStart(enc, rule.Location)
 	write.ArrayFieldFn(enc, "annotations", rule.Annotations, AnnotationsMarshalToFn)
@@ -123,7 +136,26 @@ func RuleMarshalToFn(enc *jsontext.Encoder, rule *ast.Rule) error {
 		write.FieldFn(enc, "body", rule.Body, BodyMarshalToFn)
 	}
 
-	write.FieldPtrFn(enc, "else", rule.Else, RuleMarshalToFn)
+	write.FieldPtrFn(enc, "else", rule.Else, ElseMarshalToFn)
+
+	return enc.WriteToken(jsontext.EndObject)
+}
+
+func ElseHeadMarshalToFn(enc *jsontext.Encoder, head *ast.Head) error {
+	write.ObjectStart(enc, head.Location)
+	write.WhenTrue(enc, head.Assign, "assign")
+
+	if head.Value != nil {
+		// Strip location from generated `true` values, as they don't have one
+		if head.Value.Location != nil &&
+			head.Location != nil &&
+			head.Value.Location.Row == head.Location.Row &&
+			head.Value.Location.Col == head.Location.Col {
+			head.Value.Location = nil
+		}
+
+		write.FieldFn(enc, "value", head.Value, TermMarshalToFn)
+	}
 
 	return enc.WriteToken(jsontext.EndObject)
 }

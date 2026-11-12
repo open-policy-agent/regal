@@ -79,3 +79,12 @@ test_range_contains_position_last_line if {
 
 	range.contains_position(rng, {"line": 5, "character": 15})
 }
+
+test_spanning_skips_leading_data_term if range.spanning([
+	{"type": "var", "value": "data"},
+	{"type": "string", "value": "foo", "location": "1:9:1:12"},
+	{"type": "string", "value": "bar", "location": "1:13:1:16"},
+]) == {
+	"start": {"line": 0, "character": 8},
+	"end": {"line": 0, "character": 15},
+}

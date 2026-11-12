@@ -34,8 +34,7 @@ _import_refs contains ref if {
 _named_vars(rule, name) := [var |
 	walk(rule, [_, var])
 
-	var.type == "var"
-	var.value == name
+	[var.type, var.value] == ["var", name]
 ]
 
 _declares_variable(rule_index, name) if {
@@ -46,3 +45,13 @@ _declares_variable(rule_index, name) if {
 _import := find.import_at_position
 
 _import := find.import_alias_at_position
+
+_import := imp if {
+	[var, rule_index] := find.var_at_position
+
+	not _declares_variable(rule_index, var.value)
+
+	some imp in _module.imports
+	imp.path.value[0].value in {"input", "data"}
+	ast.imported_identifier(imp) == var.value
+}

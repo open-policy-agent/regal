@@ -103,8 +103,8 @@ _comparison_locations[rule_index] contains expr.location if {
 
 	expr := ast.found.expressions[rule_index][i]
 
-	expr.terms[0].value[0].type == "var"
 	expr.terms[0].value[0].value in {"equal", "gt", "gte", "lt", "lte", "neq"}
+	expr.terms[0].value[0].type == "var"
 
 	expr.terms[1].type in ast.scalar_types
 	expr.terms[2].type in ast.scalar_types

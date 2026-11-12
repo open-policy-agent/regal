@@ -22,7 +22,6 @@ report contains violation if {
 
 	terms := rule.body[0].terms
 
-	terms[0].value[0].type == "var"
 	terms[0].value[0].value == "eq"
 
 	ref := _normalize_eq_terms(terms)

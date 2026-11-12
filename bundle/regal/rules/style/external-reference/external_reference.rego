@@ -44,7 +44,7 @@ _args_vars(args) := {name |
 }
 
 _named_vars(arg) := {arg.value} if arg.type == "var"
-_named_vars(arg) := {var.value | some var in ast.find_term_vars(arg)} if arg.type in {"array", "object", "set"}
+_named_vars(arg) := {var.value | some var in ast.find_term_vars(arg.value)} if arg.type in {"array", "object", "set"}
 
 # METADATA
 # scope: document

@@ -41,8 +41,6 @@ _rule_locations[rule_path] := location if {
 	first_rule_index := [i |
 		some i
 
-		# false positive: https://github.com/open-policy-agent/regal/issues/1353
-		# regal ignore:unused-output-variable
 		ref := ast.public_rules_and_functions[i].head.ref
 		concat(".", [ast.package_name, ast.ref_static_to_string(ref)]) == rule_path
 	][0]

@@ -18,6 +18,8 @@ result["response"] := _response_for(var) if {
 	[var, _] := find.var_at_position
 }
 
+result["response"] := _response_for(var) if [var, _] := find.assign_var_at_position
+
 result["response"] := _response_for(var) if [var, _] := find.some_var_at_position
 
 result["response"] := _response_for(var) if [var, _] := find.every_var_at_position

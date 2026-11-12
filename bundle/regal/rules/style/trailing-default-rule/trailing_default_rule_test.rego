@@ -32,7 +32,7 @@ test_fail_default_declared_after if {
 			"file": "policy.rego",
 			"row": 6,
 			"end": {
-				"col": 9,
+				"col": 21,
 				"row": 6,
 			},
 			"text": "\tdefault foo := true",

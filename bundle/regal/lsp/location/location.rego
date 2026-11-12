@@ -45,10 +45,10 @@ end_location_estimate(location) := {
 
 # METADATA
 # description: |
-#   find and return rule at provided row
+#   find and return rule index at provided row
 #   undefined if provided row is not within the range of a rule
-find_rule(rules, row) := [rule |
-	some i, rule in rules
+find_rule(rules, row) := [rule_index |
+	some rule_index, rule in rules
 
 	start_location := util.to_location_object(rule.location)
 

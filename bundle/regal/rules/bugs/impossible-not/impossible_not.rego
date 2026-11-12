@@ -47,7 +47,7 @@ _negated_refs contains negated_ref if {
 	# ignore negated local vars
 	not ref_head.value in ast.function_arg_names(rule)
 	not ref_head.value in {var.value |
-		some var in ast.find_vars_in_local_scope(rule, util.to_location_object(value.location))
+		some var in ast.find_vars_in_local_scope(rule_index, util.to_location_object(value.location))
 	}
 
 	negated_ref := {
@@ -93,9 +93,8 @@ aggregate_report contains violation if {
 		some path in aggregate.multivalue_rules
 	}
 
-	some file
-	negated := _aggregates[file].negated_refs[_] # regal ignore:prefer-some-in-iteration
-
+	some file, aggregate in _aggregates
+	some negated in aggregate.negated_refs
 	some [negated.resolved_path, ref_file] in all_multivalue_refs
 
 	# violations in same file handled by non-aggregate "report"

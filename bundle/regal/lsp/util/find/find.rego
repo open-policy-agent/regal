@@ -21,8 +21,8 @@ arg_at_position := [arg, rule_index] if {
 
 	some arg in data.workspace.parsed[input.params.textDocument.uri].rules[rule_index].head.args
 
-	arg.type == "var"
 	arg.value == var.value
+	arg.type == "var"
 }
 
 # METADATA
@@ -39,6 +39,18 @@ var_at_position := [var, rule_index] if {
 }
 
 # METADATA
+# description: find the variable declared by assignment at input.params.position, if any
+# schemas:
+#   - input.params: schema.regal.lsp.textdocumentposition
+assign_var_at_position := [var, rule_index] if {
+	[var, rule_index] := var_at_position
+
+	not startswith(var.value, "$")
+
+	ast.found.vars[rule_index].assign[_].value == var.value
+}
+
+# METADATA
 # description: find the rule at input.params.position if any
 # schemas:
 #   - input.params: schema.regal.lsp.textdocumentposition
@@ -46,6 +58,16 @@ rule_at_position := [rule, rule_index] if {
 	some rule_index, rule in data.workspace.parsed[input.params.textDocument.uri].rules
 
 	range.contains_position(range.parse(rule.location), input.params.position)
+}
+
+# METADATA
+# description: find the package whose name is at input.params.position, if any
+# schemas:
+#   - input.params: schema.regal.lsp.textdocumentposition
+package_at_position := pkg if {
+	pkg := data.workspace.parsed[input.params.textDocument.uri].package
+
+	range.contains_position(range.spanning(pkg.path), input.params.position)
 }
 
 # METADATA
