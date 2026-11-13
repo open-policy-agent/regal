@@ -12,26 +12,32 @@ import (
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
+	"github.com/open-policy-agent/regal/internal/compile"
 	"github.com/open-policy-agent/regal/internal/io"
 )
 
 type Query struct {
-	query           ast.Body
-	modules         map[string]*ast.Module
-	compiler        *ast.Compiler
-	store           *Store
-	metrics         metrics.Metrics
-	printHook       print.Hook
-	instrumentation *topdown.Instrumentation
-	txn             storage.Transaction
+	query            ast.Body
+	modules          map[string]*ast.Module
+	compiler         *ast.Compiler
+	store            *Store
+	metrics          metrics.Metrics
+	printHook        print.Hook
+	instrumentation  *topdown.Instrumentation
+	txn              storage.Transaction
+	skipSafetyChecks bool
 }
 
 func New(query ast.Body) *Query {
-	q := &Query{query: query}
-
 	// The modules provided by bundle.Loaded() are typically those embedded in the Regal binary,
 	// but could also be sourced from the file system when development mode is enabled.
-	q.modules = modulesFromBundle(rbundle.Loaded().Modules)
+	return NewWithBundle(query, rbundle.Loaded())
+}
+
+func NewWithBundle(query ast.Body, b *bundle.Bundle) *Query {
+	q := &Query{query: query}
+
+	q.modules = modulesFromBundle(b.Modules)
 
 	return q
 }
@@ -98,6 +104,12 @@ func (q *Query) WithPrintHook(hook print.Hook) *Query {
 	return q
 }
 
+func (q *Query) WithSkipSafetyChecks(skip bool) *Query {
+	q.skipSafetyChecks = skip
+
+	return q
+}
+
 func (q *Query) StartReadTransaction(ctx context.Context) *Query {
 	q.txn = q.store.ReadTransaction(ctx)
 
@@ -131,7 +143,7 @@ func (q *Query) Prepare(_ context.Context) (*Query, error) {
 	if q.compiler.Compile(q.modules); q.compiler.Failed() {
 		if rbundle.DevModeEnabled() {
 			// In dev mode, try compiling again with the embedded bundle modules only
-			q.modules = modulesFromBundle(rbundle.Embedded().Modules)
+			q.modules = modulesFromBundle(rbundle.EmbeddedFull().Modules)
 			q.compiler = q.newCompiler()
 
 			if q.compiler.Compile(q.modules); !q.compiler.Failed() {
@@ -151,7 +163,16 @@ func (q *Query) newCompiler() *ast.Compiler {
 		WithKeepModules(true).
 		WithMetrics(q.metrics).
 		WithEnablePrintStatements(q.printHook != nil).
-		WithDefaultRegoVersion(ast.RegoV1)
+		WithDefaultRegoVersion(ast.RegoV1).
+		WithSkipStages(q.skipStages()...)
+}
+
+func (q *Query) skipStages() []ast.StageID {
+	if q.skipSafetyChecks {
+		return compile.EmbeddedRegoSkipStages[:]
+	}
+
+	return nil
 }
 
 func modulesFromBundle(files []bundle.ModuleFile) map[string]*ast.Module {

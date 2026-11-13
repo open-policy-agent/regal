@@ -36,6 +36,7 @@ import (
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 	"github.com/open-policy-agent/regal/pkg/roast/transform"
 	"github.com/open-policy-agent/regal/pkg/rules"
+	"github.com/open-policy-agent/regal/pkg/version"
 
 	_ "github.com/open-policy-agent/regal/pkg/builtins"
 )
@@ -368,21 +369,18 @@ func (l Linter) Prepare(ctx context.Context) (Linter, error) {
 		l.printHook = topdown.NewPrintHook(os.Stderr)
 	}
 
-	ogreStore := ogre.NewStoreFromObject(l.prepareData(conf))
-
-	l.preparedQuery, err = ogre.New(lintQuery).
+	l.preparedQuery, err = ogre.NewWithBundle(lintQuery, rbundle.LoadedNoLSP()).
 		WithModules(l.customModulesMap()).
-		WithStore(ogreStore).
+		WithStore(ogre.NewStoreFromObject(l.prepareData(conf))).
 		WithMetrics(l.metrics).
 		WithPrintHook(l.printHook).
 		WithInstrumentation(l.instrumentation).
+		WithSkipSafetyChecks(l.canSkipCompilerStages()).
 		Prepare(ctx)
 	if err != nil {
 		return l, fmt.Errorf("failed preparing query for linting: %w", err)
 	}
 
-	// TODO: this offers a tremendous perf boost in projects, but may slow down
-	// linting a single file. investigate further, and if we can skip this in that case.
 	if err := l.regoPrepare(ctx); err != nil {
 		return l, fmt.Errorf("failed to prepare Rego: %w", err)
 	}
@@ -952,4 +950,13 @@ func (l Linter) stopTimer(name string) {
 	if l.metrics != nil {
 		l.metrics.Timer(name).Stop()
 	}
+}
+
+// canSkipCompilerStages returns true if some compiler stages safely can be skipped.
+// The requirements for this is that a Regal version is set, which it typically only will be
+// when running as a "standalone" Regal binary built for a release. In that case, AND we are
+// able to assert that we aren't compiling any other code than our own embedded Rego, we can
+// skip stages we know the bundle compiles successfully with, when enabled.
+func (l Linter) canSkipCompilerStages() bool {
+	return version.Version != "" && len(l.ruleBundles) == 1 && len(l.customRuleModules) == 0
 }

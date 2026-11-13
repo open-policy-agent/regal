@@ -1,3 +1,7 @@
+// Package bundle provides access to the contents of Regal's bundle directory
+// as embedded in the binary. This file is placed here (and not in the normal
+// directories containing Go source files) only due to the restrictions which
+// apply to the `//go:embed` directive.
 package bundle
 
 import (
@@ -12,11 +16,13 @@ import (
 	"github.com/open-policy-agent/opa/v1/bundle"
 	outil "github.com/open-policy-agent/opa/v1/util"
 
-	rio "github.com/open-policy-agent/regal/internal/io"
+	"github.com/open-policy-agent/regal/internal/io/embedded"
 	"github.com/open-policy-agent/regal/internal/mode"
 	"github.com/open-policy-agent/regal/internal/util"
 )
 
+// devMode carries state required for development mode, which allows "hot" loading of the
+// bundle from the filesystem instead of the binary. See [DevModeEnabled] for details.
 type devMode struct {
 	bundlePath  string
 	bndl        *bundle.Bundle
@@ -24,14 +30,26 @@ type devMode struct {
 	subscribers []chan struct{}
 }
 
-// Bundle FS will include the tests as well, but since that has negligible impact on the size of the binary,
-// it's preferable to filter them out from the bundle than to e.g. create a separate directory for tests.
 var (
-	Embedded = sync.OnceValue(func() *bundle.Bundle {
-		return rio.MustLoadRegalBundleFS(regalBundleFS)
+	// EmbeddedFull returns the embedded bundle with all (non-test) modules included.
+	EmbeddedFull = sync.OnceValue(func() *bundle.Bundle {
+		return embedded.LoadFull(regalBundleFS)
+	})
+	// EmbeddedNoLSP returns the embedded bundle with the language server modules excluded.
+	// This is noticeably faster to load and compile and should be preferred for commands
+	// that do not depend on the language server.
+	EmbeddedNoLSP = sync.OnceValue(func() *bundle.Bundle {
+		return embedded.LoadNoLSP(regalBundleFS)
 	})
 	Dev = &devMode{}
 
+	// regalBundleFS is the embedded filesystem mirroring the `bundle` directory at the time the binary was built.
+	// Note that this includes all tests, even if they never get used by the binary. The reason for this is that
+	// the string matching allowed by Go's embed directive (see [path.Match]) only allows defining what to match,
+	// not what to *not* match. While this would be nice to avoid, the "dead code" included doesn't cost us much
+	// more than some additional binary size, and a few nanoseconds of extra time spent traversing the embedded
+	// filesystem. Our bundle loader filters ensure these files never get loaded.
+	// Pattern '*' required to match "hidden" files, like our .manifest files.
 	//go:embed *
 	regalBundleFS embed.FS
 	compileMu     sync.Mutex
@@ -76,7 +94,7 @@ func (dm *devMode) Reload() {
 		return
 	}
 
-	if b, err := rio.LoadRegalBundlePath(dm.bundlePath); err != nil {
+	if b, err := embedded.FromPath(dm.bundlePath); err != nil {
 		// Avoid flooding the console/logs with the same error message
 		if curr, last := err.Error(), lastErrMsg.Load(); last == nil || *last != curr {
 			fmt.Fprintf(os.Stderr, "error loading development bundle from %s:\n%v\n", dm.bundlePath, err)
@@ -122,13 +140,21 @@ func DevModeEnabled() bool {
 // the compiled binary. This allows editing handler  policies while the language
 // server is running. This should be considered *very* experimental at this point.
 // In the (unlikely) case that you absolutely need to refer to the embedded bundle,
-// just call [Embedded] directly instead.
+// just call [EmbeddedFull] directly instead.
 func Loaded() *bundle.Bundle {
 	if bndl := Dev.Bundle(); bndl != nil && DevModeEnabled() {
 		return bndl
 	}
 
-	return Embedded()
+	return EmbeddedFull()
+}
+
+func LoadedNoLSP() *bundle.Bundle {
+	if bndl := Dev.Bundle(); bndl != nil && DevModeEnabled() {
+		return bndl
+	}
+
+	return EmbeddedNoLSP()
 }
 
 // CompileLock synchronizes compilation of embedded modules across goroutines.
