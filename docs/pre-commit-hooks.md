@@ -39,7 +39,15 @@ Runs Regal against all staged `.rego` files, aborting the commit if any fail.
 
 Runs Regal against all staged `.rego` files, aborting the commit if any fail.
 
-- Downloads the latest `regal` binary from Github.
+- Downloads the `regal` binary from GitHub. The downloaded version follows the
+  `rev` you pin in your `.pre-commit-config.yaml` when it points at a Regal
+  release (e.g. `rev: v0.26.0` downloads the `v0.26.0` binary), so pinning the
+  hook pins the Regal version too. If `rev` points at a branch or commit rather
+  than a release, the latest release is downloaded instead, unless a previously
+  downloaded versioned binary already exists — in that case the cached binary is
+  reused, so the hook keeps working offline.
+- Set the `REGAL_VERSION` environment variable (e.g. `v0.26.0`) to override the
+  version regardless of the pinned `rev`.
 
 ### `regal-fix`
 
@@ -66,6 +74,11 @@ Same as `regal-fix`, but uses the `regal` binary already on `$PATH`.
 
 ![commit-msg hook](https://img.shields.io/badge/hook-pre--commit-informational?logo=git)
 
-Same as `regal-fix`, but downloads the latest `regal` binary from GitHub instead of building or relying on `$PATH`.
+Same as `regal-fix`, but downloads the `regal` binary from GitHub instead of building or relying on `$PATH`.
 
-- Downloads the latest `regal` binary from Github.
+- The downloaded version follows the `rev` you pin in your
+  `.pre-commit-config.yaml` when it points at a Regal release, so pinning the
+  hook pins the Regal version too. Falls back to the latest release otherwise,
+  unless a previously downloaded versioned binary already exists, which is
+  reused instead.
+- Set the `REGAL_VERSION` environment variable to override the version.
