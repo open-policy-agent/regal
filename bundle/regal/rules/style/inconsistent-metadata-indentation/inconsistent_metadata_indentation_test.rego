@@ -217,56 +217,46 @@ b := 2
 	violation.location.text == "# - anders"
 }
 
-test_fail_array_items_indented_with_four_spaces if {
-	violations := rule.report with input as ast.policy(`
-# METADATA
-# authors:
-#     - anders
-a := 1
-`)
+# The array item step: the two default steps, the configured one, and a file that uses
+# two arrays. One named case each, so a wrong expectation fails the case it belongs to.
+test_array_item_step[tc.name] if {
+	cases := [
+		{
+			"name": "four spaces under the default step",
+			"meta": "# authors:\n#     - anders",
+			"config": {},
+			"reported": ["#     - anders"],
+		},
+		{
+			"name": "two spaces under the default step",
+			"meta": "# authors:\n#   - anders",
+			"config": {},
+			"reported": [],
+		},
+		{
+			"name": "two arrays indented the same way",
+			"meta": "# authors:\n#   - anders\n# related_resources:\n#   - ref: https://example.org",
+			"config": {},
+			"reported": [],
+		},
+		{
+			"name": "two spaces under a step of four",
+			"meta": "# authors:\n#   - anders",
+			"config": {"style": {"inconsistent-metadata-indentation": {"array-indent-num-spaces": 4}}},
+			"reported": ["#   - anders"],
+		},
+		{
+			"name": "four spaces under a step of four",
+			"meta": "# authors:\n#     - anders",
+			"config": {"style": {"inconsistent-metadata-indentation": {"array-indent-num-spaces": 4}}},
+			"reported": [],
+		},
+	]
 
-	count(violations) == 1
-	some violation in violations
-	violation.location.text == "#     - anders"
-}
-
-test_pass_array_items_indented_with_two_spaces if {
-	r := rule.report with input as ast.policy(`
-# METADATA
-# authors:
-#   - anders
-# related_resources:
-#   - ref: https://example.org
-a := 1
-`)
-
-	count(r) == 0
-}
-
-test_fail_configured_array_indent_num_spaces if {
-	violations := rule.report with input as ast.policy(`
-# METADATA
-# authors:
-#   - anders
-a := 1
-`)
-		with config.rules as {"style": {"inconsistent-metadata-indentation": {"array-indent-num-spaces": 4}}}
-
-	count(violations) == 1
-	some violation in violations
-	violation.location.text == "#   - anders"
-}
-
-test_pass_configured_array_indent_num_spaces if {
-	r := rule.report with input as ast.policy(`
-# METADATA
-# authors:
-#     - anders
-a := 1
-`)
-		with config.rules as {"style": {"inconsistent-metadata-indentation": {"array-indent-num-spaces": 4}}}
-
-	count(r) == 0
+	some tc in cases
+	violations := rule.report with input as ast.policy(sprintf("# METADATA\n%s\na := 1\n", [tc.meta]))
+		with config.rules as tc.config
+	sort([violation.location.text | some violation in violations]) == tc.reported
 }
 
 test_pass_array_item_inside_a_block_scalar_is_text if {
