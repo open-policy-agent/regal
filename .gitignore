@@ -8,6 +8,7 @@ dist/
 # Cached binaries downloaded by build/download-and-run.sh
 build/regal-v*
 build/regal-latest
+build/.regal-version
 
 # These two files are used by the Regal evaluation Code Lens, where input.json
 # (or input.yaml) defines the input to use for evaluation, and output.json is
