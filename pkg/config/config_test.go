@@ -25,7 +25,8 @@ func TestFindRegalDirectory(t *testing.T) {
 
 	root := test.TempDirOf(t, "/foo/bar/baz/p.rego", "")
 	must.MkdirAll(t, root, ".regal")
-	must.Return(FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz")))(t)
+	dir := must.Return(FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz")))(t)
+	dir.Close()
 
 	root = test.TempDirOf(t, "/foo/bar/baz/p.rego", "", "/foo/bar/bax.json", "")
 	_, err := FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz"))
@@ -105,6 +106,10 @@ func TestFindConfig(t *testing.T) {
 				testutil.ErrMustContain(err, testData.Error)(t)
 			} else if err != nil {
 				t.Fatalf("expected no error, got %s", err)
+			}
+
+			if configFile != nil {
+				defer configFile.Close()
 			}
 
 			if testData.ExpectedName != "" {

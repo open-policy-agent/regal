@@ -190,5 +190,7 @@ func (m *Manager) internalPath(pathOrURI string) string {
 	rootPath := m.workspace.Path()
 	m.mut.RUnlock()
 
-	return strings.TrimPrefix(strings.TrimPrefix(uri.ToPath(pathOrURI), rootPath), "/")
+	path, rootPath := filepath.ToSlash(uri.ToPath(pathOrURI)), filepath.ToSlash(rootPath)
+
+	return strings.TrimPrefix(strings.TrimPrefix(path, rootPath), "/")
 }

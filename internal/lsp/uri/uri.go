@@ -20,7 +20,7 @@ var drivePattern = regexp.MustCompile(`^/?([A-Za-z]):`)
 // Since clients expect URIs to be in a specific format, this function
 // will convert the path to the appropriate format for the client.
 func FromPath(client clients.Identifier, path string) string {
-	path = strings.TrimPrefix(path, "file://")
+	path = filepath.ToSlash(strings.TrimPrefix(path, "file://"))
 	path = strings.TrimPrefix(path, uriSeparator)
 
 	var driveLetter string
@@ -42,7 +42,7 @@ func FromPath(client clients.Identifier, path string) string {
 		sb.WriteString(driveLetter)
 	}
 
-	part, remaining, found := strings.Cut(filepath.ToSlash(path), uriSeparator)
+	part, remaining, found := strings.Cut(path, uriSeparator)
 
 	sb.WriteString(strings.ReplaceAll(url.QueryEscape(part), "+", "%20"))
 

@@ -181,9 +181,17 @@ func FromReader[R io.Reader](r R) (*Config, error) {
 
 // Find attempts to find either the .regal directory or .regal.yaml
 // config file, and returns the appropriate file or an error.
-func Find(path string) (*os.File, error) {
+func Find(path string) (found *os.File, err error) {
 	regalDir, regalDirError := FindRegalDirectory(path)
 	regalConfigFile, regalConfigFileError := FindRegalConfigFile(path)
+
+	defer func() {
+		for _, f := range []*os.File{regalDir, regalConfigFile} {
+			if f != nil && f != found {
+				f.Close()
+			}
+		}
+	}()
 
 	var regalDirParent, regalConfigFileParent string
 	if regalDirError == nil && regalConfigFileError == nil {

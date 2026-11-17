@@ -205,8 +205,6 @@ The following environment variables can be used to modify the behavior of Regal,
 
 - `REGAL_BUNDLE_PATH`: When set to a valid path, Regal will load its bundle from disk instead of using the embedded
   bundle. See [Contributing to the Language Server](#contributing-to-the-language-server) for details.
-- `REGAL_EXPERIMENTAL`: When set to `true`, enables experimental features in Regal, such as
-  [linked editing ranges](./language-server.md#linked-editing-ranges) in the language server.
 - `REGAL_DEBUG`: When set to `true`, enables debug logging in Regal.
 - `REGAL_BIN`: When set to a valid path, E2E tests will use the specified `regal` binary instead of looking for one in
    the top-level directory.

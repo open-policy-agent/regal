@@ -29,9 +29,6 @@ jobs:
           - runner: macos-26
             name: macos-arm64
             static: true
-          - runner: windows-latest
-            name: windows
-            static: true
     runs-on: ${{ matrix.os.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -67,6 +64,18 @@ jobs:
         with:
           name: regal-${{ matrix.os.name }}
           path: regal
+
+  # Windows runs only the Go tests for now. The rq tool, used by the full build
+  # pipeline above, has issues on Windows. We can revisit this once those are fixed.
+  test-windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: go test ./...
 
   race_detector:
     runs-on: ubuntu-latest

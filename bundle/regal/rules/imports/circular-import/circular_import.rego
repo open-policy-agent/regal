@@ -86,6 +86,16 @@ _package_locations[referenced_pkg][package_name] := [file, util.any_set_item(ref
 	package_name := _common[file].package_name_full
 
 	some referenced_pkg, referenced_locations in pkg.refs
+
+	# multiple files may declare the same package and reference the same
+	# package, so pick the first one to keep the result unique
+	file == min({other | some other in _files_by_package[package_name]; _aggregated[other].refs[referenced_pkg]})
+}
+
+_files_by_package[package_name] contains file if {
+	some file, _ in _aggregated
+
+	package_name := _common[file].package_name_full
 }
 
 # METADATA
