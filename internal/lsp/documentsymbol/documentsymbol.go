@@ -6,9 +6,9 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/ast"
 
-	rast "github.com/open-policy-agent/regal/internal/ast"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/types/symbols"
+	"github.com/open-policy-agent/regal/internal/rast"
 	"github.com/open-policy-agent/regal/internal/util"
 )
 

@@ -138,7 +138,7 @@ func TestSerializedModuleSize(t *testing.T) {
 	// This test will fail whenever the size of the serialized module changes,
 	// which not often and when it happens it's good to know about it, update
 	// and move on.
-	must.Equal(t, 79194, len(must.Marshal(t, module, Options)), "serialized module size")
+	must.Equal(t, 77451, len(must.Marshal(t, module, Options)), "serialized module size")
 }
 
 func TestSerializedModuleNoASTRoASTEquality(t *testing.T) {
@@ -180,7 +180,7 @@ func TestRuleHeadEncoding(t *testing.T) {
 	assert.JSONEqual(t, expect, bs)
 }
 
-func TestRuleHeadEncodingStripsLocationOfGeneratedValue(t *testing.T) {
+func TestRuleHeadEncodingGeneratedValue(t *testing.T) {
 	t.Parallel()
 
 	head := ast.MustParseRule(`p[x] if { x := 1 }`).Head
@@ -193,7 +193,7 @@ func TestRuleHeadEncodingStripsLocationOfGeneratedValue(t *testing.T) {
     {"location": "1:3:1:4", "type": "var", "value": "x"}
   ],
   "key": {"location": "1:3:1:4", "type": "var", "value": "x"},
-  "value": {"type": "boolean", "value": true}
+  "value": true
 }`
 	assert.JSONEqual(t, expected, bs)
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/encoding/util/write"
 	"github.com/open-policy-agent/regal/internal/funsafe"
+	irast "github.com/open-policy-agent/regal/internal/rast"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
 )
@@ -154,7 +155,11 @@ func ElseHeadMarshalToFn(enc *jsontext.Encoder, head *ast.Head) error {
 			head.Value.Location = nil
 		}
 
-		write.FieldFn(enc, "value", head.Value, TermMarshalToFn)
+		if head.Value.Location == nil {
+			write.WhenTrue(enc, true, "value") // generated value simply prints as true
+		} else {
+			write.FieldFn(enc, "value", head.Value, TermMarshalToFn)
+		}
 	}
 
 	return enc.WriteToken(jsontext.EndObject)
@@ -176,7 +181,11 @@ func HeadMarshalToFn(enc *jsontext.Encoder, head *ast.Head) error {
 			head.Value.Location = nil
 		}
 
-		write.FieldFn(enc, "value", head.Value, TermMarshalToFn)
+		if head.Value.Location == nil {
+			write.WhenTrue(enc, true, "value") // generated value simply prints as true
+		} else {
+			write.FieldFn(enc, "value", head.Value, TermMarshalToFn)
+		}
 	}
 
 	return enc.WriteToken(jsontext.EndObject)
@@ -333,7 +342,19 @@ func NumberUnmarshalFromFunc(dec *jsontext.Decoder, num *ast.Number) error {
 }
 
 func SomeDeclMarshalToFn(enc *jsontext.Encoder, some *ast.SomeDecl) error {
-	write.ObjectStart(enc, some.Location)
+	write.ObjectStart(enc, nil)
+
+	if ref, ok := irast.SymbolsCallRef(some); ok {
+		// strip locations from "generated" internal.member_2/3 calls as
+		// the location is virtual and not meaningful to us
+		save := [2]*ast.Location{ref[0].Location, ref[1].Location}
+		ref[0].Location, ref[1].Location = nil, nil
+
+		defer func() {
+			ref[0].Location, ref[1].Location = save[0], save[1]
+		}()
+	}
+
 	write.ArrayFieldFn(enc, "symbols", some.Symbols, TermMarshalToFn)
 
 	return enc.WriteToken(jsontext.EndObject)
