@@ -21,10 +21,13 @@ import (
 	_ "github.com/open-policy-agent/regal/pkg/builtins/regal"
 )
 
-type readWriteCloser struct {
-	in  io.ReadCloser
-	out io.WriteCloser
-}
+type (
+	readWriteCloser struct {
+		in  io.ReadCloser
+		out io.WriteCloser
+	}
+	namedModules = map[string]*ast.Module
+)
 
 var (
 	OPACapabilities = sync.OnceValue(opaCapabilities)
@@ -118,40 +121,32 @@ func WithCreateRecursive(path string, fn func(f *os.File) error) error {
 
 // FindManifestLocations walks the file system rooted at root, and returns the
 // *relative* paths of directories containing a .manifest file.
-func FindManifestLocations(root string) (foundBundleRoots []string, err error) {
-	foundBundleRoots, err = files.DefaultWalkReducer(root, foundBundleRoots).
-		WithFilters(filter.Not(filter.IsManifest)).
-		Reduce(files.PathAppendReducer)
+func FindManifestLocations(root string) (found []string, _ error) {
+	return files.NewWalker(root).
+		WithFilter(filter.Manifest).
+		Reduce(found, func(path string, acc []string) ([]string, error) {
+			rel, err := filepath.Rel(root, path)
+			if err == nil {
+				acc = append(acc, filepath.Dir(rel))
+			}
 
-	for i, path := range foundBundleRoots {
-		if rel, err := filepath.Rel(root, path); err == nil {
-			foundBundleRoots[i] = filepath.Dir(rel)
-		}
-	}
-
-	return foundBundleRoots, err
+			return acc, err
+		})
 }
 
-func ModulesFromCustomRuleFS(customRuleFS fs.FS, rootPath string) (map[string]*ast.Module, error) {
-	modules, err := files.DefaultWalkReducer(rootPath, make(map[string]*ast.Module)).
-		WithFilters(filter.RegoTests).
-		ReduceFS(customRuleFS, func(path string, modules map[string]*ast.Module) (map[string]*ast.Module, error) {
-			bs, err := fs.ReadFile(customRuleFS, path)
-			if err != nil {
-				return modules, fmt.Errorf("failed to read custom rule file: %w", err)
+func ModulesFromCustomRuleFS(customRuleFS fs.FS, root string) (namedModules, error) {
+	return files.NewWalker(root).
+		WithFileSystem(customRuleFS).
+		WithFilter(filter.RegoNoTests).
+		Reduce(make(namedModules), func(path string, mods namedModules) (_ namedModules, err error) {
+			var bs []byte
+
+			if bs, err = fs.ReadFile(customRuleFS, path); err == nil {
+				mods[path], err = ast.ParseModule(path, outil.ByteSliceToString(bs))
 			}
 
-			m, err := ast.ParseModule(path, outil.ByteSliceToString(bs))
-			if err != nil {
-				return modules, fmt.Errorf("failed to parse custom rule file %q: %w", path, err)
-			}
-
-			modules[path] = m
-
-			return modules, nil
+			return mods, err
 		})
-
-	return modules, util.WrapErr(err, "failed to walk custom rule FS")
 }
 
 // DirCleanUpPaths will, for a given target file, list all the dirs that would

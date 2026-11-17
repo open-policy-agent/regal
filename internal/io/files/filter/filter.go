@@ -5,8 +5,6 @@ import (
 	"os"
 	"slices"
 	"strings"
-
-	"github.com/open-policy-agent/regal/internal/util"
 )
 
 // Func is a function that filters files and directories during a walk.
@@ -15,46 +13,50 @@ type Func func(path string, info os.DirEntry) bool
 // DefaultSkipDirectories is a default skip function that skips common directories
 // that are not relevant for most file walks, such as .git, .idea, and node_modules.
 func DefaultSkipDirectories(_ string, info fs.DirEntry) bool {
-	name := info.Name()
-
-	return info.IsDir() && (name == ".git" || name == ".idea" || name == "node_modules")
+	return dirWithName(info, ".git", ".idea", "node_modules")
 }
 
-// Directories is a filter for filtering directories.
-func Directories(_ string, info os.DirEntry) bool {
-	return info.IsDir()
+// File is a filter for filtering files (excluding directories).
+func File(_ string, info os.DirEntry) bool {
+	return !info.IsDir()
 }
 
-// Filenames filters files by their exact name, not including the path.
-func Filenames(names ...string) Func {
-	return func(_ string, info os.DirEntry) bool {
-		return slices.ContainsFunc(names, util.Equal(info.Name()))
-	}
+// RegoNoTests filters Rego files excluding test files, except for the special case "todo_test.rego".
+func RegoNoTests(path string, d os.DirEntry) bool {
+	return !d.IsDir() && strings.HasSuffix(path, ".rego") &&
+		(!strings.HasSuffix(path, "_test.rego") || d.Name() == "todo_test.rego")
 }
 
-// Suffixes filters any path that has a suffix matching any of the provided suffixes.
-func Suffixes(suffixes ...string) Func {
-	return func(path string, _ os.DirEntry) bool {
-		return slices.ContainsFunc(suffixes, util.Partial2(strings.HasSuffix, path))
-	}
+// Rego filters all Rego files, including test files.
+func Rego(path string, d os.DirEntry) bool {
+	return !d.IsDir() && (strings.HasSuffix(path, ".rego") || strings.HasSuffix(path, ".rq"))
 }
 
-// Not negates the result of the provided filter, so that e.g.
-// Not(Directories) will return true for files and false for directories.
-func Not(filter Func) Func {
-	return func(path string, d os.DirEntry) bool {
-		return !filter(path, d)
-	}
+// Config filters config.yaml and .regal.yaml files.
+func Config(_ string, d os.DirEntry) bool {
+	return AnyFileName(d, "config.yaml", ".regal.yaml")
 }
 
-func RegoTests(path string, d os.DirEntry) bool {
-	return strings.HasSuffix(path, "_test.rego") && d.Name() != "todo_test.rego"
+// Input filters input.json and input.yaml files.
+func Input(_ string, d os.DirEntry) bool {
+	return AnyFileName(d, "input.json", "input.yaml")
 }
 
-func NotRego(path string, _ os.DirEntry) bool {
-	return !strings.HasSuffix(path, ".rego") && !strings.HasSuffix(path, ".rq")
+// Manifest filters .manifest files.
+func Manifest(_ string, d os.DirEntry) bool {
+	return !d.IsDir() && d.Name() == ".manifest"
 }
 
-func IsManifest(_ string, d os.DirEntry) bool {
-	return d.Name() == ".manifest"
+// JSON filters .json files.
+func JSON(path string, d os.DirEntry) bool {
+	return !d.IsDir() && strings.HasSuffix(path, ".json")
+}
+
+// AnyFileName is a helper function to check if d is a file named as any of the provided names.
+func AnyFileName(d os.DirEntry, names ...string) bool {
+	return !d.IsDir() && slices.Contains(names, d.Name())
+}
+
+func dirWithName(d os.DirEntry, names ...string) bool {
+	return d.IsDir() && slices.Contains(names, d.Name())
 }

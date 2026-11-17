@@ -19,11 +19,13 @@ func FilterIgnoredPaths(paths, ignore []string, checkExists bool, pathPrefix str
 	}
 
 	if checkExists {
-		for _, path := range paths {
-			filtered, err = files.DefaultWalkReducer(path, filtered).
-				WithFilters(filter.NotRego).
+		for i := range paths {
+			filtered, err = files.NewWalker(paths[i]).
+				WithFilter(filter.Rego).
 				WithStatBeforeWalk(true).
-				Reduce(files.PathAppendReducer)
+				Reduce(filtered, func(path string, acc []string) ([]string, error) {
+					return append(acc, path), nil
+				})
 			if err != nil {
 				return nil, fmt.Errorf("failed to filter paths:\n%w", err)
 			}

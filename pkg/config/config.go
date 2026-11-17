@@ -22,7 +22,6 @@ import (
 	rbundle "github.com/open-policy-agent/regal/bundle"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/io/files"
-	"github.com/open-policy-agent/regal/internal/io/files/filter"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 	"github.com/open-policy-agent/regal/pkg/roast/rast"
@@ -255,9 +254,7 @@ func FindRegalConfigFile(path string) (*os.File, error) {
 //
 // All returned paths are absolute paths. If the provided path itself
 // is determined to be a bundle root directory it will be included in the result.
-func FindBundleRootDirectories(path string) ([]string, error) {
-	var foundBundleRoots []string
-
+func FindBundleRootDirectories(path string) (foundBundleRoots []string, err error) {
 	// This will traverse the tree **upwards** searching for a .regal directory
 	regalDir, err := FindRegalDirectory(path)
 	if err == nil {
@@ -302,7 +299,7 @@ func FindBundleRootDirectories(path string) ([]string, error) {
 	}
 
 	// This will traverse the tree **downwards** searching for .regal directories
-	if err := files.NewWalker(path).WithSkipFunc(filter.DefaultSkipDirectories).Walk(f); err != nil {
+	if err := files.NewWalker(path).Walk(f); err != nil {
 		return nil, fmt.Errorf("failed to walk path: %w", err)
 	}
 
@@ -444,7 +441,6 @@ func findFileUpwards(path, name string, expectDir bool) (*os.File, error) {
 	return util.Wrap(os.Open(dir))("failed to open .regal directory")
 }
 
-// TODO: this doesn't properly handle .regal.yaml??
 func rootsFromRegalConfigDirOrFile(file *os.File) ([]string, error) {
 	defer file.Close()
 
@@ -454,8 +450,7 @@ func rootsFromRegalConfigDirOrFile(file *os.File) ([]string, error) {
 	}
 
 	parent, filename := filepath.Split(file.Name())
-	if (fileInfo.IsDir() && filename != ".regal") ||
-		(!fileInfo.IsDir() && filename != ".regal.yaml") {
+	if (fileInfo.IsDir() && filename != ".regal") || (!fileInfo.IsDir() && filename != ".regal.yaml") {
 		return nil, fmt.Errorf("expected a directory named '.regal' or a file named '.regal.yaml', got '%s'", filename)
 	}
 
