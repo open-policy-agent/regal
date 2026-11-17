@@ -149,9 +149,3 @@ func TestCapabilitiesIncludeLogicalKeywords(t *testing.T) {
 		assert.True(t, slices.Contains(Capabilities().FutureKeywords, keyword))
 	}
 }
-
-func BenchmarkLoadRegalBundlePath(b *testing.B) {
-	for b.Loop() {
-		must.Return(LoadRegalBundlePath("../../bundle"))(b)
-	}
-}

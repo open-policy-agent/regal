@@ -21,14 +21,14 @@ type versionCommandParams struct {
 	format string
 }
 
+const fmtDescribe = "Output format. Valid values are '" + formatPretty + "' and '" + formatJSON + "'."
+
 func init() {
 	params := versionCommandParams{}
-
 	parseCommand := &cobra.Command{
 		Use:   "version [--format=json|pretty]",
 		Short: "Print the version of Regal",
 		Long:  "Show the version and other build-time metadata for the running Regal binary.",
-
 		PreRunE: func(*cobra.Command, []string) error {
 			params.format = cmp.Or(params.format, formatPretty)
 			if params.format != formatJSON && params.format != formatPretty {
@@ -37,7 +37,6 @@ func init() {
 
 			return nil
 		},
-
 		Run: func(*cobra.Command, []string) {
 			vi := version.New()
 
@@ -48,7 +47,7 @@ func init() {
 					log.Fatalln(err)
 				}
 			case formatPretty:
-				os.Stdout.WriteString(vi.String())
+				os.Stdout.Write(vi.Append(nil))
 
 				// run version check for pretty format only
 				if os.Getenv(update.CheckVersionDisableEnvVar) == "" {
@@ -68,11 +67,6 @@ func init() {
 			}
 		},
 	}
-	parseCommand.Flags().StringVar(
-		&params.format,
-		"format",
-		formatPretty,
-		fmt.Sprintf("Output format. Valid values are '%s' and '%s'.", formatPretty, formatJSON),
-	)
+	parseCommand.Flags().StringVar(&params.format, "format", formatPretty, fmtDescribe)
 	RootCommand.AddCommand(parseCommand)
 }

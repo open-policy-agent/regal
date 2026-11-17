@@ -3,8 +3,8 @@ package version
 import (
 	"cmp"
 	"runtime"
-	"strings"
 
+	"github.com/open-policy-agent/opa/v1/util"
 	opaversion "github.com/open-policy-agent/opa/v1/version"
 )
 
@@ -21,31 +21,12 @@ type Info struct {
 
 const platform = runtime.GOOS + "/" + runtime.GOARCH
 
-// Values injected at build time using -ldflags.
 var (
-	Version   = ""
-	Commit    = ""
-	Timestamp = ""
-	Hostname  = ""
-
+	// Values injected at build time using -ldflags.
+	Version, Commit, Timestamp, Hostname = "", "", "", ""
 	// The version of Go Regal was built with.
 	goVersion = runtime.Version()
 )
-
-func (vi Info) String() string {
-	return strings.Join(
-		[]string{
-			"Version:       " + vi.Version,
-			"Go Version:    " + vi.GoVersion,
-			"OPA Version:   " + vi.OPAVersion,
-			"Platform:      " + vi.Platform,
-			"Commit:        " + vi.Commit,
-			"Timestamp:     " + vi.Timestamp,
-			"Installed via: " + vi.Hostname,
-		},
-		"\n",
-	) + "\n"
-}
 
 func New() Info {
 	return Info{
@@ -57,4 +38,20 @@ func New() Info {
 		Timestamp:  cmp.Or(Timestamp, "unknown"),
 		Hostname:   cmp.Or(Hostname, "unknown"),
 	}
+}
+
+func (vi Info) Append(buf []byte) []byte {
+	buf = append(append(append(buf, "Version:       "...), vi.Version...), '\n')
+	buf = append(append(append(buf, "Go Version:    "...), vi.GoVersion...), '\n')
+	buf = append(append(append(buf, "OPA Version:   "...), vi.OPAVersion...), '\n')
+	buf = append(append(append(buf, "Platform:      "...), vi.Platform...), '\n')
+	buf = append(append(append(buf, "Commit:        "...), vi.Commit...), '\n')
+	buf = append(append(append(buf, "Timestamp:     "...), vi.Timestamp...), '\n')
+	buf = append(append(append(buf, "Installed via: "...), vi.Hostname...), '\n')
+
+	return buf
+}
+
+func (vi Info) String() string {
+	return util.ByteSliceToString(vi.Append(nil))
 }

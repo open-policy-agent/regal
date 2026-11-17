@@ -160,7 +160,7 @@ func prepareQuery(ctx context.Context, query ast.Body, store storage.Store) (*re
 			// Try falling back to the embedded bundle, or else we'll
 			// easily have errors popping up as notifications, making it
 			// really hard to fix the issue that broke the query (like a parse error)
-			args, txn = prepareQueryArgs(ctx, query, store, rbundle.Embedded())
+			args, txn = prepareQueryArgs(ctx, query, store, rbundle.EmbeddedFull())
 			if pq, err = rego.New(args...).PrepareForEval(ctx); err == nil {
 				if store != nil && txn != nil {
 					if err := store.Commit(ctx, txn); err != nil {

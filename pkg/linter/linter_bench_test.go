@@ -10,6 +10,7 @@ import (
 	regal "github.com/open-policy-agent/regal/pkg/linter"
 	"github.com/open-policy-agent/regal/pkg/report"
 	"github.com/open-policy-agent/regal/pkg/reporter"
+	"github.com/open-policy-agent/regal/pkg/version"
 )
 
 // 736486708 ns/op	2348230496 B/op	51198148 allocs/op // OPA v1.12.2
@@ -52,11 +53,30 @@ func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
 // 61936272 ns/op   38191932 B/op     921084 allocs/op // OPA v1.13.1
 // 75080301 ns/op   47586984 B/op    1064790 allocs/op // OPA v1.20.1
 // 54175355 ns/op   33455758 B/op     661961 allocs/op // JSON & YAML improvements
+// 60981116 ns/op	38417144 B/op	  735675 allocs/op // No skipped stages
+// 45802620 ns/op	30056136 B/op	  565168 allocs/op // Skip compiler stages
+// 40271718 ns/op	26811090 B/op	  508564 allocs/op // No skipped stages, no LSP modules
+// 30556994 ns/op	20161949 B/op	  380834 allocs/op // With skipped stages, no LSP modules
 func BenchmarkOnlyPrepare(b *testing.B) {
 	linter := bundleLinter(b, true)
-	for b.Loop() {
-		linter.MustPrepare(b.Context())
-	}
+
+	b.Run("no skipped stages", func(b *testing.B) {
+		for b.Loop() {
+			linter.MustPrepare(b.Context())
+		}
+	})
+
+	b.Run("with skipped stages", func(b *testing.B) {
+		// equivalent to building with:
+		// go build -ldflags "-X 'github.com/open-policy-agent/regal/pkg/version.Version=0.99.0'"
+		version.Version = "0.99.0"
+
+		for b.Loop() {
+			linter.MustPrepare(b.Context())
+		}
+
+		version.Version = ""
+	})
 }
 
 // 127396828 ns/op	300739526 B/op	 5938689 allocs/op // OPA v1.10.0

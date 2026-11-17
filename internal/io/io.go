@@ -5,15 +5,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/open-policy-agent/opa/v1/ast"
-	"github.com/open-policy-agent/opa/v1/bundle"
-	ofilter "github.com/open-policy-agent/opa/v1/loader/filter"
 	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/io/files"
@@ -57,62 +54,10 @@ func Getwd() string {
 	return wd
 }
 
-// LoadRegalBundleFS loads bundle embedded from policy and data directory.
-func LoadRegalBundleFS(fs fs.FS) (*bundle.Bundle, error) {
-	embedLoader, err := bundle.NewFSLoader(fs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load bundle from filesystem: %w", err)
-	}
-
-	b, err := bundle.NewCustomReader(embedLoader.WithFilter(ExcludeTestLegacyFilter())).
-		WithCapabilities(Capabilities()).
-		WithSkipBundleVerification(true).
-		WithProcessAnnotations(true).
-		WithLazyLoadingMode(false). // NB(sr): This is OPA's default, unless when using bundle plugins
-		WithRegoVersion(ast.RegoV1).
-		WithBundleName("regal").
-		Read()
-	if err != nil {
-		return nil, fmt.Errorf("failed to read bundle from filesystem: %w", err)
-	}
-
-	return &b, nil
-}
-
-// LoadRegalBundlePath loads bundle from path.
-func LoadRegalBundlePath(path string) (*bundle.Bundle, error) {
-	root, err := os.OpenRoot(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open root: %w", err)
-	}
-	defer CloseIgnore(root)
-
-	return LoadRegalBundleFS(root.FS())
-}
-
-// MustLoadRegalBundleFS loads bundle embedded from policy and data directory, exit on failure.
-func MustLoadRegalBundleFS(fs fs.FS) *bundle.Bundle {
-	regalBundle, err := LoadRegalBundleFS(fs)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return regalBundle
-}
-
 // CloseIgnore closes handle ignoring errors, mainly for deferred cleanup.
 func CloseIgnore(handle io.Closer) {
 	if handle != nil {
 		_ = handle.Close()
-	}
-}
-
-func ExcludeTestLegacyFilter() ofilter.LoaderFilter {
-	return func(_ string, info fs.FileInfo, _ int) bool {
-		return strings.HasSuffix(info.Name(), "_test.rego") &&
-			// (anderseknert): This is an outlier, but not sure we need something
-			// more polished to deal with this for the time being.
-			info.Name() != "todo_test.rego"
 	}
 }
 
@@ -173,19 +118,18 @@ func WithCreateRecursive(path string, fn func(f *os.File) error) error {
 
 // FindManifestLocations walks the file system rooted at root, and returns the
 // *relative* paths of directories containing a .manifest file.
-func FindManifestLocations(root string) ([]string, error) {
-	var foundBundleRoots []string
+func FindManifestLocations(root string) (foundBundleRoots []string, err error) {
+	foundBundleRoots, err = files.DefaultWalkReducer(root, foundBundleRoots).
+		WithFilters(filter.Not(filter.IsManifest)).
+		Reduce(files.PathAppendReducer)
 
-	return files.DefaultWalkReducer(root, foundBundleRoots).
-		WithFilters(filter.Not(filter.Filenames(".manifest"))).
-		Reduce(func(path string, curr []string) ([]string, error) {
-			rel, err := filepath.Rel(root, path)
-			if err == nil {
-				curr = append(curr, filepath.Dir(rel))
-			}
+	for i, path := range foundBundleRoots {
+		if rel, err := filepath.Rel(root, path); err == nil {
+			foundBundleRoots[i] = filepath.Dir(rel)
+		}
+	}
 
-			return curr, err
-		})
+	return foundBundleRoots, err
 }
 
 func ModulesFromCustomRuleFS(customRuleFS fs.FS, rootPath string) (map[string]*ast.Module, error) {
@@ -213,20 +157,21 @@ func ModulesFromCustomRuleFS(customRuleFS fs.FS, rootPath string) (map[string]*a
 // DirCleanUpPaths will, for a given target file, list all the dirs that would
 // be empty if the target file was deleted.
 func DirCleanUpPaths(target string, preserve []string) ([]string, error) {
-	dirs := make([]string, 0)
-	preserveDirs := util.NewSet[string]()
+	preserveDirs := util.NewSet(preserve...)
 
 	for _, p := range preserve {
 		for {
-			preserveDirs.Add(p)
-
 			p = filepath.Dir(p)
 			if p == "." || p == "/" || p == paths.Separator ||
 				p == filepath.VolumeName(p) || preserveDirs.Contains(p) {
 				break
 			}
+
+			preserveDirs.Add(p)
 		}
 	}
+
+	var dirs []string
 
 	dir := filepath.Dir(target)
 

@@ -198,6 +198,13 @@ func EqualsAny[T comparable](a ...T) func(T) bool {
 	return Partial2(slices.Contains, a)
 }
 
+// Equal returns a function comparing for equality to a.
+func Equal[T comparable](a T) func(T) bool {
+	return func(b T) bool {
+		return a == b
+	}
+}
+
 // FreePort returns a free port to listen on, if none of the preferred ports
 // are available on the localhost interface, then a random free port is returned.
 func FreePort(preferred ...int) (port int, err error) {

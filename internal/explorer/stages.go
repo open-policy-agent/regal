@@ -67,7 +67,7 @@ func CompilerStages(path, rego string, useStrict, useAnno, usePrint bool) []Comp
 
 	if c.Compile(map[string]*ast.Module{path: mod}); len(c.Errors) > 0 {
 		// stage after the last than ran successfully
-		stage := stages[len(result)-1]
+		stage := stages[min(len(stages), len(result))-1]
 		result = append(result, CompileResult{Stage: stage + ": Failure", Error: c.Errors.Error()})
 	}
 
