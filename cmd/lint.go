@@ -200,15 +200,7 @@ func lint(args []string, params *lintParams) (violations []report.Violation, err
 	searchPath := getSearchPath(args)
 	if searchPath != "" {
 		if regalPath, err = config.FindRegalDirectoryPath(searchPath); err == nil {
-			regal = regal.WithPathPrefix(regalPath)
-
-			if params.configFile == "" {
-				if regalConf := filepath.Join(regalPath, "config.yaml"); rio.IsFile(regalConf) {
-					// override param in case it's unset, so that the readUserConfig function
-					// called below can skip searching for the config file
-					params.configFile = regalConf
-				}
-			}
+			regal = regal.WithPathPrefix(filepath.Dir(regalPath))
 
 			if rulesDir := filepath.Join(regalPath, "rules"); !params.rules.isSet && rio.IsDir(rulesDir) {
 				regal = regal.WithCustomRulesPaths(rulesDir)
@@ -221,9 +213,9 @@ func lint(args []string, params *lintParams) (violations []report.Violation, err
 		m.Timer(regalmetrics.RegalConfigParse).Start()
 	}
 
-	userConfig, path, err := loadUserConfig(params.lintAndFixParams, searchPath)
+	userConfig, _, err := config.LoadUser(params.configFile, searchPath, params.debug)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read user-provided config in %s: %w", path, err)
+		return nil, err
 	}
 
 	if params.metrics {

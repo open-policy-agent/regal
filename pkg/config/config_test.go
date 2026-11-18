@@ -20,16 +20,16 @@ import (
 	"github.com/open-policy-agent/regal/internal/util"
 )
 
-func TestFindRegalDirectory(t *testing.T) {
+func TestFindRegalDirectoryPath(t *testing.T) {
 	t.Parallel()
 
 	root := test.TempDirOf(t, "/foo/bar/baz/p.rego", "")
 	must.MkdirAll(t, root, ".regal")
-	dir := must.Return(FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz")))(t)
-	dir.Close()
+	dir := must.Return(FindRegalDirectoryPath(filepath.Join(root, "foo", "bar", "baz")))(t)
+	assert.Equal(t, filepath.Join(root, ".regal"), dir)
 
 	root = test.TempDirOf(t, "/foo/bar/baz/p.rego", "", "/foo/bar/bax.json", "")
-	_, err := FindRegalDirectory(filepath.Join(root, "foo", "bar", "baz"))
+	_, err := FindRegalDirectoryPath(filepath.Join(root, "foo", "bar", "baz"))
 	assert.NotNil(t, err, "expected no config file found")
 }
 
@@ -46,7 +46,6 @@ func TestFindConfig(t *testing.T) {
 				"/foo/bar/baz/p.rego": "package p",
 				"/foo/bar/bax.json":   "{}",
 			},
-			Error: "could not find Regal config",
 		},
 		".regal/config.yaml": {
 			FS: map[string]string{
@@ -60,7 +59,6 @@ func TestFindConfig(t *testing.T) {
 				"/foo/bar/baz/p.rego":   "package p",
 				"/foo/bar/.regal/.keep": "me", // .keep file to ensure the dir is present
 			},
-			Error: "config file was not found in .regal directory",
 		},
 		".regal.yaml": {
 			FS: map[string]string{
@@ -101,22 +99,16 @@ func TestFindConfig(t *testing.T) {
 
 			root := test.TempDir(t, testData.FS)
 
-			configFile, err := Find(filepath.Join(root, "foo", "bar", "baz"))
+			configPath, err := Find(filepath.Join(root, "foo", "bar", "baz"), false)
 			if testData.Error != "" {
 				testutil.ErrMustContain(err, testData.Error)(t)
 			} else if err != nil {
 				t.Fatalf("expected no error, got %s", err)
 			}
 
-			if configFile != nil {
-				defer configFile.Close()
-			}
-
-			if testData.ExpectedName != "" {
-				got, exp := strings.TrimPrefix(configFile.Name(), root), filepath.FromSlash(testData.ExpectedName)
-				if got != exp {
-					t.Fatalf("expected config file %q, got %q", exp, got)
-				}
+			got, exp := strings.TrimPrefix(configPath, root), filepath.FromSlash(testData.ExpectedName)
+			if got != exp {
+				t.Fatalf("expected config file %q, got %q", exp, got)
 			}
 		})
 	}
@@ -137,7 +129,7 @@ func TestFindBundleRootDirectories(t *testing.T) {
 		"/foo/bar/baz/policy.rego":  "package p", // foo/bar from config
 		"/baz":                      "",          // baz from config
 	})
-	locations := must.Return(FindBundleRootDirectories(root))(t)
+	locations := must.Return(findBundleRootDirectories(root))(t)
 	assert.Equal(t, 5, len(locations), "locations")
 
 	expected := outil.Map([]string{"", ".regal/rules", "baz", "bundle", "foo/bar"}, util.FilepathJoiner(root))
@@ -158,7 +150,7 @@ func TestFindBundleRootDirectoriesWithStandaloneConfig(t *testing.T) {
 		"/foo/bar/baz/policy.rego": "package p", // foo/bar from config
 		"/baz":                     "",          // baz from config
 	})
-	locations := must.Return(FindBundleRootDirectories(root))(t)
+	locations := must.Return(findBundleRootDirectories(root))(t)
 	assert.Equal(t, 4, len(locations), "locations")
 
 	expected := outil.Map([]string{"", "baz", "bundle", "foo/bar"}, util.FilepathJoiner(root))

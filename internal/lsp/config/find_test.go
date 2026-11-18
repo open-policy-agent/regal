@@ -63,3 +63,21 @@ func TestFindConfigRoots(t *testing.T) {
 		})
 	}
 }
+
+func TestHasConfigSuffix(t *testing.T) {
+	t.Parallel()
+
+	for path, expected := range map[string]bool{
+		".regal.yaml":                   true,
+		"/project/.regal.yaml":          true,
+		"/project/.regal/config.yaml":   true,
+		`C:\project\.regal\config.yaml`: true,
+		"/project/config.yaml":          false,
+		"/project/.regal/rules/a.rego":  false,
+		"/project/other.yaml":           false,
+	} {
+		if got := HasConfigSuffix(path); got != expected {
+			t.Errorf("HasConfigSuffix(%q): expected %v, got %v", path, expected, got)
+		}
+	}
+}

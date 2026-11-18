@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -109,7 +110,7 @@ var (
 		file := rbundle.Open("regal/config/provided/data.yaml")
 		defer file.Close()
 
-		return util.Must(FromReader(file))
+		return util.Must(fromReader(file))
 	})
 	OpaCapsForThisVersionTerm = sync.OnceValue(func() *ast.Term {
 		return ast.NewTerm(rast.StructToValue(OpaCapsForThisVersionInterned()))
@@ -163,147 +164,40 @@ func (r Rule) Copy() Rule {
 	return c
 }
 
-func HasConfigSuffix(path string) bool {
-	return util.HasAnySuffix(path, standaloneConfigFileName, ".regal/config.yaml", ".regal\\config.yaml")
-}
-
 func FromPath(path string) (*Config, error) {
-	return util.Wrap(rio.WithOpen(path, FromReader))("failed to open config file")
+	return rio.WithOpen(path, func(file *os.File) (*Config, error) {
+		cfg, err := fromReader(file)
+
+		return cfg, util.WrapErr(err, "failed to decode "+path)
+	})
 }
 
-func FromReader[R io.Reader](r R) (*Config, error) {
-	cfg := &Config{}
-	err := yaml.NewDecoder(r).Decode(cfg)
+// Find attempts to find either the .regal directory or .regal.yaml config file, searching upwards from the path,
+// and returns the path of the config file. The path is empty if there is none, and an error means there is a problem,
+// like conflicting config files. If global is set, the user's global config file is used, if there is one, when no
+// other is found.
+func Find(path string, global bool) (string, error) {
+	found, err := findProjectConfig(path)
+	if found != "" || err != nil || !global {
+		return found, err
+	}
 
-	return cfg, err
-}
+	if dir := GlobalConfigDir(false); dir != "" {
+		globalConfig := filepath.Join(dir, configFileName)
 
-// Find attempts to find either the .regal directory or .regal.yaml
-// config file, and returns the appropriate file or an error.
-func Find(path string) (found *os.File, err error) {
-	regalDir, regalDirError := FindRegalDirectory(path)
-	regalConfigFile, regalConfigFileError := FindRegalConfigFile(path)
-
-	defer func() {
-		for _, f := range []*os.File{regalDir, regalConfigFile} {
-			if f != nil && f != found {
-				f.Close()
-			}
-		}
-	}()
-
-	var regalDirParent, regalConfigFileParent string
-	if regalDirError == nil && regalConfigFileError == nil {
-		regalDirParent = filepath.Dir(regalDir.Name())
-		regalConfigFileParent = filepath.Dir(regalConfigFile.Name())
-
-		if regalDirParent == regalConfigFileParent {
-			return nil, errors.New("conflicting config files: both .regal directory and .regal.yaml found")
+		if _, statErr := os.Stat(globalConfig); statErr == nil {
+			return globalConfig, nil
+		} else if !errors.Is(statErr, fs.ErrNotExist) {
+			return "", fmt.Errorf("failed to stat global config file: %w", statErr)
 		}
 	}
 
-	if regalDirError != nil && regalConfigFileError != nil {
-		return nil, errors.New("could not find Regal config")
-	}
-
-	// if the config file parent is not "", then it was found, and if it's
-	// longer then it's more specific to the search path in question, and so we
-	// return that here in such cases.
-	if len(regalConfigFileParent) > len(regalDirParent) {
-		return regalConfigFile, nil
-	}
-
-	// if there is a .regal directory, a config file is expected to be found inside.
-	if regalDirError == nil {
-		expectedConfigFilePath := filepath.Join(regalDir.Name(), configFileName)
-
-		if _, err := os.Stat(expectedConfigFilePath); err != nil && os.IsNotExist(err) {
-			return nil, errors.New("config file was not found in .regal directory")
-		} else if err != nil {
-			return nil, fmt.Errorf("failed to stat .regal config file: %w", err)
-		}
-
-		return os.Open(expectedConfigFilePath)
-	}
-
-	// regalConfigFileError is nil at this point, so we can return the file
-	return regalConfigFile, nil
+	return "", nil
 }
 
 // FindRegalDirectoryPath searches for a .regal directory upwards from the provided path.
 func FindRegalDirectoryPath(path string) (string, error) {
 	return findUpwards(path, regalDirName, true)
-}
-
-// FindRegalDirectory searches for a .regal directory upwards from the provided path.
-func FindRegalDirectory(path string) (*os.File, error) {
-	return findFileUpwards(path, regalDirName, true)
-}
-
-// FindRegalConfigFile searches for a .regal.yaml config file upwards from the provided path.
-func FindRegalConfigFile(path string) (*os.File, error) {
-	return findFileUpwards(path, standaloneConfigFileName, false)
-}
-
-// FindBundleRootDirectories finds all bundle root directories from the provided path,
-// which **must** be an absolute path. Bundle root directories may be found either by:
-//
-// - Configuration (`project.roots`)
-// - By the presence of a .manifest file anywhere under the path
-// - By the presence of a .regal directory anywhere under or above the path ...
-//
-// All returned paths are absolute paths. If the provided path itself
-// is determined to be a bundle root directory it will be included in the result.
-func FindBundleRootDirectories(path string) (foundBundleRoots []string, err error) {
-	// This will traverse the tree **upwards** searching for a .regal directory
-	regalDir, err := FindRegalDirectory(path)
-	if err == nil {
-		roots, err := rootsFromRegalConfigDirOrFile(regalDir)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get roots from .regal directory: %w", err)
-		}
-
-		foundBundleRoots = append(foundBundleRoots, roots...)
-	}
-
-	// This will traverse the tree **upwards** searching for a .regal.yaml file
-	regalConfigFile, err := FindRegalConfigFile(path)
-	if err == nil {
-		roots, err := rootsFromRegalConfigDirOrFile(regalConfigFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get roots from .regal.yaml: %w", err)
-		}
-
-		foundBundleRoots = append(foundBundleRoots, roots...)
-	}
-
-	f := func(path string) error {
-		if filepath.Dir(path) == regalDirName {
-			// Opening files as part of walking is generally not a good idea...
-			// but I think we can assume the number of .regal directories in a project
-			// is limited to a reasonable number.
-			roots, err := rio.WithOpen(path, rootsFromRegalConfigDirOrFile)
-			if err != nil {
-				return fmt.Errorf("failed to get roots from .regal directory: %w", err)
-			}
-
-			foundBundleRoots = append(foundBundleRoots, roots...)
-		}
-
-		// check for .manifest directories as part of the same walk
-		if filepath.Base(path) == ".manifest" {
-			foundBundleRoots = append(foundBundleRoots, filepath.Dir(path))
-		}
-
-		return nil
-	}
-
-	// This will traverse the tree **downwards** searching for .regal directories
-	if err := files.NewWalker(path).Walk(f); err != nil {
-		return nil, fmt.Errorf("failed to walk path: %w", err)
-	}
-
-	return slices.Compact(outil.Sorted(foundBundleRoots)), nil
 }
 
 // AllRegoVersions returns a map of all Rego versions found in the provided config and .manifest files,
@@ -379,7 +273,7 @@ func GetPotentialRoots(paths ...string) ([]string, error) {
 
 		absDirPaths[i] = rio.Dir(abs)
 
-		brds, err := FindBundleRootDirectories(absDirPaths[i])
+		brds, err := findBundleRootDirectories(absDirPaths[i])
 		if err != nil {
 			return nil, fmt.Errorf("failed to find bundle root directories in %s: %w", absDirPaths[i], err)
 		}
@@ -392,6 +286,114 @@ func GetPotentialRoots(paths ...string) ([]string, error) {
 	}
 
 	return dirMap.Items(), nil
+}
+
+func findProjectConfig(path string) (string, error) {
+	regalDir, regalDirError := findUpwards(path, regalDirName, true)
+	regalConfigFile, regalConfigFileError := findUpwards(path, standaloneConfigFileName, false)
+	foundDir, foundFile := regalDirError == nil, regalConfigFileError == nil
+
+	var regalDirParent, regalConfigFileParent string
+	if foundDir && foundFile {
+		regalDirParent = filepath.Dir(regalDir)
+		regalConfigFileParent = filepath.Dir(regalConfigFile)
+
+		if regalDirParent == regalConfigFileParent {
+			return "", errors.New("conflicting config files: both .regal directory and .regal.yaml found")
+		}
+	}
+
+	if !foundDir && !foundFile {
+		return "", nil
+	}
+
+	// if the config file parent is not "", then it was found, and if it's
+	// longer then it's more specific to the search path in question, and so we
+	// return that here in such cases.
+	if len(regalConfigFileParent) > len(regalDirParent) {
+		return regalConfigFile, nil
+	}
+
+	// if there is a .regal directory, a config file is expected to be found inside.
+	if foundDir {
+		expectedConfigFilePath := filepath.Join(regalDir, configFileName)
+
+		if _, err := os.Stat(expectedConfigFilePath); err != nil && os.IsNotExist(err) {
+			return "", nil // a .regal directory may have only custom rules
+		} else if err != nil {
+			return "", fmt.Errorf("failed to stat .regal config file: %w", err)
+		}
+
+		return expectedConfigFilePath, nil
+	}
+
+	// regalConfigFileError is nil at this point, so we can return the file
+	return regalConfigFile, nil
+}
+
+// findBundleRootDirectories finds all bundle root directories from the provided path,
+// which **must** be an absolute path. Bundle root directories may be found either by:
+//
+// - Configuration (`project.roots`)
+// - By the presence of a .manifest file anywhere under the path
+// - By the presence of a .regal directory anywhere under or above the path ...
+//
+// All returned paths are absolute paths. If the provided path itself
+// is determined to be a bundle root directory it will be included in the result.
+func findBundleRootDirectories(path string) (foundBundleRoots []string, err error) {
+	// This will traverse the tree **upwards** searching for a .regal directory
+	regalDir, err := findUpwards(path, regalDirName, true)
+	if err == nil {
+		roots, err := rootsFromRegalConfigDirOrFile(regalDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get roots from .regal directory: %w", err)
+		}
+
+		foundBundleRoots = append(foundBundleRoots, roots...)
+	}
+
+	// This will traverse the tree **upwards** searching for a .regal.yaml file
+	regalConfigFile, err := findUpwards(path, standaloneConfigFileName, false)
+	if err == nil {
+		roots, err := rootsFromRegalConfigDirOrFile(regalConfigFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get roots from .regal.yaml: %w", err)
+		}
+
+		foundBundleRoots = append(foundBundleRoots, roots...)
+	}
+
+	f := func(path string) error {
+		if filepath.Dir(path) == regalDirName {
+			roots, err := rootsFromRegalConfigDirOrFile(path)
+			if err != nil {
+				return fmt.Errorf("failed to get roots from .regal directory: %w", err)
+			}
+
+			foundBundleRoots = append(foundBundleRoots, roots...)
+		}
+
+		// check for .manifest directories as part of the same walk
+		if filepath.Base(path) == ".manifest" {
+			foundBundleRoots = append(foundBundleRoots, filepath.Dir(path))
+		}
+
+		return nil
+	}
+
+	// This will traverse the tree **downwards** searching for .regal directories
+	if err := files.NewWalker(path).Walk(f); err != nil {
+		return nil, fmt.Errorf("failed to walk path: %w", err)
+	}
+
+	return slices.Compact(outil.Sorted(foundBundleRoots)), nil
+}
+
+func fromReader[R io.Reader](r R) (*Config, error) {
+	cfg := &Config{}
+	err := yaml.NewDecoder(r).Decode(cfg)
+
+	return cfg, err
 }
 
 // findUpwards searches for a file or directory matching the given name,
@@ -432,31 +434,20 @@ func findUpwards(path, name string, expectDir bool) (string, error) {
 	}
 }
 
-func findFileUpwards(path, name string, expectDir bool) (*os.File, error) {
-	dir, err := findUpwards(path, name, expectDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find .regal directory: %w", err)
-	}
-
-	return util.Wrap(os.Open(dir))("failed to open .regal directory")
-}
-
-func rootsFromRegalConfigDirOrFile(file *os.File) ([]string, error) {
-	defer file.Close()
-
-	fileInfo, err := file.Stat()
+func rootsFromRegalConfigDirOrFile(path string) ([]string, error) {
+	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat file: %w", err)
 	}
 
-	parent, filename := filepath.Split(file.Name())
+	parent, filename := filepath.Split(path)
 	if (fileInfo.IsDir() && filename != ".regal") || (!fileInfo.IsDir() && filename != ".regal.yaml") {
 		return nil, fmt.Errorf("expected a directory named '.regal' or a file named '.regal.yaml', got '%s'", filename)
 	}
 
 	parent = filepath.Clean(parent)
 
-	configFilePath := file.Name()
+	configFilePath := path
 	if fileInfo.IsDir() {
 		configFilePath = filepath.Join(configFilePath, "config.yaml")
 	}
@@ -471,7 +462,7 @@ func rootsFromRegalConfigDirOrFile(file *os.File) ([]string, error) {
 
 	// Include the "rules" directory when loading from a .regal dir
 	if fileInfo.IsDir() {
-		if customDir := filepath.Join(file.Name(), "rules"); rio.IsDir(customDir) {
+		if customDir := filepath.Join(path, "rules"); rio.IsDir(customDir) {
 			foundBundleRoots = append(foundBundleRoots, customDir)
 		}
 	}
