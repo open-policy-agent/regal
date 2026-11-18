@@ -26,3 +26,11 @@ test_aggregate_ignores_imports_of_regal_in_custom_rule if {
 
 	r == [[["a", "b", "c"], "6:2:6:8"]]
 }
+
+test_rule_tree_has_rule_head_keys_with_slashes if {
+	tree := aggregators.rule_tree with input as regal.parse_module("p.rego", `package a
+
+	rules["category/title"] := 1`)
+
+	tree == {"data": {"a": {"rules[\"category/title\"]": {}}}}
+}

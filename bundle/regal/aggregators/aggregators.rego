@@ -16,7 +16,7 @@ rule_tree := tree if {
 
 		patch := {
 			"op": "add",
-			"path": $"/{concat("/", array.slice(pkg_path, 0, i))}",
+			"path": _pointer(array.slice(pkg_path, 0, i)),
 			"value": {},
 		}
 	])
@@ -26,11 +26,13 @@ rule_tree := tree if {
 
 		patch := {
 			"op": "add",
-			"path": $"/{concat("/", array.concat(pkg_path, rule_path))}",
+			"path": _pointer(array.concat(pkg_path, rule_path)),
 			"value": {},
 		}
 	])
 }
+
+_pointer(path) := $"/{concat("/", [replace(replace(name, "~", "~0"), "/", "~1") | some name in path])}"
 
 # METADATA
 # description: |
