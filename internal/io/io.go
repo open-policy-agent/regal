@@ -64,6 +64,25 @@ func CloseIgnore(handle io.Closer) {
 	}
 }
 
+// WriteStrings writes the given strings in sequence to the provided writer.
+func WriteStrings(w io.Writer, strs ...string) error {
+	if sw, ok := w.(io.StringWriter); ok {
+		for _, s := range strs {
+			if _, err := sw.WriteString(s); err != nil {
+				return err
+			}
+		}
+	} else {
+		for _, s := range strs {
+			if _, err := w.Write(outil.StringToByteSlice(s)); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func Dir(path string) string {
 	if IsDir(path) {
 		return path

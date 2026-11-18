@@ -94,8 +94,7 @@ func CheckAndWarn(ctx context.Context, opts Options, w io.Writer) {
 		return errors.New("no result set")
 	})
 
-	err = q.Evaluator().WithInput(input).WithResultHandler(handler).Eval(ctx)
-	if err != nil {
+	if err = q.Evaluator().WithInput(input).WithResultHandler(handler).Eval(ctx); err != nil {
 		if opts.Debug {
 			w.Write([]byte(err.Error()))
 		}

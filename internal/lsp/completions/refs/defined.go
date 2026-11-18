@@ -10,6 +10,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/util"
 
+	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/rast"
 )
@@ -126,18 +127,14 @@ func findAnnotationForRuleGroup(rs []*ast.Rule) (*ast.Annotations, bool) {
 }
 
 func documentAnnotatedRef(selectedAnnotation *ast.Annotations) string {
-	var sb strings.Builder
+	sb := new(strings.Builder)
 
 	if selectedAnnotation.Title != "" {
-		sb.WriteString("# ")
-		sb.WriteString(selectedAnnotation.Title)
-		sb.WriteString("\n\n")
+		io.WriteStrings(sb, "# ", selectedAnnotation.Title, "\n\n")
 	}
 
 	if selectedAnnotation.Description != "" {
-		sb.WriteString("**Description**:\n\n")
-		sb.WriteString(selectedAnnotation.Description)
-		sb.WriteString("\n\n")
+		io.WriteStrings(sb, "**Description**:\n\n", selectedAnnotation.Description, "\n\n")
 	}
 
 	if len(selectedAnnotation.Authors) > 0 {
@@ -151,9 +148,7 @@ func documentAnnotatedRef(selectedAnnotation *ast.Annotations) string {
 			}
 
 			if author.Email != "" {
-				sb.WriteString(" <")
-				sb.WriteString(author.Email)
-				sb.WriteByte('>')
+				io.WriteStrings(sb, " <", author.Email, ">")
 			}
 
 			sb.WriteByte('\n')
@@ -166,9 +161,7 @@ func documentAnnotatedRef(selectedAnnotation *ast.Annotations) string {
 		sb.WriteString("**Organizations**:\n\n")
 
 		for _, org := range selectedAnnotation.Organizations {
-			sb.WriteString("* ")
-			sb.WriteString(org)
-			sb.WriteByte('\n')
+			io.WriteStrings(sb, "* ", org, "\n")
 		}
 
 		sb.WriteByte('\n')
@@ -186,9 +179,7 @@ func documentAnnotatedRef(selectedAnnotation *ast.Annotations) string {
 				sb.WriteString(strings.Replace(resource.Ref.String(), "http://", "", 1))
 			}
 
-			sb.WriteString("](")
-			sb.WriteString(resource.Ref.String())
-			sb.WriteString(")\n")
+			io.WriteStrings(sb, "](", resource.Ref.String(), ")\n")
 		}
 
 		sb.WriteByte('\n')

@@ -43,7 +43,9 @@ func BenchmarkRegalLintingItself(b *testing.B) {
 // 376966625 ns/op	1251852949 B/op	34368833 allocs/op // OPA perf PRs merged
 // 421812986 ns/op	1424521477 B/op	38601015 allocs/op // OPA v1.20.1 + more rules
 // 395505430 ns/op	1356996173 B/op	37101749 allocs/op // OPA v1.21.0
-// 398796611 ns/op	1356353613 B/op	37084556 allocs/op
+// 348654292 ns/op	820025240 B/op	17454057 allocs/op // OPA v1.22.0 (!!!)
+// 342811472 ns/op	805012312 B/op	16824305 allocs/op // ObjectKeysIterator pool
+// 334947014 ns/op	771351845 B/op	15413130 allocs/op // Eval operands pool
 func BenchmarkRegalLintingItselfPrepareOnce(b *testing.B) {
 	benchmarkLint(b, bundleLinter(b, true).MustPrepare(b.Context()))
 }

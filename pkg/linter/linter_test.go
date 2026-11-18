@@ -216,7 +216,22 @@ func TestLintWithCustomRule(t *testing.T) {
 	assert.Equal(t, "acme-corp-package", result.Violations[0].Title, "unexpected first violation")
 }
 
-func TestLintWithErrorInEnable(t *testing.T) {
+func TestLintWithCustomRuleNameInEnableParam(t *testing.T) {
+	t.Parallel()
+
+	result := must.Return(regal.NewLinter().
+		WithCustomRulesPaths(filepath.Join("testdata", "custom.rego")).
+		WithInputModules(test.InputPolicy("p/p.rego", "package p\n\nimport rego.v1\n")).
+		WithEnabledCategories("naming").
+		WithEnabledRules("acme-corp-package").
+		Lint(t.Context()))(t)
+
+	// No validation errors
+	assert.NumViolations(t, 1, result)
+	assert.Equal(t, "acme-corp-package", result.Violations[0].Title, "unexpected first violation")
+}
+
+func TestLintWithUnknownRuleInEnableParam(t *testing.T) {
 	t.Parallel()
 
 	_, err := regal.NewLinter().
@@ -225,7 +240,19 @@ func TestLintWithErrorInEnable(t *testing.T) {
 		WithInputModules(test.InputPolicy("p/p.rego", "package p")).
 		Lint(t.Context())
 
-	testutil.ErrMustContain(err, "unknown rules: [foo]")(t)
+	testutil.ErrMustContain(err, "unknown rule: foo")(t)
+}
+
+func TestLintWithUnknownCategoryInEnableCategoriesParam(t *testing.T) {
+	t.Parallel()
+
+	_, err := regal.NewLinter().
+		WithCustomRulesPaths(filepath.Join("testdata", "custom.rego")).
+		WithEnabledCategories("foo").
+		WithInputModules(test.InputPolicy("p/p.rego", "package p")).
+		Lint(t.Context())
+
+	testutil.ErrMustContain(err, "unknown category: foo")(t)
 }
 
 func TestLintWithCustomEmbeddedRules(t *testing.T) {

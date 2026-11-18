@@ -13,6 +13,7 @@ const (
 	RegalFilterIgnoredModules = "regal_filter_ignored_modules"
 	RegalInputParse           = "regal_input_parse"
 	RegalPrepare              = "regal_prepare"
+	RegalPrepareRego          = "regal_prepare_rego"
 	RegalLint                 = "regal_lint_total"
 	RegalLintRego             = "regal_lint_rego"
 	RegalLintRegoAggregate    = "regal_lint_rego_aggregate"

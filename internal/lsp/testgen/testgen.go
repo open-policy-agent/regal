@@ -15,6 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/format"
 
 	"github.com/open-policy-agent/regal/internal/compile"
+	"github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/lsp/input"
 )
 
@@ -56,7 +57,7 @@ func CreateTestModule(ctx context.Context, opts TestModuleOptions) (string, erro
 
 	packagePath := opts.Module.Package.Path.String()
 
-	var b strings.Builder
+	b := new(strings.Builder)
 	b.WriteString(BuildTestHeader(packagePath))
 
 	var ruleErrs []error
@@ -81,8 +82,7 @@ func CreateTestModule(ctx context.Context, opts TestModuleOptions) (string, erro
 			continue
 		}
 
-		b.WriteString("\n\n")
-		b.WriteString(testFunction)
+		io.WriteStrings(b, "\n\n", testFunction)
 
 		successCount++
 	}

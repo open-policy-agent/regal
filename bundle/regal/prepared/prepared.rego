@@ -5,6 +5,8 @@
 #   here, with the notable exception of input files to lint
 package regal.prepared
 
+import future.keywords.not
+
 import data.regal.config
 import data.regal.notices as ext_notices
 
@@ -51,6 +53,40 @@ prepare.ignore_patterns.files[category][title] contains compiled if {
 prepare.ignore_patterns.global := config.patterns_compiler(data.eval.params.ignore_files) if {
 	data.eval.params.ignore_files
 } else := config.patterns_compiler(config.merged_config.ignore.files)
+
+# METADATA
+# description: check for unknown categories in params and configuration
+prepare.validate.unknown contains $"unknown category: {category}" if {
+	config_categories := {category |
+		some category in array.flatten([
+			data.eval.params.enable_category,
+			data.eval.params.disable_category,
+			[category | some category, _ in config.rules],
+		])
+	}
+	actual_categories := object.keys(data.internal.rules)
+
+	some category in (config_categories - actual_categories)
+}
+
+# METADATA
+# description: check for unknown rules in params and configuration
+prepare.validate.unknown contains $"unknown rule: {title}" if {
+	params_rule_names := {title | some title in array.concat(
+		data.eval.params.enable,
+		data.eval.params.disable,
+	)}
+	config_rule_names := {title |
+		some category, titles in config.rules
+		some title, _ in titles
+	}
+	actual_rule_names := {title |
+		some rules in data.internal.rules
+		some title, _ in rules
+	}
+
+	some title in ((params_rule_names | config_rule_names) - actual_rule_names)
+}
 
 # METADATA
 # description: once prepared, rules_to_run fetched from storage

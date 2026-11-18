@@ -56,7 +56,7 @@ type (
 	}
 )
 
-func (params *lintAndFixParams) outputWriter() (io.Writer, error) {
+func (params *lintAndFixParams) outputWriter() (*os.File, error) {
 	if params.outputFile == "" {
 		return os.Stdout, nil
 	}
@@ -228,6 +228,10 @@ func lint(args []string, params *lintParams) (violations []report.Violation, err
 
 	regal, err = regal.Prepare(ctx)
 	if err != nil {
+		if _, ok := errors.AsType[*linter.ValidationError](err); ok {
+			return nil, fmt.Errorf("input validation error(s):\n%s", err.Error())
+		}
+
 		return nil, fmt.Errorf("failed to prepare for linting: %w", err)
 	}
 

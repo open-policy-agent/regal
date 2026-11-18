@@ -93,6 +93,15 @@ func Insert(obj ast.Object, key string, value *ast.Term) {
 	obj.Insert(ast.InternedTerm(key), value)
 }
 
+// Text returns the term's string representation unquoted.
+func Text(term *ast.Term) string {
+	if s, ok := term.Value.(ast.String); ok {
+		return string(s)
+	}
+
+	return term.String()
+}
+
 // GetOr retrieves a term from an ast.Value by key, or returns the default value if not found.
 func GetOr(val ast.Value, key string, defaultSupplier func() *ast.Term) *ast.Term {
 	if obj, ok := val.(ast.Object); ok {
