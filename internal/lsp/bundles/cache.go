@@ -139,9 +139,7 @@ func (c *Cache) All() map[string]bundle.Bundle {
 // source files have changed since the last refresh.
 func (c *cacheBundle) Refresh(path string) (bool, error) {
 	// walk the bundle path and calculate the current MD5 hash of each file on disk
-	onDiskDigests, err := files.DefaultWalkReducer(path, make(map[string][]byte)).
-		WithFilters(filter.Not(filter.Filenames(".manifest", "data.json", "data.yml", "data.yaml"))).
-		Reduce(hasher)
+	onDiskDigests, err := files.NewWalker(path).WithFilter(dataOrManifest).Reduce(make(map[string][]byte), hasher)
 	if err != nil {
 		return false, fmt.Errorf("failed to walk bundle path %q: %w", path, err)
 	}
@@ -176,4 +174,8 @@ func hasher(path string, curr map[string][]byte) (map[string][]byte, error) {
 
 		return curr, nil
 	})
+}
+
+func dataOrManifest(_ string, d os.DirEntry) bool {
+	return filter.AnyFileName(d, "data.json", "data.yml", "data.yaml", ".manifest")
 }

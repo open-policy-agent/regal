@@ -32,6 +32,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/dap/evaluate"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/io/files"
+	"github.com/open-policy-agent/regal/internal/io/files/filter"
 	"github.com/open-policy-agent/regal/internal/io/paths"
 	"github.com/open-policy-agent/regal/internal/lsp/bundles"
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
@@ -1392,7 +1393,7 @@ func (l *LanguageServer) loadWorkspaceContents(ctx context.Context, newOnly bool
 	go func() {
 		defer close(fileCh)
 
-		walkErr <- files.DefaultWalker(workspace.Path()).Walk(func(path string) error {
+		walkErr <- files.NewWalker(workspace.Path()).WithFilter(filter.File).Walk(func(path string) error {
 			fileURI := workspace.URI(path)
 			if l.ignoreURI(fileURI) {
 				return nil
