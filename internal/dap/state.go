@@ -14,6 +14,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/dap/evaluate"
 	"github.com/open-policy-agent/regal/internal/encoding/noast"
+	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/roast/encoding"
 )
@@ -144,6 +145,11 @@ func (s *state) launch(ctx context.Context, r *godap.LaunchRequest) (*godap.Laun
 		err = json.Unmarshal(r.Arguments, &evalProps, noast.Options, json.MatchCaseInsensitiveNames(true))
 		if err != nil {
 			return nil, fmt.Errorf("invalid launch eval properties: %w", err)
+		}
+
+		evalProps.DataPaths, err = files.FilterOPALoadPaths(evalProps.DataPaths)
+		if err != nil {
+			return nil, fmt.Errorf("failed to filter workspace load paths: %w", err)
 		}
 
 		// FIXME: Should we protect this with a mutex?
