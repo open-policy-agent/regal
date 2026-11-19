@@ -1,6 +1,14 @@
 package types
 
 type (
+	FileJob struct {
+		Reason string
+		URI    string
+	}
+	// LintJob is sent to the lintJobs channel to trigger a linter run.
+	LintJob struct {
+		Reason string
+	}
 	// RefKind represents the kind of object that a Ref represents.
 	// This is intended to toggle functionality and which UI symbols to use.
 	RefKind uint8

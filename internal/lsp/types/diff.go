@@ -4,7 +4,7 @@
 // Source:
 // https://github.com/golang/tools/blob/78b158585360beccadc3faac6e35759f491831f3/internal/lsp/diff/myers/diff.go
 
-package lsp
+package types
 
 import (
 	"strings"

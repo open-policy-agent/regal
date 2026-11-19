@@ -53,6 +53,7 @@ type (
 		pathPrefix        string
 		customRuleError   error
 		inputPaths        []string
+		rulesToRun        []string
 		ruleBundles       []*bundle.Bundle
 		customRuleModules []*ast.Module
 		useCollectQuery   bool
@@ -70,15 +71,13 @@ type (
 	ValidationError struct {
 		Messages []string
 	}
-	determineRulesHandler struct {
-		ruleKeys []string
-	}
 	lintResultHandler struct {
 		results []*report.Report
 	}
 	prepareResultHandler struct {
 		stg storage.Store
 		txn storage.Transaction
+		rul []string
 	}
 	aggregateResultHandler struct {
 		rep *report.Report
@@ -86,13 +85,11 @@ type (
 )
 
 var (
-	eqVarValue      ast.Value = ast.Var("eq")
-	lintVarValue    ast.Value = ast.Var("lint")
-	enabledVarValue ast.Value = ast.Var("enabled")
-	eqNameVarTerm   *ast.Term = ast.NewTerm(eqVarValue)
-	lintVarTerm     *ast.Term = ast.NewTerm(lintVarValue)
-	enabledVarTerm  *ast.Term = ast.NewTerm(enabledVarValue)
-	eqRef                     = ast.RefTerm(eqNameVarTerm)
+	eqVarValue    ast.Value = ast.Var("eq")
+	lintVarValue  ast.Value = ast.Var("lint")
+	eqNameVarTerm *ast.Term = ast.NewTerm(eqVarValue)
+	lintVarTerm   *ast.Term = ast.NewTerm(lintVarValue)
+	eqRef                   = ast.RefTerm(eqNameVarTerm)
 
 	lintQuery = []*ast.Expr{{ // lint = data.regal.main.lint.
 		Terms: []*ast.Term{eqRef, lintVarTerm, {Value: ast.Ref{
@@ -100,14 +97,6 @@ var (
 			ast.InternedTerm("regal"),
 			ast.InternedTerm("main"),
 			ast.InternedTerm("lint"),
-		}}},
-	}}
-	enabledRulesQuery = []*ast.Expr{{ // enabled = data.regal.main.enabled_rules.
-		Terms: []*ast.Term{eqRef, enabledVarTerm, {Value: ast.Ref{
-			ast.DefaultRootDocument,
-			ast.InternedTerm("regal"),
-			ast.InternedTerm("main"),
-			ast.InternedTerm("enabled_rules"),
 		}}},
 	}}
 
@@ -133,7 +122,6 @@ var (
 	internalPreparedNoticesPath = storage.Path{"internal", "prepared", "notices"}
 	preparedPath                = internalPreparedNoticesPath[:2]
 
-	errNoEnabledRules  = errors.New("expected enabled rules object, didn't get it")
 	errNothingToLint   = errors.New("nothing provided to lint")
 	errNoPreparedField = errors.New("expected 'prepared' field in result object")
 
@@ -141,7 +129,7 @@ var (
 )
 
 func init() {
-	ast.InternStringTerm("eval", "aggregates_internal", "__aggregate_report__")
+	ast.InternStringTerm("eval", "aggregates_internal", "__aggregate_report__", "prepare", "__prepare__", "annotated")
 }
 
 // NewLinter creates a new Regal linter.
@@ -328,23 +316,6 @@ func (l Linter) WithPathPrefix(pathPrefix string) Linter {
 	return l.notPrepared()
 }
 
-// WithExportAggregates enables the setting of intermediate aggregate data
-// on the final report. This is useful when you want to collect and
-// aggregate state from multiple different linting runs.
-func (l Linter) WithExportAggregates(enabled bool) Linter {
-	l.exportAggregates = enabled
-
-	return l
-}
-
-// WithCollectQuery forcibly enables the collect query even when there is
-// only one file to lint.
-func (l Linter) WithCollectQuery(enabled bool) Linter {
-	l.useCollectQuery = enabled
-
-	return l
-}
-
 // Prepare stores linter preparation state, like the determined configuration,
 // and the query perpared for linting.
 // Experimental: while used internally, the details of what is prepared here
@@ -379,7 +350,8 @@ func (l Linter) Prepare(ctx context.Context) (_ Linter, err error) {
 		Prepare(ctx)
 
 	if err = wrapNonValidationError(err, "failed preparing query for linting"); err == nil {
-		if err = wrapNonValidationError(l.regoPrepare(ctx), "failed preparing Rego"); err == nil {
+		l, err = l.regoPrepare(ctx)
+		if err = wrapNonValidationError(err, "failed preparing Rego"); err == nil {
 			l.isPrepared = true
 		}
 	}
@@ -512,59 +484,16 @@ func (l Linter) Lint(ctx context.Context) (r report.Report, err error) {
 	return *regoReport, nil
 }
 
-func (h *determineRulesHandler) Handle(result ogre.Result) error {
-	enabled, ok := result.Value.(ast.Object)
-	if !ok {
-		return errNoEnabledRules
-	}
-
-	return enabled.Iter(func(category, rules *ast.Term) error {
-		categoryRules, ok := rules.Value.(ast.Object)
-		if !ok {
-			return fmt.Errorf("expected list of enabled rules for category %s, didn't get it", category)
-		}
-
-		titles := categoryRules.Keys()
-		h.ruleKeys = slices.Grow(h.ruleKeys, len(titles))
-
-		for _, title := range titles {
-			titleStr, _ := title.Value.(ast.String)
-
-			h.ruleKeys = append(h.ruleKeys, string(titleStr))
-		}
-
-		return nil
-	})
-}
-
 // DetermineEnabledRules returns the list of rules that are enabled based on
 // the supplied configuration. This makes use of the linter rule settings
 // to produce a single list of the rules that are to be run on this linter
 // instance.
-func (l Linter) DetermineEnabledRules(ctx context.Context) ([]string, error) {
-	conf, err := l.GetConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to merge config: %w", err)
+func (l Linter) DetermineEnabledRules(ctx context.Context) (_ []string, err error) {
+	if len(l.rulesToRun) == 0 {
+		l, err = l.Prepare(ctx)
 	}
 
-	pq, err := ogre.New(enabledRulesQuery).
-		WithStore(ogre.NewStoreFromObject(l.prepareData(conf))).
-		Prepare(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed preparing query: %w", err)
-	}
-
-	handler := &determineRulesHandler{}
-
-	input := ast.InternedEmptyObjectValue
-
-	ex := pq.Evaluator().WithInput(input).WithResultHandler(handler)
-
-	if err = ex.Eval(ctx); err != nil {
-		return nil, fmt.Errorf("failed to evaluate enabled rules query: %w", err)
-	}
-
-	return outil.Sorted(handler.ruleKeys), nil
+	return l.rulesToRun, err
 }
 
 // GetConfig returns the final configuration for the linter, i.e. Regal's default
@@ -626,6 +555,14 @@ func (h *prepareResultHandler) Handle(result ogre.Result) error {
 		}
 	}
 
+	if rulesToRun, ok := rast.GetValue[ast.Object](prep, "rules_to_run"); ok {
+		for _, elem := range funsafe.ObjectElems(rulesToRun) {
+			if rulesInCategory, ok := elem.Value().Value.(ast.Set); ok {
+				h.rul = append(h.rul, outil.Map(rulesInCategory.Slice(), rast.Text)...)
+			}
+		}
+	}
+
 	ctx := emptyCtx
 
 	// Ensure all intermediate path segments exist before writing the leaf.
@@ -662,25 +599,28 @@ func (h *prepareResultHandler) Handle(result ogre.Result) error {
 	return nil
 }
 
-func (l Linter) regoPrepare(ctx context.Context) error {
+func (l Linter) regoPrepare(ctx context.Context) (Linter, error) {
 	l.startTimer(regalmetrics.RegalPrepareRego)
 	defer l.stopTimer(regalmetrics.RegalPrepareRego)
 
 	stg := l.preparedQuery.Store().Storage()
 	txn := storage.NewTransactionOrDie(ctx, stg, storage.WriteParams)
+	prh := &prepareResultHandler{stg: stg, txn: txn}
 
 	err := l.preparedQuery.Evaluator().
 		WithTransaction(txn).
 		WithInput(preparedInput).
-		WithResultHandler(&prepareResultHandler{stg: stg, txn: txn}).
+		WithResultHandler(prh).
 		Eval(ctx)
 	if err != nil {
 		stg.Abort(ctx, txn)
 
-		return wrapNonValidationError(err, "failed to evaluate prepare query")
+		return l, wrapNonValidationError(err, "failed to evaluate prepare query")
 	}
 
-	return stg.Commit(ctx, txn)
+	l.rulesToRun = outil.Sorted(prh.rul)
+
+	return l, stg.Commit(ctx, txn)
 }
 
 func (l Linter) notPrepared() Linter {

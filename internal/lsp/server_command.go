@@ -198,7 +198,7 @@ func (l *LanguageServer) fixEditParams(
 		edits = []types.TextEdit{{Range: types.RangeBetween(0, 0, numLines-1, len(line)), NewText: res[0].Contents}}
 	} else {
 		// Other clients use the standard diff-based edits
-		edits = ComputeEdits(oldContent, res[0].Contents)
+		edits = types.ComputeEdits(oldContent, res[0].Contents)
 	}
 
 	editParams = workspace.NewApplyEditParams(label).WithChanges(types.NewTextDocumentEdit(args.Target, edits))
