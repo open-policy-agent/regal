@@ -60,6 +60,7 @@ linters:
         - (*os.File).WriteString
         - (*encoding/json/jsontext.Encoder).WriteToken
         - (*encoding/json/jsontext.Encoder).WriteValue
+        - github.com/open-policy-agent/regal/internal/io.WriteStrings
         - github.com/open-policy-agent/regal/internal/encoding/util/write.ArrayField
         - github.com/open-policy-agent/regal/internal/encoding/util/write.ArrayFieldFn
         - github.com/open-policy-agent/regal/internal/encoding/util/write.ArrayFieldTo

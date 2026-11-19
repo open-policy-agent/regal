@@ -21,11 +21,11 @@ import (
 	"github.com/open-policy-agent/opa/v1/metrics"
 	"github.com/open-policy-agent/opa/v1/profiler"
 	"github.com/open-policy-agent/opa/v1/storage"
-	"github.com/open-policy-agent/opa/v1/topdown"
 	"github.com/open-policy-agent/opa/v1/topdown/print"
 	outil "github.com/open-policy-agent/opa/v1/util"
 
 	rbundle "github.com/open-policy-agent/regal/bundle"
+	"github.com/open-policy-agent/regal/internal/funsafe"
 	rio "github.com/open-policy-agent/regal/internal/io"
 	regalmetrics "github.com/open-policy-agent/regal/internal/metrics"
 	"github.com/open-policy-agent/regal/internal/ogre"
@@ -63,6 +63,12 @@ type (
 		isPrepared        bool
 
 		preparedQuery *ogre.Query
+	}
+	// ValidationError is the error type used for invalid CLI parameters, configuration or anything else that the user
+	// provided as part of setting up the linter. These errors should normally not be wrapped but displayed exactly as
+	// they are to the user invoking the linter.
+	ValidationError struct {
+		Messages []string
 	}
 	determineRulesHandler struct {
 		ruleKeys []string
@@ -175,7 +181,17 @@ func (l Linter) WithAddedBundle(b *bundle.Bundle) Linter {
 //
 // Deprecated: use WithCustomRulesPaths instead.
 func (l Linter) WithCustomRules(paths []string) Linter {
+	return l.WithCustomRulesPaths(paths...)
+}
+
+// WithCustomRulesPaths adds custom rules for evaluation, from the Rego (and data) files provided at paths.
+// Empty strings are ignored.
+func (l Linter) WithCustomRulesPaths(paths ...string) Linter {
 	for _, path := range paths {
+		if path == "" {
+			continue
+		}
+
 		if rio.IsDir(path) {
 			l = l.WithCustomRulesFromFS(os.DirFS(path), ".")
 		} else {
@@ -193,25 +209,11 @@ func (l Linter) WithCustomRules(paths []string) Linter {
 	return l.notPrepared()
 }
 
-// WithCustomRulesPaths adds custom rules for evaluation, from the Rego (and data) files provided at paths.
-// Empty strings are ignored.
-func (l Linter) WithCustomRulesPaths(paths ...string) Linter {
-	nonEmpty := paths[:0]
-	for _, path := range paths {
-		if path != "" {
-			nonEmpty = append(nonEmpty, path)
-		}
-	}
-
-	return l.WithCustomRules(nonEmpty)
-}
-
-// WithCustomRulesFromFS adds custom rules for evaluation from a filesystem implementing the fs.FS interface.
+// WithCustomRulesFromFS adds custom rules for evaluation from a filesystem implementing the [fs.FS] interface.
 // A root path within the filesystem must also be specified. Note, _test.rego files will be ignored.
 func (l Linter) WithCustomRulesFromFS(f fs.FS, rootPath string) Linter {
 	if f != nil {
-		modules, err := rio.ModulesFromCustomRuleFS(f, rootPath)
-		if err != nil {
+		if modules, err := rio.ModulesFromCustomRuleFS(f, rootPath); err != nil {
 			l.customRuleError = err
 		} else {
 			l.customRuleModules = append(l.customRuleModules, outil.Values(modules)...)
@@ -348,46 +350,41 @@ func (l Linter) WithCollectQuery(enabled bool) Linter {
 // Experimental: while used internally, the details of what is prepared here
 // are very likely to change in the future, and this method should not yet be
 // relied on by external clients.
-func (l Linter) Prepare(ctx context.Context) (Linter, error) {
+func (l Linter) Prepare(ctx context.Context) (_ Linter, err error) {
 	l.startTimer(regalmetrics.RegalPrepare)
 	defer l.stopTimer(regalmetrics.RegalPrepare)
 
 	l.params = cmp.Or(l.params, params.None)
 
-	conf, err := l.GetConfig()
+	l.combinedCfg, err = l.GetConfig()
 	if err != nil {
 		return l, fmt.Errorf("failed to merge config: %w", err)
 	}
 
-	if err := l.validate(conf); err != nil {
-		return l, fmt.Errorf("validation failed: %w", err)
+	if l.customRuleError != nil {
+		return l, fmt.Errorf("failed to load custom rules: %w", l.customRuleError)
 	}
 
-	l.combinedCfg = conf
-
 	if l.debugMode && l.printHook == nil {
-		l.printHook = topdown.NewPrintHook(os.Stderr)
+		l.printHook = util.StderrPrintHook
 	}
 
 	l.preparedQuery, err = ogre.NewWithBundle(lintQuery, rbundle.LoadedNoLSP()).
 		WithModules(l.customModulesMap()).
-		WithStore(ogre.NewStoreFromObject(l.prepareData(conf))).
+		WithStore(ogre.NewStoreFromObject(l.prepareData(l.combinedCfg))).
 		WithMetrics(l.metrics).
 		WithPrintHook(l.printHook).
 		WithInstrumentation(l.instrumentation).
 		WithSkipSafetyChecks(l.canSkipCompilerStages()).
 		Prepare(ctx)
-	if err != nil {
-		return l, fmt.Errorf("failed preparing query for linting: %w", err)
+
+	if err = wrapNonValidationError(err, "failed preparing query for linting"); err == nil {
+		if err = wrapNonValidationError(l.regoPrepare(ctx), "failed preparing Rego"); err == nil {
+			l.isPrepared = true
+		}
 	}
 
-	if err := l.regoPrepare(ctx); err != nil {
-		return l, fmt.Errorf("failed to prepare Rego: %w", err)
-	}
-
-	l.isPrepared = true
-
-	return l, nil
+	return l, err
 }
 
 // MustPrepare prepares the linter and panics on errors. Mostly used for tests.
@@ -410,7 +407,7 @@ func (l Linter) Lint(ctx context.Context) (r report.Report, err error) {
 
 	if !l.isPrepared {
 		if l, err = l.Prepare(ctx); err != nil {
-			return r, fmt.Errorf("failed to prepare linter: %w", err)
+			return r, wrapNonValidationError(err, "failed to prepare linter")
 		}
 	}
 
@@ -591,27 +588,23 @@ func (l Linter) countSkippedFromNotices(ctx context.Context, r *report.Report) i
 	// Nesting galore. Any better way? A Rego transform would be nice.
 	if noticesAny, err := storage.ReadOne(ctx, s.Storage(), internalPreparedNoticesPath); err == nil {
 		if categoriesObj, ok := noticesAny.(ast.Object); ok {
-			categoriesObj.Foreach(func(_, v *ast.Term) {
-				if noticesObj, ok := v.Value.(ast.Object); ok {
-					noticesObj.Foreach(func(_, vv *ast.Term) {
-						if notices, ok := vv.Value.(ast.Set); ok {
+			for _, v := range funsafe.ObjectElems(categoriesObj) {
+				if noticesObj, ok := v.Value().Value.(ast.Object); ok {
+					for _, vv := range funsafe.ObjectElems(noticesObj) {
+						if notices, ok := vv.Value().Value.(ast.Set); ok {
 							for v := range rast.ValuesOfType[ast.Object](notices.Slice()) {
 								r.Notices = append(r.Notices, report.NoticeFromObject(v))
 							}
 						}
-					})
+					}
 				}
-			})
+			}
 		}
 	}
 
 	r.Notices = slices.Compact(outil.SortedFunc(r.Notices, report.Notice.ByTitle))
 
 	return outil.Count(severityNotNone, r.Notices...)
-}
-
-func severityNotNone(n report.Notice) bool {
-	return n.Severity != "none"
 }
 
 func (h *prepareResultHandler) Handle(result ogre.Result) error {
@@ -625,10 +618,17 @@ func (h *prepareResultHandler) Handle(result ogre.Result) error {
 		return errNoPreparedField
 	}
 
+	if validate, ok := rast.GetValue[ast.Object](prep, "validate"); ok {
+		if unknown, ok := rast.GetValue[ast.Set](validate, "unknown"); ok {
+			if messages := outil.Map(unknown.Slice(), rast.Text); len(messages) > 0 {
+				return &ValidationError{Messages: messages}
+			}
+		}
+	}
+
 	ctx := emptyCtx
 
 	// Ensure all intermediate path segments exist before writing the leaf.
-	// Sometimes these are missing at start up and we want to be reliable.
 	for i := 1; i < len(preparedPath); i++ {
 		prefix := preparedPath[:i]
 		if _, err := h.stg.Read(ctx, h.txn, prefix); err != nil {
@@ -663,20 +663,21 @@ func (h *prepareResultHandler) Handle(result ogre.Result) error {
 }
 
 func (l Linter) regoPrepare(ctx context.Context) error {
+	l.startTimer(regalmetrics.RegalPrepareRego)
+	defer l.stopTimer(regalmetrics.RegalPrepareRego)
+
 	stg := l.preparedQuery.Store().Storage()
 	txn := storage.NewTransactionOrDie(ctx, stg, storage.WriteParams)
-	hnd := &prepareResultHandler{stg: stg, txn: txn}
 
-	// TODO: profiling, instrumentation, metrics
-	ev := l.preparedQuery.Evaluator().
+	err := l.preparedQuery.Evaluator().
 		WithTransaction(txn).
 		WithInput(preparedInput).
-		WithResultHandler(hnd)
-
-	if err := ev.Eval(ctx); err != nil {
+		WithResultHandler(&prepareResultHandler{stg: stg, txn: txn}).
+		Eval(ctx)
+	if err != nil {
 		stg.Abort(ctx, txn)
 
-		return fmt.Errorf("failed to evaluate prepare query: %w", err)
+		return wrapNonValidationError(err, "failed to evaluate prepare query")
 	}
 
 	return stg.Commit(ctx, txn)
@@ -709,86 +710,46 @@ func (l Linter) customModulesMap() map[string]*ast.Module {
 }
 
 func (l Linter) prepareData(conf *config.Config) ast.Object {
-	userConf := ast.InternedEmptyObjectValue
+	userConf := ast.InternedEmptyObject
 	if l.userConfig != nil {
-		userConf = l.userConfig.ToValue()
+		userConf = ast.NewTerm(l.userConfig.ToValue())
+	}
+
+	rules := map[string][]*ast.Term{}
+
+	for _, b := range l.ruleBundles { // Add all built-in rules
+		for _, module := range b.Modules {
+			if ref := module.Parsed.Package.Path[1:]; len(ref) == 4 && rast.Text(ref[1]) == "rules" {
+				category := rast.Text(ref[2])
+
+				rules[category] = append(rules[category], ref[3])
+			}
+		}
+	}
+
+	for _, module := range l.customRuleModules { // Add any custom rules
+		if ref := module.Package.Path[1:]; len(ref) == 5 && rast.Text(ref[2]) == "rules" {
+			category := rast.Text(ref[3])
+			rules[category] = append(rules[category], ref[4])
+		}
+	}
+
+	rulesObj := ast.NewObjectWithCapacity(len(rules))
+	for cat, rules := range rules {
+		rast.Insert(rulesObj, cat, ast.SetTerm(rules...))
 	}
 
 	return ast.NewObject(
 		rast.Item("eval", ast.ObjectTerm(rast.Item("params", l.params.ToTerm()))),
 		rast.Item("internal", ast.ObjectTerm(
 			rast.Item("combined_config", ast.NewTerm(conf.ToValue())),
-			rast.Item("user_config", ast.NewTerm(userConf)),
+			rast.Item("user_config", userConf),
 			rast.Item("capabilities", config.OpaCapsForThisVersionTerm()),
 			rast.Item("path_prefix", ast.InternedTerm(l.pathPrefix)),
 			rast.Item("prepared", ast.InternedNullTerm),
+			rast.Item("rules", ast.NewTerm(rulesObj)),
 		)),
 	)
-}
-
-func (l Linter) validate(conf *config.Config) error {
-	if l.customRuleError != nil {
-		return fmt.Errorf("failed to load custom rules: %w", l.customRuleError)
-	}
-
-	validCategories := util.NewSet[string]()
-	validRules := util.NewSet[string]()
-
-	// Add all built-in rules
-	for _, b := range l.ruleBundles {
-		for _, module := range b.Modules {
-			parts, _ := storage.NewPathForRef(module.Parsed.Package.Path)
-			// 1     2     3   4
-			// regal.rules.cat.rule
-			if len(parts) != 4 {
-				continue
-			}
-
-			validCategories.Add(parts[2])
-			validRules.Add(parts[3])
-		}
-	}
-
-	// Add any custom rules
-	for _, module := range l.customRuleModules {
-		parts, _ := storage.NewPathForRef(module.Package.Path)
-		// 1      2     3     4   5
-		// custom.regal.rules.cat.rule
-		if len(parts) != 5 {
-			continue
-		}
-
-		validCategories.Add(parts[3])
-		validRules.Add(parts[4])
-	}
-
-	configuredCategories := util.NewSetFromKeys(conf.Rules)
-	configuredRules := util.NewSet[string]()
-
-	for _, cat := range conf.Rules {
-		configuredRules.Add(outil.Keys(cat)...)
-	}
-
-	if !l.params.IsNone() {
-		configuredRules.Add(l.params.Enable...)
-		configuredRules.Add(l.params.Disable...)
-		configuredCategories.Add(l.params.EnableCategory...)
-		configuredCategories.Add(l.params.DisableCategory...)
-	}
-
-	invalidCategories := configuredCategories.Diff(validCategories)
-	invalidRules := configuredRules.Diff(validRules)
-
-	switch {
-	case invalidCategories.Size() > 0 && invalidRules.Size() > 0:
-		return fmt.Errorf("unknown categories: %v, unknown rules: %v", invalidCategories, invalidRules)
-	case invalidCategories.Size() > 0:
-		return fmt.Errorf("unknown categories: %v", invalidCategories)
-	case invalidRules.Size() > 0:
-		return fmt.Errorf("unknown rules: %v", invalidRules)
-	}
-
-	return nil
 }
 
 func (h *lintResultHandler) Handle(result ogre.Result) error {
@@ -959,4 +920,34 @@ func (l Linter) stopTimer(name string) {
 // skip stages we know the bundle compiles successfully with, when enabled.
 func (l Linter) canSkipCompilerStages() bool {
 	return version.Version != "" && len(l.ruleBundles) == 1 && len(l.customRuleModules) == 0
+}
+
+func (e *ValidationError) Error() string {
+	sb := new(strings.Builder)
+	if len(e.Messages) > 0 {
+		rio.WriteStrings(sb, "  - ", e.Messages[0])
+
+		for _, msg := range e.Messages[1:] {
+			rio.WriteStrings(sb, "\n  - ", msg)
+		}
+	}
+
+	return sb.String()
+}
+
+// wrapNonValidationError wraps the error with the provided message if it is not a ValidationError.
+// ValidationErrors should not be wrapped as we want the message to be displayed to the user without
+// including additional context that isn't helpful to the user.
+func wrapNonValidationError(err error, msg string) error {
+	if err != nil {
+		if _, ok := errors.AsType[*ValidationError](err); !ok {
+			err = fmt.Errorf("%s: %w", msg, err)
+		}
+	}
+
+	return err
+}
+
+func severityNotNone(n report.Notice) bool {
+	return n.Severity != "none"
 }
