@@ -133,6 +133,8 @@ _capabilities.documentLinkProvider := {
 	"resolveProvider": false,
 }
 
+_capabilities.declarationProvider := true
+
 _capabilities.documentHighlightProvider := true
 
 _capabilities.selectionRangeProvider := true

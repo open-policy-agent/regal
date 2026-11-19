@@ -85,10 +85,11 @@ var (
 
 func init() {
 	ast.InternStringTerm(
-		"textDocument/codeAction", "textDocument/codeLens", "textDocument/completion", "textDocument/documentLink",
-		"textDocument/documentHighlight", "textDocument/foldingRange", "textDocument/hover", "textDocument/inlayHint",
-		"textDocument/linkedEditingRange", "textDocument/selectionRange", "textDocument/semanticTokens/full",
-		"textDocument/signatureHelp", "textDocument/references", "textDocument/prepareRename", "textDocument/rename",
+		"textDocument/codeAction", "textDocument/codeLens", "textDocument/completion", "textDocument/declaration",
+		"textDocument/documentLink", "textDocument/documentHighlight", "textDocument/foldingRange",
+		"textDocument/hover", "textDocument/inlayHint", "textDocument/linkedEditingRange",
+		"textDocument/selectionRange", "textDocument/semanticTokens/full", "textDocument/signatureHelp",
+		"textDocument/references", "textDocument/prepareRename", "textDocument/rename",
 		"completionItem/resolve", "inlayHint/resolve",
 
 		"method", "params", "identifier",
@@ -124,6 +125,7 @@ func NewRouter(ctx context.Context, s storage.Store, qc *query.Cache, prvs Provi
 			ParseErrors:              true,
 		}}},
 		"textDocument/completion":          {requires: Requirements{File: FileRequirements{Lines: true}, InputPath: true}},
+		"textDocument/declaration":         {requires: fileLines},
 		"textDocument/documentLink":        {requires: fileLines},
 		"textDocument/documentHighlight":   {requires: fileLines},
 		"textDocument/foldingRange":        {requires: fileLines},

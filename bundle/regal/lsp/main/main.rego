@@ -30,6 +30,7 @@ _handlers := {
 	"textDocument/codeAction": "codeaction",
 	"textDocument/codeLens": "codelens",
 	"textDocument/completion": "completion",
+	"textDocument/declaration": "declaration",
 	"textDocument/documentLink": "documentlink",
 	"textDocument/documentHighlight": "documenthighlight",
 	"textDocument/foldingRange": "foldingrange",
