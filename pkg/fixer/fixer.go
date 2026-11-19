@@ -187,15 +187,12 @@ func (f *Fixer) applyLinterFixes(
 		return fmt.Errorf("failed to list files: %w", err)
 	}
 
-	var versionsMap map[string]ast.RegoVersion
-	if f.versionsMap != nil {
-		versionsMap = f.versionsMap
-	}
-
 	li, err := l.WithDisableAll(true).WithEnabledRules(fixableEnabledRules...).Prepare(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to prepare linter for fixing: %w", err)
 	}
+
+	versionsMap := f.versionsMap
 
 	for {
 		in, err := fp.ToInput(versionsMap)
