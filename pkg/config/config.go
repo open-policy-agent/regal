@@ -110,7 +110,7 @@ var (
 		file := rbundle.Open("regal/config/provided/data.yaml")
 		defer file.Close()
 
-		return util.Must(fromReader(file))
+		return util.Must(FromReader(file))
 	})
 	OpaCapsForThisVersionTerm = sync.OnceValue(func() *ast.Term {
 		return ast.NewTerm(rast.StructToValue(OpaCapsForThisVersionInterned()))
@@ -166,10 +166,17 @@ func (r Rule) Copy() Rule {
 
 func FromPath(path string) (*Config, error) {
 	return rio.WithOpen(path, func(file *os.File) (*Config, error) {
-		cfg, err := fromReader(file)
+		cfg, err := FromReader(file)
 
 		return cfg, util.WrapErr(err, "failed to decode "+path)
 	})
+}
+
+func FromReader[R io.Reader](r R) (*Config, error) {
+	cfg := &Config{}
+	err := yaml.NewDecoder(r).Decode(cfg)
+
+	return cfg, err
 }
 
 // Find attempts to find either the .regal directory or .regal.yaml config file, searching upwards from the path,
@@ -387,13 +394,6 @@ func findBundleRootDirectories(path string) (foundBundleRoots []string, err erro
 	}
 
 	return slices.Compact(outil.Sorted(foundBundleRoots)), nil
-}
-
-func fromReader[R io.Reader](r R) (*Config, error) {
-	cfg := &Config{}
-	err := yaml.NewDecoder(r).Decode(cfg)
-
-	return cfg, err
 }
 
 // findUpwards searches for a file or directory matching the given name,
