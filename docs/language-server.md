@@ -49,6 +49,11 @@ The Regal language server currently supports hover for all built-in functions OP
 Go to definition allows references to rules and functions to be clicked on (while holding `ctrl/cmd`), and the editor
 will navigate to the definition of the rule or function.
 
+### Go to declaration
+
+Regal additionally supports go to declaration requests. This is however quite limited compared to go to definition,
+as the only real form of declaration in Rego is the `some` statement used to declare output variables.
+
 ### Find references
 
 Find references lists every place where code uses a symbol. Put the cursor on a symbol. Then run "Find All References"

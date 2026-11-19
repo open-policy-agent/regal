@@ -60,18 +60,15 @@ spanning(terms) := {
 # scope: document
 contains_position(range, pos) if {
 	pos.line > range.start.line
-	pos.line < range.end.line
+	pos.line < range.end.line or {
+		pos.line == range.end.line
+		pos.character <= range.end.character
+	}
 } or {
 	pos.line == range.start.line
-	pos.line < range.end.line
 	pos.character >= range.start.character
-} or {
-	pos.line > range.start.line
-	pos.line == range.end.line
-	pos.character <= range.end.character
-} or {
-	pos.line == range.start.line
-	pos.line == range.end.line
-	pos.character >= range.start.character
-	pos.character <= range.end.character
+	pos.line < range.end.line or {
+		pos.line == range.end.line
+		pos.character <= range.end.character
+	}
 }
