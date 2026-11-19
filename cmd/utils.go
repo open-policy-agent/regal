@@ -3,17 +3,11 @@ package cmd
 import (
 	"cmp"
 	"context"
-	"errors"
-	"fmt"
-	"io"
 	"log"
-	"os"
-	"path/filepath"
 	"strings"
 
 	rio "github.com/open-policy-agent/regal/internal/io"
 	"github.com/open-policy-agent/regal/internal/io/paths"
-	"github.com/open-policy-agent/regal/pkg/config"
 )
 
 type repeatedStringFlag struct {
@@ -50,66 +44,6 @@ func getSearchPath(args []string) (searchPath string) {
 	}
 
 	return searchPath
-}
-
-func readUserConfig(params lintAndFixParams, searchPath string) (userConfig *os.File, err error) {
-	if params.configFile != "" {
-		userConfig, err = os.Open(params.configFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to open config file %w", err)
-		}
-
-		if params.debug {
-			log.Printf("found user config file: %s", userConfig.Name())
-		}
-
-		return userConfig, nil
-	}
-
-	if params.debug {
-		log.Println("no user-provided config file found, will use the default config")
-	}
-
-	userConfig, err = config.Find(searchPath)
-	if err != nil {
-		// if no config was found, attempt to load the user's global config if it exists
-		if globalConfigDir := config.GlobalConfigDir(false); globalConfigDir != "" {
-			globalConfigFile := filepath.Join(globalConfigDir, "config.yaml")
-
-			if userConfig, err = os.Open(globalConfigFile); err != nil {
-				return nil, fmt.Errorf("failed to open global config file %w", err)
-			}
-		}
-	}
-
-	return userConfig, err
-}
-
-func loadUserConfig(params lintAndFixParams, root string) (cfg *config.Config, path string, err error) {
-	file, err := readUserConfig(params, root)
-	if err != nil && params.configFile != "" {
-		return cfg, "", fmt.Errorf("user-provided config file %s not found: %w", params.configFile, err)
-	}
-
-	if file == nil {
-		return nil, "", nil // No user config provided, use default
-	}
-
-	defer rio.CloseIgnore(file)
-
-	cfg, err = config.FromReader(file)
-	if err != nil {
-		switch {
-		case errors.Is(err, io.EOF):
-			log.Printf("user config file %q is empty, will use the default config", file.Name())
-		case params.configFile != "":
-			return nil, "", fmt.Errorf("failed to decode user config from %s: %w", params.configFile, err)
-		default:
-			return nil, "", fmt.Errorf("failed to decode user config: %w", err)
-		}
-	}
-
-	return cfg, file.Name(), nil
 }
 
 func getLinterContext(params lintAndFixParams) (context.Context, func()) {

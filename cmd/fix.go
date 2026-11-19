@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -12,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"go.yaml.in/yaml/v3"
 
 	outil "github.com/open-policy-agent/opa/v1/util"
 
@@ -111,10 +109,7 @@ func fix(args []string, params *fixParams) (err error) {
 		return err
 	}
 
-	var (
-		regalDir                         *os.File
-		customRulesDir, configSearchPath string
-	)
+	var customRulesDir, configSearchPath, regalPath string
 
 	if len(args) == 1 {
 		if configSearchPath = args[0]; !filepath.IsAbs(args[0]) {
@@ -127,10 +122,8 @@ func fix(args []string, params *fixParams) (err error) {
 	if configSearchPath == "" {
 		log.Println("failed to determine relevant directory for config file search - won't search for custom config or rules")
 	} else {
-		if regalDir, err = config.FindRegalDirectory(configSearchPath); err == nil {
-			defer regalDir.Close()
-
-			if customRulesPath := filepath.Join(regalDir.Name(), "rules"); rio.IsDir(customRulesPath) {
+		if regalPath, err = config.FindRegalDirectoryPath(configSearchPath); err == nil {
+			if customRulesPath := filepath.Join(regalPath, "rules"); rio.IsDir(customRulesPath) {
 				customRulesDir = customRulesPath
 			}
 		}
@@ -157,36 +150,17 @@ func fix(args []string, params *fixParams) (err error) {
 		l = l.WithIgnore(params.ignoreFiles.v)
 	}
 
-	if regalDir != nil {
-		l = l.WithPathPrefix(filepath.Dir(regalDir.Name()))
+	if regalPath != "" {
+		l = l.WithPathPrefix(filepath.Dir(regalPath))
 	}
 
-	userConfig := &config.Config{}
+	userConfig, userConfigPath, err := config.LoadUser(params.configFile, configSearchPath, params.debug)
+	if err != nil {
+		return err
+	}
 
-	userConfigFile, err := readUserConfig(params.lintAndFixParams, configSearchPath)
-	switch {
-	case err == nil:
-		defer rio.CloseIgnore(userConfigFile)
-
-		if params.debug {
-			log.Printf("found user config file: %s", userConfigFile.Name())
-		}
-
-		if err := yaml.NewDecoder(userConfigFile).Decode(userConfig); errors.Is(err, io.EOF) {
-			log.Printf("user config file %q is empty, will use the default config", userConfigFile.Name())
-		} else if err != nil {
-			if regalDir != nil {
-				return fmt.Errorf("failed to decode user config from %s: %w", regalDir.Name(), err)
-			}
-
-			return fmt.Errorf("failed to decode user config: %w", err)
-		}
-
+	if userConfig != nil {
 		l = l.WithUserConfig(userConfig)
-	case params.configFile != "":
-		return fmt.Errorf("user-provided config file not found: %w", err)
-	case params.debug:
-		log.Println("no user-provided config file found, will use the default config")
 	}
 
 	roots, err := config.GetPotentialRoots(args...)
@@ -196,8 +170,8 @@ func fix(args []string, params *fixParams) (err error) {
 
 	f := fixer.NewFixer().RegisterRoots(roots...).RegisterFixes(fixes.NewDefaultFixes()...)
 
-	if userConfigFile != nil {
-		versionsMap, err := config.AllRegoVersions(filepath.Dir(userConfigFile.Name()), userConfig)
+	if userConfigPath != "" {
+		versionsMap, err := config.AllRegoVersions(filepath.Dir(userConfigPath), userConfig)
 		if err != nil {
 			return fmt.Errorf("failed to get all Rego versions: %w", err)
 		}

@@ -180,6 +180,62 @@ func TestLintRuleIgnoreFiles(t *testing.T) {
 	e2eutil.AssertNotContainsViolations(t, rep, "prefer-snake-case")
 }
 
+func TestLintIgnoreFilesRelativeToConfigRoot(t *testing.T) {
+	var rep report.Report
+
+	root := t.TempDir()
+
+	must.MkdirAll(t, root, ".regal")
+	must.WriteFile(t, filepath.Join(root, ".regal", "config.yaml"), []byte("ignore:\n  files:\n    - sub/*.rego\n"))
+
+	for _, file := range []string{"b.rego", filepath.Join("sub", "a.rego")} {
+		must.MkdirAll(t, root, filepath.Dir(file))
+		must.WriteFile(t, filepath.Join(root, file), []byte("package p\n\nx := 1 # not formatted"))
+	}
+
+	regal("lint", "--format", "json", root).
+		expectExitCode(3).
+		expectStdout(unmarshalsTo(&rep)).
+		verify(t)
+
+	for _, violation := range rep.Violations {
+		assert.False(t, strings.Contains(filepath.ToSlash(violation.Location.File), "/sub/"), "ignored file reported")
+	}
+}
+
+func TestLintUsesTheNearestConfigFile(t *testing.T) {
+	var rep report.Report
+
+	root := t.TempDir()
+
+	must.MkdirAll(t, root, ".regal")
+	must.MkdirAll(t, root, "sub")
+	must.WriteFile(t, filepath.Join(root, ".regal", "config.yaml"), []byte("rules:\n  style:\n    opa-fmt:\n      level: ignore\n"))
+	must.WriteFile(t, filepath.Join(root, "sub", ".regal.yaml"), []byte("rules: {}\n"))
+	must.WriteFile(t, filepath.Join(root, "sub", "a.rego"), []byte("package sub\n\nx := 1 # not formatted"))
+
+	regal("lint", "--format", "json", filepath.Join(root, "sub")).
+		expectExitCode(3).
+		expectStdout(unmarshalsTo(&rep)).
+		verify(t)
+
+	e2eutil.AssertContainsViolations(t, rep, "opa-fmt")
+}
+
+func TestLintFailsConflictingConfigFiles(t *testing.T) {
+	root := t.TempDir()
+
+	must.MkdirAll(t, root, ".regal")
+	must.WriteFile(t, filepath.Join(root, ".regal", "config.yaml"), []byte("rules: {}\n"))
+	must.WriteFile(t, filepath.Join(root, ".regal.yaml"), []byte("rules: {}\n"))
+	must.WriteFile(t, filepath.Join(root, "p.rego"), []byte("package p\n"))
+
+	regal("lint", root).
+		expectExitCode(1).
+		expectStderr(contains("conflicting config files")).
+		verify(t)
+}
+
 func TestLintWithDebugOption(t *testing.T) {
 	regal("lint", "--debug", "--config-file", cwd("testdata/configs/ignore_files_prefer_snake_case.yaml"),
 		cwd("testdata/violations")).

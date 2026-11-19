@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-policy-agent/regal/internal/io/files"
 	"github.com/open-policy-agent/regal/internal/io/files/filter"
+	"github.com/open-policy-agent/regal/internal/util"
 )
 
 // FindConfigRoots will search for all config roots in the given path. A config
@@ -14,6 +15,11 @@ import (
 // the most suitable config root for the server to operate on.
 func FindConfigRoots(path string) (foundRoots []string, _ error) {
 	return files.NewWalker(path).WithFilter(filter.Config).Reduce(foundRoots, configRootsReducer)
+}
+
+// HasConfigSuffix reports whether the path is that of a config file, .regal.yaml or .regal/config.yaml.
+func HasConfigSuffix(path string) bool {
+	return util.HasAnySuffix(path, ".regal.yaml", ".regal/config.yaml", ".regal\\config.yaml")
 }
 
 func configRootsReducer(path string, foundRoots []string) ([]string, error) {

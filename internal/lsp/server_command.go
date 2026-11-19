@@ -292,14 +292,14 @@ func (l *LanguageServer) handleIgnoreRuleCommand(_ context.Context, args types.C
 	}
 
 	// find or create config file
-	var configPath string
-
 	workspace := l.Workspace()
-	if configFile, err := config.Find(workspace.Path()); err == nil {
-		defer configFile.Close()
 
-		configPath = configFile.Name()
-	} else {
+	configPath, err := config.Find(workspace.Path(), false)
+	if err != nil {
+		return fmt.Errorf("failed to find config file: %w", err)
+	}
+
+	if configPath == "" {
 		regalDir := workspace.Path(".regal")
 		if err := os.MkdirAll(regalDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create .regal directory: %w", err)

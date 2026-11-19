@@ -1349,14 +1349,9 @@ func (l *LanguageServer) loadWorkspace(ctx context.Context, rootURI string, clie
 
 	workspace := workspace.New(workspaceRootURI).WithClient(client.WithConnection(l.Conn()))
 
-	var configFilePath string
-	if configFile, err := config.Find(workspace.Path()); err == nil {
-		configFilePath = configFile.Name()
-	} else if globalConfigDir := config.GlobalConfigDir(false); globalConfigDir != "" {
-		// the file might not exist and we only want to log we're using the global file if it does.
-		if globalConfigFile := filepath.Join(globalConfigDir, "config.yaml"); rio.IsFile(globalConfigFile) {
-			configFilePath = globalConfigFile
-		}
+	configFilePath, err := config.Find(workspace.Path(), true)
+	if err != nil {
+		l.log.Message("failed to find config file: %s", err)
 	}
 
 	l.loadedConfigLock.Lock()
@@ -1544,11 +1539,12 @@ func (l *LanguageServer) handleWorkspaceDidChangeWatchedFiles(
 						l.log.Message("failed to delete input entry for %s: %s", change.URI, err)
 					}
 				}
-			} else if change.Type == 1 && config.HasConfigSuffix(change.URI) {
+			} else if change.Type == 1 && lsconfig.HasConfigSuffix(change.URI) {
 				// this handles the case of a new config file being created when one did not exist before
-				if configFile, err := config.Find(ws.Path()); err == nil {
-					l.configWatcher.Watch(configFile.Name())
-					rio.CloseIgnore(configFile)
+				if configPath, err := config.Find(ws.Path(), false); err != nil {
+					l.log.Message("failed to find config file: %s", err)
+				} else if configPath != "" {
+					l.configWatcher.Watch(configPath)
 				}
 			}
 		case strings.HasSuffix(change.URI, ".rego"):
