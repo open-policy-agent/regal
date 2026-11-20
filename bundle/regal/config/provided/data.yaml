@@ -59,6 +59,7 @@ rules:
     unused-output-variable:
       level: error
     var-shadows-builtin:
+      except-names: []
       level: error
     zero-arity-function:
       level: ignore

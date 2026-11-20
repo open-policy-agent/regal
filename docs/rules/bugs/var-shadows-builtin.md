@@ -42,6 +42,10 @@ rules:
     var-shadows-builtin:
       # one of "error", "warning", "ignore"
       level: error
+      # names of built-in functions or namespaces that may be used as variable
+      # names without being reported, e.g. "http" or "uri" if you have no use
+      # for the functions in these namespaces
+      except-names: []
 ```
 
 ## Related Resources
