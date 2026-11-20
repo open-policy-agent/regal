@@ -50,3 +50,21 @@ test_success_print_excluded if {
 
 	r == set()
 }
+
+test_success_var_shadows_builtin_but_name_excepted if {
+	r := rule.report
+		with input as ast.with_rego_v1(`allow if http := "yes"`)
+		with config.capabilities as capabilities.provided
+		with config.rules as {"bugs": {"var-shadows-builtin": {"except-names": ["http"]}}}
+
+	r == set()
+}
+
+test_fail_var_shadows_builtin_not_in_excepted_names if {
+	r := rule.report
+		with input as ast.with_rego_v1(`allow if http := "yes"`)
+		with config.capabilities as capabilities.provided
+		with config.rules as {"bugs": {"var-shadows-builtin": {"except-names": ["uri"]}}}
+
+	count(r) == 1
+}
