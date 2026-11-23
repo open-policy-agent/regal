@@ -11,7 +11,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -46,6 +45,7 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/rego/query"
 	"github.com/open-policy-agent/regal/internal/lsp/semantictokens"
 	"github.com/open-policy-agent/regal/internal/lsp/store"
+	"github.com/open-policy-agent/regal/internal/lsp/templater"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
 	"github.com/open-policy-agent/regal/internal/lsp/window"
@@ -93,6 +93,7 @@ type (
 		loadedConfigLock            sync.RWMutex
 		loadedConfigAllRegoVersions *concurrent.Map[string, ast.RegoVersion]
 		loadedBuiltins              *concurrent.Map[string, map[string]*ast.Builtin]
+		allEnabledRules             []string
 
 		cache       *cache.Cache
 		bundleCache *bundles.Cache
@@ -104,18 +105,14 @@ type (
 		initializationGate     chan struct{}
 		initializationGateOnce sync.Once
 
-		lintJobs         chan lintJob
-		templateFileJobs chan fileJob
-		testLocationJobs chan fileJob
+		lintJobs         chan types.LintJob
+		templateFileJobs chan types.FileJob
+		testLocationJobs chan types.FileJob
 		prepareQueryJobs chan struct{}
 		commandRequest   chan types.ExecuteCommandParams
 
-		input *input.Manager
-
-		// templatingFiles tracks files currently being templated to ensure
-		// other updates are not processed while the file is being updated.
-		templatingFiles *concurrent.Map[string, bool]
-
+		templater *templater.Processor
+		input     *input.Manager
 		webServer *web.Server
 
 		workspace                workspace.Workspace
@@ -130,14 +127,6 @@ type (
 	fileLoadFailure struct {
 		URI   string
 		Error error
-	}
-	// lintJob is sent to the lintJobs channel to trigger a linter run.
-	lintJob struct {
-		Reason string
-	}
-	fileJob struct {
-		Reason string
-		URI    string
 	}
 	fileToLoad struct {
 		uri  string
@@ -169,8 +158,6 @@ var (
 	emptyStruct                             any = struct{}{}
 
 	noDiagnostics = make([]types.Diagnostic, 0)
-
-	validPathComponentPattern = regexp.MustCompile(`^\w+[\w\-]*\w+$`)
 
 	fixFmt                    = &fixes.Fmt{OPAFmtOpts: format.Opts{}}
 	fixUseRegoV1              = &fixes.Fmt{OPAFmtOpts: format.Opts{RegoVersion: ast.RegoV0CompatV1}}
@@ -221,14 +208,13 @@ func NewLanguageServerMinimal(ctx context.Context, opts *LanguageServerOptions, 
 		featureFlags:       *featureFlags,
 		input:              input.NewManager(rstore, opts.Logger),
 		initializationGate: make(chan struct{}),
-		lintJobs:           make(chan lintJob, 10),
+		lintJobs:           make(chan types.LintJob, 10),
 		commandRequest:     make(chan types.ExecuteCommandParams, 10),
-		templateFileJobs:   make(chan fileJob, 10),
+		templateFileJobs:   make(chan types.FileJob, 10),
 		// at start up, we need to be able to fire many of these in quick succession for large repos
 		// without blocking.
-		testLocationJobs:            make(chan fileJob, 1000),
+		testLocationJobs:            make(chan types.FileJob, 1000),
 		prepareQueryJobs:            make(chan struct{}, 1),
-		templatingFiles:             concurrent.MapOf(make(map[string]bool)),
 		webServer:                   web.NewServer(opts.Logger),
 		loadedBuiltins:              concurrent.MapOf(make(map[string]map[string]*ast.Builtin)),
 		workspaceDiagnosticsPoll:    opts.WorkspaceDiagnosticsPoll,
@@ -412,7 +398,7 @@ func (l *LanguageServer) StartDiagnosticsWorker(ctx context.Context) {
 					case <-ctx.Done():
 						return
 					case <-ticker.C:
-						l.lintJobs <- lintJob{Reason: "poll ticker"}
+						l.lintJobs <- types.LintJob{Reason: "poll ticker"}
 					}
 				}
 			})
@@ -534,13 +520,13 @@ func (l *LanguageServer) StartConfigWorker(ctx context.Context) {
 					}
 				})
 
-				l.lintJobs <- lintJob{Reason: "config file changed"}
+				l.lintJobs <- types.LintJob{Reason: "config file changed"}
 			case <-l.configWatcher.Drop:
 				l.loadedConfigLock.Lock()
 				l.loadedConfig = config.Embedded()
 				l.loadedConfigLock.Unlock()
 
-				l.lintJobs <- lintJob{Reason: "config file dropped"}
+				l.lintJobs <- types.LintJob{Reason: "config file dropped"}
 			}
 		}
 	})
@@ -592,10 +578,10 @@ func (l *LanguageServer) StartWorkspaceStateWorker(ctx context.Context) {
 					if err != nil {
 						l.log.Message("failed to update module for %s: %s", cnURI, err)
 					} else if l.Workspace().Client().InitOptions.EnableServerTesting && parseSuccess {
-						l.testLocationJobs <- fileJob{URI: cnURI}
+						l.testLocationJobs <- types.FileJob{URI: cnURI}
 					}
 
-					l.lintJobs <- lintJob{Reason: "internal/workspaceStateWorker/changedOrNewFile"}
+					l.lintJobs <- types.LintJob{Reason: "internal/workspaceStateWorker/changedOrNewFile"}
 				}
 			}
 		}
@@ -616,7 +602,7 @@ func (l *LanguageServer) StartTemplateWorker(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case job := <-l.templateFileJobs:
-				if err := l.processTemplateJob(ctx, job); err != nil {
+				if err := l.templater.Process(ctx, job); err != nil {
 					l.log.Message(err.Error())
 				}
 			}
@@ -653,12 +639,19 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf *config.Config) {
 		l.log.Message("failed to update config in storage: %v", err)
 	}
 
+	if enabled, err := linter.NewLinter().WithUserConfig(conf).DetermineEnabledRules(ctx); err != nil {
+		l.log.Message("failed to determine enabled rules: %s", err)
+	} else {
+		l.loadedConfigLock.Lock()
+		l.allEnabledRules = enabled
+		l.loadedConfigLock.Unlock()
+	}
+
 	workspace := l.Workspace()
 
 	// Rego versions may have changed, so reload them.
 	if workspace.Path() != "" {
-		allRegoVersions, err := config.AllRegoVersions(workspace.Path(), conf)
-		if err != nil {
+		if allRegoVersions, err := config.AllRegoVersions(workspace.Path(), conf); err != nil {
 			l.log.Debug("failed to reload rego versions: %s", err)
 		} else {
 			l.loadedConfigAllRegoVersions.Clear()
@@ -728,140 +721,6 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf *config.Config) {
 
 		l.cache.ClearIgnoredFileContents(k)
 	}
-}
-
-// processTemplateJob handles the templating of a newly created Rego file.
-func (l *LanguageServer) processTemplateJob(ctx context.Context, job fileJob) error {
-	l.log.Debug("template worker received job: %s (reason: %s)", job.URI, job.Reason)
-
-	// mark file as being templated to prevent race conditions
-	l.templatingFiles.Set(job.URI, true)
-	defer l.templatingFiles.Delete(job.URI)
-
-	// disable the templating feature for files in the workspace root.
-	if filepath.Dir(uri.ToPath(job.URI)) == l.Workspace().Path() {
-		return nil
-	}
-
-	// determine the new contents for the file, if permitted
-	newContents, err := l.templateContents(job.URI)
-	if err != nil {
-		return fmt.Errorf("failed to template new file: %w", err)
-	}
-
-	// set the contents of the new file in the cache immediately as
-	// these must be update to date in order for fixRenameParams
-	// to work
-	l.cache.SetFileContents(job.URI, newContents)
-
-	// determine if a rename is needed based on the new file package.
-	// edits will be empty if no file rename is needed.
-	additionalRenameEdits, err := l.fixRenameChanges(job.URI)
-	if err != nil {
-		return fmt.Errorf("failed to get rename params: %w", err)
-	}
-
-	// combine content changes with any additional rename changes
-	params := workspace.NewApplyEditParams("Template new Rego file").
-		WithTimeout(rpcTimeout).
-		WithChanges(types.NewTextDocumentEdit(job.URI, ComputeEdits("", newContents))).
-		WithChanges(additionalRenameEdits...)
-
-	if err = l.Workspace().ApplyEdit(ctx, params); err != nil {
-		return fmt.Errorf("failed to apply workspace edit for templating new file: %w", err)
-	}
-
-	// finally, trigger a diagnostics run for the new contents
-	l.lintJobs <- lintJob{Reason: "internal/templateNewFile"}
-
-	return nil
-}
-
-func (l *LanguageServer) templateContents(fileURI string) (string, error) {
-	path := uri.ToPath(fileURI)
-	wsPath := l.Workspace().Path()
-
-	// this function should not be called with files in the root, but if it is,
-	// then it is an error to prevent unwanted behavior.
-	if filepath.Dir(path) == wsPath {
-		return "", errors.New("this function does not template files in the workspace root")
-	}
-
-	content, ok := l.cache.GetFileContents(fileURI)
-	if !ok {
-		return "", fmt.Errorf("failed to get file contents for URI %q", fileURI)
-	}
-
-	if content != "" {
-		return "", errors.New("file already has contents, templating not allowed")
-	}
-
-	if diskContent, err := os.ReadFile(path); err == nil && len(diskContent) > 0 {
-		// then we found the file on disk
-		return "", errors.New("file on disk already has contents, templating not allowed")
-	}
-
-	roots, err := config.GetPotentialRoots(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to get potential roots during templating of new file: %w", err)
-	}
-
-	dir := filepath.Dir(path)
-
-	// handle the case where the root is unknown by providing the server's root
-	// dir as a defacto root. This allows templating of files when there is no
-	// known root, but the package could be determined based on the file path
-	// relative to the server's workspace root
-	if len(roots) == 1 && roots[0] == dir {
-		roots = []string{wsPath}
-	} else {
-		roots = append(roots, wsPath)
-	}
-
-	longestPrefixRoot := ""
-	for _, root := range roots {
-		if strings.HasPrefix(dir, root) && len(root) > len(longestPrefixRoot) {
-			longestPrefixRoot = root
-		}
-	}
-
-	if longestPrefixRoot == "" {
-		return "", fmt.Errorf("failed to find longest prefix root for templating of new file: %s", path)
-	}
-
-	parts := slices.Compact(strings.Split(strings.TrimPrefix(dir, longestPrefixRoot), paths.Separator))
-
-	var pkg string
-
-	for _, part := range parts {
-		if part == "" {
-			continue
-		}
-
-		if !validPathComponentPattern.MatchString(part) {
-			return "", fmt.Errorf("failed to template new file as package path contained invalid part: %s", part)
-		}
-
-		switch {
-		case strings.Contains(part, "-"):
-			pkg += fmt.Sprintf("[%q]", part)
-		case pkg == "":
-			pkg += part
-		default:
-			pkg += "." + part
-		}
-	}
-
-	// if we are in the root, then we can use main as a default
-	if pkg = cmp.Or(pkg, "main"); strings.HasSuffix(fileURI, "_test.rego") {
-		pkg += "_test"
-	}
-
-	if l.regoVersionForURI(fileURI) == ast.RegoV0 {
-		return fmt.Sprintf("package %s\n\nimport rego.v1\n", pkg), nil
-	}
-
-	return "package " + pkg + "\n\n", nil
 }
 
 // Note: currently ignoring params.Query, as the client seems to do a good
@@ -945,8 +804,7 @@ func (l *LanguageServer) handleTextDocumentDidOpen(
 	if l.ignoreURI(params.TextDocument.URI) {
 		l.cache.SetIgnoredFileContents(params.TextDocument.URI, params.TextDocument.Text)
 	} else {
-		// check if file is currently being templated
-		if _, isTemplating := l.templatingFiles.Get(params.TextDocument.URI); isTemplating {
+		if l.templater.IsInProgress(params.TextDocument.URI) {
 			l.log.Message("%s is being templated, skipping didOpen update", params.TextDocument.URI)
 		} else {
 			l.cache.SetFileContents(params.TextDocument.URI, params.TextDocument.Text)
@@ -956,10 +814,10 @@ func (l *LanguageServer) handleTextDocumentDidOpen(
 		if err != nil {
 			l.log.Message("failed to update module for %s: %s", params.TextDocument.URI, err)
 		} else if l.Workspace().Client().InitOptions.EnableServerTesting && parseSuccess {
-			l.testLocationJobs <- fileJob{URI: params.TextDocument.URI}
+			l.testLocationJobs <- types.FileJob{URI: params.TextDocument.URI}
 		}
 
-		l.lintJobs <- lintJob{Reason: "textDocument/didOpen"}
+		l.lintJobs <- types.LintJob{Reason: "textDocument/didOpen"}
 	}
 
 	return emptyStruct, nil
@@ -999,10 +857,10 @@ func (l *LanguageServer) handleTextDocumentDidChange(
 		if err != nil {
 			l.log.Message("failed to update module for %s: %s", params.TextDocument.URI, err)
 		} else if l.Workspace().Client().InitOptions.EnableServerTesting && parseSuccess {
-			l.testLocationJobs <- fileJob{URI: params.TextDocument.URI}
+			l.testLocationJobs <- types.FileJob{URI: params.TextDocument.URI}
 		}
 
-		l.lintJobs <- lintJob{Reason: "textDocument/didChange"}
+		l.lintJobs <- types.LintJob{Reason: "textDocument/didChange"}
 	}
 
 	return emptyStruct, nil
@@ -1034,20 +892,11 @@ func (l *LanguageServer) handleTextDocumentDidSave(
 	// If dev mode is enabled, reload the bundle on save. Otherwise, this is a no-op.
 	bundle.Dev.Reload()
 
-	if params.Text == nil || !strings.Contains(*params.Text, "\r\n") {
-		return emptyStruct, nil
-	}
-
-	enabled, err := linter.NewLinter().WithUserConfig(l.getLoadedConfig()).DetermineEnabledRules(ctx)
-	if err != nil {
-		l.log.Message("failed to determine enabled rules: %s", err)
-
-		return emptyStruct, nil
-	}
-
-	if slices.ContainsFunc(enabled, util.EqualsAny(ruleNameOPAFmt, ruleNameUseRegoV1)) {
-		if w := l.Window(); w != nil {
-			w.ShowMessage(ctx, types.WarningMessage, crlfWarnMsg)
+	if params.Text != nil && strings.Contains(*params.Text, "\r\n") {
+		if slices.ContainsFunc(l.enabledRules(), util.EqualsAny(ruleNameOPAFmt, ruleNameUseRegoV1)) {
+			if w := l.Window(); w != nil {
+				w.ShowMessage(ctx, types.WarningMessage, crlfWarnMsg)
+			}
 		}
 	}
 
@@ -1069,6 +918,13 @@ func (l *LanguageServer) handleTextDocumentDocumentSymbol(params types.DocumentS
 	return documentsymbol.All(contents, module, l.builtinsForCurrentCapabilities()), nil
 }
 
+func (l *LanguageServer) enabledRules() []string {
+	l.loadedConfigLock.RLock()
+	defer l.loadedConfigLock.RUnlock()
+
+	return append([]string(nil), l.allEnabledRules...)
+}
+
 func (l *LanguageServer) handleTextDocumentFormatting(
 	ctx context.Context,
 	params types.DocumentFormattingParams,
@@ -1085,7 +941,7 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 			return noTextEdits, nil
 		}
 
-		newContent, err := l.templateContents(params.TextDocument.URI)
+		newContent, err := l.templater.Contents(params.TextDocument.URI)
 		if err != nil {
 			return nil, fmt.Errorf("failed to template contents as a templating fallback: %w", err)
 		}
@@ -1097,12 +953,12 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 		if err != nil {
 			l.log.Message("failed to update module for %s: %s", params.TextDocument.URI, err)
 		} else if client.InitOptions.EnableServerTesting && parseSuccess {
-			l.testLocationJobs <- fileJob{URI: params.TextDocument.URI}
+			l.testLocationJobs <- types.FileJob{URI: params.TextDocument.URI}
 		}
 
-		l.lintJobs <- lintJob{Reason: "internal/templateFormattingFallback"}
+		l.lintJobs <- types.LintJob{Reason: "internal/templateFormattingFallback"}
 
-		return ComputeEdits(oldContent, newContent), nil
+		return types.ComputeEdits(oldContent, newContent), nil
 	}
 
 	// opa-fmt is the default formatter if not set in the client options
@@ -1165,7 +1021,7 @@ func (l *LanguageServer) handleTextDocumentFormatting(
 		return nil, fmt.Errorf("unrecognized formatter %q", formatter)
 	}
 
-	return ComputeEdits(oldContent, newContent), nil
+	return types.ComputeEdits(oldContent, newContent), nil
 }
 
 func (l *LanguageServer) handleWorkspaceDidCreateFiles(
@@ -1185,12 +1041,12 @@ func (l *LanguageServer) handleWorkspaceDidCreateFiles(
 		if err != nil {
 			l.log.Message("failed to update module for %s: %s", createOp.URI, err)
 		} else if l.Workspace().Client().InitOptions.EnableServerTesting && parseSuccess {
-			l.testLocationJobs <- fileJob{URI: createOp.URI}
+			l.testLocationJobs <- types.FileJob{URI: createOp.URI}
 		}
 
-		l.lintJobs <- lintJob{Reason: "textDocument/didCreate"}
+		l.lintJobs <- types.LintJob{Reason: "textDocument/didCreate"}
 
-		l.templateFileJobs <- fileJob{URI: createOp.URI}
+		l.templateFileJobs <- types.FileJob{URI: createOp.URI}
 	}
 
 	return emptyStruct, nil
@@ -1242,12 +1098,12 @@ func (l *LanguageServer) handleWorkspaceDidRenameFiles(
 		if err != nil {
 			l.log.Message("failed to update module for %s: %s", renameOp.NewURI, err)
 		} else if l.Workspace().Client().InitOptions.EnableServerTesting && parseSuccess {
-			l.testLocationJobs <- fileJob{URI: renameOp.NewURI}
+			l.testLocationJobs <- types.FileJob{URI: renameOp.NewURI}
 		}
 
-		l.lintJobs <- lintJob{Reason: "textDocument/didRename"}
+		l.lintJobs <- types.LintJob{Reason: "textDocument/didRename"}
 
-		l.templateFileJobs <- fileJob{URI: renameOp.NewURI}
+		l.templateFileJobs <- types.FileJob{URI: renameOp.NewURI}
 	}
 
 	return emptyStruct, nil
@@ -1348,6 +1204,9 @@ func (l *LanguageServer) loadWorkspace(ctx context.Context, rootURI string, clie
 	}
 
 	workspace := workspace.New(workspaceRootURI).WithClient(client.WithConnection(l.Conn()))
+	templater := templater.New(l.log, workspace, l.cache, l.lintJobs).
+		WithRegoVersionForURI(l.regoVersionForURI).
+		WithFixRenameChanges(l.fixRenameChanges)
 
 	configFilePath, err := config.Find(workspace.Path(), true)
 	if err != nil {
@@ -1359,6 +1218,7 @@ func (l *LanguageServer) loadWorkspace(ctx context.Context, rootURI string, clie
 
 	l.bundleCache = bundles.NewCache(workspace.Path(), l.log)
 	l.workspace = workspace
+	l.templater = templater
 
 	if configFilePath != "" {
 		l.log.Message("using config file: %s", configFilePath)
@@ -1501,11 +1361,11 @@ func (l *LanguageServer) initializedResultHandler(ctx context.Context, result an
 			if err != nil {
 				l.log.Message("failed to update module for %s: %s", cnURI, err)
 			} else if l.Workspace().Client().InitOptions.EnableServerTesting && parseSuccess {
-				l.testLocationJobs <- fileJob{URI: cnURI}
+				l.testLocationJobs <- types.FileJob{URI: cnURI}
 			}
 		}
 
-		l.lintJobs <- lintJob{Reason: "Workspace Initialization"}
+		l.lintJobs <- types.LintJob{Reason: "Workspace Initialization"}
 	}()
 
 	return emptyStruct, nil
@@ -1551,7 +1411,7 @@ func (l *LanguageServer) handleWorkspaceDidChangeWatchedFiles(
 			parseSuccess, err := updateParse(ctx, l.parseOpts(change.URI, l.builtinsForCurrentCapabilities()))
 			if err == nil {
 				if ws.Client().InitOptions.EnableServerTesting && parseSuccess {
-					l.testLocationJobs <- fileJob{URI: change.URI}
+					l.testLocationJobs <- types.FileJob{URI: change.URI}
 				}
 
 				changes = true
@@ -1562,7 +1422,7 @@ func (l *LanguageServer) handleWorkspaceDidChangeWatchedFiles(
 	}
 
 	if changes {
-		l.lintJobs <- lintJob{Reason: "workspace/didChangeWatchedFiles"}
+		l.lintJobs <- types.LintJob{Reason: "workspace/didChangeWatchedFiles"}
 	}
 
 	return emptyStruct, nil

@@ -22,29 +22,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package lsp
+package types
 
 import (
 	"strings"
-
-	"github.com/open-policy-agent/regal/internal/lsp/types"
 )
 
 // ComputeEdits computes diff edits from 2 string inputs.
-func ComputeEdits(before, after string) []types.TextEdit {
+func ComputeEdits(before, after string) []TextEdit {
 	ops := operations(splitLines(before), splitLines(after))
-	edits := make([]types.TextEdit, 0, len(ops))
+	edits := make([]TextEdit, 0, len(ops))
 
 	for _, op := range ops {
 		switch op.Kind {
 		case Delete:
 			// Delete: unformatted[i1:i2] is deleted.
-			edits = append(edits, types.TextEdit{Range: types.RangeBetween(op.I1, 0, op.I2, 0)})
+			edits = append(edits, TextEdit{Range: RangeBetween(op.I1, 0, op.I2, 0)})
 		case Insert:
 			// Insert: formatted[j1:j2] is inserted at unformatted[i1:i1].
 			if content := strings.Join(op.Content, ""); content != "" {
-				edits = append(edits, types.TextEdit{
-					Range:   types.RangeBetween(op.I1, 0, op.I1, 0),
+				edits = append(edits, TextEdit{
+					Range:   RangeBetween(op.I1, 0, op.I1, 0),
 					NewText: content,
 				})
 			}

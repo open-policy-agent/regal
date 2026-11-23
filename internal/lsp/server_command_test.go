@@ -53,7 +53,7 @@ allow if {
 	}{
 		"generic client": {
 			clientName:    "go test",
-			expectedEdits: ComputeEdits(content, expectedFormattedContent),
+			expectedEdits: types.ComputeEdits(content, expectedFormattedContent),
 		},
 		"IntelliJ client": {
 			clientName: "IntelliJ IDEA 2024.2.5",

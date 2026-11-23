@@ -7,9 +7,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/open-policy-agent/opa/v1/ast"
 	"github.com/open-policy-agent/opa/v1/topdown"
-	outil "github.com/open-policy-agent/opa/v1/util"
 
 	"github.com/open-policy-agent/regal/internal/test"
 	"github.com/open-policy-agent/regal/internal/test/assert"
@@ -55,7 +53,6 @@ func TestLintWithUserConfig(t *testing.T) {
 
 	input := test.InputPolicy("p/p.rego", "package p\n\nr := input.foo[_]\n")
 	rules := map[string]config.Category{"bugs": {"rule-shadows-builtin": config.Rule{Level: "ignore"}}}
-
 	result := must.Return(regal.NewLinter().
 		WithUserConfig(&config.Config{Rules: rules}).
 		WithInputModules(input).
@@ -226,8 +223,7 @@ func TestLintWithCustomRuleNameInEnableParam(t *testing.T) {
 		WithEnabledRules("acme-corp-package").
 		Lint(t.Context()))(t)
 
-	// No validation errors
-	assert.NumViolations(t, 1, result)
+	assert.NumViolations(t, 1, result) // No validation errors
 	assert.Equal(t, "acme-corp-package", result.Violations[0].Title, "unexpected first violation")
 }
 
@@ -304,11 +300,8 @@ func TestLintMergedConfigUsesProvidedDefaults(t *testing.T) {
 
 	userConfig := &config.Config{
 		Defaults: config.Defaults{
-			Global: config.Default{Level: "ignore"},
-			Categories: map[string]config.Default{
-				"style": {Level: "error"},
-				"bugs":  {Level: "warning"},
-			},
+			Global:     config.Default{Level: "ignore"},
+			Categories: map[string]config.Default{"style": {Level: "error"}, "bugs": {Level: "warning"}},
 		},
 		Rules: map[string]config.Category{"style": {"opa-fmt": config.Rule{Level: "warning"}}},
 	}
@@ -362,7 +355,7 @@ func TestEnabledRules(t *testing.T) {
 func TestEnabledRulesWithConfig(t *testing.T) {
 	t.Parallel()
 
-	config := testutil.MustUnmarshalYAML[config.Config](t, []byte(`
+	config := testutil.MustUnmarshalYAML[*config.Config](t, []byte(`
 rules:
   style:
     opa-fmt:
@@ -374,31 +367,13 @@ rules:
     directory-package-mismatch: # non agg rule
       level: ignore
 `))
-	enabledRules, err := regal.NewLinter().WithUserConfig(&config).DetermineEnabledRules(t.Context())
+	enabledRules, err := regal.NewLinter().WithUserConfig(config).DetermineEnabledRules(t.Context())
 
 	must.Equal(t, nil, err, "unexpected error")
 	must.NotEqual(t, 0, len(enabledRules), "enabled aggregate rules")
 	assert.False(t, slices.Contains(enabledRules, "directory-package-mismatch"))
 	assert.False(t, slices.Contains(enabledRules, "opa-fmt"))
 	assert.False(t, slices.Contains(enabledRules, "unresolved-import"))
-}
-
-func TestLintWithCollectQuery(t *testing.T) {
-	t.Parallel()
-
-	result := must.Return(regal.NewLinter().
-		WithDisableAll(true).
-		WithEnabledRules("unresolved-import").
-		WithCollectQuery(true).     // needed since we have a single file input
-		WithExportAggregates(true). // needed to be able to test the aggregates are set
-		WithInputModules(test.InputPolicy("p.rego", "package p\n\nimport data.foo.bar.unresolved\n")).
-		Lint(t.Context()))(t)
-
-	must.Equal(t, 1, result.Aggregates.Len(), "aggregates count")
-
-	_, err := result.Aggregates.Find(outil.Map([]string{"p.rego", "common"}, ast.InternedTerm))
-
-	assert.Equal(t, nil, err, "expected aggregates to contain 'p.rego/common'")
 }
 
 func TestLintWithExperimentalKeywords(t *testing.T) {

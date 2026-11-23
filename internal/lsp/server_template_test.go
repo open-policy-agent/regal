@@ -12,162 +12,18 @@ import (
 
 	"github.com/sourcegraph/jsonrpc2"
 
-	"github.com/open-policy-agent/opa/v1/ast"
-
 	"github.com/open-policy-agent/regal/internal/lsp/clients"
+	"github.com/open-policy-agent/regal/internal/lsp/connection"
 	"github.com/open-policy-agent/regal/internal/lsp/test"
 	"github.com/open-policy-agent/regal/internal/lsp/types"
 	"github.com/open-policy-agent/regal/internal/lsp/uri"
-	"github.com/open-policy-agent/regal/internal/lsp/workspace"
-	"github.com/open-policy-agent/regal/internal/test/assert"
 	"github.com/open-policy-agent/regal/internal/test/must"
 	"github.com/open-policy-agent/regal/internal/testutil"
-	"github.com/open-policy-agent/regal/pkg/roast/util/concurrent"
 )
 
 type message struct {
 	method string
 	bytes  []byte
-}
-
-func TestTemplateContentsForFile(t *testing.T) {
-	t.Parallel()
-
-	testCases := map[string]struct {
-		FileKey               string
-		CacheFileContents     string
-		DiskContents          map[string]string
-		RequireConfig         bool
-		ServerAllRegoVersions *concurrent.Map[string, ast.RegoVersion]
-		ExpectedContents      string
-		ExpectedError         string
-	}{
-		"existing contents in file": {
-			FileKey:           "foo/bar.rego",
-			CacheFileContents: "package foo",
-			ExpectedError:     "file already has contents",
-		},
-		"existing contents on disk": {
-			FileKey:           "foo/bar.rego",
-			CacheFileContents: "",
-			DiskContents: map[string]string{
-				"foo/bar.rego": "package foo",
-			},
-			ExpectedError: "file on disk already has contents",
-		},
-		"empty file is templated based on root": {
-			FileKey:           "foo/bar.rego",
-			CacheFileContents: "",
-			DiskContents: map[string]string{
-				"foo/bar.rego":       "",
-				".regal/config.yaml": "",
-			},
-			ExpectedContents: "package foo\n\n",
-		},
-		"empty test file is templated based on root": {
-			FileKey:           "foo/bar_test.rego",
-			CacheFileContents: "",
-			DiskContents: map[string]string{
-				"foo/bar_test.rego":  "",
-				".regal/config.yaml": "",
-			},
-			RequireConfig:    true,
-			ExpectedContents: "package foo_test\n\n",
-		},
-		"empty deeply nested file is templated based on root": {
-			FileKey:           "foo/bar/baz/bax.rego",
-			CacheFileContents: "",
-			DiskContents: map[string]string{
-				"foo/bar/baz/bax.rego": "",
-				".regal/config.yaml":   "",
-			},
-			ExpectedContents: "package foo.bar.baz\n\n",
-		},
-		"v0 templating using rego version setting": {
-			FileKey:           filepath.FromSlash("foo/bar/baz/bax.rego"),
-			CacheFileContents: "",
-			ServerAllRegoVersions: concurrent.MapOf(map[string]ast.RegoVersion{
-				"foo": ast.RegoV0,
-			}),
-			DiskContents: map[string]string{
-				filepath.FromSlash("foo/bar/baz/bax.rego"): "",
-				filepath.FromSlash(".regal/config.yaml"):   "", // we manually set the versions, config not loaded in these tests
-			},
-			ExpectedContents: "package foo.bar.baz\n\nimport rego.v1\n",
-		},
-		"v1 templating using rego version setting": {
-			FileKey:           filepath.FromSlash("foo/bar/baz/bax.rego"),
-			CacheFileContents: "",
-			ServerAllRegoVersions: concurrent.MapOf(map[string]ast.RegoVersion{
-				"foo": ast.RegoV1,
-			}),
-			DiskContents: map[string]string{
-				filepath.FromSlash("foo/bar/baz/bax.rego"): "",
-				filepath.FromSlash(".regal/config.yaml"):   "", // we manually set the versions, config not loaded in these tests
-			},
-			ExpectedContents: "package foo.bar.baz\n\n",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			td := testutil.TempDirectoryOf(t, tc.DiskContents)
-			ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: test.DebugLogger(t)})
-
-			wsRootURI := uri.FromPath(clients.IdentifierGeneric, td)
-			ls.workspace = workspace.New(wsRootURI)
-			ls.loadedConfigAllRegoVersions = tc.ServerAllRegoVersions
-
-			fileURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(td, tc.FileKey))
-
-			ls.cache.SetFileContents(fileURI, tc.CacheFileContents)
-
-			newContents, err := ls.templateContents(fileURI)
-			if tc.ExpectedError != "" {
-				testutil.ErrMustContain(err, tc.ExpectedError)(t)
-			} else if err != nil {
-				t.Fatalf("unexpected error: %s", err)
-			}
-
-			if newContents != tc.ExpectedContents {
-				t.Fatalf("expected contents to be\n%s\ngot\n%s", tc.ExpectedContents, newContents)
-			}
-		})
-	}
-}
-
-func TestTemplateContentsForFileInWorkspaceRoot(t *testing.T) {
-	t.Parallel()
-
-	td := testutil.TempDirectoryOf(t, map[string]string{".regal/config.yaml": ""})
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: test.DebugLogger(t)})
-
-	workspaceRootURI := uri.FromPath(clients.IdentifierGeneric, td)
-	ls.workspace = workspace.New(workspaceRootURI)
-
-	fileURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(td, "foo.rego"))
-
-	ls.cache.SetFileContents(fileURI, "")
-
-	_, err := ls.templateContents(fileURI)
-
-	testutil.ErrMustContain(err, "this function does not template files in the workspace root")(t)
-}
-
-func TestTemplateContentsForFileWithUnknownRoot(t *testing.T) {
-	t.Parallel()
-
-	td := t.TempDir()
-	ls := NewLanguageServer(t.Context(), &LanguageServerOptions{Logger: test.DebugLogger(t)})
-	fileURI := uri.FromPath(clients.IdentifierGeneric, filepath.Join(td, "foo", "bar.rego"))
-
-	ls.workspace = workspace.New(uri.FromPath(clients.IdentifierGeneric, td))
-	ls.cache.SetFileContents(fileURI, "")
-
-	must.MkdirAll(t, td, "foo")
-	assert.Equal(t, "package foo\n\n", must.Return(ls.templateContents(fileURI))(t))
 }
 
 func TestNewFileTemplating(t *testing.T) {
@@ -354,12 +210,8 @@ func TestTemplateWorkerSkipsDidOpenWhenTemplating(t *testing.T) {
 	case <-timeout.C:
 		t.Fatal("timed out waiting for server to initialize")
 	default:
-		for {
+		for ls.getLoadedConfig() == nil {
 			time.Sleep(testPollInterval)
-
-			if ls.getLoadedConfig() != nil {
-				break
-			}
 		}
 	}
 
@@ -368,7 +220,7 @@ func TestTemplateWorkerSkipsDidOpenWhenTemplating(t *testing.T) {
 	ls.cache.SetFileContents(newFileURI, initialContent)
 
 	// Simulate templating in progress
-	ls.templatingFiles.Set(newFileURI, true)
+	ls.templater.MarkInProgress(newFileURI)
 
 	params := types.DidOpenTextDocumentParams{
 		TextDocument: types.TextDocumentItem{URI: newFileURI, LanguageID: "rego", Version: 1, Text: ""},
@@ -397,7 +249,7 @@ func TestTemplateWorkerSkipsDidOpenWhenTemplating(t *testing.T) {
 	// Simulate template worker completing
 	expectedTemplateContent := "package foo.bar\n\n"
 	ls.cache.SetFileContents(newFileURI, expectedTemplateContent)
-	ls.templatingFiles.Delete(newFileURI)
+	ls.templater.ClearInProgress(newFileURI)
 
 	// Verify templated content is preserved
 	cacheContent = testutil.MustBeOK(ls.cache.GetFileContents(newFileURI))(t)
@@ -429,10 +281,7 @@ func TestTemplateWorkerSkipsDidOpenWhenTemplating(t *testing.T) {
 	}
 }
 
-func createTemplateTestClientHandler(
-	t *testing.T,
-	receivedMessages chan message,
-) func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
+func createTemplateTestClientHandler(t *testing.T, receivedMessages chan message) connection.HandlerFunc {
 	t.Helper()
 
 	return func(_ context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Request) (result any, err error) {
