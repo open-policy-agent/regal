@@ -45,15 +45,6 @@ func (fw Walker) WithFilter(filter filter.Func) Walker {
 	return fw
 }
 
-// WithSkipFunc sets the skip function for the [Walker]. This is a special
-// filter that allows skipping traversal of entire directory trees (like
-// .git, node_modules, etc.).
-func (fw Walker) WithSkipFunc(skipFunc filter.Func) Walker {
-	fw.skipFn = skipFunc
-
-	return fw
-}
-
 // WithStatBeforeWalk sets whether to stat the root directory before walking.
 // The underlying [filepath.WalkDir] implementation panics on non-existent paths,
 // so this is useful when the input isn't guaranteed to exist.

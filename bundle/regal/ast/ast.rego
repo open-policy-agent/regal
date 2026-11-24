@@ -293,7 +293,7 @@ ref_static_to_string(ref) := ref_to_string(array.slice(ref, 0, first_non_static)
 
 # METADATA
 # description: true if ref contains only static parts
-static_ref(ref) if not _non_static_ref(ref)
+static_ref(ref) if count(ref.value) == 1 or not _non_static_ref(ref)
 
 # optimized inverse of static_ref benefitting from early exit
 # 100 is used only as a reasonable (well...) upper limit for a ref, but the
@@ -432,8 +432,30 @@ assignment_terms(terms) := [terms[1], terms[2]] if is_assignment(terms[0])
 #   For a given rule head name, this rule contains a list of locations where
 #   there is a rule head with that name.
 rule_head_locations[name] contains {"row": loc.row, "col": loc.col} if {
-	some i, rule in _rules
+	some rule_index, rule in _rules
 
-	name := $"{package_name_full}.{rule_names_ordered[i]}"
+	name := $"{package_name_full}.{rule_names_ordered[rule_index]}"
 	loc := util.to_location_object(rule.head.location)
+}
+
+# METADATA
+# description: |
+#   For a given rule name, this rule contains all incremental rules (including functions) with that name.
+rules_by_name[name] contains rule if {
+	some rule_index, rule in _rules
+
+	name := rule_names_ordered[rule_index]
+}
+
+# METADATA
+# description: |
+#   true if the given rule is a constant rule, meaning it has a static reference,
+#   no body, and its head value is a constant.
+is_constant_rule(rule) if {
+	not rule.body
+	not rule.default
+	not rule.head.args
+	not rule.head.key
+	rule.head.value == true or is_constant(rule.head.value)
+	static_ref(rule.head.ref)
 }

@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/bugs/unconditional-with-conditions
 package regal.rules.bugs["unconditional-with-conditions"]
 
+import rego.v2
+
 import data.regal.ast
 import data.regal.result
 
@@ -74,20 +76,15 @@ _unconditional(rule) if {
 	# the second definition is what answers when the first is undefined
 	ast.is_constant(rule.head.value)
 
-	_matches_any_arguments(rule)
-}
+	not rule.head.args or {
+		# a function definition only catches everything when every argument is a
+		# distinct variable. `f("a") := 1` has no body, but applies only to the argument
+		# "a", so it leaves the other definitions in the set doing real work. Repeating
+		# a name — `f(x, x)` — is a constraint too, so the names must be distinct
+		every arg in rule.head.args {
+			arg.type == "var"
+		}
 
-# rules that are not functions take no arguments, so nothing further to check
-_matches_any_arguments(rule) if not rule.head.args
-
-# a function definition only catches everything when every argument is a
-# distinct variable. `f("a") := 1` has no body, but applies only to the argument
-# "a", so it leaves the other definitions in the set doing real work. Repeating
-# a name — `f(x, x)` — is a constraint too, so the names must be distinct
-_matches_any_arguments(rule) if {
-	every arg in rule.head.args {
-		arg.type == "var"
+		count({arg.value | some arg in rule.head.args}) == count(rule.head.args)
 	}
-
-	count({arg.value | some arg in rule.head.args}) == count(rule.head.args)
 }
