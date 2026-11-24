@@ -12,8 +12,49 @@ SCRIPTPATH=$(dirname "$SCRIPT")
 
 # Which Regal version to use: an explicit REGAL_VERSION wins, otherwise the
 # release tag of the checked-out hook revision. pre-commit checkouts carry no
-# tags, so the commit is mapped back to its tag with ls-remote. If the
+# tags, so the commit is mapped back to its tag with ls-remote, or — when
+# ls-remote is unreachable — with a tag recorded by an earlier fetch. If the
 # revision is not a release tag, the version is "latest".
+#
+# A tag recorded by an earlier fetch (FETCH_HEAD) can still name the pinned
+# revision when ls-remote is unreachable: the fetch that brought the tag in
+# records its name, and the tag object dereferences to the checked-out
+# commit. Only a tag that resolves to HEAD is trusted, so a stale fetch
+# record never overrides the actual checkout. Release tags are preferred.
+fetched_tag()
+{
+    HEAD_SHA=$(git -C "${SCRIPTPATH}" rev-parse HEAD 2>/dev/null) || HEAD_SHA=""
+    [ -n "${HEAD_SHA}" ] || return 1
+    FETCH_HEAD_FILE=$(git -C "${SCRIPTPATH}" rev-parse --git-path FETCH_HEAD 2>/dev/null) || FETCH_HEAD_FILE=""
+    case "${FETCH_HEAD_FILE}" in
+        /*) ;;
+        *) FETCH_HEAD_FILE="${SCRIPTPATH}/${FETCH_HEAD_FILE}" ;;
+    esac
+    [ -f "${FETCH_HEAD_FILE}" ] || return 1
+    FALLBACK=""
+    while IFS= read -r line || [ -n "${line}" ]; do
+        case "${line}" in
+            *"	tag '"*)
+                SHA=$(printf '%s\n' "${line}" | sed -n 's/^[[:space:]]*\([0-9a-f][0-9a-f]*\).*/\1/p')
+                NAME=$(printf '%s\n' "${line}" | sed -n "s/.*tag '\([^']*\)'.*/\1/p")
+                [ -n "${SHA}" ] && [ -n "${NAME}" ] || continue
+                COMMIT=$(git -C "${SCRIPTPATH}" rev-parse "${SHA}^{commit}" 2>/dev/null) || continue
+                [ "${COMMIT}" = "${HEAD_SHA}" ] || continue
+                case "${NAME}" in
+                    v[0-9]*)
+                        echo "${NAME}"
+                        return 0
+                        ;;
+                    *)
+                        [ -z "${FALLBACK}" ] && FALLBACK="${NAME}"
+                        ;;
+                esac
+                ;;
+        esac
+    done < "${FETCH_HEAD_FILE}"
+    [ -n "${FALLBACK}" ] && echo "${FALLBACK}"
+}
+
 resolve_version()
 {
     if [ -n "${REGAL_VERSION}" ]; then
@@ -29,6 +70,11 @@ resolve_version()
             # Several tags can point at one commit; prefer a release tag.
             TAG=$(git ls-remote --tags "${ORIGIN_URL}" 2>/dev/null | grep -F "${HEAD_SHA}" | sed -n 's|.*refs/tags/||p' | sed 's|\^{}$||' | sort -u | grep -E '^v[0-9]' | head -n 1) || TAG=""
         fi
+    fi
+    if [ -z "${TAG}" ]; then
+        # ls-remote unreachable (offline, for example): fall back to a tag
+        # recorded by an earlier fetch before giving up on the pin.
+        TAG=$(fetched_tag) || TAG=""
     fi
 
     if [ -n "${TAG}" ]; then
