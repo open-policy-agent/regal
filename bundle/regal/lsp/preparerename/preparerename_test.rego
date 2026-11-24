@@ -19,6 +19,23 @@ greet(name) := msg if {
 	resp == {"start": {"line": 2, "character": 6}, "end": {"line": 2, "character": 10}}
 }
 
+test_preparerename_arg_in_array if {
+	policy := `package p
+
+greet([name]) := msg if {
+	msg := sprintf("hello, %s", [name])
+}`
+
+	resp := preparerename.result.response
+		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as {"line": 2, "character": 8}
+		with input.regal.file.lines as split(policy, "\n")
+		with input.method as "textDocument/prepareRename"
+
+	resp == {"start": {"character": 7, "line": 2}, "end": {"character": 11, "line": 2}}
+}
+
 test_preparerename_arg_from_use if {
 	policy := `package p
 

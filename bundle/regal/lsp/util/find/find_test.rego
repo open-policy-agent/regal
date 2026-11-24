@@ -38,6 +38,8 @@ default rule3 := false`
 test_arg_at_position[name] if {
 	some name, snippet in {
 		"declaration": "fn(x|) := x.y",
+		"declaration in array": "fn([x|, y]) := x + y",
+		"declaration in object": `fn({"x": x|}) := x`,
 		"just after the declaration": "fn(x)| := x.y",
 		"use in the head value": "fn(x) := x|.y",
 		"use in the body": "fn(x) := y if y := x|.y",
@@ -59,7 +61,6 @@ test_arg_at_position_not_an_arg[name] if {
 		"wildcard": "fn(_|) := 1",
 		"second wildcard": "fn(_, _|) := 1",
 		"field with the same name as the argument": "fn(x) := input.x|",
-		"array argument, not supported": "fn([a|, b]) := a",
 	}
 
 	[tdp, module] := testing.at_cursor(snippet)

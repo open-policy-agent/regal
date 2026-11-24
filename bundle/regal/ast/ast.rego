@@ -127,8 +127,15 @@ public_rules_and_functions := [rule |
 ]
 
 # METADATA
-# description: a list of the argument names for the given rule (if function)
-function_arg_names(rule) := [arg.value | some arg in rule.head.args]
+# description: |
+#   a list of the argument names for the given rule (if function)
+#   names are typically declared directly as arguments but may also
+#   be found inside of arrays and object values (lightweight destructuring)
+function_arg_names(rule) := [term.value |
+	walk(rule.head.args, [_, term])
+
+	term.type == "var"
+]
 
 # METADATA
 # description: all the rule and function names in the input AST
