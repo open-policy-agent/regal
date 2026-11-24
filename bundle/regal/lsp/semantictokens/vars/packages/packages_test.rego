@@ -8,7 +8,7 @@ test_packages if {
 
 	tokens := packages.result with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	tokens == {
 		{"col": 0, "length": 7, "line": 0, "modifiers": 0, "type": 3},

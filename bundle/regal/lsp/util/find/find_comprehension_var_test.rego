@@ -12,11 +12,12 @@ r := result if {
 	]
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	[var, comp] := find.comprehension_var_at_position
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 4, "character": 7}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	var.value == "x"
 	comp.type == "arraycomprehension"
@@ -31,11 +32,12 @@ r := result if {
 	}
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	[var, comp] := find.comprehension_var_at_position
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 4, "character": 7}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	var.value == "k"
 	comp.type == "objectcomprehension"
@@ -50,10 +52,12 @@ r := result if {
 	]
 }`
 
+	module := regal.parse_module("p.rego", policy)
+
 	# cursor on the output 'x' (line 3, col 12) — that's a reference not a declaration
 	not find.comprehension_var_at_position
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 12}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 }

@@ -10,11 +10,12 @@ myrule := r if {
 	r := user.name
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	[var, rule_index] := find.some_var_at_position
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 6}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	var.value == "idx"
 	rule_index == 0
@@ -28,11 +29,12 @@ myrule := r if {
 	r := user.name
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	[var, rule_index] := find.some_var_at_position
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 11}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	var.value == "user"
 	rule_index == 0
@@ -46,9 +48,10 @@ myrule := r if {
 	r := user.name
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	not find.some_var_at_position
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 1}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 }

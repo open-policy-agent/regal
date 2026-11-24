@@ -11,10 +11,11 @@ some_two_vars if {
 	item > 0
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	tokens := some_expr.result
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	tokens == {
 		{"col": 6, "length": 1, "line": 3, "modifiers": 2, "type": 1},
@@ -32,10 +33,11 @@ some_one_var if {
 	i < 10
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	tokens := some_expr.result
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	tokens == {
 		{"col": 6, "length": 1, "line": 3, "modifiers": 2, "type": 1},

@@ -34,14 +34,15 @@ r if {
 }`,
 	}
 
+	module := regal.parse_module("p.rego", policy)
 	refs := references.refs
 		with input as {"params": {
 			"textDocument": {"uri": "file:///p.rego"},
 			"position": {"line": 2, "character": 1},
 			"context": {"includeDeclaration": true},
 		}}
-		with input.regal.file.lines as split(policy, "\n")
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.regal as module.regal
+		with data.workspace.parsed["file:///p.rego"] as module
 
 	refs == {
 		{

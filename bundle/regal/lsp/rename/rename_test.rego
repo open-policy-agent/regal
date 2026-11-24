@@ -15,14 +15,16 @@ greet(name) := msg if {
 	msg := sprintf("hi %s", [name])
 }`
 
+	module_a := regal.parse_module("a.rego", policy_a)
+	module_b := regal.parse_module("b.rego", policy_b)
 	resp := rename.result.response with data.workspace.parsed as {
-		"file:///a.rego": regal.parse_module("a.rego", policy_a),
-		"file:///b.rego": regal.parse_module("b.rego", policy_b),
+		"file:///a.rego": module_a,
+		"file:///b.rego": module_b,
 	}
 		with input.params.textDocument.uri as "file:///a.rego"
 		with input.params.position as {"line": 2, "character": 6}
 		with input.params.newName as "user"
-		with input.regal.file.lines as split(policy_a, "\n")
+		with input.regal as module_a.regal
 		with input.method as "textDocument/rename"
 
 	resp == {"changes": {
@@ -47,11 +49,12 @@ list_admins contains admin if {
 	admin := user.name
 }`
 
-	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 6}
 		with input.params.newName as "u"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/rename"
 
 	resp == {"changes": {"file:///p.rego": {
@@ -66,11 +69,12 @@ test_rename_no_match if {
 
 foo := 42`
 
-	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 2, "character": 11}
 		with input.params.newName as "x"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/rename"
 
 	resp == null
@@ -86,11 +90,12 @@ r if {
 	}
 }`
 
-	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 7}
 		with input.params.newName as "key"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/rename"
 
 	resp == {"changes": {"file:///p.rego": {
@@ -109,11 +114,12 @@ r := result if {
 	]
 }`
 
-	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 4, "character": 7}
 		with input.params.newName as "item"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/rename"
 
 	resp == {"changes": {"file:///p.rego": {
@@ -153,8 +159,9 @@ r if allow
 
 s if a`
 
+	module_a := regal.parse_module("a.rego", policy_a)
 	resp := rename.result.response with data.workspace.parsed as {
-		"file:///a.rego": regal.parse_module("a.rego", policy_a),
+		"file:///a.rego": module_a,
 		"file:///b.rego": regal.parse_module("b.rego", policy_b),
 		"file:///c.rego": regal.parse_module("c.rego", policy_c),
 		"file:///d.rego": regal.parse_module("d.rego", policy_d),
@@ -162,7 +169,7 @@ s if a`
 		with input.params.textDocument.uri as "file:///a.rego"
 		with input.params.position as {"line": 2, "character": 1}
 		with input.params.newName as "permit"
-		with input.regal.file.lines as split(policy_a, "\n")
+		with input.regal as module_a.regal
 		with input.method as "textDocument/rename"
 
 	resp == {"changes": {
@@ -188,6 +195,7 @@ test_rename_new_name[new_name] if {
 	policy := `package rules
 
 allow if input.admin`
+	module := regal.parse_module("p.rego", policy)
 
 	some new_name, valid in {
 		"x1": true,
@@ -204,11 +212,11 @@ allow if input.admin`
 		"input": false,
 	}
 
-	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 2, "character": 1}
 		with input.params.newName as new_name
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/rename"
 
 	resp == _renamed(new_name, valid)
@@ -245,11 +253,12 @@ z if data.foo.bar.allow`
 		"aliased import": ["file:///b.rego", 3, 17],
 	}
 
+	module_at_position := modules[position[0]]
 	resp := rename.result.response with data.workspace.parsed as modules
 		with input.params.textDocument.uri as position[0]
 		with input.params.position as {"line": position[1], "character": position[2]}
 		with input.params.newName as "qux"
-		with input.regal.file.lines as split(policies[position[0]], "\n")
+		with input.regal as module_at_position.regal
 		with input.method as "textDocument/rename"
 
 	# the alias, and the uses of it, are left as they are
@@ -272,14 +281,15 @@ test_rename_import_not_supported[name] if {
 import data.ext
 
 x := ext.y`
+	module := regal.parse_module("p.rego", policy)
 
 	some name, position in {"path": [2, 14], "use": [4, 7]}
 
-	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	resp := rename.result.response with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": position[0], "character": position[1]}
 		with input.params.newName as "zap"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/rename"
 
 	resp == null

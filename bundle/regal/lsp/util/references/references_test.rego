@@ -16,13 +16,15 @@ greet(name) := msg if {
 	msg := sprintf("hi %s", [name])
 }`
 
+	module_a := regal.parse_module("a.rego", policy_a)
+	module_b := regal.parse_module("b.rego", policy_b)
 	refs := references.refs with data.workspace.parsed as {
-		"file:///a.rego": regal.parse_module("a.rego", policy_a),
-		"file:///b.rego": regal.parse_module("b.rego", policy_b),
+		"file:///a.rego": module_a,
+		"file:///b.rego": module_b,
 	}
 		with input.params.textDocument.uri as "file:///a.rego"
 		with input.params.position as {"line": 2, "character": 6}
-		with input.regal.file.lines as split(policy_a, "\n")
+		with input.regal as module_a.regal
 		with input.params.context as {"includeDeclaration": true}
 
 	refs == {
@@ -68,10 +70,11 @@ other_rule contains x if {
 	x := user.label
 }`
 
-	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 6}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.params.context as {"includeDeclaration": true}
 
 	refs == {
@@ -98,10 +101,11 @@ test_references_no_match if {
 
 foo := 42`
 
-	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 2, "character": 11}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	refs == set()
 }
@@ -116,10 +120,11 @@ r if {
 	}
 }`
 
-	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 7}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.params.context as {"includeDeclaration": true}
 
 	refs == {
@@ -146,10 +151,11 @@ r := result if {
 	]
 }`
 
-	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 4, "character": 7}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.params.context as {"includeDeclaration": true}
 
 	refs == {
@@ -178,10 +184,11 @@ greet(name) := msg if {
 	msg := sprintf("hello, %s", [name])
 }`
 
-	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 2, "character": 6}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	refs == {
 		{
@@ -200,10 +207,11 @@ list_admins contains user.name if {
 	user.role == "admin"
 }`
 
-	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 6}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.params.context as {"includeDeclaration": false}
 
 	refs == {
@@ -230,10 +238,11 @@ r if {
 	}
 }`
 
-	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 7}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	refs == {
 		{
@@ -254,10 +263,11 @@ r := result if {
 	]
 }`
 
-	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 4, "character": 7}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	refs == {
 		{
@@ -278,10 +288,11 @@ test_references_arg_from_use_in_rule_head if {
 
 fn(x) := x.y`
 
-	refs := references.refs with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	refs := references.refs with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 2, "character": 9}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	refs == {
 		{
@@ -307,11 +318,12 @@ other if {
 	foo == 3
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	refs := references.refs
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 1}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	refs == {
 		{
@@ -337,11 +349,12 @@ allow if {
 	foo != bar
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	refs := references.refs
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 5, "character": 1}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	refs == {
 		{
@@ -365,11 +378,12 @@ allow if {
 	foo == 1
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	refs := references.refs
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 4, "character": 1}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.params.context as {"includeDeclaration": true}
 
 	refs == {
@@ -396,11 +410,12 @@ allow if {
 	pkgb.b == 2
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	refs := references.refs
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 5, "character": 1}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	refs == {
 		{

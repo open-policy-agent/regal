@@ -12,9 +12,10 @@ every_two_vars if {
 	}
 }`
 
-	tokens := every_expr.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	tokens := every_expr.result with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	tokens == {
 		{"col": 7, "length": 1, "line": 3, "modifiers": 2, "type": 1},
@@ -33,9 +34,10 @@ every_one_var if {
 	}
 }`
 
-	tokens := every_expr.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	tokens := every_expr.result with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	tokens == {
 		{"col": 7, "length": 1, "line": 3, "modifiers": 2, "type": 1},
