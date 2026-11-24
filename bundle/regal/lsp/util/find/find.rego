@@ -14,15 +14,17 @@ import data.regal.lsp.util.range
 #   or where it is used in the rule
 # schemas:
 #   - input.params: schema.regal.lsp.textdocumentposition
-arg_at_position := [arg, rule_index] if {
+arg_at_position := [term, rule_index] if {
 	[var, rule_index] := var_at_position
 
 	not startswith(var.value, "$")
 
-	some arg in data.workspace.parsed[input.params.textDocument.uri].rules[rule_index].head.args
+	args := data.workspace.parsed[input.params.textDocument.uri].rules[rule_index].head.args
 
-	arg.value == var.value
-	arg.type == "var"
+	walk(args, [_, term])
+
+	term.value == var.value
+	term.type == "var"
 }
 
 # METADATA

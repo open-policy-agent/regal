@@ -1,5 +1,7 @@
 # METADATA
 # description: implementation of the LSP prepare rename feature
+# related_resources:
+#   - https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_prepareRename
 # schemas:
 #   - input:                schema.regal.lsp.common
 #   - input.params:         schema.regal.lsp.textdocumentposition
