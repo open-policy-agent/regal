@@ -5,6 +5,8 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/idiomatic/use-some-for-output-vars
 package regal.rules.idiomatic["use-some-for-output-vars"]
 
+import rego.v2
+
 import data.regal.ast
 import data.regal.result
 import data.regal.util
@@ -16,8 +18,9 @@ report contains violation if {
 	not startswith(term.value, "$")
 	not term.value in ast.imported_identifiers
 	not term.value in ast.rule_names
-	not true in {true |
-		some var in ast.found.vars[rule_index].some
+	not {
+		some typ in ["some", "somein"]
+		some var in ast.found.vars[rule_index][typ]
 		var.value == term.value
 	}
 
