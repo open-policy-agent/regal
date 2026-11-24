@@ -160,6 +160,13 @@ test_success_var_in_ref_as_rule_value_declared if {
 	r == set()
 }
 
+# verify fix for https://github.com/open-policy-agent/regal/issues/2191
+test_success_var_in_ref_as_rule_head_declared if {
+	r := rule.report with input as ast.policy(`rule[input[i]] contains "foo" if some i in [1, 2, 3]`)
+
+	r == set()
+}
+
 test_success_not_an_output_var if {
 	r := rule.report with input as ast.policy(`
 		i := 0
