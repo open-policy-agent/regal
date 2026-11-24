@@ -86,11 +86,11 @@ var (
 func init() {
 	ast.InternStringTerm(
 		"textDocument/codeAction", "textDocument/codeLens", "textDocument/completion", "textDocument/declaration",
-		"textDocument/documentLink", "textDocument/documentHighlight", "textDocument/foldingRange",
-		"textDocument/hover", "textDocument/inlayHint", "textDocument/linkedEditingRange",
+		"textDocument/documentLink", "textDocument/documentHighlight", "textDocument/documentSymbol",
+		"textDocument/foldingRange", "textDocument/hover", "textDocument/inlayHint", "textDocument/linkedEditingRange",
 		"textDocument/selectionRange", "textDocument/semanticTokens/full", "textDocument/signatureHelp",
 		"textDocument/references", "textDocument/prepareRename", "textDocument/rename",
-		"completionItem/resolve", "inlayHint/resolve",
+		"completionItem/resolve", "inlayHint/resolve", "workspace/symbol",
 
 		"method", "params", "identifier",
 
@@ -128,6 +128,7 @@ func NewRouter(ctx context.Context, s storage.Store, qc *query.Cache, prvs Provi
 		"textDocument/declaration":         {requires: fileLines},
 		"textDocument/documentLink":        {requires: fileLines},
 		"textDocument/documentHighlight":   {requires: fileLines},
+		"textDocument/documentSymbol":      {requires: fileLines},
 		"textDocument/foldingRange":        {requires: fileLines},
 		"textDocument/hover":               {requires: fileLines},
 		"textDocument/inlayHint":           {requires: Requirements{File: FileRequirements{Lines: true, ParseErrors: true}}},
@@ -140,6 +141,7 @@ func NewRouter(ctx context.Context, s storage.Store, qc *query.Cache, prvs Provi
 		"textDocument/signatureHelp":       {requires: fileLines},
 		"completionItem/resolve":           {},
 		"inlayHint/resolve":                {},
+		"workspace/symbol":                 {},
 
 		"initialized": {}, // special case
 	}
@@ -180,8 +182,10 @@ func (m *Router) Handle(ctx context.Context, _ *jsonrpc2.Conn, req *jsonrpc2.Req
 	}
 
 	if route, ok := m.routes[req.Method]; ok {
-		if strings.HasPrefix(req.Method, "textDocument/") {
+		if strings.HasPrefix(req.Method, "textDocument/") { //nolint:gocritic
 			result, err = m.textDocumentPassthroughHandlerFor(route)(ctx, pq, m.providers, req)
+		} else if strings.HasPrefix(req.Method, "workspace/") {
+			result, err = m.workspacePassthroughHandlerFor(route)(ctx, pq, m.providers, req)
 		} else {
 			rctx := m.providers.ContextProvider("", route.requires) // No requirements for resolvers yet
 			rctx.Query = pq
@@ -235,6 +239,15 @@ func (m *Router) textDocumentPassthroughHandlerFor(route Route) regoHandler {
 			return nil, nil // e.g. file has always been unparsable
 		}
 
+		rctx.Query = query
+
+		return passthrough(ctx, rctx, req)
+	}
+}
+
+func (*Router) workspacePassthroughHandlerFor(route Route) regoHandler {
+	return func(ctx context.Context, query *query.Prepared, prvs Providers, req *jsonrpc2.Request) (any, error) {
+		rctx := prvs.ContextProvider("", route.requires) // No requirements for workspace routes yet
 		rctx.Query = query
 
 		return passthrough(ctx, rctx, req)

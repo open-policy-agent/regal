@@ -198,13 +198,6 @@ func EqualsAny[T comparable](a ...T) func(T) bool {
 	return Partial2(slices.Contains, a)
 }
 
-// Equal returns a function comparing for equality to a.
-func Equal[T comparable](a T) func(T) bool {
-	return func(b T) bool {
-		return a == b
-	}
-}
-
 // FreePort returns a free port to listen on, if none of the preferred ports
 // are available on the localhost interface, then a random free port is returned.
 func FreePort(preferred ...int) (port int, err error) {
@@ -302,11 +295,6 @@ func Lines(s []byte) iter.Seq2[uint, []byte] {
 // NumLines returns the number of lines in s, as uint for convenience with LSP spec types and more.
 func NumLines(s string) uint {
 	return IntTo[uint](strings.Count(s, "\n")) + 1
-}
-
-// BytesNumLines returns the number of lines in s, as uint for convenience with LSP spec types and more.
-func BytesNumLines(s []byte) uint {
-	return IntTo[uint](bytes.Count(s, NewLine)) + 1
 }
 
 // IndexByteNth returns the index of the nth occurrence of b in s, or -1 if not found / out of range.

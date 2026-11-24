@@ -37,7 +37,6 @@ import (
 	"github.com/open-policy-agent/regal/internal/lsp/cache"
 	"github.com/open-policy-agent/regal/internal/lsp/client"
 	lsconfig "github.com/open-policy-agent/regal/internal/lsp/config"
-	"github.com/open-policy-agent/regal/internal/lsp/documentsymbol"
 	"github.com/open-policy-agent/regal/internal/lsp/handler"
 	"github.com/open-policy-agent/regal/internal/lsp/input"
 	"github.com/open-policy-agent/regal/internal/lsp/log"
@@ -152,7 +151,6 @@ const (
 )
 
 var (
-	noDocumentSymbols                       any = make([]types.DocumentSymbol, 0)
 	noTextEdits                             any = make([]types.TextEdit, 0)
 	noWorkspaceFullDocumentDiagnosticReport any = make([]types.WorkspaceFullDocumentDiagnosticReport, 0)
 	emptyStruct                             any = struct{}{}
@@ -277,8 +275,6 @@ func (l *LanguageServer) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *j
 		return handler.WithParams(req, l.handleTextDocumentDidClose)
 	case "textDocument/didSave":
 		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentDidSave)
-	case "textDocument/documentSymbol":
-		return handler.WithParams(req, l.handleTextDocumentDocumentSymbol)
 	case "textDocument/didChange":
 		return handler.WithContextAndParams(ctx, req, l.handleTextDocumentDidChange)
 	case "textDocument/formatting":
@@ -295,8 +291,6 @@ func (l *LanguageServer) Handle(ctx context.Context, conn *jsonrpc2.Conn, req *j
 		return handler.WithContextAndParams(ctx, req, l.handleWorkspaceDidCreateFiles)
 	case "workspace/executeCommand":
 		return handler.WithParams(req, l.handleWorkspaceExecuteCommand)
-	case "workspace/symbol":
-		return l.handleWorkspaceSymbol()
 	case "regal/runTests":
 		return handler.WithContextAndParams(ctx, req, l.handleRunTests)
 	case "exit":
@@ -723,26 +717,6 @@ func (l *LanguageServer) loadConfig(ctx context.Context, conf *config.Config) {
 	}
 }
 
-// Note: currently ignoring params.Query, as the client seems to do a good
-// job of filtering anyway, and that would merely be an optimization here.
-// But perhaps a good one to do at some point, and I'm not sure all clients
-// do this filtering.
-func (l *LanguageServer) handleWorkspaceSymbol() (any, error) {
-	contents := l.cache.GetAllFiles()
-	symbols := make([]types.WorkspaceSymbol, 0, len(contents)*10)
-	bis := l.builtinsForCurrentCapabilities()
-
-	for moduleURL, module := range l.cache.GetAllModules() {
-		wrkSyms := make([]types.WorkspaceSymbol, 0)
-
-		documentsymbol.ToWorkspaceSymbols(documentsymbol.All(contents[moduleURL], module, bis), moduleURL, &wrkSyms)
-
-		symbols = append(symbols, wrkSyms...)
-	}
-
-	return symbols, nil
-}
-
 func (l *LanguageServer) handleTextDocumentDefinition(params types.DefinitionParams) (any, error) {
 	docURI := params.TextDocument.URI
 	if l.ignoreURI(docURI) {
@@ -901,21 +875,6 @@ func (l *LanguageServer) handleTextDocumentDidSave(
 	}
 
 	return emptyStruct, nil
-}
-
-func (l *LanguageServer) handleTextDocumentDocumentSymbol(params types.DocumentSymbolParams) (any, error) {
-	if l.ignoreURI(params.TextDocument.URI) {
-		return noDocumentSymbols, nil
-	}
-
-	contents, module, ok := l.cache.GetContentAndModule(params.TextDocument.URI)
-	if !ok {
-		l.log.Message("textDocument/documentSymbol: failed to get file contents for uri %q", params.TextDocument.URI)
-
-		return noDocumentSymbols, nil
-	}
-
-	return documentsymbol.All(contents, module, l.builtinsForCurrentCapabilities()), nil
 }
 
 func (l *LanguageServer) enabledRules() []string {
