@@ -386,6 +386,41 @@ allow if {
 	}
 }
 
+test_references_ref_var_at_position if {
+	policy := `package p
+
+allow if {
+	input.foo[key]
+	input.bar[key]
+	input.baz[key]
+}`
+
+	refs := references.refs
+		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as {"line": 3, "character": 12}
+		with input.regal.file.lines as split(policy, "\n")
+		with input.params.context as {"includeDeclaration": true}
+
+	refs == {
+		{
+			"kind": 3,
+			"range": {"end": {"character": 14, "line": 3}, "start": {"character": 11, "line": 3}},
+			"uri": "file:///p.rego",
+		},
+		{
+			"kind": 3,
+			"range": {"end": {"character": 14, "line": 4}, "start": {"character": 11, "line": 4}},
+			"uri": "file:///p.rego",
+		},
+		{
+			"kind": 3,
+			"range": {"end": {"character": 14, "line": 5}, "start": {"character": 11, "line": 5}},
+			"uri": "file:///p.rego",
+		},
+	}
+}
+
 test_references_assign_var_shadowing_import if {
 	policy := `package p
 

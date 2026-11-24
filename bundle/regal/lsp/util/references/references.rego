@@ -30,7 +30,13 @@ refs contains ref if some ref in package_refs
 # METADATA
 # description: the references to the variable or argument at the cursor
 # scope: document
-variable_refs := (((_arg_refs | _some_var_refs) | _every_var_refs) | _comprehension_var_refs) | _assign_var_refs
+variable_refs contains ref if some ref in _arg_refs
+variable_refs contains ref if some ref in _some_var_refs
+variable_refs contains ref if some ref in _every_var_refs
+variable_refs contains ref if some ref in _comprehension_var_refs
+variable_refs contains ref if some ref in _assign_var_refs
+variable_refs contains ref if some ref in _ref_var_refs
+variable_refs contains ref if some ref in _terms_var_refs
 
 _arg_refs contains ref if {
 	[arg, rule_index] := find.arg_at_position
@@ -88,6 +94,47 @@ _assign_var_refs contains ref if {
 		"uri": input.params.textDocument.uri,
 		"range": range.parse(value.location),
 		"kind": _kind_write_if(value in ast.found.vars[rule_index].assign),
+	}
+}
+
+# METADATA
+# description: references to variables inside of refs e.g. `x` in input.a[x]
+_ref_var_refs contains ref if {
+	[term, rule_index] := find.ref_var_at_position
+
+	some node in ["head", "body", "else"]
+	walk(_module.rules[rule_index][node], [_, value])
+
+	value.type == "var"
+	value.value == term.value
+	_include_declaration or value != term
+
+	ref := {
+		"uri": input.params.textDocument.uri,
+		"range": range.parse(value.location),
+		# We can do a better job to try and determine this, but
+		# variables in unification can be *both* at the same time,
+		# which can't accurately be communicated using a binary kind.
+		"kind": kind_write,
+	}
+}
+
+_terms_var_refs contains ref if {
+	not find.assign_var_at_position
+
+	[var, rule_index] := find.terms_var_at_position
+
+	some node in ["head", "body", "else"]
+	walk(_module.rules[rule_index][node], [_, value])
+
+	value.type == "var"
+	value.value == var.value
+	_include_declaration or value != var
+
+	ref := {
+		"uri": input.params.textDocument.uri,
+		"range": range.parse(value.location),
+		"kind": _kind_write_if(value == var),
 	}
 }
 

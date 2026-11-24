@@ -36,6 +36,23 @@ greet(name) := msg if {
 	resp == {"start": {"line": 3, "character": 30}, "end": {"line": 3, "character": 34}}
 }
 
+test_preparerename_terms_var if {
+	policy := `package p
+	r if {
+		input.x[key]
+		key == 100
+	}`
+
+	resp := preparerename.result.response
+		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with input.params.textDocument.uri as "file:///p.rego"
+		with input.params.position as {"line": 3, "character": 4}
+		with input.regal.file.lines as split(policy, "\n")
+		with input.method as "textDocument/prepareRename"
+
+	resp == {"start": {"character": 2, "line": 3}, "end": {"character": 5, "line": 3}}
+}
+
 test_preparerename_some_var if {
 	policy := `package p
 

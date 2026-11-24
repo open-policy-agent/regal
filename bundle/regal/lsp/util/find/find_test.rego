@@ -118,6 +118,20 @@ test_import_alias_at_position_not_on_alias[name] if {
 		with data.workspace.parsed["file:///p.rego"] as module
 }
 
+test_terms_var_at_position if {
+	snippet := `allow if {
+		input[key]
+		ke|y == 1
+	}`
+
+	[tdp, module] := testing.at_cursor(snippet)
+	[var, 0] = find.terms_var_at_position
+		with input as tdp
+		with data.workspace.parsed["file:///p.rego"] as module
+
+	var.value == "key"
+}
+
 test_assign_var_at_position[name] if {
 	some name, snippet in {
 		"declaration": `allow if {
@@ -163,6 +177,59 @@ test_assign_var_at_position_not_an_assign_var[name] if {
 	not find.assign_var_at_position
 		with input as tdp
 		with data.workspace.parsed["file:///p.rego"] as module
+}
+
+test_refs_at_position[name] if {
+	some name, case in {
+		"simple ref": {
+			"have": `allow if data.foo|.bar == 1`,
+			"want": ["data.foo.bar"],
+		},
+		"nested ref": {
+			"have": `allow if input.foo.bar[data.fo|o.bar].baz == 1`,
+			"want": ["input.foo.bar.baz", "data.foo.bar"],
+		},
+	}
+
+	[tdp, module] := testing.at_cursor(case.have)
+	[refs, index] := find.refs_at_position
+		with input as tdp
+		with data.workspace.parsed["file:///p.rego"] as module
+
+	names := [ast.ref_to_string(ref.value) | some ref in refs]
+	names == case.want
+	index == 0
+}
+
+test_ref_at_position[name] if {
+	some name, snippet in {
+		"simple ref": `allow if data.foo|.bar == 1`,
+		"nested ref": `allow if input.foo.bar[data.fo|o.bar].baz == 1`,
+	}
+
+	[tdp, module] := testing.at_cursor(snippet)
+
+	[ref, 0] = find.ref_at_position
+		with input as tdp
+		with data.workspace.parsed["file:///p.rego"] as module
+
+	ast.ref_static_to_string(ref.value) == "data.foo.bar"
+}
+
+test_ref_var_at_position[name] if {
+	some name, snippet in {
+		"var in ref": `r contains key if input[k|ey]`,
+		"var in nested ref": `r contains key if input[data.foo[key|]]`,
+	}
+
+	[tdp, module] := testing.at_cursor(snippet)
+
+	[var, rule_index] := find.ref_var_at_position
+		with input as tdp
+		with data.workspace.parsed["file:///p.rego"] as module
+
+	var.value == "key"
+	rule_index == 0
 }
 
 test_package_at_position if {
