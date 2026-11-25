@@ -333,3 +333,60 @@ find_some_decl_names_in_scope(rule_index, location) := {some_var.value |
 	some some_var in found.vars[rule_index].some
 	_before_location(_rules[rule_index].head, some_var, loc)
 }
+
+# METADATA
+# description: |
+#   the declarations of the variable in the rule that the variable is in the scope of. A declaration is an argument,
+#   or a variable declared by :=, some or every. A local variable hides any rule, import or package of the same name.
+declarations_in_scope(rule, var) := decls if {
+	var.type == "var"
+
+	args := _declared_in_args(object.get(rule.head, "args", []), var.value)
+
+	decls := (args | _declared_in_bodies(rule, var)) | _declared_in_every(rule, var)
+}
+
+_declared_in_args(args, name) := {decl |
+	some decl in _find_nested_vars(args)
+	decl.value == name
+}
+
+_declared_in_bodies(rule, var) := {decl |
+	walk(rule, [use_path, node])
+	node == var
+	walk(rule, [declaration_path, expr])
+
+	not expr.terms.domain
+	some decl in _find_nested_vars(_declared_vars(expr.terms))
+	decl.value == var.value
+
+	_in_scope(use_path, array.slice(declaration_path, 0, count(declaration_path) - 2))
+}
+
+_declared_in_every(rule, var) := {decl |
+	walk(rule, [use_path, node])
+	node == var
+	walk(rule, [declaration_path, expr])
+
+	expr.terms.domain
+	some decl in _find_nested_vars(_declared_vars(expr.terms))
+	decl.value == var.value
+
+	_in_scope(use_path, array.flatten([declaration_path, "terms"]))
+}
+
+_in_scope(use_path, scope) if {
+	array.slice(use_path, 0, count(scope)) == scope
+	not use_path[count(scope)] in {"else", "domain"}
+}
+
+# the variables declared by :=, every and some, not including the domain they iterate
+_declared_vars(terms) := [lhs] if [lhs, _] := assignment_terms(terms)
+
+_declared_vars(terms) := [var | some key in ["key", "value"]; var := terms[key]] if terms.domain
+
+_declared_vars(terms) := array.flatten([_declared_by(symbol) | some symbol in terms.symbols]) if terms.symbols
+
+_declared_by(symbol) := [symbol] if symbol.type != "call"
+
+_declared_by(symbol) := array.slice(symbol.value, 1, count(symbol.value) - 1) if symbol.type == "call"

@@ -5,7 +5,7 @@ import data.regal.lsp.util.references
 
 test_package_imports_aliases_and_full_path_uses if {
 	[tdp, modules] := testing.at_cursor_in({
-		"file:///a.rego": `package p|
+		"file:///a.rego": `package p@
 
 allow if input.a`,
 		"file:///b.rego": `package q
@@ -60,7 +60,7 @@ sub_package if data.p.sub.allow`,
 
 test_package_declared_over_multiple_files if {
 	[tdp, modules] := testing.at_cursor_in({
-		"file:///a.rego": `package p|
+		"file:///a.rego": `package p@
 
 allow if input.a`,
 		"file:///b.rego": `package p
@@ -96,7 +96,7 @@ import data.p`,
 
 test_package_sub_package_is_separate if {
 	[tdp, modules] := testing.at_cursor_in({
-		"file:///a.rego": `package p.sub|
+		"file:///a.rego": `package p.sub@
 
 allow if input.a`,
 		"file:///b.rego": `package q
@@ -140,7 +140,7 @@ allow if input.c`,
 
 test_package_shadowed_import_not_included if {
 	[tdp, modules] := testing.at_cursor_in({
-		"file:///a.rego": `package p|
+		"file:///a.rego": `package p@
 
 allow if input.a`,
 		"file:///b.rego": `package q
@@ -170,7 +170,7 @@ assigned if {
 
 test_package_document_highlight_skips_other_files if {
 	[tdp, modules] := testing.at_cursor_in({
-		"file:///a.rego": `package p|
+		"file:///a.rego": `package p@
 
 allow if input.a`,
 		"file:///b.rego": `package p
@@ -196,7 +196,7 @@ via_import if p.allow`,
 
 test_package_rule_with_the_name_of_import_is_not_a_use if {
 	[tdp, modules] := testing.at_cursor_in({
-		"file:///a.rego": `package foo.bar|
+		"file:///a.rego": `package foo.bar@
 
 allow if input.a`,
 		"file:///b.rego": `package q
@@ -228,7 +228,7 @@ use := bar`,
 
 test_package_uses_by_exact_path_deeper_imports_and_parent_imports if {
 	[tdp, modules] := testing.at_cursor_in({
-		"file:///a.rego": `package foo.bar|
+		"file:///a.rego": `package foo.bar@
 
 allow if input.a`,
 		"file:///b.rego": `package b
