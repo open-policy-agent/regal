@@ -12,11 +12,12 @@ r if {
 	}
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	[var, every_terms] := find.every_var_at_position
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 7}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	var.value == "k"
 	every_terms.key.value == "k"
@@ -33,11 +34,12 @@ r if {
 	}
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	[var, _] := find.every_var_at_position
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 10}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	var.value == "v"
 }
@@ -51,10 +53,12 @@ r if {
 	}
 }`
 
+	module := regal.parse_module("p.rego", policy)
+
 	# cursor on 'input' in the domain — not a declared var
 	not find.every_var_at_position
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 14}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 }

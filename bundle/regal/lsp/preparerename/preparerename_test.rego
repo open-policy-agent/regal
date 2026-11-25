@@ -9,11 +9,12 @@ greet(name) := msg if {
 	msg := sprintf("hello, %s", [name])
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	resp := preparerename.result.response
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 2, "character": 6}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/prepareRename"
 
 	resp == {"start": {"line": 2, "character": 6}, "end": {"line": 2, "character": 10}}
@@ -26,11 +27,12 @@ greet([name]) := msg if {
 	msg := sprintf("hello, %s", [name])
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	resp := preparerename.result.response
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 2, "character": 8}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/prepareRename"
 
 	resp == {"start": {"character": 7, "line": 2}, "end": {"character": 11, "line": 2}}
@@ -43,11 +45,12 @@ greet(name) := msg if {
 	msg := sprintf("hello, %s", [name])
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	resp := preparerename.result.response
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 31}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/prepareRename"
 
 	resp == {"start": {"line": 3, "character": 30}, "end": {"line": 3, "character": 34}}
@@ -62,11 +65,12 @@ list_admins contains admin if {
 	admin := user.name
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	resp := preparerename.result.response
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 6}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/prepareRename"
 
 	resp == {"start": {"line": 3, "character": 6}, "end": {"line": 3, "character": 10}}
@@ -77,11 +81,12 @@ test_preparerename_no_match if {
 
 simple := 42`
 
+	module := regal.parse_module("p.rego", policy)
 	resp := preparerename.result.response
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 2, "character": 11}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/prepareRename"
 
 	resp == null
@@ -97,11 +102,12 @@ r if {
 	}
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	resp := preparerename.result.response
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 3, "character": 7}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/prepareRename"
 
 	resp == {"start": {"line": 3, "character": 7}, "end": {"line": 3, "character": 8}}
@@ -117,11 +123,12 @@ r := result if {
 	]
 }`
 
+	module := regal.parse_module("p.rego", policy)
 	resp := preparerename.result.response
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 4, "character": 7}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/prepareRename"
 
 	resp == {"start": {"line": 4, "character": 7}, "end": {"line": 4, "character": 8}}
@@ -133,14 +140,15 @@ test_preparerename_import_not_supported[name] if {
 import data.pkgb as wow
 
 allow if wow.b == 1`
+	module := regal.parse_module("p.rego", policy)
 
 	some name, position in {"path": [2, 10], "alias": [2, 21], "use": [4, 10]}
 
 	resp := preparerename.result.response
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": position[0], "character": position[1]}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/prepareRename"
 
 	resp == null
@@ -153,6 +161,7 @@ allow if {
 	foo := 1
 	foo == 1
 }`
+	module := regal.parse_module("p.rego", policy)
 
 	some name, position in {
 		"declaration": {"line": 3, "character": 2},
@@ -160,10 +169,10 @@ allow if {
 	}
 
 	resp := preparerename.result.response
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as position
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/prepareRename"
 
 	resp == {"start": {"line": position.line, "character": 1}, "end": {"line": position.line, "character": 4}}
@@ -174,11 +183,12 @@ test_preparerename_not_assigned_variable_not_supported if {
 
 allow if input.user == "alice"`
 
+	module := regal.parse_module("p.rego", policy)
 	resp := preparerename.result.response
-		with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+		with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
 		with input.params.position as {"line": 2, "character": 9}
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 		with input.method as "textDocument/prepareRename"
 
 	resp == null
@@ -204,10 +214,11 @@ x if rules.allow`
 		"package import": {"uri": "file:///b.rego", "position": [2, 14], "range": [2, 12, 2, 17]},
 	}
 
+	module_at_case := modules[case.uri]
 	resp := preparerename.result.response with data.workspace.parsed as modules
 		with input.params.textDocument.uri as case.uri
 		with input.params.position as {"line": case.position[0], "character": case.position[1]}
-		with input.regal.file.lines as split(policies[case.uri], "\n")
+		with input.regal as module_at_case.regal
 		with input.method as "textDocument/prepareRename"
 
 	resp == {
@@ -224,13 +235,15 @@ f(abcd) := 1`
 
 f(x, abcd) := 2`
 
+	module_a := regal.parse_module("a.rego", policy_a)
+	module_b := regal.parse_module("b.rego", policy_b)
 	resp := preparerename.result.response with data.workspace.parsed as {
-		"file:///a.rego": regal.parse_module("a.rego", policy_a),
-		"file:///b.rego": regal.parse_module("b.rego", policy_b),
+		"file:///a.rego": module_a,
+		"file:///b.rego": module_b,
 	}
 		with input.params.textDocument.uri as "file:///a.rego"
 		with input.params.position as {"line": 2, "character": 5}
-		with input.regal.file.lines as split(policy_a, "\n")
+		with input.regal as module_a.regal
 		with input.method as "textDocument/prepareRename"
 
 	resp == {"start": {"line": 2, "character": 2}, "end": {"line": 2, "character": 6}}

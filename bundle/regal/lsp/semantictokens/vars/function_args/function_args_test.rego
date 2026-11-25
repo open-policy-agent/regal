@@ -13,9 +13,10 @@ test_function(param1, param2) := result if {
 	calc3 := 1
 	calc3 == param1
 }`
-	tokens := function_args.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	tokens := function_args.result with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	tokens == {
 		{"col": 14, "length": 6, "line": 2, "modifiers": 1, "type": 1},
@@ -32,9 +33,10 @@ test_function_args_declarations_only if {
 test_function(param1, param2) := result if {
 	true
 }`
-	tokens := function_args.result with data.workspace.parsed["file:///p.rego"] as regal.parse_module("p.rego", policy)
+	module := regal.parse_module("p.rego", policy)
+	tokens := function_args.result with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	tokens == {
 		{"col": 14, "length": 6, "line": 2, "modifiers": 1, "type": 1},

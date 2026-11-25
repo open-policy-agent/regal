@@ -13,7 +13,7 @@ test_function(param1, param2) := result if {
 	module := regal.parse_module("p.rego", policy)
 	result := semantictokens.result with data.workspace.parsed["file:///p.rego"] as module
 		with input.params.textDocument.uri as "file:///p.rego"
-		with input.regal.file.lines as split(policy, "\n")
+		with input.regal as module.regal
 
 	result == {"response": {
 		"imports": {
