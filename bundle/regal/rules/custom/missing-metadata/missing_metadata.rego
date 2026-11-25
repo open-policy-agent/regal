@@ -5,7 +5,7 @@
 #     ref: https://www.openpolicyagent.org/projects/regal/rules/custom/missing-metadata
 package regal.rules.custom["missing-metadata"]
 
-import future.keywords.not
+import rego.v2
 
 import data.regal.ast
 import data.regal.config
@@ -97,7 +97,8 @@ aggregate_report contains violation if {
 _package_path_aggs[pkg_name] contains [file, item] if {
 	some file, items in _aggregates
 	some item in items
-	pkg_name := input.aggregates_internal[file].common.package_name
+
+	pkg_name := input.aggregates_internal[file].common[_].package_name
 }
 
 # METADATA

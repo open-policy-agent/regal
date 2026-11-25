@@ -174,6 +174,18 @@ func init() {
 		"some",
 		"every",
 
+		"aggregate_source",
+
+		// aggregate data keys
+		"package_annotated",
+		"package_location",
+		"rule_annotations",
+		"rule_locations",
+		"imported_symbols",
+		"multivalue_rules",
+		"negated_refs",
+		"expanded_refs",
+
 		// Common
 		"a", "b", "c",
 		"i", "j", "k",

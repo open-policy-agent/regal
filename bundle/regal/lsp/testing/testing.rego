@@ -1,3 +1,5 @@
+# METADATA
+# description: Package testing provides test helpers for the language server policies
 package regal.lsp.testing
 
 # METADATA
