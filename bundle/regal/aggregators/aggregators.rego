@@ -1,3 +1,5 @@
+# METADATA
+# description: Package aggregators provides common data aggregators for aggregate rules
 package regal.aggregators
 
 import future.keywords.not

@@ -7,7 +7,20 @@
       "properties": {
         "aggregates_internal": {
           "type": "object",
-          "description": "Internal mapping of rule -> aggregate entries — not exposed in the API"
+          "description": "Internal mapping of rule -> aggregate entries - not exposed in the API",
+          "patternProperties": {
+            "^[a-zA-Z_\\-\\.]$": {
+              "type": "object",
+              "description": "Object keyed by filename of the aggregate source",
+              "patternProperties": {
+                "^[a-z-/]$": {
+                  "type": "array",
+                  "description": "The aggregate rule key, like 'bugs/impossible-not', or 'common' for shared data",
+                  "uniqueItems": true
+                }
+              }
+            }
+          }
         },
         "aggregate": {
           "$ref": "#/$defs/aggregate"

@@ -63,7 +63,7 @@ test_fail_missing_package_metadata_report if {
 
 	r := rule.aggregate_report
 		with input.aggregates_internal as util.with_source_files("custom/missing-metadata", [a])
-		with input.aggregates_internal["p1.rego"].common.package_name as "foo.bar"
+		with input.aggregates_internal["p1.rego"].common as {{"package_name": "foo.bar"}}
 		with config.rules as {"custom": {"missing-metadata": {}}}
 
 	r == {{
