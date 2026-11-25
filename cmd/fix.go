@@ -99,7 +99,7 @@ The linter rules with automatic fixes available are currently:
 
 // TODO: This function is too long and should be broken down
 //
-//nolint:cyclop,maintidx,funlen
+//nolint:maintidx,funlen
 func fix(args []string, params *fixParams) (err error) {
 	ctx, cancel := getLinterContext(params.lintAndFixParams)
 	defer cancel()
@@ -109,7 +109,7 @@ func fix(args []string, params *fixParams) (err error) {
 		return err
 	}
 
-	var customRulesDir, configSearchPath, regalPath string
+	var configSearchPath string
 
 	if len(args) == 1 {
 		if configSearchPath = args[0]; !filepath.IsAbs(args[0]) {
@@ -121,12 +121,6 @@ func fix(args []string, params *fixParams) (err error) {
 
 	if configSearchPath == "" {
 		log.Println("failed to determine relevant directory for config file search - won't search for custom config or rules")
-	} else {
-		if regalPath, err = config.FindRegalDirectoryPath(configSearchPath); err == nil {
-			if customRulesPath := filepath.Join(regalPath, "rules"); rio.IsDir(customRulesPath) {
-				customRulesDir = customRulesPath
-			}
-		}
 	}
 
 	l := linter.NewLinter().
@@ -138,8 +132,12 @@ func fix(args []string, params *fixParams) (err error) {
 		WithEnabledRules(params.enable.v...).
 		WithDebugMode(params.debug)
 
-	if customRulesDir != "" {
-		l = l.WithCustomRulesPaths(customRulesDir)
+	l, userConfig, userConfigPath, err := l.WithWorkspace(configSearchPath, linter.WorkspaceOptions{
+		ConfigFile: params.configFile,
+		Debug:      params.debug,
+	})
+	if err != nil {
+		return err
 	}
 
 	if params.rules.isSet {
@@ -148,19 +146,6 @@ func fix(args []string, params *fixParams) (err error) {
 
 	if params.ignoreFiles.isSet {
 		l = l.WithIgnore(params.ignoreFiles.v)
-	}
-
-	if regalPath != "" {
-		l = l.WithPathPrefix(filepath.Dir(regalPath))
-	}
-
-	userConfig, userConfigPath, err := config.LoadUser(params.configFile, configSearchPath, params.debug)
-	if err != nil {
-		return err
-	}
-
-	if userConfig != nil {
-		l = l.WithUserConfig(userConfig)
 	}
 
 	roots, err := config.GetPotentialRoots(args...)
