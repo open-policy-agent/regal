@@ -217,48 +217,5 @@ _through_import(imp_path, ref_terms) := array.concat(imp_path, [term.value |
 	some term in util.rest(ast.static_prefix(ref_terms))
 ])
 
-# true if the var is bound by a local declaration in a scope that it is in. The declaration can be an argument,
-# or a variable declared by :=, some or every. A local var hides any rule, import or package of the same name.
-_is_local(rule, var) if {
-	var.type == "var"
-	some arg in rule.head.args
-	ast.has_named_var(arg, var.value)
-}
-
-_is_local(rule, var) if {
-	walk(rule, [use_path, var])
-	walk(rule, [declaration_path, expr])
-
-	not expr.terms.domain
-	some declared in _declared_vars(expr.terms)
-	ast.has_named_var(declared, var.value)
-
-	_in_scope(use_path, array.slice(declaration_path, 0, count(declaration_path) - 2))
-}
-
-_is_local(rule, var) if {
-	walk(rule, [use_path, var])
-	walk(rule, [declaration_path, expr])
-
-	expr.terms.domain
-	some declared in _declared_vars(expr.terms)
-	ast.has_named_var(declared, var.value)
-
-	_in_scope(use_path, array.flatten([declaration_path, "terms"]))
-}
-
-_in_scope(use_path, scope) if {
-	array.slice(use_path, 0, count(scope)) == scope
-	not use_path[count(scope)] in {"else", "domain"}
-}
-
-# the variables declared by :=, every and some, not including the domain they iterate
-_declared_vars(terms) := [lhs] if [lhs, _] := ast.assignment_terms(terms)
-
-_declared_vars(terms) := [var | some key in ["key", "value"]; var := terms[key]] if terms.domain
-
-_declared_vars(terms) := array.flatten([_declared_by(symbol) | some symbol in terms.symbols]) if terms.symbols
-
-_declared_by(symbol) := [symbol] if symbol.type != "call"
-
-_declared_by(symbol) := array.slice(symbol.value, 1, count(symbol.value) - 1) if symbol.type == "call"
+# true if the var is bound by a local declaration in a scope that it is in, which hides any rule, import or package
+_is_local(rule, var) if ast.declarations_in_scope(rule, var) != set()
