@@ -155,7 +155,7 @@ allow if wow.b == 2`
 test_references_import_from_use if {
 	snippet := `import data.pkgb
 
-wow := pkgb|.b
+wow := pkgb@.b
 
 local if {
 	pkgb := 1
@@ -187,7 +187,7 @@ test_references_import_shadowed_by_local_variable_not_included if {
 
 local if {
 	pkgb := 1
-	pkgb| == 1
+	pkgb@ == 1
 }`
 
 	[tdp, module] := testing.at_cursor(snippet)
@@ -213,7 +213,7 @@ local if {
 test_references_import_unrelated_variable_not_included if {
 	snippet := `import data.pkgb
 
-allow if input|.user == "admin"`
+allow if input@.user == "admin"`
 
 	[tdp, module] := testing.at_cursor(snippet)
 

@@ -428,7 +428,7 @@ allow if {
 
 test_references_arg_document_highlight_skips_other_files if {
 	[tdp, modules] := testing.at_cursor_in({
-		"file:///a.rego": "package p\n\ngreet(name|) := name",
+		"file:///a.rego": "package p\n\ngreet(name@) := name",
 		"file:///b.rego": "package p\n\ngreet(name) := name",
 	})
 

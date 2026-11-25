@@ -10,7 +10,7 @@ test_rule_declarations_across_files if {
 
 default allow := false
 
-allow| if input.a`,
+allow@ if input.a`,
 		"file:///b.rego": `package p
 
 allow if input.b`,
@@ -43,7 +43,7 @@ test_rule_full_path_use_cross_file if {
 	[tdp, modules] := testing.at_cursor_in({
 		"file:///a.rego": `package p
 
-allow| if input.a`,
+allow@ if input.a`,
 		"file:///b.rego": `package q
 
 full if data.p.allow
@@ -71,7 +71,7 @@ test_rule_from_bare_name_use if {
 allow if input.a`,
 		"file:///b.rego": `package p
 
-other if allow|`,
+other if allow@`,
 	})
 
 	refs := references.refs
@@ -99,7 +99,7 @@ test_rule_from_full_path_use if {
 allow if input.a`,
 		"file:///b.rego": `package q
 
-full if data.p.allow|`,
+full if data.p.allow@`,
 	})
 
 	refs := references.refs
@@ -124,7 +124,7 @@ allow if input.a
 other if allow`,
 		"file:///b.rego": `package p.sub
 
-allow| := true`,
+allow@ := true`,
 		"file:///c.rego": `package q
 
 nested if data.p.sub.allow`,
@@ -152,7 +152,7 @@ test_rule_shadowed_by_local_name_not_included if {
 	[tdp, modules] := testing.at_cursor_in({
 		"file:///a.rego": `package p
 
-allow| if input.a`,
+allow@ if input.a`,
 		"file:///b.rego": `package p
 
 shadowed if {
@@ -202,7 +202,7 @@ allow if input.a`,
 
 import data.p
 
-plain if p.allow|`,
+plain if p.allow@`,
 	})
 
 	refs := references.refs
@@ -227,7 +227,7 @@ test_rule_use_through_import_and_alias_cross_file if {
 	[tdp, modules] := testing.at_cursor_in({
 		"file:///a.rego": `package p
 
-allow| if input.a`,
+allow@ if input.a`,
 		"file:///b.rego": `package q
 
 import data.p
@@ -262,7 +262,7 @@ test_rule_import_use_shadowed_by_local_name_not_included if {
 	[tdp, modules] := testing.at_cursor_in({
 		"file:///a.rego": `package p
 
-allow| if input.a`,
+allow@ if input.a`,
 		"file:///b.rego": `package q
 
 import data.p
@@ -286,7 +286,7 @@ test_rule_import_use_of_other_package_or_rule_not_included if {
 	[tdp, modules] := testing.at_cursor_in({
 		"file:///a.rego": `package p
 
-allow| if input.a`,
+allow@ if input.a`,
 		"file:///b.rego": `package q
 
 allow if input.b`,
@@ -316,7 +316,7 @@ allow if input.a`,
 
 import data.p
 
-shadowed(p) := p.allow|`,
+shadowed(p) := p.allow@`,
 	})
 
 	refs := references.refs
@@ -335,7 +335,7 @@ allow if input.a`,
 
 import data.p
 
-missing if p.nope|`,
+missing if p.nope@`,
 	})
 
 	refs := references.refs
@@ -350,7 +350,7 @@ test_rule_document_highlight_only_current_file if {
 	[tdp, modules] := testing.at_cursor_in({
 		"file:///a.rego": `package p
 
-other if allow|`,
+other if allow@`,
 		"file:///b.rego": `package p
 
 allow if input.b
@@ -381,7 +381,7 @@ test_rule_imported_directly[from] if {
 		"declaration": {
 			"file:///a.rego": `package p
 
-allow| if input.a`,
+allow@ if input.a`,
 			"file:///b.rego": `package q
 
 import data.p.allow
@@ -396,7 +396,7 @@ allow if input.a`,
 
 import data.p.allow
 
-r if allow|`,
+r if allow@`,
 		},
 	}
 
@@ -431,7 +431,7 @@ test_rule_with_same_name_as_import[cursor] if {
 
 import data.other.foo
 
-foo| if input.a
+foo@ if input.a
 
 use if foo`,
 		"use": `package p
@@ -440,7 +440,7 @@ import data.other.foo
 
 foo if input.a
 
-use if foo|`,
+use if foo@`,
 	}
 
 	[tdp, modules] := testing.at_cursor_in({
