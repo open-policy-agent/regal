@@ -110,7 +110,9 @@ _capabilities.foldingRangeProvider := true
 
 _capabilities.definitionProvider := true
 
-_capabilities.documentSymbolProvider := true
+# "A human-readable string that is shown when multiple
+# outlines trees are shown for the same document"
+_capabilities.documentSymbolProvider.label := "Regal"
 
 _capabilities.workspaceSymbolProvider := true
 
