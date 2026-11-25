@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/fatih/color"
@@ -18,8 +17,6 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/metrics"
 
-	rio "github.com/open-policy-agent/regal/internal/io"
-	regalmetrics "github.com/open-policy-agent/regal/internal/metrics"
 	"github.com/open-policy-agent/regal/internal/update"
 	"github.com/open-policy-agent/regal/internal/util"
 	"github.com/open-policy-agent/regal/pkg/config"
@@ -189,41 +186,17 @@ func lint(args []string, params *lintParams) (violations []report.Violation, err
 		regal = regal.WithIgnore(params.ignoreFiles.v)
 	}
 
-	m := metrics.New()
 	if params.metrics {
-		regal = regal.WithMetrics(m)
-		m.Timer(regalmetrics.RegalConfigSearch).Start()
+		regal = regal.WithMetrics(metrics.New())
 	}
 
-	var regalPath string
-
-	searchPath := getSearchPath(args)
-	if searchPath != "" {
-		if regalPath, err = config.FindRegalDirectoryPath(searchPath); err == nil {
-			regal = regal.WithPathPrefix(filepath.Dir(regalPath))
-
-			if rulesDir := filepath.Join(regalPath, "rules"); !params.rules.isSet && rio.IsDir(rulesDir) {
-				regal = regal.WithCustomRulesPaths(rulesDir)
-			}
-		}
-	}
-
-	if params.metrics {
-		m.Timer(regalmetrics.RegalConfigSearch).Stop()
-		m.Timer(regalmetrics.RegalConfigParse).Start()
-	}
-
-	userConfig, _, err := config.LoadUser(params.configFile, searchPath, params.debug)
+	regal, _, _, err = regal.WithWorkspace(getSearchPath(args), linter.WorkspaceOptions{
+		ConfigFile:      params.configFile,
+		SkipCustomRules: params.rules.isSet,
+		Debug:           params.debug,
+	})
 	if err != nil {
 		return nil, err
-	}
-
-	if params.metrics {
-		m.Timer(regalmetrics.RegalConfigParse).Stop()
-	}
-
-	if userConfig != nil {
-		regal = regal.WithUserConfig(userConfig)
 	}
 
 	regal, err = regal.Prepare(ctx)
