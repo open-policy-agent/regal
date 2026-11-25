@@ -37,13 +37,13 @@ default rule3 := false`
 
 test_arg_at_position[name] if {
 	some name, snippet in {
-		"declaration": "fn(x|) := x.y",
-		"declaration in array": "fn([x|, y]) := x + y",
-		"declaration in object": `fn({"x": x|}) := x`,
-		"just after the declaration": "fn(x)| := x.y",
-		"use in the head value": "fn(x) := x|.y",
-		"use in the body": "fn(x) := y if y := x|.y",
-		"use in the else branch": "fn(x) := 1 if false else := x|",
+		"declaration": "fn(x@) := x.y",
+		"declaration in array": "fn([x@, y]) := x + y",
+		"declaration in object": `fn({"x": x@}) := x`,
+		"just after the declaration": "fn(x)@ := x.y",
+		"use in the head value": "fn(x) := x@.y",
+		"use in the body": "fn(x) := y if y := x@.y",
+		"use in the else branch": "fn(x) := 1 if false else := x@",
 	}
 
 	[tdp, module] := testing.at_cursor(snippet)
@@ -58,9 +58,9 @@ test_arg_at_position[name] if {
 
 test_arg_at_position_not_an_arg[name] if {
 	some name, snippet in {
-		"wildcard": "fn(_|) := 1",
-		"second wildcard": "fn(_, _|) := 1",
-		"field with the same name as the argument": "fn(x) := input.x|",
+		"wildcard": "fn(_@) := 1",
+		"second wildcard": "fn(_, _@) := 1",
+		"field with the same name as the argument": "fn(x) := input.x@",
 	}
 
 	[tdp, module] := testing.at_cursor(snippet)
@@ -93,8 +93,8 @@ import data.alpha["be-ta"].gamma`
 
 test_import_alias_at_position[name] if {
 	some name, snippet in {
-		"in the alias": "import data.foo.bar as b|az",
-		"just after the alias": "import data.foo.bar as baz |",
+		"in the alias": "import data.foo.bar as b@az",
+		"just after the alias": "import data.foo.bar as baz @",
 	}
 
 	[tdp, module] := testing.at_cursor(snippet)
@@ -108,8 +108,8 @@ test_import_alias_at_position[name] if {
 
 test_import_alias_at_position_not_on_alias[name] if {
 	some name, snippet in {
-		"in the path": "import data.fo|o.bar as baz",
-		"on the as keyword": "import data.foo.bar a|s baz",
+		"in the path": "import data.fo@o.bar as baz",
+		"on the as keyword": "import data.foo.bar a@s baz",
 	}
 
 	[tdp, module] := testing.at_cursor(snippet)
@@ -122,15 +122,15 @@ test_import_alias_at_position_not_on_alias[name] if {
 test_assign_var_at_position[name] if {
 	some name, snippet in {
 		"declaration": `allow if {
-	foo| := 1
+	foo@ := 1
 	foo == 1
 }`,
 		"use": `allow if {
 	foo := 1
-	foo| == 1
+	foo@ == 1
 }`,
 		"destructured declaration": `allow if {
-	[foo|, bar] := [1, 2]
+	[foo@, bar] := [1, 2]
 	foo == bar
 }`,
 	}
@@ -147,15 +147,15 @@ test_assign_var_at_position[name] if {
 
 test_assign_var_at_position_not_an_assign_var[name] if {
 	some name, snippet in {
-		"input": `allow if input|.user == 1`,
+		"input": `allow if input@.user == 1`,
 		"some variable": `allow if {
-	some x| in input.xs
+	some x@ in input.xs
 	x == 1
 }`,
-		"argument": `fn(x|) := x`,
+		"argument": `fn(x@) := x`,
 		"variable that is never assigned": `allow if {
 	foo := 1
-	input.foo| == 1
+	input.foo@ == 1
 }`,
 	}
 
@@ -167,7 +167,7 @@ test_assign_var_at_position_not_an_assign_var[name] if {
 }
 
 test_package_at_position if {
-	[tdp, modules] := testing.at_cursor_in({"file:///p.rego": "package foo.ba|r"})
+	[tdp, modules] := testing.at_cursor_in({"file:///p.rego": "package foo.ba@r"})
 
 	pkg := find.package_at_position
 		with input as tdp
@@ -177,7 +177,7 @@ test_package_at_position if {
 }
 
 test_package_at_position_not_on_name if {
-	[tdp, modules] := testing.at_cursor_in({"file:///p.rego": "packag|e foo.bar"})
+	[tdp, modules] := testing.at_cursor_in({"file:///p.rego": "packag@e foo.bar"})
 
 	not find.package_at_position
 		with input as tdp

@@ -7,7 +7,7 @@ test_function_call_bare_name_and_full_path if {
 	[tdp, modules] := testing.at_cursor_in({
 		"file:///a.rego": `package p
 
-is_root|(u) if u == "root"
+is_root@(u) if u == "root"
 
 check if is_root(input.user)`,
 		"file:///b.rego": `package q
@@ -47,7 +47,7 @@ is_root(u) if u == "root"`,
 
 import data.p as pkg
 
-call := pkg.is_root|(input.user)`,
+call := pkg.is_root@(input.user)`,
 	})
 
 	refs := references.refs

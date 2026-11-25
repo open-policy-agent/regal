@@ -4,7 +4,7 @@ import data.regal.lsp.references
 import data.regal.lsp.testing
 
 test_references_response_is_the_symbol_references if {
-	[tdp, module] := testing.at_cursor("allow| if input.a\n\nother if allow")
+	[tdp, module] := testing.at_cursor("allow@ if input.a\n\nother if allow")
 
 	refs := references.result.response
 		with input as tdp
