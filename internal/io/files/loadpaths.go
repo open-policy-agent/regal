@@ -70,7 +70,7 @@ func expandDirectory(prefix []string, root string) ([]string, bool, error) {
 
 	representable := true
 
-	err := DefaultWalker(root).WithFilters(skipNonOPALoadable).Walk(func(path string) error {
+	err := NewWalker(root).WithFilter(isOPALoadable).Walk(func(path string) error {
 		if strings.EqualFold(filepath.Ext(path), ".rego") {
 			// Modules are placed by their package, not by their location.
 			out = append(out, path)
@@ -110,9 +110,9 @@ func expandDirectory(prefix []string, root string) ([]string, bool, error) {
 	return out, representable, err
 }
 
-func skipNonOPALoadable(path string, _ fs.DirEntry) bool {
+func isOPALoadable(path string, d fs.DirEntry) bool {
 	ext := strings.ToLower(filepath.Ext(path))
 	_, ok := opaLoadableExts[ext]
 
-	return !ok
+	return ok && !d.IsDir()
 }
