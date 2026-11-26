@@ -92,6 +92,9 @@ func TestFilterOPALoadPathsKeepsDataLayout(t *testing.T) {
 			files:  map[string]string{"a/data.json": `{"x": 1}`, "data.json": `{"y": 2}`},
 			prefix: "outer.inner:",
 		},
+		"nested directory name with a dot": {
+			files: map[string]string{"svc/v1.2/data.json": `{"x": 1}`, "c/data.json": `{"y": 2}`},
+		},
 		"directory name with a dot": {
 			files: map[string]string{"a.b/data.json": `{"x": 1}`, "c/data.json": `{"y": 2}`},
 		},
@@ -158,6 +161,29 @@ func TestFilterOPALoadPathsSkipsDataInIrrelevantDirectories(t *testing.T) {
 
 	if !reflect.DeepEqual(want.Documents, got.Documents) {
 		t.Fatalf("want %v, got %v", want.Documents, got.Documents)
+	}
+}
+
+// A directory name with a '.' cannot be a prefix. Only the top-level directory
+// holding it (svc) is left for the loader to walk. The rest is still expanded.
+func TestFilterOPALoadPathsNarrowFallback(t *testing.T) {
+	t.Parallel()
+
+	root := testutil.TempDirectoryOf(t, map[string]string{
+		"svc/v1.2/data.json":            `{"x": 1}`,
+		"other/data.json":               `{"y": 2}`,
+		"node_modules/pkg/package.json": `{"name": "pkg"}`,
+		".github/workflows/ci.yml":      "on: push\n",
+	})
+
+	paths, err := FilterOPALoadPaths([]string{root})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []string{"other:" + filepath.Join(root, "other", "data.json"), "svc:" + filepath.Join(root, "svc")}
+	if !slices.Equal(paths, want) {
+		t.Fatalf("want %v, got %v", want, paths)
 	}
 }
 

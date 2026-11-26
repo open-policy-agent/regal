@@ -3,6 +3,7 @@ package files
 import (
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -29,8 +30,8 @@ var opaLoadableExts = map[string]struct{}{
 // the path of the directory they are in (a/data.json becomes data.a). Passing
 // the expanded file paths would load them all at the root of data instead, so
 // each data file gets a "prefix:path" entry that keeps the same layout. A
-// directory name containing a '.' or ':' cannot be written as a prefix, so a
-// root with data in such a directory is passed through unexpanded.
+// directory name containing a '.' or ':' cannot be written as a prefix, so the
+// top-level directory holding it is passed through unexpanded (see expandDirectory).
 func FilterOPALoadPaths(paths []string) ([]string, error) {
 	out := make([]string, 0, len(paths))
 
@@ -65,49 +66,87 @@ func FilterOPALoadPaths(paths []string) ([]string, error) {
 	return out, nil
 }
 
+// expandDirectory walks root and returns its loadable files, with data files as
+// "prefix:path" entries. A name with a '.' or ':' cannot be a prefix, so the
+// top-level directory holding it is returned whole for the loader to walk. If
+// that name is itself top-level, the bool is false and nothing is expanded.
 func expandDirectory(prefix []string, root string) ([]string, bool, error) {
-	var out []string
+	var out, tops []string
 
-	representable := true
+	whole, passthrough := true, map[string]bool{}
+
+	add := func(top, entry string) {
+		out, tops = append(out, entry), append(tops, top)
+	}
 
 	err := NewWalker(root).WithFilter(isOPALoadable).Walk(func(path string) error {
-		if strings.EqualFold(filepath.Ext(path), ".rego") {
-			// Modules are placed by their package, not by their location.
-			out = append(out, path)
-
-			return nil
-		}
-
-		rel, err := filepath.Rel(root, filepath.Dir(path))
+		rel, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
 		}
 
+		dirs := strings.Split(rel, string(filepath.Separator))
+		if slices.Contains(dirs[:len(dirs)-1], ".github") {
+			// Workflow files are not data, and the name cannot be a prefix.
+			return nil
+		}
+
+		top, _, nested := strings.Cut(rel, string(filepath.Separator))
+		if !nested {
+			top = ""
+		}
+
+		if strings.EqualFold(filepath.Ext(path), ".rego") {
+			// Modules are placed by their package, not by their location.
+			add(top, path)
+
+			return nil
+		}
+
 		parts := prefix
-		if rel != "." {
-			parts = append(slices.Clip(parts), strings.Split(rel, string(filepath.Separator))...)
+		if dir := filepath.Dir(rel); dir != "." {
+			parts = append(slices.Clip(parts), strings.Split(dir, string(filepath.Separator))...)
 		}
 
 		if len(parts) == 0 {
-			out = append(out, path)
+			add(top, path)
 
 			return nil
 		}
 
 		for _, part := range parts {
 			if part == "" || strings.ContainsAny(part, ".:") {
-				representable = false
+				if top == "" || strings.ContainsAny(top, ".:") {
+					whole = false
+				}
+
+				passthrough[top] = true
 
 				return nil
 			}
 		}
 
-		out = append(out, strings.Join(parts, ".")+":"+path)
+		add(top, strings.Join(parts, ".")+":"+path)
 
 		return nil
 	})
+	if err != nil || !whole {
+		return nil, false, err
+	}
 
-	return out, representable, err
+	res := make([]string, 0, len(out))
+
+	for i, entry := range out {
+		if !passthrough[tops[i]] {
+			res = append(res, entry)
+		}
+	}
+
+	for _, top := range slices.Sorted(maps.Keys(passthrough)) {
+		res = append(res, strings.Join(append(slices.Clip(prefix), top), ".")+":"+filepath.Join(root, top))
+	}
+
+	return res, true, nil
 }
 
 func isOPALoadable(path string, d fs.DirEntry) bool {
