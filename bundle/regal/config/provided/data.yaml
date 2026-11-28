@@ -212,6 +212,7 @@ rules:
       max-line-length: 120
     messy-rule:
       level: error
+      allow-separate-defaults: false
     mixed-iteration:
       level: error
     no-whitespace-comment:

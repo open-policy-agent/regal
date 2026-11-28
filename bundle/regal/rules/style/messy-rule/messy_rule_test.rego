@@ -1,6 +1,7 @@
 package regal.rules.style["messy-rule_test"]
 
 import data.regal.ast
+import data.regal.config
 
 import data.regal.rules.style["messy-rule"] as rule
 
@@ -46,6 +47,46 @@ test_fail_messy_default_definition if {
 	foo if 5 == 1
 	`)
 	r := rule.report with input as module
+
+	r == expected_with_location({
+		"col": 2,
+		"row": 8,
+		"end": {
+			"col": 15,
+			"row": 8,
+		},
+		"text": "\tfoo if 5 == 1",
+	})
+}
+
+test_success_separate_default_definitions_allowed_by_config if {
+	module := ast.policy(`
+	default foo := true
+
+	default bar := false
+
+	foo if 5 == 1
+
+	bar if 1 == 1
+
+	bar if 2 == 2
+	`)
+	r := rule.report with input as module
+		with config.rules as {"style": {"messy-rule": {"allow-separate-defaults": true}}}
+
+	r == set()
+}
+
+test_fail_messy_definition_split_by_default_allowed_by_config if {
+	module := ast.policy(`
+	foo if true
+
+	default bar := false
+
+	foo if 5 == 1
+	`)
+	r := rule.report with input as module
+		with config.rules as {"style": {"messy-rule": {"allow-separate-defaults": true}}}
 
 	r == expected_with_location({
 		"col": 2,

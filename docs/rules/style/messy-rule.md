@@ -50,7 +50,28 @@ rules:
     messy-rule:
       # one of "error", "warning", "ignore"
       level: error
+      # whether to allow default rules to be placed apart from
+      # the other definitions of the same rule, for example to
+      # have all default rules grouped at the top of the policy
+      allow-separate-defaults: false
 ```
+
+With `allow-separate-defaults` set to `true`, the following policy is not flagged:
+
+```rego
+package policy
+
+default allow := false
+
+default reason := ""
+
+allow if input.user.admin
+
+reason := "user is admin" if input.user.admin
+```
+
+Note that default rules still break up the grouping of other rules, so a default rule placed between two definitions of
+another rule will still have those definitions reported.
 
 ## Related Resources
 
